@@ -3,6 +3,18 @@
 // import in app/locales/index.ts.
 
 export const zhCN = {
+  // ── Meta ──────────────────────────────────────────────────────────────────
+  meta: {
+    title: "ECOCTRL 智慧精控 — 能源管理平台",
+    description: "企业级三维能源管理平台",
+  },
+
+  // ── 通用 ──────────────────────────────────────────────────────────────────
+  common: {
+    loading: "加载模型中…",
+    logoAlt: "Logo",
+  },
+
   // ── 头部 ──────────────────────────────────────────────────────────────────
   header: {
     brandSub: "智慧精控",
@@ -11,6 +23,8 @@ export const zhCN = {
     date: "2026.04.19 星期五",
     statusPrefix: "全局中心总览：",
     statusValue: "最优",
+    toggleNavShow: "显示导航",
+    toggleNavHide: "隐藏导航",
   },
 
   // ── 底部导航 ───────────────────────────────────────────────────────────────
@@ -48,6 +62,7 @@ export const zhCN = {
     intensityFooter: "持续下降趋势 ↓",
 
     todayCost: "今日电费",
+    costUnit: "元",
     costFooter: "对比昨日基准",
 
     renewableRate: "可再生能源占比",
@@ -57,6 +72,24 @@ export const zhCN = {
     loadStatus: "负载状态",
     loadNormal: "● 正常",
     loadFooter: "系统负载在正常范围内",
+  },
+
+  // ── 控制按钮 ───────────────────────────────────────────────────────────────
+  controls: {
+    fullscreen: "全屏",
+    exitFullscreen: "退出全屏",
+    zoomIn: "放大",
+    zoomOut: "缩小",
+    reset: "还原",
+  },
+
+  // ── 错误页面 ───────────────────────────────────────────────────────────────
+  errors: {
+    notFoundTitle: "页面未找到",
+    notFoundDesc: "您访问的路径不存在，请检查 URL 是否正确",
+    autoRedirect: "自动返回首页",
+    redirectNow: "立即返回",
+    unexpected: "发生未知错误",
   },
 
   // ── 底部图表 ───────────────────────────────────────────────────────────────
@@ -103,6 +136,19 @@ export const zhCN = {
     lightingSaving: "预计节能 8%",
     serverText: "将非关键服务器任务迁移至低峰期 (02:00–06:00)",
     serverSaving: "预计节省 5% 费用",
+  },
+
+  // ── 通用 UI 组件 ───────────────────────────────────────────────────────────
+  ui: {
+    paginationPrevious: "上一页",
+    paginationNext: "下一页",
+    paginationPreviousAria: "转到上一页",
+    paginationNextAria: "转到下一页",
+    paginationMorePages: "更多页面",
+    spinnerLoading: "加载中",
+    sidebarToggle: "切换侧边栏",
+    commandTitle: "命令面板",
+    commandDescription: "搜索要运行的命令…",
   },
 };
 
