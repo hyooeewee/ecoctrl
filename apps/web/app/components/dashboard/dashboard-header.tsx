@@ -30,9 +30,11 @@ export function DashboardHeader({ className, onLogoClick, navVisible }: Dashboar
           title={navVisible ? "隐藏导航" : "显示导航"}
         >
           <div className="relative flex size-8 items-center justify-center rounded-full border border-cyber-cyan/50 bg-cyber-cyan/10 transition-colors group-hover:bg-cyber-cyan/20">
-            <span className="font-heading text-[9px] font-bold tracking-wider text-cyber-cyan">
-              ECC
-            </span>
+            <img
+              src="/favicon.ico"
+              alt="Logo"
+              className="size-4 object-contain"
+            />
             {/* Nav toggle indicator */}
             <span className="absolute -bottom-1 -right-1 flex size-3.5 items-center justify-center rounded-full border border-cyber-cyan/40 bg-panel-dark text-cyber-cyan/70">
               {navVisible

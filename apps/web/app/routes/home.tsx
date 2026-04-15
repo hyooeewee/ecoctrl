@@ -12,7 +12,7 @@ import { AISuggestions, AlertsPanel, DeviceStatus } from "~/components/dashboard
 
 // ─── Meta ──────────────────────────────────────────────────────────────────────
 
-export function meta({}: Route.MetaArgs) {
+export function meta(_args: Route.MetaArgs) {
   return [
     { title: "ECOCTRL 智慧精控 — 能源管理平台" },
     { name: "description", content: "企业级三维能源管理平台" },
