@@ -18,6 +18,12 @@ importers:
 
   .:
     dependencies:
+      '@babylonjs/core':
+        specifier: ^9.2.1
+        version: 9.2.1
+      '@babylonjs/loaders':
+        specifier: ^9.2.1
+        version: 9.2.1(@babylonjs/core@9.2.1)(babylonjs-gltf2interface@9.2.1)
       '@base-ui/react':
         specifier: ^1.4.0
         version: 1.4.0(@date-fns/tz@1.4.1)(@types/react@19.2.14)(date-fns@4.1.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -256,6 +262,15 @@ packages:
   '@babel/types@7.29.0':
     resolution: {integrity: sha512-LwdZHpScM4Qz8Xw2iKSzS+cfglZzJGvofQICy7W7v4caru4EaAmyUuO6BGrbyQ2mYV11W0U8j5mBhd14dd3B0A==}
     engines: {node: '>=6.9.0'}
+
+  '@babylonjs/core@9.2.1':
+    resolution: {integrity: sha512-G3409wiBQTMJPzbTPV8Lz36cfmCsvp2+7nXYRisnMet1qnelogWXM+XOcZZIzDjMCwV7eII1UzETnnS0GpBfTQ==}
+
+  '@babylonjs/loaders@9.2.1':
+    resolution: {integrity: sha512-3OZF38a/fwirBsi5H2M4uvz7YTB49laJ4BVyFZZbXxRXvraH8bWsw4hsFLjoeBAkOAJZEMoqBZtw5tCuFlgtmg==}
+    peerDependencies:
+      '@babylonjs/core': ^9.0.0
+      babylonjs-gltf2interface: ^9.0.0
 
   '@base-ui/react@1.4.0':
     resolution: {integrity: sha512-QcqdVbr/+ba2/RAKJIV1PV6S02Q5+r6a4Eym8ndBw+ZbBILkkmQAyRxXCg/pArrHnkrGeU8goe26aw0h6eE8pg==}
@@ -1334,6 +1349,9 @@ packages:
 
   babel-dead-code-elimination@1.0.12:
     resolution: {integrity: sha512-GERT7L2TiYcYDtYk1IpD+ASAYXjKbLTDPhBtYj7X1NuRMDTMtAx9kyBenub1Ev41lo91OHCKdmP+egTDmfQ7Ig==}
+
+  babylonjs-gltf2interface@9.2.1:
+    resolution: {integrity: sha512-xkB0bpnDIv1ztAKv8Ph6j8s3vsLmAdAByObLq9SOQIppfcCF9iQjpKzz4l9Ul4EA3hd/RXO2Yz97s22R7beG4Q==}
 
   balanced-match@4.0.4:
     resolution: {integrity: sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA==}
@@ -3245,6 +3263,13 @@ snapshots:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
 
+  '@babylonjs/core@9.2.1': {}
+
+  '@babylonjs/loaders@9.2.1(@babylonjs/core@9.2.1)(babylonjs-gltf2interface@9.2.1)':
+    dependencies:
+      '@babylonjs/core': 9.2.1
+      babylonjs-gltf2interface: 9.2.1
+
   '@base-ui/react@1.4.0(@date-fns/tz@1.4.1)(@types/react@19.2.14)(date-fns@4.1.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)':
     dependencies:
       '@babel/runtime': 7.29.2
@@ -4090,6 +4115,8 @@ snapshots:
       '@babel/types': 7.29.0
     transitivePeerDependencies:
       - supports-color
+
+  babylonjs-gltf2interface@9.2.1: {}
 
   balanced-match@4.0.4: {}
 
