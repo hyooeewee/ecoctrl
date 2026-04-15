@@ -14,7 +14,7 @@ import {
 import { locale as t } from "~/locales"
 import { cn } from "~/lib/utils"
 
-// ─── Measure hook (same bypass pattern as graph-button-block) ─────────────────
+// ─── Measure hook ─────────────────
 
 function useMeasureWidth(fallback = 700): [React.RefObject<HTMLDivElement | null>, number] {
   const ref = useRef<HTMLDivElement>(null)

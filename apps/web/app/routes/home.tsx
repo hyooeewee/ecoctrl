@@ -163,7 +163,6 @@ const CARDS = [
     chartData: RENEWABLE_DATA,
     progressValue: 85,
     chartColor: "var(--color-cyber-green)",
-    footer: t.cards.renewableFooter,
   },
   {
     title: t.cards.loadStatus,
@@ -176,7 +175,6 @@ const CARDS = [
     chartData: LOAD_DATA,
     progressValue: 60,
     chartColor: "var(--color-chart-2)",
-    footer: t.cards.loadFooter,
   },
 ];
 
@@ -245,7 +243,7 @@ export default function Home() {
           <div className="flex min-h-0 flex-1 overflow-hidden">
             {/* Left Panel: 6 graph-button-blocks */}
             <aside
-              className="relative flex w-[280px] shrink-0 flex-col gap-1 overflow-hidden border-r border-cyber-cyan/30 p-1.5"
+              className="relative flex w-[280px] shrink-0 flex-col gap-1.5 overflow-hidden border-r border-cyber-cyan/30 p-1.5"
               style={{
                 background: "rgba(4,14,30,0.38)",
                 backdropFilter: "blur(20px) saturate(160%)",
