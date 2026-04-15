@@ -181,7 +181,7 @@ export function GraphButtonBlock({
     <Card
       className={cn(
         // py-0 overrides the Card's default py-4, so CardContent owns all padding
-        "relative overflow-hidden rounded-xl border-white/10 bg-white/6 py-0 backdrop-blur-sm",
+        "relative overflow-hidden rounded-xl border-white/10 bg-white/[0.04] py-0 backdrop-blur-sm",
         className,
       )}
     >

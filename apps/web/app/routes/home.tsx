@@ -260,10 +260,6 @@ export default function Home() {
                 "relative flex w-[280px] shrink-0 flex-col gap-1.5 overflow-hidden p-1.5 transition-all duration-300 ease-in-out",
                 fullscreen && "pointer-events-none -translate-x-full opacity-0",
               )}
-              style={{
-                background: "rgba(4,14,30,0.38)",
-                backdropFilter: "blur(20px) saturate(160%)",
-              }}
             >
               {/* Left accent glow */}
               <div
@@ -295,10 +291,6 @@ export default function Home() {
                   "flex shrink-0 gap-1.5 p-1.5 transition-all duration-300 ease-in-out",
                   fullscreen && "translate-y-full opacity-0",
                 )}
-                style={{
-                  background: "rgba(4,14,30,0.38)",
-                  backdropFilter: "blur(20px) saturate(160%)",
-                }}
               >
                 <EnergyTrendChart className="min-w-0 flex-[3]" />
                 <EnergyBreakdownChart className="min-w-0 flex-[2]" />
@@ -311,10 +303,6 @@ export default function Home() {
                 "flex min-h-0 w-[320px] shrink-0 flex-col gap-1.5 overflow-hidden border-white/15 p-1.5 transition-all duration-300 ease-in-out",
                 fullscreen && "pointer-events-none translate-x-full opacity-0",
               )}
-              style={{
-                background: "rgba(4,14,30,0.38)",
-                backdropFilter: "blur(20px) saturate(160%)",
-              }}
             >
               <DeviceStatus />
               <AlertsPanel />
