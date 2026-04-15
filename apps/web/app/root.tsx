@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import {
   isRouteErrorResponse,
   Links,
@@ -5,6 +6,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useNavigate,
 } from "react-router";
 
 import type { Route } from "./+types/root";
@@ -46,26 +48,118 @@ export default function App() {
   return <Outlet />;
 }
 
+function NotFound404() {
+  const navigate = useNavigate();
+  const [count, setCount] = useState(15);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    timerRef.current = setInterval(() => {
+      setCount((c) => {
+        if (c <= 1) {
+          clearInterval(timerRef.current!);
+          navigate("/");
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [navigate]);
+
+  // Progress: 0→full as count goes 15→0
+  const progress = ((15 - count) / 15) * 100;
+
+  return (
+    <div className="dark flex h-screen flex-col items-center justify-center gap-8 bg-[#060d18] font-mono text-foreground">
+      {/* Decorative grid background */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-30"
+        style={{
+          backgroundImage:
+            "linear-gradient(oklch(0.93 0.2 196 / 0.12) 1px, transparent 1px), linear-gradient(90deg, oklch(0.93 0.2 196 / 0.12) 1px, transparent 1px)",
+          backgroundSize: "65px 65px",
+        }}
+      />
+
+      {/* Glow */}
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <div className="h-[400px] w-[600px] rounded-full bg-[oklch(0.93_0.2_196/0.04)] blur-3xl" />
+      </div>
+
+      <div className="relative flex flex-col items-center gap-6">
+        {/* 404 */}
+        <div className="relative">
+          <span className="select-none text-[140px] font-bold leading-none tracking-tight text-[oklch(0.93_0.2_196/0.08)]">
+            404
+          </span>
+          <span
+            className="absolute inset-0 flex items-center justify-center text-[140px] font-bold leading-none tracking-tight text-[oklch(0.93_0.2_196)]"
+            style={{ WebkitTextStroke: "1px oklch(0.93 0.2 196 / 0.6)", color: "transparent" }}
+          >
+            404
+          </span>
+        </div>
+
+        {/* Message */}
+        <div className="flex flex-col items-center gap-2 text-center">
+          <p className="text-xl font-semibold tracking-widest text-foreground/80">页面未找到</p>
+          <p className="text-sm tracking-wide text-muted-foreground">
+            您访问的路径不存在，请检查 URL 是否正确
+          </p>
+        </div>
+
+        {/* Countdown card */}
+        <div className="flex w-72 flex-col gap-3 rounded-xl border border-white/10 bg-white/5 px-5 py-4 backdrop-blur-md">
+          <div className="flex items-center justify-between text-[11px] tracking-wide">
+            <span className="text-muted-foreground">自动返回首页</span>
+            <span className="tabular-nums text-[oklch(0.93_0.2_196)]">{count}s</span>
+          </div>
+          {/* Progress bar */}
+          <div className="h-1 w-full overflow-hidden rounded-full bg-white/8">
+            <div
+              className="h-full rounded-full bg-[oklch(0.93_0.2_196)] transition-all duration-1000 ease-linear"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            className="mt-1 rounded-lg border border-[oklch(0.93_0.2_196/0.4)] bg-[oklch(0.93_0.2_196/0.08)] px-4 py-2 text-[12px] font-medium tracking-widest text-[oklch(0.93_0.2_196)] transition-colors hover:bg-[oklch(0.93_0.2_196/0.16)]"
+          >
+            立即返回
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  let message = "Oops!";
+  const is404 = isRouteErrorResponse(error) && error.status === 404;
+
+  if (is404) {
+    return <NotFound404 />;
+  }
+
   let details = "An unexpected error occurred.";
   let stack: string | undefined;
 
   if (isRouteErrorResponse(error)) {
-    message = error.status === 404 ? "404" : "Error";
-    details =
-      error.status === 404 ? "The requested page could not be found." : error.statusText || details;
-  } else if (import.meta.env.DEV && error && error instanceof Error) {
+    details = error.statusText || details;
+  } else if (import.meta.env.DEV && error instanceof Error) {
     details = error.message;
     stack = error.stack;
   }
 
   return (
-    <main className="pt-16 p-4 container mx-auto">
-      <h1>{message}</h1>
+    <main className="container mx-auto p-4 pt-16">
+      <h1>Error</h1>
       <p>{details}</p>
       {stack && (
-        <pre className="w-full p-4 overflow-x-auto">
+        <pre className="w-full overflow-x-auto p-4">
           <code>{stack}</code>
         </pre>
       )}
