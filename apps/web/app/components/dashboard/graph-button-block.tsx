@@ -13,6 +13,7 @@ import {
   Progress,
   ProgressIndicator,
   ProgressTrack,
+  ProgressValue,
 } from "~/components/ui/progress"
 import { cn } from "~/lib/utils"
 
@@ -155,29 +156,8 @@ function MiniProgress({
 }) {
   const [ref, width] = useMeasureWidth()
   return (
-    <div className="flex flex-col gap-1.5">
-      {data.length > 0 && (
-        <div ref={ref} className="h-[20px] w-full overflow-hidden">
-          <LineChart width={width} height={MICRO_H} data={data} margin={{ top: 2, right: 0, bottom: 2, left: 0 }}>
-            <Line
-              type="monotone"
-              dataKey="v"
-              stroke={color}
-              strokeWidth={1.5}
-              strokeOpacity={0.7}
-              dot={false}
-              activeDot={false}
-              isAnimationActive={false}
-            />
-          </LineChart>
-        </div>
-      )}
-      <Progress value={value} className="gap-0">
-        <ProgressTrack className="h-1.5">
-          <ProgressIndicator style={{ backgroundColor: color }} />
-        </ProgressTrack>
-      </Progress>
-    </div>
+    <Progress value={value} >
+    </Progress>
   )
 }
 
@@ -267,10 +247,6 @@ export function GraphButtonBlock({
             <MiniProgress data={chartData} value={progressValue} color={chartColor} />
           )}
         </div>
-
-        {/* ── Divider ── */}
-        <div className="border-t border-white/6" />
-
         {/* ── Row 4: footer ── */}
         {footer && (
           <div className="text-[9px] leading-none text-muted-foreground">
