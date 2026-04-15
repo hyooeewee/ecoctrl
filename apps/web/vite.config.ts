@@ -8,6 +8,10 @@ export default defineConfig({
   },
   fmt: {
     ignorePatterns: ["app/components", ".claude/"],
+    sortImports: true,
+    sortTailwindcss: {
+      functions: ["cn", "cva", "clsx"],
+    },
   },
   lint: {
     ignorePatterns: ["app/components", ".claude/"],
@@ -19,11 +23,5 @@ export default defineConfig({
   plugins: [tailwindcss(), reactRouter()],
   resolve: {
     tsconfigPaths: true,
-  },
-  server: {
-    fs: {
-      // Allow serving files from the monorepo root (parent of the worktree)
-      allow: ["../../../../"],
-    },
   },
 });
