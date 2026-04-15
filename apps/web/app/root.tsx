@@ -24,6 +24,7 @@ export const links: Route.LinksFunction = () => [
     rel: "stylesheet",
     href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
   },
+  { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -58,7 +59,7 @@ function NotFound404() {
       setCount((c) => {
         if (c <= 1) {
           clearInterval(timerRef.current!);
-          navigate("/");
+          void navigate("/");
           return 0;
         }
         return c - 1;
