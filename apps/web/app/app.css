@@ -93,6 +93,13 @@ body {
 @theme inline {
   --font-mono: "Geist Mono Variable", monospace;
   --font-heading: "Inter Variable", sans-serif;
+  /* Cyber Precision theme tokens */
+  --color-cyber-cyan: oklch(0.93 0.2 196);
+  --color-cyber-green: oklch(0.73 0.21 150);
+  --color-cyber-amber: oklch(0.79 0.17 72);
+  --color-cyber-red: oklch(0.6 0.22 24);
+  --color-panel-dark: oklch(0.065 0.02 265);
+  --color-card-dark: oklch(0.09 0.026 265);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -143,4 +150,21 @@ body {
   html {
     @apply font-mono;
   }
+}
+
+/* Hide scrollbar while keeping scroll functionality */
+.scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+/* Remove focus outlines from all recharts elements */
+.recharts-wrapper,
+.recharts-wrapper svg,
+.recharts-wrapper *:focus,
+.recharts-surface {
+  outline: none !important;
 }
