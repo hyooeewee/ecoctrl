@@ -30,6 +30,10 @@ export const zhCN = {
     dataCenter: "数据中心",
     exhibitionHall: "展示大厅",
     lobby: "大堂",
+    viewOverview: "总览",
+    viewTop: "俯视",
+    viewFront: "正面",
+    viewSide: "侧面",
   },
 
   // ── 左侧统计卡片 ───────────────────────────────────────────────────────────
