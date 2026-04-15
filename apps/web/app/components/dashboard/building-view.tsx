@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import {
   ArcRotateCamera,
   Color4,
@@ -85,6 +85,30 @@ function ViewTabs({ angles, activeKey, onChange }: ViewTabsProps) {
   );
 }
 
+export interface BuildingViewRef {
+  zoomIn: () => void;
+  zoomOut: () => void;
+  resetCamera: () => void;
+}
+
+// ─── Animate single camera property ───────────────────────────────────────────
+
+function animateCameraRadius(camera: ArcRotateCamera, toRadius: number, duration = 30) {
+  const frameRate = 60;
+  const anim = new Animation("camRadius", "radius", frameRate, Animation.ANIMATIONTYPE_FLOAT);
+  const easing = new CubicEase();
+  easing.setEasingMode(EasingFunction.EASINGMODE_EASEINOUT);
+  anim.setEasingFunction(easing);
+  anim.setKeys([
+    { frame: 0, value: camera.radius },
+    { frame: duration, value: toRadius },
+  ]);
+  camera.animations = [anim];
+  camera.getScene().beginAnimation(camera, 0, duration, false, 1, () => {
+    camera.animations = [];
+  });
+}
+
 // ─── Animate camera to target angle ───────────────────────────────────────────
 
 function animateCameraTo(
@@ -135,7 +159,7 @@ function animateCameraTo(
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function BuildingView({ className }: { className?: string }) {
+export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(function BuildingView({ className }, ref) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<Nullable<Engine>>(null);
   const sceneRef = useRef<Nullable<Scene>>(null);
@@ -143,7 +167,7 @@ export function BuildingView({ className }: { className?: string }) {
   const [activeView, setActiveView] = useState("overview");
   const [loaded, setLoaded] = useState(false);
 
-  const viewAngles: ViewAngle[] = [
+  const viewAnglesRef = useRef<ViewAngle[]>([
     {
       key: "overview",
       label: t.building.viewOverview,
@@ -176,7 +200,7 @@ export function BuildingView({ className }: { className?: string }) {
       radius: 22,
       target: new Vector3(0, 2, 0),
     },
-  ];
+  ]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -194,10 +218,10 @@ export function BuildingView({ className }: { className?: string }) {
 
     const camera = new ArcRotateCamera(
       "camera",
-      viewAngles[0].alpha,
-      viewAngles[0].beta,
-      viewAngles[0].radius,
-      viewAngles[0].target.clone(),
+      viewAnglesRef.current[0].alpha,
+      viewAnglesRef.current[0].beta,
+      viewAnglesRef.current[0].radius,
+      viewAnglesRef.current[0].target.clone(),
       scene,
     );
     camera.attachControl(canvas, true);
@@ -244,7 +268,7 @@ export function BuildingView({ className }: { className?: string }) {
           // Adjust camera target to model center after scaling
           const target = new Vector3(0, (size.y * scale) / 2, 0);
           camera.setTarget(target);
-          viewAngles.forEach((v) => {
+          viewAnglesRef.current.forEach((v) => {
             v.target = target.clone();
           });
         }
@@ -273,6 +297,27 @@ export function BuildingView({ className }: { className?: string }) {
     };
   }, []);
 
+  useImperativeHandle(ref, () => ({
+    zoomIn: () => {
+      const camera = cameraRef.current;
+      if (!camera) return;
+      const next = Math.max(camera.radius * 0.8, camera.lowerRadiusLimit ?? 8);
+      animateCameraRadius(camera, next);
+    },
+    zoomOut: () => {
+      const camera = cameraRef.current;
+      if (!camera) return;
+      const next = Math.min(camera.radius * 1.25, camera.upperRadiusLimit ?? 60);
+      animateCameraRadius(camera, next);
+    },
+    resetCamera: () => {
+      const camera = cameraRef.current;
+      if (!camera) return;
+      const angle = viewAnglesRef.current.find((v) => v.key === activeView);
+      if (angle) animateCameraTo(camera, angle);
+    },
+  }), [activeView]);
+
   const handleViewChange = (angle: ViewAngle) => {
     setActiveView(angle.key);
     const camera = cameraRef.current;
@@ -297,13 +342,13 @@ export function BuildingView({ className }: { className?: string }) {
       {!loaded && (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="rounded border border-cyber-cyan/30 bg-black/60 px-4 py-2 text-xs text-cyber-cyan backdrop-blur-sm">
-            加载模型中…
+            {t.common.loading}
           </div>
         </div>
       )}
 
       <ViewTabs
-        angles={viewAngles}
+        angles={viewAnglesRef.current}
         activeKey={activeView}
         onChange={handleViewChange}
       />
@@ -317,4 +362,4 @@ export function BuildingView({ className }: { className?: string }) {
       <AreaLabel label={t.building.lobby}          x="79%" y="45%" />
     </div>
   );
-}
+});

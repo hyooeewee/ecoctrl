@@ -27,12 +27,12 @@ export function DashboardHeader({ className, onLogoClick, navVisible }: Dashboar
           type="button"
           onClick={onLogoClick}
           className="group flex items-center gap-2.5 rounded-lg px-1 py-0.5 transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyber-cyan/50"
-          title={navVisible ? "隐藏导航" : "显示导航"}
+          title={navVisible ? t.header.toggleNavHide : t.header.toggleNavShow}
         >
           <div className="relative flex size-8 items-center justify-center rounded-full border border-cyber-cyan/50 bg-cyber-cyan/10 transition-colors group-hover:bg-cyber-cyan/20">
             <img
               src="/favicon.ico"
-              alt="Logo"
+              alt={t.common.logoAlt}
               className="size-4 object-contain"
             />
             {/* Nav toggle indicator */}
