@@ -1,6 +1,23 @@
 import { reactRouter } from "@react-router/dev/vite";
 import tailwindcss from "@tailwindcss/vite";
+import type { Plugin } from "vite";
 import { defineConfig } from "vite-plus";
+
+function chromeDevToolsDummy(): Plugin {
+  return {
+    name: "chrome-devtools-dummy",
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url === "/.well-known/appspecific/com.chrome.devtools.json") {
+          res.statusCode = 204;
+          res.end();
+          return;
+        }
+        next();
+      });
+    },
+  };
+}
 
 export default defineConfig({
   staged: {
@@ -20,7 +37,7 @@ export default defineConfig({
       typeCheck: true,
     },
   },
-  plugins: [tailwindcss(), reactRouter()],
+  plugins: [chromeDevToolsDummy(), tailwindcss(), reactRouter()],
   resolve: {
     tsconfigPaths: true,
   },
