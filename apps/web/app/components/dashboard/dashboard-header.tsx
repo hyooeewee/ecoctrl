@@ -73,17 +73,6 @@ export function DashboardHeader({ className, onLogoClick, navVisible }: Dashboar
           </span>
         </div>
       </div>
-
-      {/* ── Status bar ── */}
-      <div className="flex h-8 items-center justify-center gap-2 border-t border-white/6 bg-cyber-green/5">
-        <span className="size-2 animate-pulse rounded-full bg-cyber-green shadow-[0_0_8px_#22c55e]" />
-        <span className="text-[11px] font-medium tracking-wide text-cyber-green">
-          {t.header.statusPrefix}
-        </span>
-        <span className="text-[11px] font-semibold text-cyber-green">
-          {t.header.statusValue}
-        </span>
-      </div>
     </header>
   )
 }
