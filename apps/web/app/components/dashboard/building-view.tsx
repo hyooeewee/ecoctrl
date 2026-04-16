@@ -1,16 +1,20 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import {
   ArcRotateCamera,
+  ArcRotateCameraPointersInput,
   Color4,
   CubicEase,
   EasingFunction,
   Engine,
   GlowLayer,
   HemisphericLight,
+  Matrix,
   Scene,
+  TransformNode,
   SceneLoader,
   Vector3,
   Animation,
+  PointerEventTypes,
   type Nullable,
 } from "@babylonjs/core";
 import "@babylonjs/loaders/glTF";
@@ -18,72 +22,40 @@ import "@babylonjs/loaders/glTF";
 import { locale as t } from "~/locales";
 import { cn } from "~/lib/utils";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── 3D-projected area label floating pill ────────────────────────────────────
 
-interface ViewAngle {
-  key: string;
-  label: string;
-  alpha: number;
-  beta: number;
-  radius: number;
-  target: Vector3;
-}
-
-// ─── Area label floating pill ─────────────────────────────────────────────────
-
-interface AreaLabelProps {
-  label: string;
-  x: string;
-  y: string;
-}
-
-function AreaLabel({ label, x, y }: AreaLabelProps) {
+const AreaLabel = forwardRef<HTMLDivElement, { label: string }>(function AreaLabel({ label }, ref) {
   return (
     <div
+      ref={ref}
       className={cn(
-        "pointer-events-none absolute flex items-center gap-1.5 rounded border border-cyber-cyan/40 bg-panel-dark/90",
+        "pointer-events-none absolute left-0 top-0 flex items-center gap-1.5 rounded border border-cyber-cyan/40 bg-panel-dark/90",
         "px-2 py-1 text-[11px] font-medium tracking-wide text-cyan-200/90 backdrop-blur-sm",
       )}
-      style={{ left: x, top: y }}
+      style={{ willChange: "transform" }}
     >
       <span className="size-1.5 rounded-full bg-cyber-cyan/70" />
       {label}
     </div>
   );
+});
+
+// Label definitions: fallback world positions + mesh name keywords
+interface LabelDef {
+  key: string;
+  label: string;
+  fallbackPosition: Vector3;
+  meshKeywords: string[];
 }
 
-// ─── View angle buttons ───────────────────────────────────────────────────────
-
-interface ViewTabsProps {
-  angles: ViewAngle[];
-  activeKey: string;
-  onChange: (angle: ViewAngle) => void;
-}
-
-function ViewTabs({ angles, activeKey, onChange }: ViewTabsProps) {
-  return (
-    <div className="absolute left-1/2 top-4 z-20 flex -translate-x-1/2 gap-2 rounded-full border border-white/10 bg-black/40 px-2 py-1.5 backdrop-blur-md">
-      {angles.map((angle) => {
-        const active = angle.key === activeKey;
-        return (
-          <button
-            key={angle.key}
-            type="button"
-            onClick={() => onChange(angle)}
-            className={cn(
-              "rounded-full px-3 py-1 text-[11px] font-medium transition-colors",
-              active
-                ? "bg-cyber-cyan/20 text-cyber-cyan border border-cyber-cyan/40"
-                : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
-            )}
-          >
-            {angle.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
+const LABELS: LabelDef[] = [
+  { key: "office1", label: t.building.officeArea, fallbackPosition: new Vector3(-4, 2.5, -3), meshKeywords: ["office", "办公"] },
+  { key: "meeting", label: t.building.meetingArea, fallbackPosition: new Vector3(0, 3.2, -3), meshKeywords: ["meeting", "会议"] },
+  { key: "dataCenter", label: t.building.dataCenter, fallbackPosition: new Vector3(-1.5, 1.5, 0), meshKeywords: ["data", "server", "机房", "数据"] },
+  { key: "exhibition", label: t.building.exhibitionHall, fallbackPosition: new Vector3(2.5, 2.2, -2), meshKeywords: ["exhibition", "hall", "展示", "展厅"] },
+  { key: "office2", label: t.building.officeArea, fallbackPosition: new Vector3(3.5, 2.5, -3), meshKeywords: ["office", "办公"] },
+  { key: "lobby", label: t.building.lobby, fallbackPosition: new Vector3(3.5, 0.8, 2), meshKeywords: ["lobby", "大堂", "大厅", "entrance"] },
+];
 
 export interface BuildingViewRef {
   zoomIn: () => void;
@@ -109,54 +81,6 @@ function animateCameraRadius(camera: ArcRotateCamera, toRadius: number, duration
   });
 }
 
-// ─── Animate camera to target angle ───────────────────────────────────────────
-
-function animateCameraTo(
-  camera: ArcRotateCamera,
-  angle: ViewAngle,
-  duration = 60,
-) {
-  const frameRate = 60;
-  const totalFrames = duration;
-
-  const animAlpha = new Animation("camAlpha", "alpha", frameRate, Animation.ANIMATIONTYPE_FLOAT);
-  const animBeta = new Animation("camBeta", "beta", frameRate, Animation.ANIMATIONTYPE_FLOAT);
-  const animRadius = new Animation("camRadius", "radius", frameRate, Animation.ANIMATIONTYPE_FLOAT);
-  const animTargetX = new Animation("camTargetX", "target.x", frameRate, Animation.ANIMATIONTYPE_FLOAT);
-  const animTargetY = new Animation("camTargetY", "target.y", frameRate, Animation.ANIMATIONTYPE_FLOAT);
-  const animTargetZ = new Animation("camTargetZ", "target.z", frameRate, Animation.ANIMATIONTYPE_FLOAT);
-
-  const easing = new CubicEase();
-  easing.setEasingMode(EasingFunction.EASINGMODE_EASEINOUT);
-  [animAlpha, animBeta, animRadius, animTargetX, animTargetY, animTargetZ].forEach(
-    (a) => a.setEasingFunction(easing),
-  );
-
-  const makeKeys = (from: number, to: number) => [
-    { frame: 0, value: from },
-    { frame: totalFrames, value: to },
-  ];
-
-  animAlpha.setKeys(makeKeys(camera.alpha, angle.alpha));
-  animBeta.setKeys(makeKeys(camera.beta, angle.beta));
-  animRadius.setKeys(makeKeys(camera.radius, angle.radius));
-  animTargetX.setKeys(makeKeys(camera.target.x, angle.target.x));
-  animTargetY.setKeys(makeKeys(camera.target.y, angle.target.y));
-  animTargetZ.setKeys(makeKeys(camera.target.z, angle.target.z));
-
-  camera.animations = [
-    animAlpha,
-    animBeta,
-    animRadius,
-    animTargetX,
-    animTargetY,
-    animTargetZ,
-  ];
-  camera.getScene().beginAnimation(camera, 0, totalFrames, false, 1, () => {
-    camera.animations = [];
-  });
-}
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(function BuildingView({ className }, ref) {
@@ -164,43 +88,19 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
   const engineRef = useRef<Nullable<Engine>>(null);
   const sceneRef = useRef<Nullable<Scene>>(null);
   const cameraRef = useRef<Nullable<ArcRotateCamera>>(null);
-  const [activeView, setActiveView] = useState("overview");
+  const rootMeshRef = useRef<Nullable<TransformNode>>(null);
+  const labelAnchorsRef = useRef<{ key: string; worldPos: Vector3 }[]>([]);
+  const labelElsRef = useRef<Record<string, HTMLDivElement | null>>({});
+  const isDraggingRef = useRef(false);
   const [loaded, setLoaded] = useState(false);
 
-  const viewAnglesRef = useRef<ViewAngle[]>([
-    {
-      key: "overview",
-      label: t.building.viewOverview,
-      alpha: Math.PI / 4,
-      beta: Math.PI / 2.8,
-      radius: 25,
-      target: new Vector3(0, 2, 0),
-    },
-    {
-      key: "top",
-      label: t.building.viewTop,
-      alpha: Math.PI / 4,
-      beta: 0.15,
-      radius: 28,
-      target: new Vector3(0, 2, 0),
-    },
-    {
-      key: "front",
-      label: t.building.viewFront,
-      alpha: Math.PI / 2,
-      beta: Math.PI / 2.2,
-      radius: 22,
-      target: new Vector3(0, 2, 0),
-    },
-    {
-      key: "side",
-      label: t.building.viewSide,
-      alpha: 0,
-      beta: Math.PI / 2.2,
-      radius: 22,
-      target: new Vector3(0, 2, 0),
-    },
-  ]);
+  const AUTO_ROTATE_SPEED = 0.002;
+
+  // Hard-coded initial camera values
+  const initialAlpha = Math.PI / 4;
+  const initialBeta = Math.PI / 2.8;
+  const initialRadius = 25;
+  const initialTarget = new Vector3(0, 2, 0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -218,16 +118,21 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
 
     const camera = new ArcRotateCamera(
       "camera",
-      viewAnglesRef.current[0].alpha,
-      viewAnglesRef.current[0].beta,
-      viewAnglesRef.current[0].radius,
-      viewAnglesRef.current[0].target.clone(),
+      initialAlpha,
+      initialBeta,
+      initialRadius,
+      initialTarget.clone(),
       scene,
     );
     camera.attachControl(canvas, true);
     camera.wheelPrecision = 50;
     camera.lowerRadiusLimit = 8;
     camera.upperRadiusLimit = 60;
+    // Disable default left-button rotation on camera; we will rotate the mesh instead.
+    const pointersInput = camera.inputs.attached.pointers as ArcRotateCameraPointersInput | undefined;
+    if (pointersInput) {
+      pointersInput.buttons = [1, 2]; // middle (pan) and right (pan) only; exclude left (0)
+    }
     cameraRef.current = camera;
 
     const hemi = new HemisphericLight("hemi", new Vector3(0, 1, 0), scene);
@@ -236,6 +141,10 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
     // Glow layer for cyber aesthetic
     const glow = new GlowLayer("glow", scene);
     glow.intensity = 0.4;
+
+    // Create a pivot node that we explicitly rotate so we don't depend on GLB root naming.
+    const pivot = new TransformNode("rotationPivot", scene);
+    rootMeshRef.current = pivot;
 
     SceneLoader.ImportMeshAsync(
       "",
@@ -251,26 +160,49 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
       },
     )
       .then((result) => {
-        // Center and scale imported mesh if needed
-        const root = result.meshes[0];
-        if (root) {
-          const { min, max } = root.getHierarchyBoundingVectors(true);
+        const firstMesh = result.meshes[0];
+        if (firstMesh) {
+          const glbRoot = scene.getTransformNodeByName("__root__") ?? firstMesh;
+          // Parent the GLB root to our pivot so rotating the pivot rotates the whole building.
+          glbRoot.parent = pivot;
+
+          const { min, max } = firstMesh.getHierarchyBoundingVectors(true);
           const size = max.subtract(min);
           const center = min.add(size.scale(0.5));
           const maxSize = Math.max(size.x, size.y, size.z);
           const scale = maxSize > 0 ? 10 / maxSize : 1;
 
-          root.position.x = -center.x * scale;
-          root.position.y = -min.y * scale; // sit on ground
-          root.position.z = -center.z * scale;
-          root.scaling.scaleInPlace(scale);
+          glbRoot.position.x = -center.x * scale;
+          glbRoot.position.y = -min.y * scale; // sit on ground
+          glbRoot.position.z = -center.z * scale;
+          glbRoot.scaling.scaleInPlace(scale);
 
           // Adjust camera target to model center after scaling
           const target = new Vector3(0, (size.y * scale) / 2, 0);
           camera.setTarget(target);
-          viewAnglesRef.current.forEach((v) => {
-            v.target = target.clone();
+
+          // Build label anchors by matching mesh names or falling back to preset positions
+          const allNodes = [...scene.meshes, ...scene.transformNodes];
+          const findNode = (keywords: string[]) =>
+            allNodes.find((n) => keywords.some((kw) => n.name.toLowerCase().includes(kw.toLowerCase())));
+
+          labelAnchorsRef.current = LABELS.map((cfg) => {
+            const node = findNode(cfg.meshKeywords);
+            let worldPos: Vector3;
+            if (node && (node as any).getBoundingInfo) {
+              worldPos = (node as any).getBoundingInfo().boundingBox.centerWorld.clone();
+            } else if (node) {
+              worldPos = node.getAbsolutePosition().clone();
+            } else {
+              worldPos = cfg.fallbackPosition.clone();
+            }
+            // eslint-disable-next-line no-console
+            console.log(`[ecoctrl] label "${cfg.key}" anchored to`, node ? node.name : "fallback", worldPos);
+            return { key: cfg.key, worldPos };
           });
+
+          // eslint-disable-next-line no-console
+          console.log("[ecoctrl] GLB loaded, pivot created, root parented:", glbRoot.name);
         }
         setLoaded(true);
       })
@@ -280,7 +212,91 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
       });
 
     engine.runRenderLoop(() => {
+      // Auto-rotate the building around Y when user is not dragging
+      const root = rootMeshRef.current;
+      if (root && !isDraggingRef.current) {
+        root.rotation.y += AUTO_ROTATE_SPEED;
+      }
+
       scene.render();
+
+      // Project 3D label anchors to 2D screen positions every frame
+      if (camera && labelAnchorsRef.current.length) {
+        const renderWidth = engine.getRenderWidth();
+        const renderHeight = engine.getRenderHeight();
+        const transformMatrix = scene.getTransformMatrix();
+        const globalViewport = camera.viewport.toGlobal(renderWidth, renderHeight);
+
+        labelAnchorsRef.current.forEach(({ key, worldPos }) => {
+          const el = labelElsRef.current[key];
+          if (!el) return;
+          const p = Vector3.Project(
+            worldPos,
+            Matrix.Identity(),
+            transformMatrix,
+            globalViewport,
+          );
+          const visible = p.z > 0 && p.z < 1 && p.x >= 0 && p.x <= renderWidth && p.y >= 0 && p.y <= renderHeight;
+          el.style.display = visible ? "flex" : "none";
+          el.style.transform = `translate(${p.x}px, ${p.y}px)`;
+        });
+      }
+    });
+
+    // ─── Long-press drag to rotate mesh around Y axis ───────────────────────────
+    let isPointerDown = false;
+    let isDragging = false;
+    let lastClientX = 0;
+    let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+    const DRAG_SENSITIVITY = 0.008;
+    const LONG_PRESS_DELAY = 150;
+
+    const pointerObserver = scene.onPointerObservable.add((pointerInfo) => {
+      const evt = pointerInfo.event as PointerEvent;
+      switch (pointerInfo.type) {
+        case PointerEventTypes.POINTERDOWN: {
+          if (evt.button !== 0) return;
+          isPointerDown = true;
+          lastClientX = evt.clientX;
+          longPressTimer = window.setTimeout(() => {
+            isDragging = true;
+            isDraggingRef.current = true;
+            canvas.style.cursor = "grabbing";
+          }, LONG_PRESS_DELAY);
+          break;
+        }
+        case PointerEventTypes.POINTERMOVE: {
+          if (!isPointerDown) return;
+          if (!isDragging) {
+            if (Math.abs(evt.clientX - lastClientX) > 20 && longPressTimer) {
+              clearTimeout(longPressTimer);
+              longPressTimer = null;
+              isPointerDown = false;
+              isDraggingRef.current = false;
+            }
+            return;
+          }
+          const deltaX = evt.clientX - lastClientX;
+          lastClientX = evt.clientX;
+          const root = rootMeshRef.current;
+          if (root) {
+            root.rotation.y += deltaX * DRAG_SENSITIVITY;
+          }
+          break;
+        }
+        case PointerEventTypes.POINTERUP:
+        case PointerEventTypes.POINTERCANCEL: {
+          if (longPressTimer) {
+            clearTimeout(longPressTimer);
+            longPressTimer = null;
+          }
+          isPointerDown = false;
+          isDragging = false;
+          isDraggingRef.current = false;
+          canvas.style.cursor = "";
+          break;
+        }
+      }
     });
 
     const handleResize = () => {
@@ -290,10 +306,13 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
 
     return () => {
       window.removeEventListener("resize", handleResize);
+      if (longPressTimer) clearTimeout(longPressTimer);
+      scene.onPointerObservable.remove(pointerObserver);
       engine.dispose();
       engineRef.current = null;
       sceneRef.current = null;
       cameraRef.current = null;
+      rootMeshRef.current = null;
     };
   }, []);
 
@@ -313,18 +332,20 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
     resetCamera: () => {
       const camera = cameraRef.current;
       if (!camera) return;
-      const angle = viewAnglesRef.current.find((v) => v.key === activeView);
-      if (angle) animateCameraTo(camera, angle);
+      const scene = camera.getScene();
+      scene.stopAnimation(camera);
+      camera.animations = [];
+      camera.alpha = initialAlpha;
+      camera.beta = initialBeta;
+      camera.radius = initialRadius;
+      camera.target = initialTarget.clone();
+      const root = rootMeshRef.current;
+      if (root) {
+        root.rotation.setAll(0);
+        root.rotationQuaternion = null;
+      }
     },
-  }), [activeView]);
-
-  const handleViewChange = (angle: ViewAngle) => {
-    setActiveView(angle.key);
-    const camera = cameraRef.current;
-    if (camera) {
-      animateCameraTo(camera, angle);
-    }
-  };
+  }), []);
 
   return (
     <div
@@ -347,19 +368,14 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
         </div>
       )}
 
-      <ViewTabs
-        angles={viewAnglesRef.current}
-        activeKey={activeView}
-        onChange={handleViewChange}
-      />
-
       {/* ── Floating area labels (positioned absolutely over canvas) ── */}
-      <AreaLabel label={t.building.officeArea}     x="4%"  y="11%" />
-      <AreaLabel label={t.building.meetingArea}    x="36%" y="7%"  />
-      <AreaLabel label={t.building.dataCenter}     x="33%" y="38%" />
-      <AreaLabel label={t.building.exhibitionHall} x="62%" y="20%" />
-      <AreaLabel label={t.building.officeArea}     x="79%" y="11%" />
-      <AreaLabel label={t.building.lobby}          x="79%" y="45%" />
+      {LABELS.map((cfg) => (
+        <AreaLabel
+          key={cfg.key}
+          label={cfg.label}
+          ref={(el) => { labelElsRef.current[cfg.key] = el; }}
+        />
+      ))}
     </div>
   );
 });

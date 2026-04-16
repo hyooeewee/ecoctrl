@@ -19,6 +19,16 @@ import { DashboardNav } from "~/components/dashboard/dashboard-nav";
 import { EnergyBreakdownChart, EnergyTrendChart } from "~/components/dashboard/energy-charts";
 import { GraphButtonBlock } from "~/components/dashboard/graph-button-block";
 import { AISuggestions, AlertsPanel, DeviceStatus } from "~/components/dashboard/right-panels";
+import { NAV_HIDE_DELAY } from "~/config/dashboard";
+import {
+  CARD_VALUES,
+  CARBON_DATA,
+  COST_DATA,
+  ENERGY_DATA,
+  INTENSITY_DATA,
+  LOAD_DATA,
+  RENEWABLE_DATA,
+} from "~/data/dashboard";
 import { cn } from "~/lib/utils";
 import { locale as t } from "~/locales";
 
@@ -30,98 +40,14 @@ export function meta(_args: Route.MetaArgs) {
   return [{ title: t.meta.title }, { name: "description", content: t.meta.description }];
 }
 
-// ─── Sparkline data ────────────────────────────────────────────────────────────
-
-const ENERGY_DATA = [
-  { v: 280 },
-  { v: 310 },
-  { v: 295 },
-  { v: 340 },
-  { v: 380 },
-  { v: 420 },
-  { v: 395 },
-  { v: 440 },
-  { v: 410 },
-  { v: 460 },
-  { v: 480 },
-  { v: 500 },
-];
-const CARBON_DATA = [
-  { v: 280 },
-  { v: 320 },
-  { v: 290 },
-  { v: 350 },
-  { v: 310 },
-  { v: 270 },
-  { v: 340 },
-];
-const INTENSITY_DATA = [
-  { v: 120 },
-  { v: 115 },
-  { v: 112 },
-  { v: 108 },
-  { v: 105 },
-  { v: 103 },
-  { v: 100 },
-  { v: 99 },
-  { v: 97 },
-  { v: 96 },
-  { v: 97 },
-  { v: 98 },
-];
-const COST_DATA = [
-  { v: 180 },
-  { v: 210 },
-  { v: 195 },
-  { v: 240 },
-  { v: 280 },
-  { v: 310 },
-  { v: 290 },
-  { v: 330 },
-  { v: 350 },
-  { v: 370 },
-  { v: 385 },
-  { v: 400 },
-];
-const RENEWABLE_DATA = [
-  { v: 78 },
-  { v: 80 },
-  { v: 81 },
-  { v: 80 },
-  { v: 82 },
-  { v: 84 },
-  { v: 83 },
-  { v: 85 },
-  { v: 84 },
-  { v: 86 },
-  { v: 85 },
-  { v: 85 },
-];
-const LOAD_DATA = [
-  { v: 55 },
-  { v: 58 },
-  { v: 60 },
-  { v: 63 },
-  { v: 61 },
-  { v: 60 },
-  { v: 58 },
-  { v: 59 },
-  { v: 60 },
-  { v: 62 },
-  { v: 61 },
-  { v: 60 },
-];
-
 // ─── Left panel card definitions ──────────────────────────────────────────────
 
 const CARDS = [
   {
     title: t.cards.totalEnergy,
     icon: <IconBolt size={12} />,
-    value: "8,456",
+    ...CARD_VALUES.totalEnergy,
     unit: "kWh",
-    delta: "+12%",
-    deltaVariant: "up-bad" as const,
     chartType: "area" as const,
     chartData: ENERGY_DATA,
     chartColor: "var(--color-chart-1)",
@@ -130,10 +56,8 @@ const CARDS = [
   {
     title: t.cards.carbonEmission,
     icon: <IconLeaf size={12} />,
-    value: "2,340",
+    ...CARD_VALUES.carbonEmission,
     unit: "kg CO₂",
-    delta: "+2%",
-    deltaVariant: "up-bad" as const,
     chartType: "bar" as const,
     chartData: CARBON_DATA,
     chartColor: "var(--color-chart-2)",
@@ -142,10 +66,8 @@ const CARDS = [
   {
     title: t.cards.energyIntensity,
     icon: <IconActivity size={12} />,
-    value: "98",
+    ...CARD_VALUES.energyIntensity,
     unit: "kWh/m²",
-    delta: "−7%",
-    deltaVariant: "down-good" as const,
     chartType: "line" as const,
     chartData: INTENSITY_DATA,
     chartColor: "var(--color-chart-1)",
@@ -154,10 +76,8 @@ const CARDS = [
   {
     title: t.cards.todayCost,
     icon: <IconCoin size={12} />,
-    value: "5,240",
+    ...CARD_VALUES.todayCost,
     unit: t.cards.costUnit,
-    delta: "+8%",
-    deltaVariant: "up-bad" as const,
     chartType: "area" as const,
     chartData: COST_DATA,
     chartColor: "var(--color-chart-4)",
@@ -166,32 +86,26 @@ const CARDS = [
   {
     title: t.cards.renewableRate,
     icon: <IconSun size={12} />,
-    value: "85",
+    ...CARD_VALUES.renewableRate,
     unit: "%",
     delta: t.cards.renewableTarget,
-    deltaVariant: "neutral" as const,
     chartType: "progress" as const,
     chartData: RENEWABLE_DATA,
-    progressValue: 85,
     chartColor: "var(--color-cyber-green)",
   },
   {
     title: t.cards.loadStatus,
     icon: <IconWind size={12} />,
-    value: "60",
+    ...CARD_VALUES.loadStatus,
     unit: "%",
     delta: t.cards.loadNormal,
-    deltaVariant: "up-good" as const,
     chartType: "progress" as const,
     chartData: LOAD_DATA,
-    progressValue: 60,
     chartColor: "var(--color-chart-2)",
   },
 ];
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
-
-const NAV_HIDE_DELAY = 30_000;
 
 export default function Home() {
   const [navVisible, setNavVisible] = useState(false);
