@@ -12,6 +12,7 @@ import {
   IconWind,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useLoaderData } from "react-router";
 
 import { BuildingView, type BuildingViewRef } from "~/components/dashboard/building-view";
 import { DashboardHeader } from "~/components/dashboard/dashboard-header";
@@ -23,15 +24,7 @@ import {
 } from "~/components/dashboard/graph-button-block";
 import { AISuggestions, AlertsPanel, DeviceStatus } from "~/components/dashboard/right-panels";
 import { ExpandableModal } from "~/components/expandable-modal";
-import {
-  CARD_VALUES,
-  CARBON_DATA,
-  COST_DATA,
-  ENERGY_DATA,
-  INTENSITY_DATA,
-  LOAD_DATA,
-  RENEWABLE_DATA,
-} from "~/data/dashboard";
+import { fetchDashboardData, type DashboardData } from "~/lib/dashboard-api";
 import { cn } from "~/lib/utils";
 import { locale, useLocale } from "~/locales";
 import { useSettingsStore } from "~/store/settings";
@@ -44,74 +37,52 @@ export function meta(_args: Route.MetaArgs) {
   return [{ title: locale.meta.title }, { name: "description", content: locale.meta.description }];
 }
 
+// ─── Loader ─────────────────────────────────────────────────────────────────────
+
+export async function clientLoader() {
+  const data = await fetchDashboardData();
+  return data;
+}
+
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function Home() {
   const t = useLocale();
+  const loaderData = useLoaderData() as DashboardData;
   const navHideDelay = useSettingsStore((state) => state.navHideDelay);
 
-  const CARDS = [
-    {
-      title: t.cards.totalEnergy,
-      icon: <IconBolt size={12} />,
-      ...CARD_VALUES.totalEnergy,
-      unit: "kWh",
-      chartType: "area" as const,
-      chartData: ENERGY_DATA,
-      chartColor: "var(--color-chart-1)",
-      footer: t.cards.totalEnergyFooter,
-    },
-    {
-      title: t.cards.carbonEmission,
-      icon: <IconLeaf size={12} />,
-      ...CARD_VALUES.carbonEmission,
-      unit: "kg CO₂",
-      chartType: "bar" as const,
-      chartData: CARBON_DATA,
-      chartColor: "var(--color-chart-2)",
-      footer: t.cards.carbonFooter,
-    },
-    {
-      title: t.cards.energyIntensity,
-      icon: <IconActivity size={12} />,
-      ...CARD_VALUES.energyIntensity,
-      unit: "kWh/m²",
-      chartType: "line" as const,
-      chartData: INTENSITY_DATA,
-      chartColor: "var(--color-chart-1)",
-      footer: t.cards.intensityFooter,
-    },
-    {
-      title: t.cards.todayCost,
-      icon: <IconCoin size={12} />,
-      ...CARD_VALUES.todayCost,
-      unit: t.cards.costUnit,
-      chartType: "area" as const,
-      chartData: COST_DATA,
-      chartColor: "var(--color-chart-4)",
-      footer: t.cards.costFooter,
-    },
-    {
-      title: t.cards.renewableRate,
-      icon: <IconSun size={12} />,
-      ...CARD_VALUES.renewableRate,
-      unit: "%",
-      delta: t.cards.renewableTarget,
-      chartType: "progress" as const,
-      chartData: RENEWABLE_DATA,
-      chartColor: "var(--color-cyber-green)",
-    },
-    {
-      title: t.cards.loadStatus,
-      icon: <IconWind size={12} />,
-      ...CARD_VALUES.loadStatus,
-      unit: "%",
-      delta: t.cards.loadNormal,
-      chartType: "progress" as const,
-      chartData: LOAD_DATA,
-      chartColor: "var(--color-chart-2)",
-    },
-  ];
+  const CARDS = loaderData.cards.map((card) => ({
+    title: t.cards[card.titleKey as keyof typeof t.cards] ?? card.titleKey,
+    icon:
+      card.titleKey === "totalEnergy" ? (
+        <IconBolt size={12} />
+      ) : card.titleKey === "carbonEmission" ? (
+        <IconLeaf size={12} />
+      ) : card.titleKey === "energyIntensity" ? (
+        <IconActivity size={12} />
+      ) : card.titleKey === "todayCost" ? (
+        <IconCoin size={12} />
+      ) : card.titleKey === "renewableRate" ? (
+        <IconSun size={12} />
+      ) : (
+        <IconWind size={12} />
+      ),
+    value: card.value,
+    unit: card.unit.startsWith("cost")
+      ? (t.cards[card.unit as keyof typeof t.cards] ?? card.unit)
+      : card.unit,
+    delta: card.delta
+      ? card.delta.startsWith("renewable") || card.delta.startsWith("load")
+        ? (t.cards[card.delta as keyof typeof t.cards] ?? card.delta)
+        : card.delta
+      : undefined,
+    deltaVariant: card.deltaVariant,
+    chartType: card.chartType,
+    chartData: card.chartData,
+    chartColor: card.chartColor,
+    footer: card.footerKey ? t.cards[card.footerKey as keyof typeof t.cards] : undefined,
+    progressValue: card.progressValue,
+  }));
   const [navVisible, setNavVisible] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -216,8 +187,8 @@ export default function Home() {
                   fullscreen && "translate-y-full opacity-0",
                 )}
               >
-                <EnergyTrendChart className="min-w-0 flex-[3]" />
-                <EnergyBreakdownChart className="min-w-0 flex-[2]" />
+                <EnergyTrendChart className="min-w-0 flex-[3]" data={loaderData.trend} />
+                <EnergyBreakdownChart className="min-w-0 flex-[2]" data={loaderData.breakdown} />
               </div>
             </main>
 

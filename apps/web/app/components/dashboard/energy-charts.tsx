@@ -11,6 +11,7 @@ import {
   YAxis,
 } from "recharts"
 
+import type { BreakdownItem, TrendPoint } from "~/lib/dashboard-api"
 import { useLocale } from "~/locales"
 import { cn } from "~/lib/utils"
 
@@ -62,22 +63,7 @@ function PieCustomTooltip({ active, payload }: { active?: boolean; payload?: { n
 
 // ─── 24-Hour Energy Trend ─────────────────────────────────────────────────────
 
-const trendData = [
-  { h: "00", kWh: 180 },
-  { h: "02", kWh: 145 },
-  { h: "04", kWh: 120 },
-  { h: "06", kWh: 160 },
-  { h: "08", kWh: 310 },
-  { h: "10", kWh: 420 },
-  { h: "12", kWh: 480 },
-  { h: "14", kWh: 460 },
-  { h: "16", kWh: 440 },
-  { h: "18", kWh: 410 },
-  { h: "20", kWh: 360 },
-  { h: "24", kWh: 280 },
-]
-
-export function EnergyTrendChart({ className }: { className?: string }) {
+export function EnergyTrendChart({ className, data }: { className?: string; data: TrendPoint[] }) {
   const t = useLocale()
   const [ref, width] = useMeasureWidth(700)
   const CHART_H = 148
@@ -97,7 +83,7 @@ export function EnergyTrendChart({ className }: { className?: string }) {
         <AreaChart
           width={width}
           height={CHART_H}
-          data={trendData}
+          data={data}
           margin={{ top: 4, right: 4, bottom: 0, left: -20 }}
           style={{ outline: "none" }}
         >
@@ -144,17 +130,15 @@ export function EnergyTrendChart({ className }: { className?: string }) {
 
 // ─── Energy Breakdown Pie ─────────────────────────────────────────────────────
 
-export function EnergyBreakdownChart({ className }: { className?: string }) {
+export function EnergyBreakdownChart({ className, data }: { className?: string; data: BreakdownItem[] }) {
   const t = useLocale()
   const [ref, width] = useMeasureWidth(200)
   const PIE_H = 148
 
-  const breakdownData = [
-    { name: t.charts.hvac,      value: 45, color: "var(--color-chart-1)" },
-    { name: t.charts.lighting,  value: 30, color: "var(--color-chart-3)" },
-    { name: t.charts.equipment, value: 15, color: "var(--color-chart-4)" },
-    { name: t.charts.other,     value: 10, color: "oklch(0.35 0.02 265)"  },
-  ]
+  const breakdownData = data.map((item) => ({
+    ...item,
+    name: t.charts[item.name as keyof typeof t.charts] ?? item.name,
+  }))
 
   return (
     <div

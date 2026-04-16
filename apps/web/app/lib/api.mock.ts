@@ -1,4 +1,4 @@
-// Mock dashboard data — will be replaced by API calls in production.
+// Mock data fallback when API is unavailable
 
 export const ENERGY_DATA = [
   { v: 280 },
@@ -85,7 +85,6 @@ export const LOAD_DATA = [
   { v: 60 },
 ];
 
-// Dynamic card values (candidates for API replacement)
 export const CARD_VALUES = {
   totalEnergy: { value: "8,456", delta: "+12%", deltaVariant: "up-bad" as const },
   carbonEmission: { value: "2,340", delta: "+2%", deltaVariant: "up-bad" as const },
