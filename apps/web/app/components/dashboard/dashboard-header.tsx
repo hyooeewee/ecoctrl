@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 import { IconLayoutNavbar, IconLayoutNavbarCollapse } from "@tabler/icons-react";
 
 import { cn } from "~/lib/utils";
@@ -9,7 +11,26 @@ export interface DashboardHeaderProps {
   navVisible?: boolean;
 }
 
+function formatTime(d: Date) {
+  return d.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
+function formatDate(d: Date) {
+  const dateStr = d
+    .toLocaleDateString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" })
+    .replace(/\//g, ".");
+  const weekStr = d.toLocaleDateString("zh-CN", { weekday: "long" });
+  return `${dateStr} ${weekStr}`;
+}
+
 export function DashboardHeader({ className, onLogoClick, navVisible }: DashboardHeaderProps) {
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <header className={cn("relative z-20 h-14 overflow-hidden", className)}>
       {/* Background base */}
@@ -89,9 +110,9 @@ export function DashboardHeader({ className, onLogoClick, navVisible }: Dashboar
         {/* Right time */}
         <div className="z-10 flex flex-col items-end gap-0 text-right">
           <span className="font-heading text-xl font-semibold tabular-nums tracking-wide text-foreground/95">
-            18:07
+            {formatTime(now)}
           </span>
-          <span className="text-[9px] tracking-wider text-muted-foreground/70">{t.header.date}</span>
+          <span className="text-[9px] tracking-wider text-muted-foreground/70">{formatDate(now)}</span>
         </div>
       </div>
     </header>
