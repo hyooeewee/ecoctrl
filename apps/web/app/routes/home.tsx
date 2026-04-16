@@ -17,8 +17,12 @@ import { BuildingView, type BuildingViewRef } from "~/components/dashboard/build
 import { DashboardHeader } from "~/components/dashboard/dashboard-header";
 import { DashboardNav } from "~/components/dashboard/dashboard-nav";
 import { EnergyBreakdownChart, EnergyTrendChart } from "~/components/dashboard/energy-charts";
-import { GraphButtonBlock } from "~/components/dashboard/graph-button-block";
+import {
+  GraphButtonBlock,
+  GraphButtonBlockDetail,
+} from "~/components/dashboard/graph-button-block";
 import { AISuggestions, AlertsPanel, DeviceStatus } from "~/components/dashboard/right-panels";
+import { ExpandableModal } from "~/components/expandable-modal";
 import { NAV_HIDE_DELAY } from "~/config/dashboard";
 import {
   CARD_VALUES,
@@ -186,7 +190,12 @@ export default function Home() {
                 }}
               />
               {CARDS.map((card) => (
-                <GraphButtonBlock key={card.title} {...card} className="min-h-0 flex-1" />
+                <ExpandableModal
+                  key={card.title}
+                  trigger={<GraphButtonBlock {...card} className="min-h-0 flex-1" />}
+                >
+                  <GraphButtonBlockDetail {...card} />
+                </ExpandableModal>
               ))}
             </aside>
 
