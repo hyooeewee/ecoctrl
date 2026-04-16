@@ -87,7 +87,7 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
   const glowRef = useRef<Nullable<GlowLayer>>(null);
   const [loaded, setLoaded] = useState(false);
 
-  const { autoRotate, rotateSpeed, showLabels, glowIntensity } = useSettingsStore();
+  const { autoRotate, rotateSpeed, showLabels, glowIntensity, defaultCameraRadius, defaultRotationY } = useSettingsStore();
   const t = useLocale();
 
   const LABELS: LabelDef[] = [
@@ -107,10 +107,25 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
     }
   }, [glowIntensity]);
 
+  // Sync default camera radius in real time
+  useEffect(() => {
+    const camera = cameraRef.current;
+    if (camera) {
+      animateCameraRadius(camera, defaultCameraRadius);
+    }
+  }, [defaultCameraRadius]);
+
+  // Sync default rotation Y in real time
+  useEffect(() => {
+    const root = rootMeshRef.current;
+    if (root) {
+      root.rotation.y = (defaultRotationY * Math.PI) / 180;
+    }
+  }, [defaultRotationY]);
+
   // Hard-coded initial camera values
   const initialAlpha = Math.PI / 4;
   const initialBeta = Math.PI / 2.8;
-  const initialRadius = 25;
   const initialTarget = new Vector3(0, 2, 0);
 
   useEffect(() => {
@@ -131,7 +146,7 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
       "camera",
       initialAlpha,
       initialBeta,
-      initialRadius,
+      defaultCameraRadius,
       initialTarget.clone(),
       scene,
     );
@@ -156,6 +171,7 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
 
     // Create a pivot node that we explicitly rotate so we don't depend on GLB root naming.
     const pivot = new TransformNode("rotationPivot", scene);
+    pivot.rotation.y = (defaultRotationY * Math.PI) / 180;
     rootMeshRef.current = pivot;
 
     SceneLoader.ImportMeshAsync(
@@ -350,12 +366,13 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
       camera.animations = [];
       camera.alpha = initialAlpha;
       camera.beta = initialBeta;
-      camera.radius = initialRadius;
+      camera.radius = defaultCameraRadius;
       camera.target = initialTarget.clone();
       const root = rootMeshRef.current;
       if (root) {
         root.rotation.setAll(0);
         root.rotationQuaternion = null;
+        root.rotation.y = (defaultRotationY * Math.PI) / 180;
       }
     },
   }), []);

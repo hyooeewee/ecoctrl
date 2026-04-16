@@ -8,6 +8,8 @@ export interface SettingsState {
   glowIntensity: number;
   dataRefreshInterval: number;
   navHideDelay: number;
+  defaultCameraRadius: number;
+  defaultRotationY: number;
   language: "zh-CN" | "en-US";
   reducedMotion: boolean;
 }
@@ -19,6 +21,8 @@ interface SettingsStore extends SettingsState {
   setGlowIntensity: (value: number) => void;
   setDataRefreshInterval: (value: number) => void;
   setNavHideDelay: (value: number) => void;
+  setDefaultCameraRadius: (value: number) => void;
+  setDefaultRotationY: (value: number) => void;
   setLanguage: (value: SettingsState["language"]) => void;
   setReducedMotion: (value: boolean) => void;
   reset: () => void;
@@ -31,6 +35,8 @@ const defaults: SettingsState = {
   glowIntensity: 0.4,
   dataRefreshInterval: 30,
   navHideDelay: 1500,
+  defaultCameraRadius: 25,
+  defaultRotationY: 0,
   language: "zh-CN",
   reducedMotion: false,
 };
@@ -45,6 +51,8 @@ export const useSettingsStore = create<SettingsStore>()(
       setGlowIntensity: (value) => set({ glowIntensity: value }),
       setDataRefreshInterval: (value) => set({ dataRefreshInterval: value }),
       setNavHideDelay: (value) => set({ navHideDelay: value }),
+      setDefaultCameraRadius: (value) => set({ defaultCameraRadius: value }),
+      setDefaultRotationY: (value) => set({ defaultRotationY: value }),
       setLanguage: (value) => set({ language: value }),
       setReducedMotion: (value) => set({ reducedMotion: value }),
       reset: () => set(defaults),
