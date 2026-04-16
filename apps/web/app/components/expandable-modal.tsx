@@ -7,12 +7,14 @@ interface ExpandableModalProps {
   trigger: React.ReactNode;
   children: React.ReactNode;
   contentClassName?: string;
+  className?: string;
 }
 
 export function ExpandableModal({
   trigger,
   children,
   contentClassName,
+  className,
 }: ExpandableModalProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -20,7 +22,10 @@ export function ExpandableModal({
     <>
       <div
         onClick={() => setOpen(true)}
-        className="cursor-pointer transition-transform duration-150 ease-out active:scale-[0.98]"
+        className={cn(
+          "cursor-pointer transition-transform duration-150 ease-out active:scale-[0.98]",
+          className,
+        )}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => {

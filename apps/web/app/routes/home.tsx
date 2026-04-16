@@ -192,7 +192,8 @@ export default function Home() {
               {CARDS.map((card) => (
                 <ExpandableModal
                   key={card.title}
-                  trigger={<GraphButtonBlock {...card} className="min-h-0 flex-1" />}
+                  className="flex min-h-0 flex-1 flex-col"
+                  trigger={<GraphButtonBlock {...card} className="flex-1" />}
                 >
                   <GraphButtonBlockDetail {...card} />
                 </ExpandableModal>
