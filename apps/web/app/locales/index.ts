@@ -1,12 +1,20 @@
 // index.ts — active locale entry point
-// To switch locale: change the import below to a different locale file.
-// To add a locale: create app/locales/en-US.ts matching the Locale type,
-// then re-export it here.
+// To add a locale: create a new file matching the Locale type,
+// then export it here and add it to useLocale().
 
+import { useSettingsStore } from "~/store/settings";
+
+import { enUS } from "./en-US";
 import { zhCN } from "./zh-CN";
 
 export type { Locale } from "./zh-CN";
-export { zhCN };
+export { enUS, zhCN };
 
-// Default locale used throughout the app
+// Default locale used for static contexts (meta tags, server-side)
 export const locale = zhCN;
+
+// Dynamic locale hook for components — reacts to language setting changes
+export function useLocale() {
+  const language = useSettingsStore((state) => state.language);
+  return language === "en-US" ? enUS : zhCN;
+}

@@ -9,8 +9,9 @@ import {
   useNavigate,
 } from "react-router";
 
+import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
-import { locale as t } from "~/locales";
+import { useLocale } from "~/locales";
 
 import "./app.css";
 import type { Route } from "./+types/root";
@@ -39,7 +40,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        <TooltipProvider>{children}</TooltipProvider>
+        <TooltipProvider>
+          {children}
+          <Toaster position="top-center" richColors />
+        </TooltipProvider>
         <ScrollRestoration />
         <Scripts />
       </body>
@@ -52,6 +56,7 @@ export default function App() {
 }
 
 function NotFound404() {
+  const t = useLocale();
   const navigate = useNavigate();
   const [count, setCount] = useState(15);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -141,6 +146,7 @@ function NotFound404() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  const t = useLocale();
   const is404 = isRouteErrorResponse(error) && error.status === 404;
 
   if (is404) {

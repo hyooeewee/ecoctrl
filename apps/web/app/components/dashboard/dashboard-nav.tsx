@@ -7,44 +7,46 @@ import {
 } from "@tabler/icons-react"
 import { NavLink, useLocation } from "react-router"
 
-import { locale as t } from "~/locales"
+import { useLocale } from "~/locales"
 import { cn } from "~/lib/utils"
 
-const navItems = [
-  {
-    id: "overview",
-    to: "/",
-    label: t.nav.overview,
-    Icon: IconLayoutDashboard,
-  },
-  {
-    id: "floors",
-    to: "/floors",
-    label: t.nav.floors,
-    Icon: IconBuildingSkyscraper,
-  },
-  {
-    id: "systems",
-    to: "/systems",
-    label: t.nav.systems,
-    Icon: IconTopologyFull,
-  },
-  {
-    id: "analysis",
-    to: "/analysis",
-    label: t.nav.analysis,
-    Icon: IconChartBar,
-  },
-  {
-    id: "settings",
-    to: "/settings",
-    label: t.nav.settings,
-    Icon: IconSettings,
-  },
-]
-
 export function DashboardNav({ className }: { className?: string }) {
+  const t = useLocale()
   const location = useLocation()
+
+  const navItems = [
+    {
+      id: "overview",
+      to: "/",
+      label: t.nav.overview,
+      Icon: IconLayoutDashboard,
+    },
+    {
+      id: "floors",
+      to: "/floors",
+      label: t.nav.floors,
+      Icon: IconBuildingSkyscraper,
+    },
+    {
+      id: "systems",
+      to: "/systems",
+      label: t.nav.systems,
+      Icon: IconTopologyFull,
+    },
+    {
+      id: "analysis",
+      to: "/analysis",
+      label: t.nav.analysis,
+      Icon: IconChartBar,
+    },
+    {
+      id: "settings",
+      to: "/settings",
+      label: t.nav.settings,
+      Icon: IconSettings,
+    },
+  ]
+
   const activeIndex = Math.max(
     0,
     navItems.findIndex((item) => {

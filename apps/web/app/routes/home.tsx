@@ -23,7 +23,6 @@ import {
 } from "~/components/dashboard/graph-button-block";
 import { AISuggestions, AlertsPanel, DeviceStatus } from "~/components/dashboard/right-panels";
 import { ExpandableModal } from "~/components/expandable-modal";
-import { NAV_HIDE_DELAY } from "~/config/dashboard";
 import {
   CARD_VALUES,
   CARBON_DATA,
@@ -34,84 +33,85 @@ import {
   RENEWABLE_DATA,
 } from "~/data/dashboard";
 import { cn } from "~/lib/utils";
-import { locale as t } from "~/locales";
+import { locale, useLocale } from "~/locales";
+import { useSettingsStore } from "~/store/settings";
 
 import type { Route } from "./+types/home";
 
 // ─── Meta ──────────────────────────────────────────────────────────────────────
 
 export function meta(_args: Route.MetaArgs) {
-  return [{ title: t.meta.title }, { name: "description", content: t.meta.description }];
+  return [{ title: locale.meta.title }, { name: "description", content: locale.meta.description }];
 }
-
-// ─── Left panel card definitions ──────────────────────────────────────────────
-
-const CARDS = [
-  {
-    title: t.cards.totalEnergy,
-    icon: <IconBolt size={12} />,
-    ...CARD_VALUES.totalEnergy,
-    unit: "kWh",
-    chartType: "area" as const,
-    chartData: ENERGY_DATA,
-    chartColor: "var(--color-chart-1)",
-    footer: t.cards.totalEnergyFooter,
-  },
-  {
-    title: t.cards.carbonEmission,
-    icon: <IconLeaf size={12} />,
-    ...CARD_VALUES.carbonEmission,
-    unit: "kg CO₂",
-    chartType: "bar" as const,
-    chartData: CARBON_DATA,
-    chartColor: "var(--color-chart-2)",
-    footer: t.cards.carbonFooter,
-  },
-  {
-    title: t.cards.energyIntensity,
-    icon: <IconActivity size={12} />,
-    ...CARD_VALUES.energyIntensity,
-    unit: "kWh/m²",
-    chartType: "line" as const,
-    chartData: INTENSITY_DATA,
-    chartColor: "var(--color-chart-1)",
-    footer: t.cards.intensityFooter,
-  },
-  {
-    title: t.cards.todayCost,
-    icon: <IconCoin size={12} />,
-    ...CARD_VALUES.todayCost,
-    unit: t.cards.costUnit,
-    chartType: "area" as const,
-    chartData: COST_DATA,
-    chartColor: "var(--color-chart-4)",
-    footer: t.cards.costFooter,
-  },
-  {
-    title: t.cards.renewableRate,
-    icon: <IconSun size={12} />,
-    ...CARD_VALUES.renewableRate,
-    unit: "%",
-    delta: t.cards.renewableTarget,
-    chartType: "progress" as const,
-    chartData: RENEWABLE_DATA,
-    chartColor: "var(--color-cyber-green)",
-  },
-  {
-    title: t.cards.loadStatus,
-    icon: <IconWind size={12} />,
-    ...CARD_VALUES.loadStatus,
-    unit: "%",
-    delta: t.cards.loadNormal,
-    chartType: "progress" as const,
-    chartData: LOAD_DATA,
-    chartColor: "var(--color-chart-2)",
-  },
-];
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function Home() {
+  const t = useLocale();
+  const navHideDelay = useSettingsStore((state) => state.navHideDelay);
+
+  const CARDS = [
+    {
+      title: t.cards.totalEnergy,
+      icon: <IconBolt size={12} />,
+      ...CARD_VALUES.totalEnergy,
+      unit: "kWh",
+      chartType: "area" as const,
+      chartData: ENERGY_DATA,
+      chartColor: "var(--color-chart-1)",
+      footer: t.cards.totalEnergyFooter,
+    },
+    {
+      title: t.cards.carbonEmission,
+      icon: <IconLeaf size={12} />,
+      ...CARD_VALUES.carbonEmission,
+      unit: "kg CO₂",
+      chartType: "bar" as const,
+      chartData: CARBON_DATA,
+      chartColor: "var(--color-chart-2)",
+      footer: t.cards.carbonFooter,
+    },
+    {
+      title: t.cards.energyIntensity,
+      icon: <IconActivity size={12} />,
+      ...CARD_VALUES.energyIntensity,
+      unit: "kWh/m²",
+      chartType: "line" as const,
+      chartData: INTENSITY_DATA,
+      chartColor: "var(--color-chart-1)",
+      footer: t.cards.intensityFooter,
+    },
+    {
+      title: t.cards.todayCost,
+      icon: <IconCoin size={12} />,
+      ...CARD_VALUES.todayCost,
+      unit: t.cards.costUnit,
+      chartType: "area" as const,
+      chartData: COST_DATA,
+      chartColor: "var(--color-chart-4)",
+      footer: t.cards.costFooter,
+    },
+    {
+      title: t.cards.renewableRate,
+      icon: <IconSun size={12} />,
+      ...CARD_VALUES.renewableRate,
+      unit: "%",
+      delta: t.cards.renewableTarget,
+      chartType: "progress" as const,
+      chartData: RENEWABLE_DATA,
+      chartColor: "var(--color-cyber-green)",
+    },
+    {
+      title: t.cards.loadStatus,
+      icon: <IconWind size={12} />,
+      ...CARD_VALUES.loadStatus,
+      unit: "%",
+      delta: t.cards.loadNormal,
+      chartType: "progress" as const,
+      chartData: LOAD_DATA,
+      chartColor: "var(--color-chart-2)",
+    },
+  ];
   const [navVisible, setNavVisible] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -120,7 +120,7 @@ export default function Home() {
   // Start/reset the 30s auto-hide countdown
   const resetTimer = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setNavVisible(false), NAV_HIDE_DELAY);
+    timerRef.current = setTimeout(() => setNavVisible(false), navHideDelay);
   }, []);
 
   // Toggle nav on logo click
@@ -129,7 +129,7 @@ export default function Home() {
       if (!prev) {
         // Opening — start countdown
         if (timerRef.current) clearTimeout(timerRef.current);
-        timerRef.current = setTimeout(() => setNavVisible(false), NAV_HIDE_DELAY);
+        timerRef.current = setTimeout(() => setNavVisible(false), navHideDelay);
       } else {
         // Closing — cancel countdown
         if (timerRef.current) clearTimeout(timerRef.current);
