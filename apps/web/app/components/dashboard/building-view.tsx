@@ -19,8 +19,9 @@ import {
 } from "@babylonjs/core";
 import "@babylonjs/loaders/glTF";
 
-import { locale as t } from "~/locales";
+import { useLocale } from "~/locales";
 import { cn } from "~/lib/utils";
+import { useSettingsStore } from "~/store/settings";
 
 // ─── 3D-projected area label floating pill ────────────────────────────────────
 
@@ -47,15 +48,6 @@ interface LabelDef {
   fallbackPosition: Vector3;
   meshKeywords: string[];
 }
-
-const LABELS: LabelDef[] = [
-  { key: "office1", label: t.building.officeArea, fallbackPosition: new Vector3(-4, 2.5, -3), meshKeywords: ["office", "办公"] },
-  { key: "meeting", label: t.building.meetingArea, fallbackPosition: new Vector3(0, 3.2, -3), meshKeywords: ["meeting", "会议"] },
-  { key: "dataCenter", label: t.building.dataCenter, fallbackPosition: new Vector3(-1.5, 1.5, 0), meshKeywords: ["data", "server", "机房", "数据"] },
-  { key: "exhibition", label: t.building.exhibitionHall, fallbackPosition: new Vector3(2.5, 2.2, -2), meshKeywords: ["exhibition", "hall", "展示", "展厅"] },
-  { key: "office2", label: t.building.officeArea, fallbackPosition: new Vector3(3.5, 2.5, -3), meshKeywords: ["office", "办公"] },
-  { key: "lobby", label: t.building.lobby, fallbackPosition: new Vector3(3.5, 0.8, 2), meshKeywords: ["lobby", "大堂", "大厅", "entrance"] },
-];
 
 export interface BuildingViewRef {
   zoomIn: () => void;
@@ -92,9 +84,28 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
   const labelAnchorsRef = useRef<{ key: string; worldPos: Vector3 }[]>([]);
   const labelElsRef = useRef<Record<string, HTMLDivElement | null>>({});
   const isDraggingRef = useRef(false);
+  const glowRef = useRef<Nullable<GlowLayer>>(null);
   const [loaded, setLoaded] = useState(false);
 
-  const AUTO_ROTATE_SPEED = 0.002;
+  const { autoRotate, rotateSpeed, showLabels, glowIntensity } = useSettingsStore();
+  const t = useLocale();
+
+  const LABELS: LabelDef[] = [
+    { key: "office1", label: t.building.officeArea, fallbackPosition: new Vector3(-4, 2.5, -3), meshKeywords: ["office", "办公"] },
+    { key: "meeting", label: t.building.meetingArea, fallbackPosition: new Vector3(0, 3.2, -3), meshKeywords: ["meeting", "会议"] },
+    { key: "dataCenter", label: t.building.dataCenter, fallbackPosition: new Vector3(-1.5, 1.5, 0), meshKeywords: ["data", "server", "机房", "数据"] },
+    { key: "exhibition", label: t.building.exhibitionHall, fallbackPosition: new Vector3(2.5, 2.2, -2), meshKeywords: ["exhibition", "hall", "展示", "展厅"] },
+    { key: "office2", label: t.building.officeArea, fallbackPosition: new Vector3(3.5, 2.5, -3), meshKeywords: ["office", "办公"] },
+    { key: "lobby", label: t.building.lobby, fallbackPosition: new Vector3(3.5, 0.8, 2), meshKeywords: ["lobby", "大堂", "大厅", "entrance"] },
+  ];
+
+  // Sync glow intensity in real time
+  useEffect(() => {
+    const glow = glowRef.current;
+    if (glow) {
+      glow.intensity = glowIntensity;
+    }
+  }, [glowIntensity]);
 
   // Hard-coded initial camera values
   const initialAlpha = Math.PI / 4;
@@ -140,7 +151,8 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
 
     // Glow layer for cyber aesthetic
     const glow = new GlowLayer("glow", scene);
-    glow.intensity = 0.4;
+    glow.intensity = glowIntensity;
+    glowRef.current = glow;
 
     // Create a pivot node that we explicitly rotate so we don't depend on GLB root naming.
     const pivot = new TransformNode("rotationPivot", scene);
@@ -214,8 +226,8 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
     engine.runRenderLoop(() => {
       // Auto-rotate the building around Y when user is not dragging
       const root = rootMeshRef.current;
-      if (root && !isDraggingRef.current) {
-        root.rotation.y += AUTO_ROTATE_SPEED;
+      if (root && !isDraggingRef.current && autoRotate) {
+        root.rotation.y += 0.002 * rotateSpeed;
       }
 
       scene.render();
@@ -236,7 +248,7 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
             transformMatrix,
             globalViewport,
           );
-          const visible = p.z > 0 && p.z < 1 && p.x >= 0 && p.x <= renderWidth && p.y >= 0 && p.y <= renderHeight;
+          const visible = showLabels && p.z > 0 && p.z < 1 && p.x >= 0 && p.x <= renderWidth && p.y >= 0 && p.y <= renderHeight;
           el.style.display = visible ? "flex" : "none";
           el.style.transform = `translate(${p.x}px, ${p.y}px)`;
         });
@@ -313,6 +325,7 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
       sceneRef.current = null;
       cameraRef.current = null;
       rootMeshRef.current = null;
+      glowRef.current = null;
     };
   }, []);
 

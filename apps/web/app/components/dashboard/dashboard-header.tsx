@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { IconLayoutNavbar, IconLayoutNavbarCollapse } from "@tabler/icons-react";
 
 import { cn } from "~/lib/utils";
-import { locale as t } from "~/locales";
+import { useLocale } from "~/locales";
+import { useSettingsStore } from "~/store/settings";
 
 export interface DashboardHeaderProps {
   className?: string;
@@ -11,20 +12,22 @@ export interface DashboardHeaderProps {
   navVisible?: boolean;
 }
 
-function formatTime(d: Date) {
-  return d.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false });
-}
-
-function formatDate(d: Date) {
-  const dateStr = d
-    .toLocaleDateString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" })
-    .replace(/\//g, ".");
-  const weekStr = d.toLocaleDateString("zh-CN", { weekday: "long" });
-  return `${dateStr} ${weekStr}`;
-}
-
 export function DashboardHeader({ className, onLogoClick, navVisible }: DashboardHeaderProps) {
+  const t = useLocale();
+  const language = useSettingsStore((state) => state.language);
   const [now, setNow] = useState(() => new Date());
+
+  function formatTime(d: Date) {
+    return d.toLocaleTimeString(language, { hour: "2-digit", minute: "2-digit", hour12: false });
+  }
+
+  function formatDate(d: Date) {
+    const dateStr = d
+      .toLocaleDateString(language, { year: "numeric", month: "2-digit", day: "2-digit" })
+      .replace(/\//g, ".");
+    const weekStr = d.toLocaleDateString(language, { weekday: "long" });
+    return `${dateStr} ${weekStr}`;
+  }
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);

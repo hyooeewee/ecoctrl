@@ -11,7 +11,7 @@ import {
   YAxis,
 } from "recharts"
 
-import { locale as t } from "~/locales"
+import { useLocale } from "~/locales"
 import { cn } from "~/lib/utils"
 
 // ─── Measure hook ─────────────────
@@ -39,11 +39,11 @@ function useMeasureWidth(fallback = 700): [React.RefObject<HTMLDivElement | null
 
 // ─── Custom tooltips ──────────────────────────────────────────────────────────
 
-function TrendTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) {
+function TrendTooltip({ active, payload, label, timeUnit }: { active?: boolean; payload?: { value: number }[]; label?: string; timeUnit: string }) {
   if (!active || !payload?.length) return null
   return (
     <div className="rounded border border-white/10 bg-panel-dark/95 px-2 py-1.5 text-[10px] shadow-xl backdrop-blur">
-      <span className="text-muted-foreground">{label}{t.charts.trendTimeUnit}</span>
+      <span className="text-muted-foreground">{label}{timeUnit}</span>
       <span className="ml-2 font-semibold tabular-nums text-foreground">{payload[0].value} kWh</span>
     </div>
   )
@@ -78,6 +78,7 @@ const trendData = [
 ]
 
 export function EnergyTrendChart({ className }: { className?: string }) {
+  const t = useLocale()
   const [ref, width] = useMeasureWidth(700)
   const CHART_H = 148
   const color = "var(--color-chart-1)"
@@ -124,7 +125,7 @@ export function EnergyTrendChart({ className }: { className?: string }) {
             axisLine={false}
             tickFormatter={(v) => `${v}`}
           />
-          <Tooltip content={<TrendTooltip />} cursor={{ stroke: "oklch(1 0 0 / 10%)", strokeWidth: 1 }} />
+          <Tooltip content={<TrendTooltip timeUnit={t.charts.trendTimeUnit} />} cursor={{ stroke: "oklch(1 0 0 / 10%)", strokeWidth: 1 }} />
           <Area
             type="monotone"
             dataKey="kWh"
@@ -143,16 +144,17 @@ export function EnergyTrendChart({ className }: { className?: string }) {
 
 // ─── Energy Breakdown Pie ─────────────────────────────────────────────────────
 
-const breakdownData = [
-  { name: t.charts.hvac,      value: 45, color: "var(--color-chart-1)" },
-  { name: t.charts.lighting,  value: 30, color: "var(--color-chart-3)" },
-  { name: t.charts.equipment, value: 15, color: "var(--color-chart-4)" },
-  { name: t.charts.other,     value: 10, color: "oklch(0.35 0.02 265)"  },
-]
-
 export function EnergyBreakdownChart({ className }: { className?: string }) {
+  const t = useLocale()
   const [ref, width] = useMeasureWidth(200)
   const PIE_H = 148
+
+  const breakdownData = [
+    { name: t.charts.hvac,      value: 45, color: "var(--color-chart-1)" },
+    { name: t.charts.lighting,  value: 30, color: "var(--color-chart-3)" },
+    { name: t.charts.equipment, value: 15, color: "var(--color-chart-4)" },
+    { name: t.charts.other,     value: 10, color: "oklch(0.35 0.02 265)"  },
+  ]
 
   return (
     <div

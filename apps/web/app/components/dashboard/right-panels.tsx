@@ -11,7 +11,7 @@ import {
   IconWind,
 } from "@tabler/icons-react";
 
-import { locale as t } from "~/locales";
+import { useLocale } from "~/locales";
 import { cn } from "~/lib/utils";
 
 // ─── Shared bento card wrapper ─────────────────────────────────────────────────
@@ -67,6 +67,7 @@ function DeviceItem({ icon, label, count, status }: DeviceItemProps) {
 }
 
 export function DeviceStatus() {
+  const t = useLocale();
   return (
     <BentoCard>
       <div className="shrink-0 px-3 pt-3">
@@ -147,6 +148,7 @@ function AlertItem({ icon, title, subtitle, severity, time }: AlertItemProps) {
 }
 
 export function AlertsPanel() {
+  const t = useLocale();
   return (
     <BentoCard>
       <div className="shrink-0 px-3 pt-3">
@@ -217,6 +219,7 @@ function SuggestionItem({ icon, text, saving }: SuggestionItemProps) {
 }
 
 export function AISuggestions() {
+  const t = useLocale();
   return (
     <BentoCard>
       <div className="shrink-0 px-3 pt-3">

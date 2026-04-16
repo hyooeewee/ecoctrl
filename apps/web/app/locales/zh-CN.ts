@@ -18,7 +18,6 @@ export const zhCN = {
   // ── 头部 ──────────────────────────────────────────────────────────────────
   header: {
     brandSub: "智慧精控",
-    pageTitle: "ECOCTRL 智慧精控",
     tagline: "企业级三维能源管理平台",
     toggleNavShow: "显示导航",
     toggleNavHide: "隐藏导航",
@@ -35,6 +34,30 @@ export const zhCN = {
     settings: "设置",
   },
 
+  // ── 设置页面 ────────────────────────────────────────────────────────────────
+  settings: {
+    title: "系统设置",
+    subtitle: "自定义你的仪表盘体验",
+    general: "通用",
+    appearance: "外观",
+    data: "数据控制",
+    account: "账户",
+    reset: "恢复默认",
+    resetConfirm: "已恢复默认设置",
+    autoRotate: "3D 建筑自动旋转",
+    autoRotateDesc: "无人操作时建筑模型自动缓慢旋转",
+    rotateSpeed: "旋转速度",
+    showLabels: "显示区域标签",
+    showLabelsDesc: "在 3D 模型上叠加展示楼层/区域名称",
+    glowIntensity: "光晕强度",
+    dataRefreshInterval: "数据刷新频率",
+    navHideDelay: "导航自动隐藏",
+    seconds: "秒",
+    language: "界面语言",
+    reducedMotion: "减少动态效果",
+    reducedMotionDesc: "关闭不必要的动画以提升可访问性",
+  },
+
   // ── 三维建筑视图 ───────────────────────────────────────────────────────────
   building: {
     ariaLabel: "三维建筑能耗可视化",
@@ -43,10 +66,6 @@ export const zhCN = {
     dataCenter: "数据中心",
     exhibitionHall: "展示大厅",
     lobby: "大堂",
-    viewOverview: "总览",
-    viewTop: "俯视",
-    viewFront: "正面",
-    viewSide: "侧面",
   },
 
   // ── 左侧统计卡片 ───────────────────────────────────────────────────────────
@@ -66,11 +85,9 @@ export const zhCN = {
 
     renewableRate: "可再生能源占比",
     renewableTarget: "目标：90%",
-    renewableFooter: "本月清洁能源份额",
 
     loadStatus: "负载状态",
     loadNormal: "● 正常",
-    loadFooter: "系统负载在正常范围内",
   },
 
   // ── 控制按钮 ───────────────────────────────────────────────────────────────
@@ -135,19 +152,6 @@ export const zhCN = {
     lightingSaving: "预计节能 8%",
     serverText: "将非关键服务器任务迁移至低峰期 (02:00–06:00)",
     serverSaving: "预计节省 5% 费用",
-  },
-
-  // ── 通用 UI 组件 ───────────────────────────────────────────────────────────
-  ui: {
-    paginationPrevious: "上一页",
-    paginationNext: "下一页",
-    paginationPreviousAria: "转到上一页",
-    paginationNextAria: "转到下一页",
-    paginationMorePages: "更多页面",
-    spinnerLoading: "加载中",
-    sidebarToggle: "切换侧边栏",
-    commandTitle: "命令面板",
-    commandDescription: "搜索要运行的命令…",
   },
 };
 
