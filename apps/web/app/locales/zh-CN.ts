@@ -25,6 +25,8 @@ export const zhCN = {
     statusValue: "最优",
     toggleNavShow: "显示导航",
     toggleNavHide: "隐藏导航",
+    location: "会展中心整体",
+    monitoring: "能源监控",
   },
 
   // ── 底部导航 ───────────────────────────────────────────────────────────────
