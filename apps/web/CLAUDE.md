@@ -76,4 +76,5 @@ Use `@tabler/icons-react` for all icons.
 - [ ] Do not touch formatting in `app/components/`.
 - [ ] Use `~/` aliases instead of deep relative imports.
 - [ ] Update i18n keys if user-facing text changes.
+- [ ] Run `uv run scripts/check-locale-dead-code.py` after modifying `app/locales/` to ensure no orphaned keys.
 - [ ] Remove dead code, unused constants, and orphaned i18n keys when replacing hard-coded values. Do not leave tails behind.
