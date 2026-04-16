@@ -2,6 +2,15 @@
 
 A React Router 7 dashboard application with 3D building visualization via BabylonJS.
 
+## 交互规则
+
+- 任何编码或修改前，必须先输出执行计划。
+- 计划需包含：
+  - 涉及的文件列表（路径）。
+  - 每个文件的拟操作（创建/修改/删除）。
+- 输出计划后，明确请求确认（如："确认后开始执行。"）。
+- 仅在收到"确认""可以"或"执行"后，方可动手。
+
 ## Stack
 
 - **Framework:** React Router 7 (framework mode), React 19
@@ -67,3 +76,4 @@ Use `@tabler/icons-react` for all icons.
 - [ ] Do not touch formatting in `app/components/`.
 - [ ] Use `~/` aliases instead of deep relative imports.
 - [ ] Update i18n keys if user-facing text changes.
+- [ ] Remove dead code, unused constants, and orphaned i18n keys when replacing hard-coded values. Do not leave tails behind.
