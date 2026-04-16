@@ -43,6 +43,8 @@ export default function SettingsPage() {
     glowIntensity,
     dataRefreshInterval,
     navHideDelay,
+    defaultCameraRadius,
+    defaultRotationY,
     language,
     reducedMotion,
     setAutoRotate,
@@ -51,6 +53,8 @@ export default function SettingsPage() {
     setGlowIntensity,
     setDataRefreshInterval,
     setNavHideDelay,
+    setDefaultCameraRadius,
+    setDefaultRotationY,
     setLanguage,
     setReducedMotion,
     reset,
@@ -256,6 +260,37 @@ export default function SettingsPage() {
                     max={1}
                     step={0.05}
                     onValueChange={(v) => setGlowIntensity(Array.isArray(v) ? v[0] : v)}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">{t.settings.defaultCameraRadius}</Label>
+                    <span className="text-muted-foreground text-xs">{defaultCameraRadius}</span>
+                  </div>
+                  <Slider
+                    value={[defaultCameraRadius]}
+                    min={8}
+                    max={60}
+                    step={1}
+                    onValueChange={(v) => setDefaultCameraRadius(Array.isArray(v) ? v[0] : v)}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">{t.settings.defaultRotationY}</Label>
+                    <span className="text-muted-foreground text-xs">
+                      {defaultRotationY}
+                      {t.settings.degrees}
+                    </span>
+                  </div>
+                  <Slider
+                    value={[defaultRotationY]}
+                    min={0}
+                    max={360}
+                    step={15}
+                    onValueChange={(v) => setDefaultRotationY(Array.isArray(v) ? v[0] : v)}
                   />
                 </div>
               </div>
