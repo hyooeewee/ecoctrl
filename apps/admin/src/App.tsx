@@ -4,19 +4,19 @@
  */
 
 import React, { useState } from "react";
-import Sidebar from "./components/Sidebar";
-import Header from "./components/Header";
-import Dashboard from "./pages/Dashboard";
-import Config from "./pages/Config";
-import Accounts from "./pages/Accounts";
-import Models from "./pages/Models";
-import ThreeDConfig from "./pages/ThreeDConfig";
-import Monitoring from "./pages/Monitoring";
-import Reports from "./pages/Reports";
-import Maintenance from "./pages/Maintenance";
-import Faults from "./pages/Faults";
-import Energy from "./pages/Energy";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import Sidebar from "@/components/Sidebar";
+import Header from "@/components/Header";
+import Dashboard from "@/pages/Dashboard";
+import Config from "@/pages/Config";
+import Accounts from "@/pages/Accounts";
+import Models from "@/pages/Models";
+import ThreeDConfig from "@/pages/ThreeDConfig";
+import Monitoring from "@/pages/Monitoring";
+import Reports from "@/pages/Reports";
+import Maintenance from "@/pages/Maintenance";
+import Faults from "@/pages/Faults";
+import Energy from "@/pages/Energy";
+import { ScrollArea } from "@ui/scroll-area";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("dashboard");

@@ -11,8 +11,10 @@
     "moduleDetection": "force",
     "allowJs": true,
     "jsx": "react-jsx",
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["src/*"],
+      "@ui/*": ["src/components/ui/*"]
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
