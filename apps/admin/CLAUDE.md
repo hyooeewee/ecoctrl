@@ -31,7 +31,7 @@ This is a single-page app **without React Router**. Navigation is handled via ta
 
 - `src/pages/` — Page-level components (one per sidebar tab).
 - `src/components/` — App-specific components (`Sidebar`, `Header`, `BrandLogo`).
-- `components/ui/` — shadcn/ui base components.
+- `components/ui/` — shadcn/ui base components. **Do not modify directly**; create wrappers in `src/components/` for customizations.
 - `src/constants/mockData.ts` — All current data is mock/static.
 - `src/types.ts` — Shared TypeScript interfaces.
 - `lib/utils.ts` — `cn()` utility for Tailwind class merging.
@@ -55,6 +55,12 @@ This is a single-page app **without React Router**. Navigation is handled via ta
 - `.vite-hooks/pre-commit` runs `vp check --fix` on staged files.
 - `vite.config.ts` injects `process.env.GEMINI_API_KEY` at build time.
 - HMR can be disabled via `DISABLE_HMR`.
+
+## 组件规则
+
+- **`components/ui/` 内的组件禁止直接修改。** 这是 shadcn/ui 的原始组件库，需保持原样以便后续更新。
+- 如需定制或复用，请在 `src/components/` 下创建二次封装组件，而不是修改 `components/ui/` 的源文件。
+- **优先抽象和复用组件。** 在新增页面或功能时，先检查是否已有可复用的组件或布局模式；避免大量复制粘贴相似代码。若同一结构在多处出现，应提取为 `src/components/` 下的共享组件。
 
 ## 交互规则
 

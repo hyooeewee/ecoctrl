@@ -3,45 +3,45 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
-import Sidebar from './components/Sidebar';
-import Header from './components/Header';
-import Dashboard from './pages/Dashboard';
-import Config from './pages/Config';
-import Accounts from './pages/Accounts';
-import Models from './pages/Models';
-import ThreeDConfig from './pages/ThreeDConfig';
-import Monitoring from './pages/Monitoring';
-import Reports from './pages/Reports';
-import Maintenance from './pages/Maintenance';
-import Faults from './pages/Faults';
-import Energy from './pages/Energy';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import React, { useState } from "react";
+import Sidebar from "./components/Sidebar";
+import Header from "./components/Header";
+import Dashboard from "./pages/Dashboard";
+import Config from "./pages/Config";
+import Accounts from "./pages/Accounts";
+import Models from "./pages/Models";
+import ThreeDConfig from "./pages/ThreeDConfig";
+import Monitoring from "./pages/Monitoring";
+import Reports from "./pages/Reports";
+import Maintenance from "./pages/Maintenance";
+import Faults from "./pages/Faults";
+import Energy from "./pages/Energy";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState("dashboard");
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'dashboard':
+      case "dashboard":
         return <Dashboard />;
-      case 'config':
+      case "config":
         return <Config />;
-      case 'accounts':
+      case "accounts":
         return <Accounts />;
-      case 'models':
+      case "models":
         return <Models />;
-      case 'settingsGroup':
+      case "settingsGroup":
         return <ThreeDConfig />;
-      case 'monitoring':
+      case "monitoring":
         return <Monitoring />;
-      case 'reports':
+      case "reports":
         return <Reports />;
-      case 'maintenance':
+      case "maintenance":
         return <Maintenance />;
-      case 'faults':
+      case "faults":
         return <Faults />;
-      case 'energy':
+      case "energy":
         return <Energy />;
       default:
         return <Dashboard />;
@@ -51,19 +51,16 @@ export default function App() {
   return (
     <div className="flex bg-background h-screen overflow-hidden text-foreground font-sans selection:bg-primary/10 selection:text-primary">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-      
+
       <div className="flex-1 flex flex-col min-w-0 h-full">
         <Header activeTab={activeTab} />
-        
+
         <main className="flex-1 overflow-hidden bg-background">
           <ScrollArea className="h-full w-full">
-            <div className="p-8 max-w-[1440px] mx-auto pb-24">
-              {renderContent()}
-            </div>
+            <div className="p-8 max-w-[1440px] mx-auto pb-24">{renderContent()}</div>
           </ScrollArea>
         </main>
       </div>
     </div>
   );
 }
-
