@@ -23,9 +23,10 @@ import {
   SheetFooter,
 } from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
+import ExportDialog from "../components/ExportDialog";
 
 export default function Accounts() {
-  const handleExport = () => {
+  const handleExport = (fileName: string) => {
     const headers = ["姓名", "角色", "状态", "最后登录"];
     const csvContent = [
       headers.join(","),
@@ -43,7 +44,7 @@ export default function Accounts() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `用户列表_${new Date().toLocaleDateString()}.csv`);
+    link.setAttribute("download", `${fileName}.csv`);
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
@@ -61,10 +62,20 @@ export default function Accounts() {
         </div>
 
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="gap-2" onClick={handleExport}>
-            <Download size={18} />
-            导出表格
-          </Button>
+          <ExportDialog
+            trigger={
+              <Button variant="outline" className="gap-2">
+                <Download size={18} />
+                导出表格
+              </Button>
+            }
+            title="导出用户列表"
+            description="请确认报表导出信息，系统将根据选定参数生成文件。"
+            defaultFileName={`用户列表_${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}`}
+            defaultFormat="CSV"
+            defaultOperator="系统管理员"
+            onExport={({ fileName }) => handleExport(fileName)}
+          />
 
           <Sheet>
             <SheetTrigger
