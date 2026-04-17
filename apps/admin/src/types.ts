@@ -9,7 +9,7 @@ export interface MetricCardProps {
   value: string;
   unit?: string;
   trend?: string;
-  trendType?: 'up' | 'down' | 'neutral';
+  trendType?: "up" | "down" | "neutral";
   icon: any;
 }
 
@@ -17,24 +17,24 @@ export interface User {
   id: string;
   name: string;
   role: string;
-  status: 'active' | 'inactive';
+  status: "active" | "inactive";
   lastLogin: string;
 }
 
 export interface Alert {
   id: string;
   device: string;
-  level: 'high' | 'medium' | 'low';
+  level: "high" | "medium" | "low";
   message: string;
   time: string;
-  status: 'pending' | 'resolved';
+  status: "pending" | "resolved";
 }
 
 export interface MaintenanceReminder {
   id: string;
   task: string;
   dueDate: string;
-  priority: 'high' | 'medium' | 'low';
+  priority: "high" | "medium" | "low";
 }
 
 export interface ReportPlan {

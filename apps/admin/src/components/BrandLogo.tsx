@@ -1,5 +1,5 @@
-import React from 'react';
-import logoUrl from '../assets/logo.png';
+import React from "react";
+import logoUrl from "../assets/logo.png";
 
 interface BrandLogoProps {
   className?: string;
@@ -7,13 +7,5 @@ interface BrandLogoProps {
 }
 
 export const BrandLogo: React.FC<BrandLogoProps> = ({ className, size = 24 }) => {
-  return (
-    <img
-      src={logoUrl}
-      alt="EcoCtrl"
-      width={size}
-      height={size}
-      className={className}
-    />
-  );
+  return <img src={logoUrl} alt="EcoCtrl" width={size} height={size} className={className} />;
 };
