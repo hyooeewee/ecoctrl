@@ -1,11 +1,46 @@
 import { User, Alert, MaintenanceReminder, ReportPlan, Fault } from "../types";
 
 export const USERS: User[] = [
-  { id: "1", name: "张三", role: "超级管理员", status: "active", lastLogin: "2024-03-20 10:00" },
-  { id: "2", name: "李四", role: "运维工程师", status: "active", lastLogin: "2024-03-20 09:30" },
-  { id: "3", name: "王五", role: "财务分析师", status: "inactive", lastLogin: "2024-03-19 16:45" },
-  { id: "4", name: "赵六", role: "系统管理员", status: "active", lastLogin: "2024-03-20 08:00" },
-  { id: "5", name: "孙七", role: "观察员", status: "active", lastLogin: "2024-03-15 11:20" },
+  {
+    id: "1",
+    name: "张三",
+    email: "zhangsan@energy.com",
+    role: "超级管理员",
+    status: "active",
+    lastLogin: "2024-03-20 10:00",
+  },
+  {
+    id: "2",
+    name: "李四",
+    email: "lisi@energy.com",
+    role: "运维工程师",
+    status: "active",
+    lastLogin: "2024-03-20 09:30",
+  },
+  {
+    id: "3",
+    name: "王五",
+    email: "wangwu@energy.com",
+    role: "财务分析师",
+    status: "inactive",
+    lastLogin: "2024-03-19 16:45",
+  },
+  {
+    id: "4",
+    name: "赵六",
+    email: "zhaoliu@energy.com",
+    role: "系统管理员",
+    status: "active",
+    lastLogin: "2024-03-20 08:00",
+  },
+  {
+    id: "5",
+    name: "孙七",
+    email: "sunqi@energy.com",
+    role: "观察员",
+    status: "active",
+    lastLogin: "2024-03-15 11:20",
+  },
 ];
 
 export const ALERTS: Alert[] = [
