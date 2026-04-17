@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Table,
@@ -12,27 +12,22 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Edit2, ShieldAlert, Trash2, Download } from "lucide-react";
-import { USERS } from "../constants/mockData";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-  SheetFooter,
-} from "@/components/ui/sheet";
-import { Label } from "@/components/ui/label";
+import { USERS as INITIAL_USERS } from "../constants/mockData";
 import ExportDialog from "../components/ExportDialog";
+import UserSheet from "../components/UserSheet";
+import { User } from "../types";
 
 export default function Accounts() {
+  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
+
   const handleExport = (fileName: string) => {
-    const headers = ["姓名", "角色", "状态", "最后登录"];
+    const headers = ["姓名", "邮箱", "角色", "状态", "最后登录"];
     const csvContent = [
       headers.join(","),
-      ...USERS.map((user) =>
+      ...users.map((user) =>
         [
           `"${user.name}"`,
+          `"${user.email}"`,
           `"${user.role}"`,
           user.status === "active" ? "在线" : "离线",
           `"${user.lastLogin}"`,
@@ -49,6 +44,20 @@ export default function Accounts() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleCreate = (user: User) => {
+    setUsers((prev) => [...prev, user]);
+  };
+
+  const handleEdit = (updated: User) => {
+    setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+  };
+
+  const handleDelete = (id: string, name: string) => {
+    if (window.confirm(`确定要删除用户 "${name}" 吗？`)) {
+      setUsers((prev) => prev.filter((u) => u.id !== id));
+    }
   };
 
   return (
@@ -77,47 +86,16 @@ export default function Accounts() {
             onExport={({ fileName }) => handleExport(fileName)}
           />
 
-          <Sheet>
-            <SheetTrigger
-              render={
-                <Button className="gap-2">
-                  <Plus size={18} />
-                  新增账户
-                </Button>
-              }
-            />
-            <SheetContent className="sm:max-w-md">
-              <SheetHeader>
-                <SheetTitle>创建新账户</SheetTitle>
-                <SheetDescription>
-                  为系统添加新用户。在提交前请确保已分配正确的角色。
-                </SheetDescription>
-              </SheetHeader>
-              <div className="grid gap-4 py-6 px-4">
-                <div className="grid space-y-2">
-                  <Label htmlFor="name">姓名</Label>
-                  <Input id="name" placeholder="请输入真实姓名" />
-                </div>
-                <div className="grid space-y-2">
-                  <Label htmlFor="email">邮箱地址</Label>
-                  <Input id="email" placeholder="example@energy.com" />
-                </div>
-                <div className="grid space-y-2">
-                  <Label htmlFor="role">角色</Label>
-                  <Input id="role" placeholder="运维工程师" />
-                </div>
-              </div>
-              <SheetFooter>
-                <Button
-                  type="submit"
-                  className="w-full"
-                  onClick={() => console.log("Creating new account...")}
-                >
-                  确认创建
-                </Button>
-              </SheetFooter>
-            </SheetContent>
-          </Sheet>
+          <UserSheet
+            mode="create"
+            trigger={
+              <Button className="gap-2">
+                <Plus size={18} />
+                新增账户
+              </Button>
+            }
+            onSave={handleCreate}
+          />
         </div>
       </div>
 
@@ -142,6 +120,7 @@ export default function Accounts() {
             <TableHeader className="bg-gray-50/50">
               <TableRow className="border-b border-gray-100">
                 <TableHead className="w-[200px] px-6 font-semibold text-gray-600">姓名</TableHead>
+                <TableHead className="font-semibold text-gray-600">邮箱</TableHead>
                 <TableHead className="font-semibold text-gray-600">角色</TableHead>
                 <TableHead className="font-semibold text-gray-600">状态</TableHead>
                 <TableHead className="font-semibold text-gray-600">最后登录</TableHead>
@@ -149,9 +128,10 @@ export default function Accounts() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {USERS.map((user) => (
+              {users.map((user) => (
                 <TableRow key={user.id} className="hover:bg-gray-50/50">
                   <TableCell className="font-medium px-6">{user.name}</TableCell>
+                  <TableCell className="text-gray-600 text-sm">{user.email}</TableCell>
                   <TableCell>{user.role}</TableCell>
                   <TableCell>
                     <Badge
@@ -168,15 +148,21 @@ export default function Accounts() {
                   <TableCell className="text-gray-500 text-sm italic">{user.lastLogin}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                        title="编辑"
-                        onClick={() => console.log("Edit user:", user.name)}
-                      >
-                        <Edit2 size={16} />
-                      </Button>
+                      <UserSheet
+                        mode="edit"
+                        user={user}
+                        trigger={
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            title="编辑"
+                          >
+                            <Edit2 size={16} />
+                          </Button>
+                        }
+                        onSave={handleEdit}
+                      />
                       <Button
                         variant="ghost"
                         size="icon"
@@ -191,11 +177,7 @@ export default function Accounts() {
                         size="icon"
                         className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
                         title="删除"
-                        onClick={() => {
-                          if (window.confirm(`确定要删除用户 "${user.name}" 吗？`)) {
-                            console.log("Delete user:", user.name);
-                          }
-                        }}
+                        onClick={() => handleDelete(user.id, user.name)}
                       >
                         <Trash2 size={16} />
                       </Button>
