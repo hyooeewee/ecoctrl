@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { BookOpen, Calendar, Clock, FileText, ArrowUpRight } from "lucide-react";
+import { BookOpen, Calendar, Clock, FileText, ExternalLink } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { REMINDERS } from "../constants/mockData";
 
@@ -48,10 +48,7 @@ export default function Maintenance() {
                       />
                       <span className="truncate">{item}</span>
                     </div>
-                    <ArrowUpRight
-                      size={14}
-                      className="opacity-0 group-hover:opacity-100 shrink-0 transition-opacity"
-                    />
+                    <ExternalLink size={14} className="text-gray-300" />
                   </Button>
                 ))}
               </div>
