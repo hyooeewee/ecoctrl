@@ -1,12 +1,13 @@
 {
   "hooks": {
-    "PostToolUse": [
+    "Stop": [
       {
-        "matcher": "Write|Edit",
         "hooks": [
           {
             "type": "command",
-            "command": "echo '>>> Stop hook triggered' && vp check --fix"
+            "command": "vp check --fix",
+            "statusMessage": "Running vp check --fix before stopping...",
+            "timeout": 20
           }
         ]
       }
