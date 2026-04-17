@@ -9,17 +9,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { Zap, Activity, AlertCircle, Droplets } from "lucide-react";
 import { ALERTS, ENERGY_CHART_DATA } from "../constants/mockData";
 import {
@@ -31,6 +20,7 @@ import {
   CartesianGrid,
   Tooltip,
 } from "recharts";
+import ExportDialog from "../components/ExportDialog";
 
 const Indicator = ({
   title,
@@ -273,55 +263,21 @@ export default function DashboardContent() {
             <span className="text-foreground font-medium">2023-11-20 03:00</span>
           </div>
         </div>
-        <Dialog>
-          <DialogTrigger
-            render={
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm shadow-primary/20 px-6 h-9">
-                导出今日报表
-              </Button>
-            }
-          />
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>导出今日能耗报表</DialogTitle>
-              <DialogDescription>
-                请确认报表导出信息，系统将根据选定参数生成文件。
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 p-4 pl-[17px]">
-              <div className="grid gap-2">
-                <Label htmlFor="reportName">报表名称</Label>
-                <Input
-                  id="reportName"
-                  placeholder="今日能耗概览_20240320"
-                  defaultValue="今日能耗概览_20240320"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="exportFormat">导出格式</Label>
-                <Input id="exportFormat" placeholder="PDF / EXCEL / CSV" defaultValue="PDF" />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="operator">操作人</Label>
-                <Input id="operator" placeholder="系统管理员" defaultValue="系统管理员" />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                type="submit"
-                onClick={() => {
-                  const name =
-                    (document.getElementById("reportName") as HTMLInputElement)?.value ||
-                    "今日能耗概览_20240320";
-                  console.log("Exporting today report:", name);
-                  // Success feedback via console for now
-                }}
-              >
-                确认导出
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <ExportDialog
+          trigger={
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm shadow-primary/20 px-6 h-9">
+              导出今日报表
+            </Button>
+          }
+          title="导出今日能耗报表"
+          description="请确认报表导出信息，系统将根据选定参数生成文件。"
+          defaultFileName={`今日能耗概览_${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}`}
+          defaultFormat="PDF"
+          defaultOperator="系统管理员"
+          onExport={({ fileName }) => {
+            console.log("Exporting today report:", fileName);
+          }}
+        />
       </div>
     </div>
   );
