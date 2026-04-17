@@ -82,7 +82,7 @@ export default function Accounts() {
                   为系统添加新用户。在提交前请确保已分配正确的角色。
                 </SheetDescription>
               </SheetHeader>
-              <div className="grid gap-4 py-6">
+              <div className="grid gap-4 py-6 px-4">
                 <div className="grid space-y-2">
                   <Label htmlFor="name">姓名</Label>
                   <Input id="name" placeholder="请输入真实姓名" />
