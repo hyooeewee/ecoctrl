@@ -11,8 +11,8 @@ import {
   IconWind,
 } from "@tabler/icons-react";
 
-import { useLocale } from "~/locales";
 import { cn } from "~/lib/utils";
+import { useLocale } from "~/locales";
 
 // ─── Shared bento card wrapper ─────────────────────────────────────────────────
 
@@ -32,7 +32,7 @@ function BentoCard({ children, className }: { children: React.ReactNode; classNa
 function SectionHeader({ title, badge }: { title: string; badge?: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between">
-      <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+      <h3 className="text-muted-foreground text-[11px] font-semibold tracking-widest uppercase">
         {title}
       </h3>
       {badge}
@@ -59,8 +59,8 @@ function DeviceItem({ icon, label, count, status }: DeviceItemProps) {
   return (
     <div className="flex items-center gap-2.5 rounded-lg border border-white/8 bg-white/4 px-2.5 py-1.5">
       <span className="text-muted-foreground">{icon}</span>
-      <span className="flex-1 text-[11px] font-medium text-foreground/80">{label}</span>
-      <span className="font-heading text-sm font-bold tabular-nums text-foreground">{count}</span>
+      <span className="text-foreground/80 flex-1 text-[11px] font-medium">{label}</span>
+      <span className="font-heading text-foreground text-sm font-bold tabular-nums">{count}</span>
       <span className={cn("size-2 rounded-full", dotColor)} />
     </div>
   );
@@ -74,13 +74,13 @@ export function DeviceStatus() {
         <SectionHeader
           title={t.devices.title}
           badge={
-            <span className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[9px] text-muted-foreground">
+            <span className="text-muted-foreground rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[9px]">
               {t.devices.total}
             </span>
           }
         />
       </div>
-      <div className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
+      <div className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto px-3 pt-2 pb-3">
         <div className="flex flex-col gap-1">
           <DeviceItem
             icon={<IconWind size={14} />}
@@ -139,10 +139,10 @@ function AlertItem({ icon, title, subtitle, severity, time }: AlertItemProps) {
     <div className={cn("flex items-start gap-2 rounded-r-lg border-l-2 px-2 py-1.5", accentColor)}>
       <span className={cn("mt-0.5 shrink-0", iconColor)}>{icon}</span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[11px] font-medium text-foreground/90">{title}</p>
-        <p className="truncate text-[9px] text-muted-foreground">{subtitle}</p>
+        <p className="text-foreground/90 truncate text-[11px] font-medium">{title}</p>
+        <p className="text-muted-foreground truncate text-[9px]">{subtitle}</p>
       </div>
-      <span className="shrink-0 text-[9px] tabular-nums text-muted-foreground/60">{time}</span>
+      <span className="text-muted-foreground/60 shrink-0 text-[9px] tabular-nums">{time}</span>
     </div>
   );
 }
@@ -155,14 +155,14 @@ export function AlertsPanel() {
         <SectionHeader
           title={t.alerts.title}
           badge={
-            <span className="inline-flex items-center gap-1 rounded border border-cyber-red/30 bg-cyber-red/10 px-1.5 py-0.5 text-[9px] font-semibold text-cyber-red">
-              <span className="size-1.5 animate-pulse rounded-full bg-cyber-red" />
+            <span className="border-cyber-red/30 bg-cyber-red/10 text-cyber-red inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[9px] font-semibold">
+              <span className="bg-cyber-red size-1.5 animate-pulse rounded-full" />
               {t.alerts.active}
             </span>
           }
         />
       </div>
-      <div className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
+      <div className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto px-3 pt-2 pb-3">
         <div className="flex flex-col gap-1">
           <AlertItem
             icon={<IconTemperature size={12} />}
@@ -208,11 +208,11 @@ interface SuggestionItemProps {
 
 function SuggestionItem({ icon, text, saving }: SuggestionItemProps) {
   return (
-    <div className="flex items-start gap-2 rounded-lg border border-cyber-cyan/15 bg-cyber-cyan/5 px-2.5 py-2">
-      <span className="mt-0.5 shrink-0 text-cyber-cyan">{icon}</span>
+    <div className="border-cyber-cyan/15 bg-cyber-cyan/5 flex items-start gap-2 rounded-lg border px-2.5 py-2">
+      <span className="text-cyber-cyan mt-0.5 shrink-0">{icon}</span>
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] leading-snug text-foreground/80">{text}</p>
-        {saving && <p className="mt-0.5 text-[9px] font-semibold text-cyber-green">↓ {saving}</p>}
+        <p className="text-foreground/80 text-[11px] leading-snug">{text}</p>
+        {saving && <p className="text-cyber-green mt-0.5 text-[9px] font-semibold">↓ {saving}</p>}
       </div>
     </div>
   );
@@ -225,7 +225,7 @@ export function AISuggestions() {
       <div className="shrink-0 px-3 pt-3">
         <SectionHeader title={t.ai.title} />
       </div>
-      <div className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
+      <div className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto px-3 pt-2 pb-3">
         <div className="flex flex-col gap-1.5">
           <SuggestionItem
             icon={<IconWind size={12} />}
@@ -247,9 +247,9 @@ export function AISuggestions() {
         {/* AI globe decoration */}
         <div className="flex justify-center pt-2">
           <div className="relative flex size-14 items-center justify-center">
-            <div className="absolute size-14 animate-ping rounded-full border border-cyber-cyan/20" />
-            <div className="absolute size-10 animate-pulse rounded-full border border-cyber-cyan/30" />
-            <div className="relative flex size-9 items-center justify-center rounded-full border border-cyber-cyan/50 bg-cyber-cyan/10">
+            <div className="border-cyber-cyan/20 absolute size-14 animate-ping rounded-full border" />
+            <div className="border-cyber-cyan/30 absolute size-10 animate-pulse rounded-full border" />
+            <div className="border-cyber-cyan/50 bg-cyber-cyan/10 relative flex size-9 items-center justify-center rounded-full border">
               <IconAi size={16} className="text-cyber-cyan" />
             </div>
           </div>

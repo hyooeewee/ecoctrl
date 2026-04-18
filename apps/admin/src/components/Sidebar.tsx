@@ -1,4 +1,3 @@
-import React from "react";
 import {
   LayoutDashboard,
   Settings,
@@ -13,9 +12,12 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "motion/react";
+import React from "react";
+
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
 import { BrandLogo } from "./BrandLogo";
 
 interface SidebarProps {
@@ -47,20 +49,20 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
         duration: 0.4,
         ease: [0.32, 0.72, 0, 1],
       }}
-      className="h-screen bg-card text-foreground flex flex-col border-r border-border sticky top-0 z-50 overflow-hidden"
+      className="bg-card text-foreground border-border sticky top-0 z-50 flex h-screen flex-col overflow-hidden border-r"
     >
       {/* Brand */}
       <div
         className={cn(
-          "h-16 flex items-center px-[18px] justify-between border-b border-border group relative transition-colors duration-200",
-          collapsed && "cursor-pointer hover:bg-muted/50",
+          "border-border group relative flex h-16 items-center justify-between border-b px-[18px] transition-colors duration-200",
+          collapsed && "hover:bg-muted/50 cursor-pointer",
         )}
         onClick={() => collapsed && setCollapsed(false)}
       >
         <div
           className={cn(
             "flex items-center gap-2.5 overflow-hidden transition-all duration-300",
-            collapsed && "group-hover:opacity-0 group-hover:scale-90",
+            collapsed && "group-hover:scale-90 group-hover:opacity-0",
           )}
         >
           <BrandLogo size={24} className="shrink-0" />
@@ -71,7 +73,7 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
                 animate={{ opacity: 1, width: "auto" }}
                 exit={{ opacity: 0, width: 0 }}
                 transition={{ duration: 0.2 }}
-                className="text-primary font-bold text-lg tracking-tight whitespace-nowrap overflow-hidden"
+                className="text-primary overflow-hidden text-lg font-bold tracking-tight whitespace-nowrap"
               >
                 EcoCtrl 能管平台
               </motion.div>
@@ -83,7 +85,7 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
             variant="ghost"
             size="icon"
             onClick={() => setCollapsed(!collapsed)}
-            className="text-muted-foreground hover:text-foreground shrink-0 h-8 w-8"
+            className="text-muted-foreground hover:text-foreground h-8 w-8 shrink-0"
           >
             <ChevronLeft size={18} />
           </Button>
@@ -96,7 +98,7 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
               e.stopPropagation();
               setCollapsed(!collapsed);
             }}
-            className="text-primary shrink-0 h-8 w-8 absolute left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 scale-75 group-hover:scale-100 bg-background/80 backdrop-blur-sm border border-primary/20 shadow-sm"
+            className="text-primary bg-background/80 border-primary/20 absolute left-1/2 h-8 w-8 shrink-0 -translate-x-1/2 scale-75 border opacity-0 shadow-sm backdrop-blur-sm transition-all duration-300 group-hover:scale-100 group-hover:opacity-100"
           >
             <ChevronRight size={18} strokeWidth={3} />
           </Button>
@@ -104,7 +106,7 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 py-4 overflow-y-auto scrollbar-hide overflow-x-hidden">
+      <nav className="scrollbar-hide flex-1 overflow-x-hidden overflow-y-auto py-4">
         <ul className="space-y-1 px-3">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -114,13 +116,13 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
                 <button
                   onClick={() => setActiveTab(item.id)}
                   className={cn(
-                    "w-full flex items-center h-10 px-2.5 rounded-md transition-all text-sm group relative overflow-hidden",
+                    "group relative flex h-10 w-full items-center overflow-hidden rounded-md px-2.5 text-sm transition-all",
                     isActive
-                      ? "bg-primary/5 text-primary font-bold shadow-xs active-nav-glow"
+                      ? "bg-primary/5 text-primary active-nav-glow font-bold shadow-xs"
                       : "text-muted-foreground hover:bg-accent hover:text-foreground",
                   )}
                 >
-                  <div className="w-5 flex items-center justify-center shrink-0">
+                  <div className="flex w-5 shrink-0 items-center justify-center">
                     <Icon
                       size={18}
                       strokeWidth={isActive ? 2.5 : 2}
@@ -128,7 +130,7 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
                     />
                   </div>
 
-                  <div className="flex-1 text-left overflow-hidden">
+                  <div className="flex-1 overflow-hidden text-left">
                     <AnimatePresence mode="wait">
                       {!collapsed && (
                         <motion.span
@@ -136,7 +138,7 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: -10 }}
                           transition={{ duration: 0.2 }}
-                          className="whitespace-nowrap ml-3"
+                          className="ml-3 whitespace-nowrap"
                         >
                           {item.label}
                         </motion.span>
@@ -147,7 +149,7 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
                   {isActive && (
                     <motion.div
                       layoutId="active-indicator"
-                      className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-full"
+                      className="bg-primary absolute top-1/2 left-0 h-6 w-1 -translate-y-1/2 rounded-r-full"
                     />
                   )}
                 </button>

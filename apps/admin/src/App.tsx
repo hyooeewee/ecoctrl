@@ -3,20 +3,21 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { ScrollArea } from "@ui/scroll-area";
 import React, { useState } from "react";
-import Sidebar from "@/components/Sidebar";
+
 import Header from "@/components/Header";
-import Dashboard from "@/pages/Dashboard";
-import Config from "@/pages/Config";
+import Sidebar from "@/components/Sidebar";
 import Accounts from "@/pages/Accounts";
+import Config from "@/pages/Config";
+import Dashboard from "@/pages/Dashboard";
+import Energy from "@/pages/Energy";
+import Faults from "@/pages/Faults";
+import Maintenance from "@/pages/Maintenance";
 import Models from "@/pages/Models";
-import ThreeDConfig from "@/pages/ThreeDConfig";
 import Monitoring from "@/pages/Monitoring";
 import Reports from "@/pages/Reports";
-import Maintenance from "@/pages/Maintenance";
-import Faults from "@/pages/Faults";
-import Energy from "@/pages/Energy";
-import { ScrollArea } from "@ui/scroll-area";
+import ThreeDConfig from "@/pages/ThreeDConfig";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -49,15 +50,15 @@ export default function App() {
   };
 
   return (
-    <div className="flex bg-background h-screen overflow-hidden text-foreground font-sans selection:bg-primary/10 selection:text-primary">
+    <div className="bg-background text-foreground selection:bg-primary/10 selection:text-primary flex h-screen overflow-hidden font-sans">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      <div className="flex-1 flex flex-col min-w-0 h-full">
+      <div className="flex h-full min-w-0 flex-1 flex-col">
         <Header activeTab={activeTab} />
 
-        <main className="flex-1 overflow-hidden bg-background">
+        <main className="bg-background flex-1 overflow-hidden">
           <ScrollArea className="h-full w-full">
-            <div className="p-8 max-w-[1440px] mx-auto pb-24">{renderContent()}</div>
+            <div className="mx-auto max-w-[1440px] p-8 pb-24">{renderContent()}</div>
           </ScrollArea>
         </main>
       </div>

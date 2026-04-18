@@ -4,15 +4,15 @@ import {
   IconLayoutDashboard,
   IconSettings,
   IconTopologyFull,
-} from "@tabler/icons-react"
-import { NavLink, useLocation } from "react-router"
+} from "@tabler/icons-react";
+import { NavLink, useLocation } from "react-router";
 
-import { useLocale } from "~/locales"
-import { cn } from "~/lib/utils"
+import { cn } from "~/lib/utils";
+import { useLocale } from "~/locales";
 
 export function DashboardNav({ className }: { className?: string }) {
-  const t = useLocale()
-  const location = useLocation()
+  const t = useLocale();
+  const location = useLocation();
 
   const navItems = [
     {
@@ -45,28 +45,23 @@ export function DashboardNav({ className }: { className?: string }) {
       label: t.nav.settings,
       Icon: IconSettings,
     },
-  ]
+  ];
 
   const activeIndex = Math.max(
     0,
     navItems.findIndex((item) => {
-      if (item.to === "/") return location.pathname === "/"
-      return location.pathname.startsWith(item.to)
+      if (item.to === "/") return location.pathname === "/";
+      return location.pathname.startsWith(item.to);
     }),
-  )
+  );
 
-  const pillPaddingX = 6
-  const itemWidth = 88
-  const indicatorLeft = pillPaddingX + activeIndex * itemWidth
-  const indicatorWidth = itemWidth
+  const pillPaddingX = 6;
+  const itemWidth = 88;
+  const indicatorLeft = pillPaddingX + activeIndex * itemWidth;
+  const indicatorWidth = itemWidth;
 
   return (
-    <nav
-      className={cn(
-        "flex h-[60px] items-center justify-center px-4",
-        className,
-      )}
-    >
+    <nav className={cn("flex h-[60px] items-center justify-center px-4", className)}>
       <div className="relative">
         {/* ambient glow beneath the pill */}
         <div
@@ -91,7 +86,7 @@ export function DashboardNav({ className }: { className?: string }) {
           />
 
           {navItems.map((item, index) => {
-            const isActive = index === activeIndex
+            const isActive = index === activeIndex;
             return (
               <NavLink
                 key={item.id}
@@ -120,10 +115,10 @@ export function DashboardNav({ className }: { className?: string }) {
                   {item.label}
                 </span>
               </NavLink>
-            )
+            );
           })}
         </div>
       </div>
     </nav>
-  )
+  );
 }

@@ -1,7 +1,15 @@
 import React, { useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -11,13 +19,7 @@ import {
   SheetTrigger,
   SheetFooter,
 } from "@/components/ui/sheet";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import { ReportPlan } from "../types";
 
 interface ReportPlanSheetProps {
@@ -60,7 +62,7 @@ export default function ReportPlanSheet({ trigger, onSave }: ReportPlanSheetProp
             配置周期性自动报表任务，系统将按设定频率发送至指定邮箱。
           </SheetDescription>
         </SheetHeader>
-        <div className="grid gap-4 py-6 px-4">
+        <div className="grid gap-4 px-4 py-6">
           <div className="grid space-y-2">
             <Label htmlFor="plan-name">报表名称</Label>
             <Input
@@ -82,7 +84,7 @@ export default function ReportPlanSheet({ trigger, onSave }: ReportPlanSheetProp
           </div>
           <div className="grid space-y-2">
             <Label htmlFor="plan-frequency">发送频率</Label>
-            <Select value={frequency} onValueChange={setFrequency}>
+            <Select value={frequency} onValueChange={(v) => setFrequency(v ?? "")}>
               <SelectTrigger id="plan-frequency">
                 <SelectValue placeholder="选择发送频率" />
               </SelectTrigger>

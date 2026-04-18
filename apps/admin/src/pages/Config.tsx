@@ -1,4 +1,7 @@
+import { Save } from "lucide-react";
 import React from "react";
+
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -9,7 +12,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -18,7 +20,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Save } from "lucide-react";
 
 export default function SystemConfig() {
   const handleSave = () => {
@@ -26,22 +27,22 @@ export default function SystemConfig() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">系统配置</h1>
       </div>
 
-      <Card className="border border-border shadow-sm bg-card overflow-hidden">
-        <CardHeader className="border-b border-border/50 px-6">
-          <CardTitle className="text-base font-bold text-foreground">基础设置</CardTitle>
+      <Card className="border-border bg-card overflow-hidden border shadow-sm">
+        <CardHeader className="border-border/50 border-b px-6">
+          <CardTitle className="text-foreground text-base font-bold">基础设置</CardTitle>
           <CardDescription className="text-xs">配置能耗管理平台的全局属性。</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6 pt-6 px-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <CardContent className="space-y-6 px-6 pt-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div className="space-y-2">
               <Label
                 htmlFor="platform-name"
-                className="text-xs font-bold text-muted-foreground uppercase tracking-wider"
+                className="text-muted-foreground text-xs font-bold tracking-wider uppercase"
               >
                 平台名称
               </Label>
@@ -54,7 +55,7 @@ export default function SystemConfig() {
             <div className="space-y-2">
               <Label
                 htmlFor="refresh-interval"
-                className="text-xs font-bold text-muted-foreground uppercase tracking-wider"
+                className="text-muted-foreground text-xs font-bold tracking-wider uppercase"
               >
                 数据刷新间隔 (秒)
               </Label>
@@ -72,11 +73,11 @@ export default function SystemConfig() {
             </div>
           </div>
 
-          <div className="space-y-5 pt-6 border-t border-border/50">
+          <div className="border-border/50 space-y-5 border-t pt-6">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label className="text-sm font-semibold">启用实时告警推送</Label>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   当设备发生严重故障时，系统会自动发送桌面通知。
                 </p>
               </div>
@@ -85,7 +86,7 @@ export default function SystemConfig() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label className="text-sm font-semibold">深色模式跟随系统</Label>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   自动根据操作系统的显示偏好切换应用主题。
                 </p>
               </div>
@@ -93,10 +94,10 @@ export default function SystemConfig() {
             </div>
           </div>
         </CardContent>
-        <CardFooter className="flex justify-end py-6 px-6 border-t border-border/50 bg-muted/20">
+        <CardFooter className="border-border/50 bg-muted/20 flex justify-end border-t px-6 py-6">
           <Button
             onClick={handleSave}
-            className="gap-2 bg-primary hover:bg-primary/90 text-white shadow-sm shadow-primary/20 font-semibold px-6"
+            className="bg-primary hover:bg-primary/90 shadow-primary/20 gap-2 px-6 font-semibold text-white shadow-sm"
           >
             <Save size={18} />
             保存配置
@@ -104,15 +105,15 @@ export default function SystemConfig() {
         </CardFooter>
       </Card>
 
-      <Card className="border border-border shadow-sm bg-card overflow-hidden border-l-4 border-l-primary/30">
+      <Card className="border-border bg-card border-l-primary/30 overflow-hidden border border-l-4 shadow-sm">
         <CardHeader className="px-6">
-          <CardTitle className="text-base font-bold text-foreground">高级选项</CardTitle>
+          <CardTitle className="text-foreground text-base font-bold">高级选项</CardTitle>
           <CardDescription className="text-xs">涉及到系统核心逻辑，请谨慎修改。</CardDescription>
         </CardHeader>
         <CardContent className="px-6 pb-6">
           <Button
             variant="outline"
-            className="text-destructive border-destructive/20 hover:bg-destructive/5 font-semibold text-xs text-nowrap"
+            className="text-destructive border-destructive/20 hover:bg-destructive/5 text-xs font-semibold text-nowrap"
           >
             重置数据库索引
           </Button>

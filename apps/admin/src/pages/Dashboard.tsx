@@ -1,16 +1,5 @@
-import React from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
 import { Zap, Activity, AlertCircle, Droplets } from "lucide-react";
-import { ALERTS, ENERGY_CHART_DATA } from "../constants/mockData";
+import React from "react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -20,7 +9,20 @@ import {
   CartesianGrid,
   Tooltip,
 } from "recharts";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
 import ExportDialog from "../components/ExportDialog";
+import { ALERTS, ENERGY_CHART_DATA } from "../constants/mockData";
 
 const Indicator = ({
   title,
@@ -44,30 +46,30 @@ const Indicator = ({
   }
 
   return (
-    <Card className="border border-border shadow-sm bg-card overflow-hidden group hover:shadow-md hover:border-primary/20 transition-all duration-300">
-      <CardContent className="p-6 flex flex-col justify-between h-full">
+    <Card className="border-border bg-card group hover:border-primary/20 overflow-hidden border shadow-sm transition-all duration-300 hover:shadow-md">
+      <CardContent className="flex h-full flex-col justify-between p-6">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+            <p className="text-muted-foreground text-[10px] font-bold tracking-widest uppercase">
               {title} ({unit})
             </p>
             <div
               className={cn(
-                "p-2 rounded-md transition-colors group-hover:bg-primary/10",
+                "group-hover:bg-primary/10 rounded-md p-2 transition-colors",
                 color.replace("text-", "bg-").concat("/10"),
               )}
             >
-              <Icon className={cn("w-4 h-4", color)} />
+              <Icon className={cn("h-4 w-4", color)} />
             </div>
           </div>
           <div className="space-y-1">
-            <h3 className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
+            <h3 className="text-foreground text-2xl font-bold tracking-tight tabular-nums">
               {value}
             </h3>
             <div className={cn("flex items-center gap-1 text-[11px] font-bold", trendColorClass)}>
               {trendType === "up" ? "↑" : trendType === "down" ? "↓" : "—"}
               {trend}{" "}
-              <span className="text-muted-foreground font-medium ml-0.5 whitespace-nowrap">
+              <span className="text-muted-foreground ml-0.5 font-medium whitespace-nowrap">
                 较上月同期
               </span>
             </div>
@@ -83,7 +85,7 @@ import { cn } from "@/lib/utils";
 export default function DashboardContent() {
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Indicator
           title="总能耗"
           value="12,840"
@@ -126,27 +128,27 @@ export default function DashboardContent() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 border border-border shadow-sm bg-card overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between px-6 pb-8 border-b border-border/50">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <Card className="border-border bg-card overflow-hidden border shadow-sm lg:col-span-2">
+          <CardHeader className="border-border/50 flex flex-row items-center justify-between border-b px-6 pb-8">
             <div className="space-y-1">
-              <CardTitle className="text-base font-bold text-foreground">
+              <CardTitle className="text-foreground text-base font-bold">
                 近一周能耗趋势 (分项)
               </CardTitle>
               <CardDescription className="text-xs">2024年3月14日 - 2024年3月20日</CardDescription>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-primary shadow-sm shadow-primary/20"></div>
-                <span className="text-[11px] font-medium text-muted-foreground">照明</span>
+                <div className="bg-primary shadow-primary/20 h-2.5 w-2.5 rounded-full shadow-sm"></div>
+                <span className="text-muted-foreground text-[11px] font-medium">照明</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-slate-300"></div>
-                <span className="text-[11px] font-medium text-muted-foreground">空调</span>
+                <div className="h-2.5 w-2.5 rounded-full bg-slate-300"></div>
+                <span className="text-muted-foreground text-[11px] font-medium">空调</span>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="pt-8 px-6">
+          <CardContent className="px-6 pt-8">
             <div className="h-[280px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={ENERGY_CHART_DATA}>
@@ -190,10 +192,10 @@ export default function DashboardContent() {
           </CardContent>
         </Card>
 
-        <Card className="border border-border shadow-sm bg-card overflow-hidden flex flex-col">
-          <CardHeader className="flex flex-row items-center justify-between px-6 pb-4 border-b border-border/50">
+        <Card className="border-border bg-card flex flex-col overflow-hidden border shadow-sm">
+          <CardHeader className="border-border/50 flex flex-row items-center justify-between border-b px-6 pb-4">
             <div className="space-y-1">
-              <CardTitle className="text-base font-bold text-foreground">实时告警列表</CardTitle>
+              <CardTitle className="text-foreground text-base font-bold">实时告警列表</CardTitle>
             </div>
             <a
               href="#"
@@ -201,22 +203,22 @@ export default function DashboardContent() {
                 e.preventDefault();
                 console.log("Navigate to all alerts");
               }}
-              className="text-xs font-semibold text-primary hover:underline underline-offset-4"
+              className="text-primary text-xs font-semibold underline-offset-4 hover:underline"
             >
               查看全部
             </a>
           </CardHeader>
-          <CardContent className="p-0 flex-1">
+          <CardContent className="flex-1 p-0">
             <Table>
               <TableHeader className="bg-muted/30">
-                <TableRow className="hover:bg-transparent border-border">
-                  <TableHead className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground py-3 px-6">
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead className="text-muted-foreground px-6 py-3 text-[10px] font-bold tracking-wider uppercase">
                     设备名称
                   </TableHead>
-                  <TableHead className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground py-3">
+                  <TableHead className="text-muted-foreground py-3 text-[10px] font-bold tracking-wider uppercase">
                     级别
                   </TableHead>
-                  <TableHead className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground py-3 text-right pr-6">
+                  <TableHead className="text-muted-foreground py-3 pr-6 text-right text-[10px] font-bold tracking-wider uppercase">
                     状态
                   </TableHead>
                 </TableRow>
@@ -224,13 +226,13 @@ export default function DashboardContent() {
               <TableBody>
                 {ALERTS.slice(0, 5).map((alert) => (
                   <TableRow key={alert.id} className="group hover:bg-muted/50 border-border">
-                    <TableCell className="py-4 px-6">
-                      <span className="text-sm font-medium text-foreground">{alert.device}</span>
+                    <TableCell className="px-6 py-4">
+                      <span className="text-foreground text-sm font-medium">{alert.device}</span>
                     </TableCell>
                     <TableCell className="py-4">
                       <span
                         className={cn(
-                          "status-badge px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase tracking-tight",
+                          "status-badge rounded-sm px-2 py-0.5 text-[10px] font-bold tracking-tight uppercase",
                           alert.level === "high"
                             ? "bg-red-100 text-red-700"
                             : "bg-orange-100 text-orange-700",
@@ -239,8 +241,8 @@ export default function DashboardContent() {
                         {alert.level === "high" ? "紧急" : "次要"}
                       </span>
                     </TableCell>
-                    <TableCell className="py-4 text-right pr-6">
-                      <span className="text-xs text-muted-foreground">未处理</span>
+                    <TableCell className="py-4 pr-6 text-right">
+                      <span className="text-muted-foreground text-xs">未处理</span>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -251,21 +253,21 @@ export default function DashboardContent() {
       </div>
 
       {/* Quick Access / Bottom Bar */}
-      <div className="flex flex-col sm:flex-row justify-between items-center bg-muted/30 p-6 rounded-md border border-border">
-        <div className="flex flex-wrap gap-8 mb-4 sm:mb-0">
-          <div className="text-sm flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+      <div className="bg-muted/30 border-border flex flex-col items-center justify-between rounded-md border p-6 sm:flex-row">
+        <div className="mb-4 flex flex-wrap gap-8 sm:mb-0">
+          <div className="flex items-center gap-2 text-sm">
+            <div className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
             <span className="text-muted-foreground">系统状态:</span>
             <span className="text-foreground font-semibold">正常运行中</span>
           </div>
-          <div className="text-sm flex items-center gap-2 pl-4 border-l border-border/50">
+          <div className="border-border/50 flex items-center gap-2 border-l pl-4 text-sm">
             <span className="text-muted-foreground">下次备份:</span>
             <span className="text-foreground font-medium">2023-11-20 03:00</span>
           </div>
         </div>
         <ExportDialog
           trigger={
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm shadow-primary/20 px-6 h-9">
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/20 h-9 px-6 shadow-sm">
               导出今日报表
             </Button>
           }

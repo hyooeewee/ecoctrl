@@ -1,4 +1,7 @@
+import { Trash2, FileText } from "lucide-react";
 import React, { useState } from "react";
+
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -8,10 +11,8 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Trash2, FileText } from "lucide-react";
 
 export interface TemplateDialogProps {
   trigger: React.ReactElement;
@@ -53,7 +54,7 @@ export default function TemplateDialog({
         </DialogHeader>
         <div className="grid gap-4 p-4 pl-[17px]">
           <div className="flex items-end gap-2">
-            <div className="flex-1 grid gap-2">
+            <div className="grid flex-1 gap-2">
               <Label htmlFor="newTemplate">新增模板</Label>
               <Input
                 id="newTemplate"
@@ -67,15 +68,15 @@ export default function TemplateDialog({
             </div>
             <Button onClick={handleAdd}>添加</Button>
           </div>
-          <div className="border rounded-md overflow-hidden">
+          <div className="overflow-hidden rounded-md border">
             {templates.length === 0 ? (
-              <div className="p-4 text-sm text-muted-foreground text-center">暂无模板</div>
+              <div className="text-muted-foreground p-4 text-center text-sm">暂无模板</div>
             ) : (
               <ul className="divide-y">
                 {templates.map((t) => (
                   <li
                     key={t}
-                    className="flex items-center justify-between px-3 py-2 hover:bg-muted/30"
+                    className="hover:bg-muted/30 flex items-center justify-between px-3 py-2"
                   >
                     <div className="flex items-center gap-2 text-sm">
                       <FileText size={14} className="text-muted-foreground" />
@@ -84,7 +85,7 @@ export default function TemplateDialog({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      className="h-7 w-7 text-red-600 hover:bg-red-50 hover:text-red-700"
                       onClick={() => handleDelete(t)}
                     >
                       <Trash2 size={14} />

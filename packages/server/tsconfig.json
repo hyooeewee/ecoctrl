@@ -1,0 +1,4 @@
+{
+  "extends": "@ecoctrl/config/tsconfig.node.json",
+  "include": ["**/*.ts"]
+}

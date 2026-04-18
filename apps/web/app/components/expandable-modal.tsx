@@ -41,7 +41,7 @@ export function ExpandableModal({
         <DialogContent
           showCloseButton
           className={cn(
-            "dark h-[80vh] w-[80vw] !max-w-none border-white/10 bg-[rgba(4,14,30,0.92)] p-0 text-white backdrop-blur-xl overflow-hidden",
+            "dark h-[80vh] w-[80vw] !max-w-none overflow-hidden border-white/10 bg-[rgba(4,14,30,0.92)] p-0 text-white backdrop-blur-xl",
             contentClassName,
           )}
         >
