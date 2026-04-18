@@ -10,8 +10,7 @@
     "fmt": "vp fmt",
     "lint": "vp lint",
     "check": "vp check",
-    "check:fix": "vp check --fix",
-    "prepare": "vp config"
+    "check:fix": "vp check --fix"
   },
   "dependencies": {
     "@babylonjs/core": "^9.2.1",
