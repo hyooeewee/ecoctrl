@@ -21,6 +21,13 @@ interface FileMeta {
   filename: string;
 }
 
+interface MaintenanceReminder {
+  id: string;
+  task: string;
+  dueDate: string;
+  priority: string;
+}
+
 function loadMeta(): FileMeta[] {
   if (!fs.existsSync(META_FILE)) return [];
   try {
@@ -134,6 +141,15 @@ fastify.get("/api/files/:id", async (request, reply) => {
     return reply.status(404).send({ error: "File not found" });
   }
   return reply.type("application/pdf").send(fs.createReadStream(filePath));
+});
+
+fastify.get("/api/maintenance/reminders", async (_request, reply) => {
+  const reminders: MaintenanceReminder[] = [
+    { id: "1", task: "发电机组季度维保", dueDate: "2024-03-25", priority: "high" },
+    { id: "2", task: "冷水机组滤网更换", dueDate: "2024-03-22", priority: "medium" },
+    { id: "3", task: "楼宇控制系统备份", dueDate: "2024-03-28", priority: "low" },
+  ];
+  return reply.send(reminders);
 });
 
 try {
