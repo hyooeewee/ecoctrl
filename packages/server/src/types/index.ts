@@ -23,3 +23,63 @@ export interface MaintenanceReminderDetail {
   estimatedHours: number;
   lastCompleted?: string;
 }
+
+export interface Fault {
+  id: string;
+  device: string;
+  level: "严重" | "一般" | "提示";
+  time: string;
+  status: "待处理" | "维保中" | "已修复";
+}
+
+export interface FaultStats {
+  totalCount: number;
+  trend: string;
+  mttr: number;
+  avgResponseTime: string;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: "active" | "inactive";
+  lastLogin: string;
+}
+
+export interface DashboardStatItem {
+  value: string;
+  unit: string;
+  trend: string;
+  trendType: "up" | "down";
+}
+
+export interface DashboardStats {
+  totalEnergy: DashboardStatItem;
+  onlineRate: DashboardStatItem;
+  pendingAlerts: DashboardStatItem;
+  carbonEmission: DashboardStatItem;
+}
+
+export interface EnergyChartItem {
+  name: string;
+  value: number;
+}
+
+export interface Alert {
+  id: string;
+  device: string;
+  level: "high" | "medium" | "low";
+  message: string;
+  time: string;
+  status: "pending" | "resolved";
+}
+
+export interface ReportPlan {
+  id: string;
+  name: string;
+  receiver: string;
+  frequency: string;
+  status: boolean;
+}
