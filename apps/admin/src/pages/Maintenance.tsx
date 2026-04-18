@@ -1,5 +1,5 @@
-import { BookOpen, Calendar, Clock, FileText, ExternalLink } from "lucide-react";
-import React, { useState } from "react";
+import { BookOpen, Calendar, Clock, FileText, Trash2, Upload } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -8,8 +8,85 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { REMINDERS } from "../constants/mockData";
 
+interface Manual {
+  id: string;
+  name: string;
+  url?: string;
+}
+
 export default function Maintenance() {
+  const [manuals, setManuals] = useState<Manual[]>([]);
   const [previewManual, setPreviewManual] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const fetchManuals = async () => {
+    try {
+      const res = await fetch("/api/files");
+      if (!res.ok) throw new Error("Failed to fetch files");
+      const data = (await res.json()) as Manual[];
+      setManuals(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchManuals();
+  }, []);
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const res = await fetch("/api/files", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!res.ok) throw new Error("Upload failed");
+      }
+      await fetchManuals();
+    } catch (err) {
+      console.error(err);
+      alert("上传失败，请重试");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleManualClick = (manual: Manual) => {
+    if (manual.url) {
+      window.open(`${manual.url}/preview`, "_blank");
+    } else {
+      setPreviewManual(manual.name);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const res = await fetch(`/api/files/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Delete failed");
+      await fetchManuals();
+    } catch (err) {
+      console.error(err);
+      alert("删除失败，请重试");
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -19,40 +96,66 @@ export default function Maintenance() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
         {/* Left Side: Manuals */}
-        <Card className="flex h-full flex-col border-none shadow-sm lg:col-span-1">
-          <CardHeader className="border-b border-gray-50 px-6">
+        <Card className="flex h-full flex-col border-none shadow-sm lg:col-span-1 gap-0">
+          <CardHeader className="flex flex-row items-center gap-3 border-b border-gray-50 px-6 pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <BookOpen size={18} className="text-blue-600" />
               维保说明书
             </CardTitle>
+            <Button variant="outline" size="sm" onClick={handleUploadClick} disabled={uploading}>
+              <Upload size={15} />
+              {uploading ? "上传中..." : "上传文件"}
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/pdf"
+              multiple
+              className="hidden"
+              onChange={handleFileChange}
+            />
           </CardHeader>
           <CardContent className="flex-1 p-0">
             <ScrollArea className="h-[500px]">
-              <div className="space-y-1 p-2">
-                {[
-                  "空调系统 A1 系列说明",
-                  "ABB 高压柜操作手册",
-                  "电梯维保技术标准 (2024)",
-                  "消防联动系统测试指南",
-                  "各层给排水分布图",
-                  "弱电智能化系统架构",
-                ].map((item, i) => (
-                  <Button
-                    key={i}
-                    variant="ghost"
-                    className="group h-10 w-full justify-between px-3 text-sm font-normal hover:bg-blue-50 hover:text-blue-700"
-                    onClick={() => setPreviewManual(item)}
+              <div className="px-2 py-1">
+                {loading && (
+                  <div className="flex items-center justify-center py-8 text-sm text-gray-400">
+                    加载中...
+                  </div>
+                )}
+                {manuals.map((manual) => (
+                  <div
+                    key={manual.id}
+                    className="group flex h-10 items-center justify-between overflow-hidden rounded-md px-6 hover:bg-blue-50"
                   >
-                    <div className="flex items-center gap-2 truncate">
+                    <button
+                      className="flex min-w-0 flex-1 items-center gap-2 text-sm text-left hover:text-blue-700"
+                      onClick={() => handleManualClick(manual)}
+                      title={manual.name}
+                    >
                       <FileText
                         size={16}
                         className="text-muted-foreground shrink-0 group-hover:text-blue-600"
                       />
-                      <span className="truncate">{item}</span>
-                    </div>
-                    <ExternalLink size={14} className="text-gray-300" />
-                  </Button>
+                      <span className="block truncate">{manual.name}</span>
+                    </button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100"
+                      onClick={() => handleDelete(manual.id)}
+                    >
+                      <Trash2 size={14} className="text-red-500" />
+                    </Button>
+                  </div>
                 ))}
+                {!loading && manuals.length === 0 && (
+                  <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+                    <FileText className="h-10 w-10 text-muted-foreground/40" />
+                    <p className="text-sm font-medium text-muted-foreground">暂无维保说明书</p>
+                    <p className="text-xs text-muted-foreground/60">点击右上角上传文件</p>
+                  </div>
+                )}
               </div>
             </ScrollArea>
           </CardContent>
