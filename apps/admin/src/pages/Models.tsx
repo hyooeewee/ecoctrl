@@ -11,10 +11,6 @@ export default function Models() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">模型与对象管理</h1>
-      </div>
-
       <Tabs defaultValue="models" className="w-full">
         <TabsList className="mb-6 bg-gray-100/80 p-1">
           <TabsTrigger

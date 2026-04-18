@@ -28,10 +28,6 @@ export default function SystemConfig() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">系统配置</h1>
-      </div>
-
       <Card className="border-border bg-card overflow-hidden border shadow-sm">
         <CardHeader className="border-border/50 border-b px-6">
           <CardTitle className="text-foreground text-base font-bold">基础设置</CardTitle>

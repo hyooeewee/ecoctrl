@@ -18,10 +18,6 @@ import { FAULTS } from "../constants/mockData";
 export default function Faults() {
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">故障管理</h1>
-      </div>
-
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <Card className="border-l-4 border-none border-l-red-500 bg-red-50 shadow-sm">
           <CardContent className="flex items-center justify-between p-6">

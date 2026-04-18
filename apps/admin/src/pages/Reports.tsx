@@ -65,10 +65,6 @@ export default function Reports() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">报表管理</h1>
-          <p className="text-muted-foreground text-sm">自动化数据分析与定期报表分发系统。</p>
-        </div>
         <div className="flex items-center gap-3">
           <TemplateDialog
             trigger={

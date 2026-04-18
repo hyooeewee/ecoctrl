@@ -308,10 +308,6 @@ export default function Maintenance() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">维保管理</h1>
-      </div>
-
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
         {/* Left Side: Manuals */}
         <Card className="flex h-full flex-col border-none shadow-sm lg:col-span-1 gap-0">

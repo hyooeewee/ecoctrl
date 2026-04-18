@@ -65,13 +65,6 @@ export default function Accounts() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">账户控制</h1>
-          <p className="text-muted-foreground text-sm">
-            管理平台用户列表、角色分配及系统权限控制。
-          </p>
-        </div>
-
         <div className="flex items-center gap-3">
           <ExportDialog
             trigger={

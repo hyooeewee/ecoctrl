@@ -10,18 +10,12 @@ import { Progress } from "../components/Progress";
 export default function Energy() {
   return (
     <Tabs defaultValue="overview" className="w-full space-y-6">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">能耗管理</h1>
-        </div>
-
-        <TabsList>
-          <TabsTrigger value="overview">分区总览</TabsTrigger>
-          <TabsTrigger value="details">详细数据</TabsTrigger>
-          <TabsTrigger value="stats">统计报表</TabsTrigger>
-          <TabsTrigger value="config">分项配置</TabsTrigger>
-        </TabsList>
-      </div>
+      <TabsList>
+        <TabsTrigger value="overview">分区总览</TabsTrigger>
+        <TabsTrigger value="details">详细数据</TabsTrigger>
+        <TabsTrigger value="stats">统计报表</TabsTrigger>
+        <TabsTrigger value="config">分项配置</TabsTrigger>
+      </TabsList>
 
       <TabsContent value="overview" className="space-y-6">
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">

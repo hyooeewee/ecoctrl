@@ -8,10 +8,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export default function ThreeDConfig() {
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">3D 模型设置</h1>
-      </div>
-
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="border-none shadow-sm lg:col-span-1">
           <CardHeader className="px-6">
