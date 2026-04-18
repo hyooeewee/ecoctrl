@@ -24,6 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 import ExportDialog from "../components/ExportDialog";
 import { Alert } from "../types";
+import { dashboardApi } from "../api/dashboard";
 
 interface DashboardStats {
   totalEnergy: { value: string; unit: string; trend: string; trendType: "up" | "down" | "neutral" };
@@ -106,16 +107,14 @@ export default function DashboardContent() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [statsRes, energyRes, alertsRes] = await Promise.all([
-          fetch("/api/dashboard/stats"),
-          fetch("/api/dashboard/energy-chart"),
-          fetch("/api/alerts?limit=5"),
+        const [statsData, energyData, alertsData] = await Promise.all([
+          dashboardApi.stats(),
+          dashboardApi.energyChart(),
+          dashboardApi.alerts(),
         ]);
-
-        if (statsRes.ok) setStats((await statsRes.json()) as DashboardStats);
-        if (energyRes.ok)
-          setEnergyData((await energyRes.json()) as { name: string; value: number }[]);
-        if (alertsRes.ok) setAlerts((await alertsRes.json()) as Alert[]);
+        setStats(statsData);
+        setEnergyData(energyData);
+        setAlerts(alertsData);
       } catch (err) {
         console.error(err);
       } finally {

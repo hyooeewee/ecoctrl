@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table";
 
 import { User } from "../types";
+import { usersApi } from "../api/users";
 
 export default function Accounts() {
   const [users, setUsers] = useState<User[]>([]);
@@ -33,9 +34,7 @@ export default function Accounts() {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch("/api/users");
-      if (!res.ok) throw new Error("Failed to fetch users");
-      const data = (await res.json()) as User[];
+      const data = await usersApi.list();
       setUsers(data);
     } catch (err) {
       console.error(err);
@@ -52,12 +51,7 @@ export default function Accounts() {
     if (!newUser.name || !newUser.email || !newUser.role) return;
     setAdding(true);
     try {
-      const res = await fetch("/api/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newUser),
-      });
-      if (!res.ok) throw new Error("Failed to add user");
+      await usersApi.create(newUser);
       await fetchUsers();
       setShowAdd(false);
       setNewUser({ name: "", email: "", role: "" });
@@ -72,8 +66,7 @@ export default function Accounts() {
   const handleDelete = async (id: string, name: string) => {
     if (!window.confirm(`确定要删除用户 "${name}" 吗？`)) return;
     try {
-      const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to delete user");
+      await usersApi.delete(id);
       await fetchUsers();
     } catch (err) {
       console.error(err);
