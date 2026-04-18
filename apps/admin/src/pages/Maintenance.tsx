@@ -1,12 +1,23 @@
-import { BookOpen, Calendar, Clock, FileText, Trash2, Upload } from "lucide-react";
-import React, { useEffect, useRef, useState } from "react";
+import {
+  BookOpen,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  FileText,
+  Trash2,
+  Upload,
+} from "lucide-react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-import { REMINDERS } from "../constants/mockData";
+import { cn } from "@/lib/utils";
+import { MaintenanceReminder } from "../types";
 
 interface Manual {
   id: string;
@@ -14,11 +25,158 @@ interface Manual {
   url?: string;
 }
 
+function MaintenanceCalendar({
+  reminders,
+  onDateSelect,
+}: {
+  reminders: MaintenanceReminder[];
+  onDateSelect?: (dateStr: string) => void;
+}) {
+  const [currentDate, setCurrentDate] = useState(new Date(2026, 3, 1));
+  const today = new Date(2026, 3, 18);
+  const [selectedDate, setSelectedDate] = useState(today);
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  const calendarDays = useMemo(() => {
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startWeekday = firstDay.getDay();
+    const daysInMonth = lastDay.getDate();
+
+    const days: { day: number; dateStr: string }[] = [];
+    for (let i = 0; i < startWeekday; i++) {
+      days.push(null as any);
+    }
+    for (let i = 1; i <= daysInMonth; i++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(i).padStart(2, "0")}`;
+      days.push({ day: i, dateStr });
+    }
+    return days;
+  }, [year, month]);
+
+  const eventsByDate = useMemo(() => {
+    const map: Record<string, MaintenanceReminder[]> = {};
+    for (const r of reminders) {
+      if (!map[r.dueDate]) map[r.dueDate] = [];
+      map[r.dueDate].push(r);
+    }
+    return map;
+  }, [reminders]);
+
+  const weekDays = ["日", "一", "二", "三", "四", "五", "六"];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">
+            {year}年{month + 1}月
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            今天: {today.getFullYear()}年{today.getMonth() + 1}月{today.getDate()}日
+          </p>
+        </div>
+        <div className="flex gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
+          >
+            <ChevronLeft size={16} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
+          >
+            <ChevronRight size={16} />
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-7 text-center text-xs text-muted-foreground">
+        {weekDays.map((d) => (
+          <div key={d} className="py-1">
+            {d}
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-7 gap-1">
+        {calendarDays.map((day, i) => {
+          if (!day) return <div key={`empty-${i}`} className="h-9" />;
+          const isToday =
+            today.getFullYear() === year &&
+            today.getMonth() === month &&
+            today.getDate() === day.day;
+          const isSelected =
+            selectedDate.getFullYear() === year &&
+            selectedDate.getMonth() === month &&
+            selectedDate.getDate() === day.day;
+          const events = eventsByDate[day.dateStr] || [];
+
+          return (
+            <button
+              key={day.day}
+              onClick={() => {
+                const date = new Date(year, month, day.day);
+                setSelectedDate(date);
+                const ds = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+                onDateSelect?.(ds);
+              }}
+              className={cn(
+                "relative flex h-9 flex-col items-center justify-center rounded-md text-sm transition-colors",
+                isToday
+                  ? "bg-blue-500 text-white hover:bg-blue-600"
+                  : isSelected
+                    ? "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                    : "hover:bg-gray-100",
+              )}
+            >
+              <span>{day.day}</span>
+              {events.length > 0 && (
+                <div className="absolute bottom-0.5 flex gap-0.5">
+                  {events.slice(0, 3).map((e, idx) => (
+                    <div
+                      key={idx}
+                      className={cn(
+                        "h-1 w-1 rounded-full",
+                        isToday
+                          ? "bg-white/80"
+                          : e.priority === "high"
+                            ? "bg-red-500"
+                            : e.priority === "medium"
+                              ? "bg-orange-500"
+                              : "bg-blue-500",
+                      )}
+                    />
+                  ))}
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function Maintenance() {
   const [manuals, setManuals] = useState<Manual[]>([]);
   const [previewManual, setPreviewManual] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [reminders, setReminders] = useState<MaintenanceReminder[]>([]);
+  const [showAllPlans, setShowAllPlans] = useState(false);
+  const [selectedReminder, setSelectedReminder] = useState<MaintenanceReminder | null>(null);
+  const [selectedDateStr, setSelectedDateStr] = useState<string>("2026-04-18");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState<Partial<MaintenanceReminder>>({});
+  const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchManuals = async () => {
@@ -34,8 +192,20 @@ export default function Maintenance() {
     }
   };
 
+  const fetchReminders = async () => {
+    try {
+      const res = await fetch("/api/maintenance/reminders");
+      if (!res.ok) throw new Error("Failed to fetch reminders");
+      const data = (await res.json()) as MaintenanceReminder[];
+      setReminders(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchManuals();
+    fetchReminders();
   }, []);
 
   const handleUploadClick = () => {
@@ -86,6 +256,54 @@ export default function Maintenance() {
       console.error(err);
       alert("删除失败，请重试");
     }
+  };
+
+  const handleViewDetail = async (id: string) => {
+    try {
+      const res = await fetch(`/api/maintenance/reminders/${id}`);
+      if (!res.ok) throw new Error("Failed to fetch reminder detail");
+      const data = (await res.json()) as MaintenanceReminder;
+      setSelectedReminder(data);
+      setIsEditing(false);
+      setEditForm({});
+    } catch (err) {
+      console.error(err);
+      alert("获取详情失败，请重试");
+    }
+  };
+
+  const startEdit = () => {
+    if (!selectedReminder) return;
+    setEditForm({ ...selectedReminder });
+    setIsEditing(true);
+  };
+
+  const handleSave = async () => {
+    if (!selectedReminder || !editForm) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/maintenance/reminders/${selectedReminder.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      if (!res.ok) throw new Error("Save failed");
+      const updated = (await res.json()) as MaintenanceReminder;
+      setSelectedReminder(updated);
+      setIsEditing(false);
+      await fetchReminders();
+    } catch (err) {
+      console.error(err);
+      alert("保存失败，请重试");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const selectedDateReminders = reminders.filter((r) => r.dueDate === selectedDateStr);
+
+  const handleDateSelect = (dateStr: string) => {
+    setSelectedDateStr(dateStr);
   };
 
   return (
@@ -161,23 +379,33 @@ export default function Maintenance() {
           </CardContent>
         </Card>
 
-        {/* Right Side: Reminders and Calendar View */}
+        {/* Right Side: Calendar View and Reminders */}
         <div className="space-y-6 lg:col-span-3">
+          <Card className="border-none shadow-sm p-6">
+            <MaintenanceCalendar reminders={reminders} onDateSelect={handleDateSelect} />
+          </Card>
+
           <Card className="border-none shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between px-6 pb-4">
               <div className="space-y-1">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Clock size={18} className="text-orange-500" />
-                  今日维保提醒
+                  {selectedDateStr === "2026-04-18"
+                    ? "今日维保提醒"
+                    : `${selectedDateStr} 维保提醒`}
                 </CardTitle>
-                <CardDescription>今天需要关注的设备保养任务清单</CardDescription>
+                <CardDescription>
+                  {selectedDateStr === "2026-04-18"
+                    ? "今天需要关注的设备保养任务清单"
+                    : `${selectedDateStr}需要关注的设备保养任务清单`}
+                </CardDescription>
               </div>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => setShowAllPlans(true)}>
                 全部计划
               </Button>
             </CardHeader>
             <CardContent className="space-y-4 px-6 pb-6">
-              {REMINDERS.map((reminder) => (
+              {selectedDateReminders.map((reminder) => (
                 <div
                   key={reminder.id}
                   className="group flex cursor-pointer items-center justify-between rounded-lg bg-gray-50 p-4 transition-colors hover:bg-gray-100"
@@ -194,20 +422,22 @@ export default function Maintenance() {
                       </p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="opacity-0 group-hover:opacity-100"
+                    onClick={() => handleViewDetail(reminder.id)}
+                  >
                     查看详情
                   </Button>
                 </div>
               ))}
+              {selectedDateReminders.length === 0 && (
+                <div className="text-center py-8 text-sm text-muted-foreground">
+                  {selectedDateStr === "2026-04-18" ? "今日暂无维保任务" : "该日期暂无维保任务"}
+                </div>
+              )}
             </CardContent>
-          </Card>
-
-          <Card className="flex min-h-[400px] items-center justify-center border-none bg-gray-50 shadow-sm">
-            <div className="text-center">
-              <Calendar className="mx-auto h-12 w-12 text-gray-300" />
-              <h3 className="mt-2 text-sm font-semibold text-gray-900">日历视图占位符</h3>
-              <p className="mt-1 text-sm text-gray-500">此区域将集成全功能维保排程日历。</p>
-            </div>
           </Card>
         </div>
       </div>
@@ -231,6 +461,297 @@ export default function Maintenance() {
               {/* PDF Viewer Placeholder */}
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showAllPlans} onOpenChange={(open) => !open && setShowAllPlans(false)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="flex items-center gap-2">
+              <Calendar className="text-orange-500" size={18} />
+              全部维保计划
+            </DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto py-2">
+            {reminders.length === 0 ? (
+              <div className="py-8 text-center text-sm text-muted-foreground">暂无维保计划</div>
+            ) : (
+              <div className="space-y-2">
+                {reminders.map((reminder) => (
+                  <div
+                    key={reminder.id}
+                    className="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div
+                        className={cn(
+                          "h-10 w-2 rounded-full",
+                          reminder.priority === "high"
+                            ? "bg-red-500"
+                            : reminder.priority === "medium"
+                              ? "bg-orange-500"
+                              : "bg-blue-500",
+                        )}
+                      />
+                      <div>
+                        <p className="font-semibold text-gray-900">{reminder.task}</p>
+                        <p className="mt-1 flex items-center gap-1 text-xs text-gray-500">
+                          <Calendar size={12} />
+                          截止日期: {reminder.dueDate}
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      className={cn(
+                        "rounded-full px-2 py-0.5 text-xs font-medium",
+                        reminder.priority === "high"
+                          ? "bg-red-50 text-red-600"
+                          : reminder.priority === "medium"
+                            ? "bg-orange-50 text-orange-600"
+                            : "bg-blue-50 text-blue-600",
+                      )}
+                    >
+                      {reminder.priority === "high"
+                        ? "高优先级"
+                        : reminder.priority === "medium"
+                          ? "中优先级"
+                          : "低优先级"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!selectedReminder}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedReminder(null);
+            setIsEditing(false);
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="flex items-center gap-2">
+              <Clock className="text-orange-500" size={18} />
+              {isEditing ? "编辑维保任务" : "维保任务详情"}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedReminder && !isEditing && (
+            <div className="space-y-4 py-2">
+              <div className="flex justify-end">
+                <Button variant="ghost" size="sm" onClick={startEdit}>
+                  编辑
+                </Button>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground">任务名称</p>
+                  <p className="text-sm font-medium">{selectedReminder.task}</p>
+                </div>
+                <span
+                  className={cn(
+                    "rounded-full px-2.5 py-0.5 text-xs font-medium",
+                    selectedReminder.priority === "high"
+                      ? "bg-red-50 text-red-600"
+                      : selectedReminder.priority === "medium"
+                        ? "bg-orange-50 text-orange-600"
+                        : "bg-blue-50 text-blue-600",
+                  )}
+                >
+                  {selectedReminder.priority === "high"
+                    ? "高优先级"
+                    : selectedReminder.priority === "medium"
+                      ? "中优先级"
+                      : "低优先级"}
+                </span>
+              </div>
+              {selectedReminder.description && (
+                <div>
+                  <p className="text-xs text-muted-foreground">任务描述</p>
+                  <p className="text-sm text-gray-700">{selectedReminder.description}</p>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">截止日期</p>
+                  <p className="text-sm font-medium">{selectedReminder.dueDate}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">状态</p>
+                  <p className="text-sm font-medium">
+                    {selectedReminder.status === "pending"
+                      ? "待处理"
+                      : selectedReminder.status === "in_progress"
+                        ? "进行中"
+                        : selectedReminder.status === "completed"
+                          ? "已完成"
+                          : selectedReminder.status || "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">负责人</p>
+                  <p className="text-sm font-medium">{selectedReminder.assignee || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">地点</p>
+                  <p className="text-sm font-medium">{selectedReminder.location || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">预估工时</p>
+                  <p className="text-sm font-medium">
+                    {selectedReminder.estimatedHours
+                      ? `${selectedReminder.estimatedHours} 小时`
+                      : "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">上次完成</p>
+                  <p className="text-sm font-medium">{selectedReminder.lastCompleted || "-"}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          {selectedReminder && isEditing && (
+            <div className="space-y-3 py-2">
+              <div>
+                <div className="mb-1 flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">任务名称</p>
+                  <p
+                    className={cn(
+                      "text-xs",
+                      (editForm.task?.length || 0) < 2 || (editForm.task?.length || 0) > 100
+                        ? "text-red-500"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    {editForm.task?.length || 0} / 100
+                  </p>
+                </div>
+                <Input
+                  maxLength={100}
+                  value={editForm.task || ""}
+                  onChange={(e) => setEditForm((f) => ({ ...f, task: e.target.value }))}
+                />
+                {(editForm.task?.length || 0) < 2 && (
+                  <p className="mt-1 text-xs text-red-500">任务名称至少需要 2 个字符</p>
+                )}
+              </div>
+              <div>
+                <div className="mb-1 flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">任务描述</p>
+                  <p
+                    className={cn(
+                      "text-xs",
+                      (editForm.description?.length || 0) > 2000
+                        ? "text-red-500"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    {editForm.description?.length || 0} / 2000
+                  </p>
+                </div>
+                <textarea
+                  maxLength={2000}
+                  rows={4}
+                  className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                  value={editForm.description || ""}
+                  onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="mb-1 text-xs text-muted-foreground">截止日期</p>
+                  <Input
+                    type="date"
+                    value={editForm.dueDate || ""}
+                    onChange={(e) => setEditForm((f) => ({ ...f, dueDate: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <p className="mb-1 text-xs text-muted-foreground">优先级</p>
+                  <select
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors"
+                    value={editForm.priority || ""}
+                    onChange={(e) =>
+                      setEditForm((f) => ({
+                        ...f,
+                        priority: e.target.value as MaintenanceReminder["priority"],
+                      }))
+                    }
+                  >
+                    <option value="high">高</option>
+                    <option value="medium">中</option>
+                    <option value="low">低</option>
+                  </select>
+                </div>
+                <div>
+                  <p className="mb-1 text-xs text-muted-foreground">状态</p>
+                  <select
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors"
+                    value={editForm.status || ""}
+                    onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))}
+                  >
+                    <option value="pending">待处理</option>
+                    <option value="in_progress">进行中</option>
+                    <option value="completed">已完成</option>
+                  </select>
+                </div>
+                <div>
+                  <p className="mb-1 text-xs text-muted-foreground">负责人</p>
+                  <Input
+                    value={editForm.assignee || ""}
+                    onChange={(e) => setEditForm((f) => ({ ...f, assignee: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <p className="mb-1 text-xs text-muted-foreground">地点</p>
+                  <Input
+                    value={editForm.location || ""}
+                    onChange={(e) => setEditForm((f) => ({ ...f, location: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <p className="mb-1 text-xs text-muted-foreground">预估工时</p>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    value={editForm.estimatedHours ?? ""}
+                    onChange={(e) =>
+                      setEditForm((f) => ({ ...f, estimatedHours: parseFloat(e.target.value) }))
+                    }
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditing(false)}
+                  disabled={saving}
+                >
+                  取消
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={
+                    saving ||
+                    !editForm.task ||
+                    editForm.task.length < 2 ||
+                    editForm.task.length > 100 ||
+                    (editForm.description?.length || 0) > 2000
+                  }
+                >
+                  {saving ? "保存中..." : "保存"}
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
