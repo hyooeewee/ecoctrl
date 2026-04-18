@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
-
 import { IconLayoutNavbar, IconLayoutNavbarCollapse } from "@tabler/icons-react";
+import { useEffect, useState } from "react";
 
 import { cn } from "~/lib/utils";
 import { useLocale } from "~/locales";
@@ -40,11 +39,12 @@ export function DashboardHeader({ className, onLogoClick, navVisible }: Dashboar
       <div className="absolute inset-0 bg-[rgba(2,10,22,0.82)]" />
 
       {/* Top glow edge */}
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyber-cyan/30 to-transparent" />
+      <div className="via-cyber-cyan/30 absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent to-transparent" />
 
       {/* Center cyan badge — rounded capsule with border glow */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <div className="relative flex h-8 items-center justify-center rounded-full px-8"
+        <div
+          className="relative flex h-8 items-center justify-center rounded-full px-8"
           style={{
             background:
               "linear-gradient(180deg, rgba(0,210,230,0.18) 0%, rgba(0,160,190,0.06) 100%)",
@@ -54,13 +54,13 @@ export function DashboardHeader({ className, onLogoClick, navVisible }: Dashboar
         >
           {/* Wing lines extending from badge */}
           <div
-            className="absolute right-full top-1/2 h-px w-[28vw] max-w-[420px] -translate-y-1/2"
+            className="absolute top-1/2 right-full h-px w-[28vw] max-w-[420px] -translate-y-1/2"
             style={{
               background: "linear-gradient(90deg, transparent 0%, rgba(0,220,255,0.35) 100%)",
             }}
           />
           <div
-            className="absolute left-full top-1/2 h-px w-[28vw] max-w-[420px] -translate-y-1/2"
+            className="absolute top-1/2 left-full h-px w-[28vw] max-w-[420px] -translate-y-1/2"
             style={{
               background: "linear-gradient(90deg, rgba(0,220,255,0.35) 0%, transparent 100%)",
             }}
@@ -70,15 +70,15 @@ export function DashboardHeader({ className, onLogoClick, navVisible }: Dashboar
           <div className="relative z-10 flex items-center gap-2.5">
             {/* Green pulse dot */}
             <span className="relative flex size-2">
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-cyber-green opacity-70" />
-              <span className="relative inline-flex size-2 rounded-full bg-cyber-green shadow-[0_0_8px_#22c55e]" />
+              <span className="bg-cyber-green absolute inline-flex size-full animate-ping rounded-full opacity-70" />
+              <span className="bg-cyber-green relative inline-flex size-2 rounded-full shadow-[0_0_8px_#22c55e]" />
             </span>
 
-            <span className="font-heading text-[15px] font-semibold tracking-[0.15em] text-foreground/95">
+            <span className="font-heading text-foreground/95 text-[15px] font-semibold tracking-[0.15em]">
               {t.header.location}
             </span>
 
-            <span className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] tracking-wider text-muted-foreground/90">
+            <span className="text-muted-foreground/90 rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] tracking-wider">
               {t.header.monitoring}
             </span>
           </div>
@@ -91,20 +91,20 @@ export function DashboardHeader({ className, onLogoClick, navVisible }: Dashboar
         <button
           type="button"
           onClick={onLogoClick}
-          className="group z-10 flex items-center gap-3 rounded-lg px-1 py-0.5 transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyber-cyan/50"
+          className="group focus-visible:ring-cyber-cyan/50 z-10 flex items-center gap-3 rounded-lg px-1 py-0.5 transition-colors hover:bg-white/5 focus-visible:ring-1 focus-visible:outline-none"
           title={navVisible ? t.header.toggleNavHide : t.header.toggleNavShow}
         >
-          <div className="relative flex size-9 items-center justify-center rounded-full border border-cyber-cyan/40 bg-cyber-cyan/10 transition-colors group-hover:bg-cyber-cyan/15">
+          <div className="border-cyber-cyan/40 bg-cyber-cyan/10 group-hover:bg-cyber-cyan/15 relative flex size-9 items-center justify-center rounded-full border transition-colors">
             <img src="/favicon.ico" alt={t.common.logoAlt} className="size-4 object-contain" />
-            <span className="absolute -bottom-1 -right-1 flex size-3.5 items-center justify-center rounded-full border border-cyber-cyan/40 bg-panel-dark text-cyber-cyan/70">
+            <span className="border-cyber-cyan/40 bg-panel-dark text-cyber-cyan/70 absolute -right-1 -bottom-1 flex size-3.5 items-center justify-center rounded-full border">
               {navVisible ? <IconLayoutNavbar size={8} /> : <IconLayoutNavbarCollapse size={8} />}
             </span>
           </div>
           <div className="flex flex-col items-start gap-0">
-            <span className="font-heading text-sm font-bold tracking-[0.1em] text-cyber-cyan">
+            <span className="font-heading text-cyber-cyan text-sm font-bold tracking-[0.1em]">
               ECOCTRL {t.header.brandSub}
             </span>
-            <span className="text-[8px] tracking-[0.06em] text-muted-foreground/80">
+            <span className="text-muted-foreground/80 text-[8px] tracking-[0.06em]">
               {t.header.tagline}
             </span>
           </div>
@@ -112,10 +112,12 @@ export function DashboardHeader({ className, onLogoClick, navVisible }: Dashboar
 
         {/* Right time */}
         <div className="z-10 flex flex-col items-end gap-0 text-right">
-          <span className="font-heading text-xl font-semibold tabular-nums tracking-wide text-foreground/95">
+          <span className="font-heading text-foreground/95 text-xl font-semibold tracking-wide tabular-nums">
             {formatTime(now)}
           </span>
-          <span className="text-[9px] tracking-wider text-muted-foreground/70">{formatDate(now)}</span>
+          <span className="text-muted-foreground/70 text-[9px] tracking-wider">
+            {formatDate(now)}
+          </span>
         </div>
       </div>
     </header>

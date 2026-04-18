@@ -1,5 +1,10 @@
+import { Plus, Search, Edit2, ShieldAlert, Trash2, Download } from "lucide-react";
 import React, { useState } from "react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -8,13 +13,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Plus, Search, Edit2, ShieldAlert, Trash2, Download } from "lucide-react";
-import { USERS as INITIAL_USERS } from "../constants/mockData";
+
 import ExportDialog from "../components/ExportDialog";
 import UserSheet from "../components/UserSheet";
+import { USERS as INITIAL_USERS } from "../constants/mockData";
 import { User } from "../types";
 
 export default function Accounts() {
@@ -62,7 +64,7 @@ export default function Accounts() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">账户控制</h1>
           <p className="text-muted-foreground text-sm">
@@ -99,15 +101,15 @@ export default function Accounts() {
         </div>
       </div>
 
-      <Card className="border-none shadow-sm overflow-hidden">
-        <CardHeader className="bg-white px-6 pb-4 border-b border-gray-50">
+      <Card className="overflow-hidden border-none shadow-sm">
+        <CardHeader className="border-b border-gray-50 bg-white px-6 pb-4">
           <div className="flex items-center gap-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+            <div className="relative max-w-sm flex-1">
+              <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-gray-500" />
               <Input
                 type="search"
                 placeholder="搜索账户姓名或角色..."
-                className="pl-9 h-10 border-gray-200"
+                className="h-10 border-gray-200 pl-9"
               />
             </div>
             <Button variant="outline" className="h-10">
@@ -124,14 +126,14 @@ export default function Accounts() {
                 <TableHead className="font-semibold text-gray-600">角色</TableHead>
                 <TableHead className="font-semibold text-gray-600">状态</TableHead>
                 <TableHead className="font-semibold text-gray-600">最后登录</TableHead>
-                <TableHead className="text-right pr-6 font-semibold text-gray-600">操作</TableHead>
+                <TableHead className="pr-6 text-right font-semibold text-gray-600">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {users.map((user) => (
                 <TableRow key={user.id} className="hover:bg-gray-50/50">
-                  <TableCell className="font-medium px-6">{user.name}</TableCell>
-                  <TableCell className="text-gray-600 text-sm">{user.email}</TableCell>
+                  <TableCell className="px-6 font-medium">{user.name}</TableCell>
+                  <TableCell className="text-sm text-gray-600">{user.email}</TableCell>
                   <TableCell>{user.role}</TableCell>
                   <TableCell>
                     <Badge
@@ -145,7 +147,7 @@ export default function Accounts() {
                       {user.status === "active" ? "在线" : "离线"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-gray-500 text-sm italic">{user.lastLogin}</TableCell>
+                  <TableCell className="text-sm text-gray-500 italic">{user.lastLogin}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
                       <UserSheet
@@ -155,7 +157,7 @@ export default function Accounts() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            className="h-8 w-8 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
                             title="编辑"
                           >
                             <Edit2 size={16} />
@@ -166,7 +168,7 @@ export default function Accounts() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                        className="h-8 w-8 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
                         title="权限分配"
                         onClick={() => console.log("Assign permissions for:", user.name)}
                       >
@@ -175,7 +177,7 @@ export default function Accounts() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700"
                         title="删除"
                         onClick={() => handleDelete(user.id, user.name)}
                       >

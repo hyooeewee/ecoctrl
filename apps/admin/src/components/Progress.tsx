@@ -1,6 +1,7 @@
 import { Progress as ProgressPrimitive } from "@base-ui/react/progress";
-import { cn } from "@/lib/utils";
+
 import { ProgressTrack, ProgressIndicator } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 
 interface ProgressProps extends ProgressPrimitive.Root.Props {
   indicatorClassName?: string;

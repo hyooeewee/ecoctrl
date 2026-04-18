@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +12,7 @@ import {
   SheetTrigger,
   SheetFooter,
 } from "@/components/ui/sheet";
+
 import { User } from "../types";
 
 interface UserSheetProps {
@@ -72,7 +74,7 @@ export default function UserSheet({ mode, user, trigger, onSave }: UserSheetProp
               : "为系统添加新用户。在提交前请确保已分配正确的角色。"}
           </SheetDescription>
         </SheetHeader>
-        <div className="grid gap-4 py-6 px-4">
+        <div className="grid gap-4 px-4 py-6">
           <div className="grid space-y-2">
             <Label htmlFor={`${mode}-name`}>姓名</Label>
             <Input

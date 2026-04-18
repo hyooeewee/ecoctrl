@@ -1,9 +1,11 @@
-import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { BookOpen, Calendar, Clock, FileText, ExternalLink } from "lucide-react";
+import React, { useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { REMINDERS } from "../constants/mockData";
 
 export default function Maintenance() {
@@ -15,18 +17,18 @@ export default function Maintenance() {
         <h1 className="text-2xl font-bold tracking-tight">维保管理</h1>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
         {/* Left Side: Manuals */}
-        <Card className="lg:col-span-1 border-none shadow-sm flex flex-col h-full">
+        <Card className="flex h-full flex-col border-none shadow-sm lg:col-span-1">
           <CardHeader className="border-b border-gray-50 px-6">
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-base">
               <BookOpen size={18} className="text-blue-600" />
               维保说明书
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-0 flex-1">
+          <CardContent className="flex-1 p-0">
             <ScrollArea className="h-[500px]">
-              <div className="p-2 space-y-1">
+              <div className="space-y-1 p-2">
                 {[
                   "空调系统 A1 系列说明",
                   "ABB 高压柜操作手册",
@@ -38,13 +40,13 @@ export default function Maintenance() {
                   <Button
                     key={i}
                     variant="ghost"
-                    className="w-full justify-between font-normal text-sm px-3 hover:bg-blue-50 hover:text-blue-700 group h-10"
+                    className="group h-10 w-full justify-between px-3 text-sm font-normal hover:bg-blue-50 hover:text-blue-700"
                     onClick={() => setPreviewManual(item)}
                   >
                     <div className="flex items-center gap-2 truncate">
                       <FileText
                         size={16}
-                        className="text-muted-foreground group-hover:text-blue-600 shrink-0"
+                        className="text-muted-foreground shrink-0 group-hover:text-blue-600"
                       />
                       <span className="truncate">{item}</span>
                     </div>
@@ -57,11 +59,11 @@ export default function Maintenance() {
         </Card>
 
         {/* Right Side: Reminders and Calendar View */}
-        <div className="lg:col-span-3 space-y-6">
+        <div className="space-y-6 lg:col-span-3">
           <Card className="border-none shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between px-6 pb-4">
               <div className="space-y-1">
-                <CardTitle className="text-lg flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-lg">
                   <Clock size={18} className="text-orange-500" />
                   今日维保提醒
                 </CardTitle>
@@ -75,15 +77,15 @@ export default function Maintenance() {
               {REMINDERS.map((reminder) => (
                 <div
                   key={reminder.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer group"
+                  className="group flex cursor-pointer items-center justify-between rounded-lg bg-gray-50 p-4 transition-colors hover:bg-gray-100"
                 >
                   <div className="flex items-center gap-4">
                     <div
-                      className={`w-2 h-10 rounded-full ${reminder.priority === "high" ? "bg-red-500" : reminder.priority === "medium" ? "bg-orange-500" : "bg-blue-500"}`}
+                      className={`h-10 w-2 rounded-full ${reminder.priority === "high" ? "bg-red-500" : reminder.priority === "medium" ? "bg-orange-500" : "bg-blue-500"}`}
                     ></div>
                     <div>
                       <p className="font-semibold text-gray-900">{reminder.task}</p>
-                      <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                      <p className="mt-1 flex items-center gap-1 text-xs text-gray-500">
                         <Calendar size={12} />
                         截止日期: {reminder.dueDate}
                       </p>
@@ -97,7 +99,7 @@ export default function Maintenance() {
             </CardContent>
           </Card>
 
-          <Card className="border-none shadow-sm bg-gray-50 min-h-[400px] flex items-center justify-center">
+          <Card className="flex min-h-[400px] items-center justify-center border-none bg-gray-50 shadow-sm">
             <div className="text-center">
               <Calendar className="mx-auto h-12 w-12 text-gray-300" />
               <h3 className="mt-2 text-sm font-semibold text-gray-900">日历视图占位符</h3>
@@ -108,18 +110,18 @@ export default function Maintenance() {
       </div>
 
       <Dialog open={!!previewManual} onOpenChange={(open) => !open && setPreviewManual(null)}>
-        <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0 overflow-hidden">
-          <DialogHeader className="p-4 border-b">
+        <DialogContent className="flex h-[80vh] max-w-4xl flex-col overflow-hidden p-0">
+          <DialogHeader className="border-b p-4">
             <DialogTitle className="flex items-center gap-2">
               <FileText className="text-blue-600" size={18} />
               维保说明书预览: {previewManual}
             </DialogTitle>
           </DialogHeader>
           <div className="flex-1 bg-gray-100 p-4">
-            <div className="w-full h-full bg-white rounded-lg shadow-inner flex flex-col items-center justify-center border border-gray-200 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1.5 bg-blue-500 animate-pulse opacity-50"></div>
-              <FileText size={64} className="text-gray-200 mb-4" />
-              <div className="text-center space-y-2">
+            <div className="relative flex h-full w-full flex-col items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-white shadow-inner">
+              <div className="absolute top-0 left-0 h-1.5 w-full animate-pulse bg-blue-500 opacity-50"></div>
+              <FileText size={64} className="mb-4 text-gray-200" />
+              <div className="space-y-2 text-center">
                 <p className="text-lg font-semibold text-gray-700">正在加载文档内容...</p>
                 <p className="text-sm text-gray-400">正在从安全服务器检索 PDF 流</p>
               </div>

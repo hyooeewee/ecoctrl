@@ -86,7 +86,12 @@ function MiniArea({ data, color }: { data: SparkPoint[]; color: string }) {
   const gradId = `mini-area-${color.replace(/[^a-z0-9]/gi, "x")}`;
   return (
     <div ref={ref} className="h-[36px] w-full overflow-hidden">
-      <AreaChart width={width} height={CHART_H} data={data} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
+      <AreaChart
+        width={width}
+        height={CHART_H}
+        data={data}
+        margin={{ top: 2, right: 0, bottom: 0, left: 0 }}
+      >
         <defs>
           <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor={color} stopOpacity={0.35} />
@@ -112,7 +117,13 @@ function MiniBar({ data, color }: { data: SparkPoint[]; color: string }) {
   const [ref, width] = useMeasureWidth();
   return (
     <div ref={ref} className="h-[36px] w-full overflow-hidden">
-      <BarChart width={width} height={CHART_H} data={data} margin={{ top: 2, right: 0, bottom: 0, left: 0 }} barSize={4}>
+      <BarChart
+        width={width}
+        height={CHART_H}
+        data={data}
+        margin={{ top: 2, right: 0, bottom: 0, left: 0 }}
+        barSize={4}
+      >
         <Bar dataKey="v" fill={color} radius={[2, 2, 0, 0]} isAnimationActive={false} />
       </BarChart>
     </div>
@@ -123,7 +134,12 @@ function MiniLine({ data, color }: { data: SparkPoint[]; color: string }) {
   const [ref, width] = useMeasureWidth();
   return (
     <div ref={ref} className="h-[36px] w-full overflow-hidden">
-      <LineChart width={width} height={CHART_H} data={data} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
+      <LineChart
+        width={width}
+        height={CHART_H}
+        data={data}
+        margin={{ top: 2, right: 0, bottom: 0, left: 0 }}
+      >
         <Line
           type="monotone"
           dataKey="v"
@@ -220,7 +236,12 @@ function LargeBar({ data, color }: { data: SparkPoint[]; color: string }) {
   const chartData = data.map((d, i) => ({ ...d, t: i }));
   return (
     <div ref={ref} className="h-[240px] w-full">
-      <BarChart width={width} height={LARGE_H} data={chartData} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
+      <BarChart
+        width={width}
+        height={LARGE_H}
+        data={chartData}
+        margin={{ top: 10, right: 10, bottom: 0, left: -20 }}
+      >
         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
         <XAxis dataKey="t" hide />
         <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} />
@@ -255,7 +276,12 @@ function LargeLine({ data, color }: { data: SparkPoint[]; color: string }) {
   const chartData = data.map((d, i) => ({ ...d, t: i }));
   return (
     <div ref={ref} className="h-[240px] w-full">
-      <LineChart width={width} height={LARGE_H} data={chartData} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
+      <LineChart
+        width={width}
+        height={LARGE_H}
+        data={chartData}
+        margin={{ top: 10, right: 10, bottom: 0, left: -20 }}
+      >
         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
         <XAxis dataKey="t" hide />
         <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} />
@@ -302,7 +328,10 @@ function LargeProgress({ value, color }: { value: number; color: string }) {
         </span>
       </div>
       <div className="relative h-3 w-full overflow-hidden rounded-full bg-white/10">
-        <div className="h-full transition-all" style={{ width: `${value}%`, backgroundColor: color }} />
+        <div
+          className="h-full transition-all"
+          style={{ width: `${value}%`, backgroundColor: color }}
+        />
       </div>
     </div>
   );
@@ -353,7 +382,7 @@ export function GraphButtonBlock({
                 {icon}
               </span>
             )}
-            <span className="truncate text-[10px] font-medium tracking-wide text-muted-foreground">
+            <span className="text-muted-foreground truncate text-[10px] font-medium tracking-wide">
               {title}
             </span>
           </div>
@@ -371,10 +400,10 @@ export function GraphButtonBlock({
 
         {/* ── Row 2: value · unit ── */}
         <div className="flex items-baseline gap-1.5">
-          <span className="font-heading text-xl font-bold tabular-nums leading-none text-foreground">
+          <span className="font-heading text-foreground text-xl leading-none font-bold tabular-nums">
             {value}
           </span>
-          <span className="rounded border border-white/10 bg-white/5 px-1 py-0.5 text-[9px] font-medium text-muted-foreground">
+          <span className="text-muted-foreground rounded border border-white/10 bg-white/5 px-1 py-0.5 text-[9px] font-medium">
             {unit}
           </span>
         </div>
@@ -389,7 +418,7 @@ export function GraphButtonBlock({
           )}
         </div>
         {/* ── Row 4: footer ── */}
-        {footer && <div className="text-[9px] leading-none text-muted-foreground">{footer}</div>}
+        {footer && <div className="text-muted-foreground text-[9px] leading-none">{footer}</div>}
       </CardContent>
     </Card>
   );
@@ -433,10 +462,12 @@ export function GraphButtonBlockDetail({
             </span>
           )}
           <div className="flex flex-col">
-            <span className="text-sm font-medium tracking-wide text-muted-foreground">{title}</span>
+            <span className="text-muted-foreground text-sm font-medium tracking-wide">{title}</span>
             <div className="flex items-baseline gap-2">
-              <span className="font-heading text-4xl font-bold tabular-nums text-foreground">{value}</span>
-              <span className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-sm font-medium text-muted-foreground">
+              <span className="font-heading text-foreground text-4xl font-bold tabular-nums">
+                {value}
+              </span>
+              <span className="text-muted-foreground rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-sm font-medium">
                 {unit}
               </span>
             </div>
@@ -465,7 +496,7 @@ export function GraphButtonBlockDetail({
       </div>
 
       {/* Footer */}
-      {footer && <div className="relative text-sm text-muted-foreground">{footer}</div>}
+      {footer && <div className="text-muted-foreground relative text-sm">{footer}</div>}
     </div>
   );
 }

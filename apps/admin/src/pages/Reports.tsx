@@ -1,19 +1,21 @@
-import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { cn } from "@/lib/utils";
 import { FileDown, PlusCircle, Settings2, CalendarDays, ExternalLink } from "lucide-react";
-import { REPORT_PLANS } from "../constants/mockData";
-import TemplateDialog from "../components/TemplateDialog";
-import ReportPlanSheet from "../components/ReportPlanSheet";
+import React, { useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
+
 import ExportDialog from "../components/ExportDialog";
+import ReportPlanSheet from "../components/ReportPlanSheet";
+import TemplateDialog from "../components/TemplateDialog";
+import { REPORT_PLANS } from "../constants/mockData";
 import { ReportPlan } from "../types";
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
-    <div className="relative w-full overflow-x-auto scrollbar-hide">
+    <div className="scrollbar-hide relative w-full overflow-x-auto">
       <table className={cn("w-full caption-bottom text-sm", className)} {...props} />
     </div>
   );
@@ -62,7 +64,7 @@ export default function Reports() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">报表管理</h1>
           <p className="text-muted-foreground text-sm">自动化数据分析与定期报表分发系统。</p>
@@ -104,7 +106,7 @@ export default function Reports() {
         </div>
       </div>
 
-      <Card className="border-none shadow-sm overflow-hidden">
+      <Card className="overflow-hidden border-none shadow-sm">
         <CardHeader className="bg-white px-6">
           <CardTitle className="text-lg">定时发送计划</CardTitle>
           <CardDescription>配置自动生成的周期性数据概览并发送至指定邮箱。</CardDescription>
@@ -121,20 +123,20 @@ export default function Reports() {
                     发送频率
                   </div>
                 </TableHead>
-                <TableHead className="text-right pr-6">状态控制</TableHead>
+                <TableHead className="pr-6 text-right">状态控制</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {reportPlans.map((plan) => (
                 <TableRow key={plan.id} className="group hover:bg-muted/30 transition-colors">
-                  <TableCell className="font-medium px-6">{plan.name}</TableCell>
+                  <TableCell className="px-6 font-medium">{plan.name}</TableCell>
                   <TableCell
-                    className="text-blue-600 underline underline-offset-4 cursor-pointer text-sm"
+                    className="cursor-pointer text-sm text-blue-600 underline underline-offset-4"
                     onClick={() => console.log("Edit receiver for:", plan.name)}
                   >
                     {plan.receiver}
                   </TableCell>
-                  <TableCell className="text-gray-600 text-sm">{plan.frequency}</TableCell>
+                  <TableCell className="text-sm text-gray-600">{plan.frequency}</TableCell>
                   <TableCell className="text-right">
                     <Switch
                       checked={plan.status}
@@ -148,22 +150,22 @@ export default function Reports() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         {templates.map((label, i) => {
           const counts = ["1,245 份", "48 份", "12 份"];
           const icons = ["📄", "📊", "🔍"];
           return (
             <Card
               key={label + i}
-              className="border-none shadow-sm hover:translate-y-[-2px] transition-all cursor-pointer group relative overflow-hidden"
+              className="group relative cursor-pointer overflow-hidden border-none shadow-sm transition-all hover:translate-y-[-2px]"
             >
-              <CardContent className="p-6 flex items-center gap-4">
+              <CardContent className="flex items-center gap-4 p-6">
                 <div className="text-3xl">{icons[i % icons.length]}</div>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-500">{label}</p>
                   <p className="text-xl font-bold">{counts[i % counts.length]}</p>
                 </div>
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute top-2 right-2 text-gray-300">
+                <div className="absolute top-2 right-2 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100">
                   <ExternalLink size={14} />
                 </div>
               </CardContent>

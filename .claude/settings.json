@@ -1,0 +1,6 @@
+{
+  "permissions": {
+    "allow": ["Read"],
+    "ask": ["Write", "Edit", "Bash(rm *)", "Bash(sudo *)"]
+  }
+}

@@ -1,4 +1,7 @@
+import { AlertCircle, History, BarChart3, Clock } from "lucide-react";
 import React from "react";
+
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -9,8 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { AlertCircle, History, BarChart3, Clock } from "lucide-react";
+
 import { FAULTS } from "../constants/mockData";
 
 export default function Faults() {
@@ -20,27 +22,27 @@ export default function Faults() {
         <h1 className="text-2xl font-bold tracking-tight">故障管理</h1>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="border-none shadow-sm bg-red-50 border-l-4 border-l-red-500">
-          <CardContent className="p-6 flex items-center justify-between">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <Card className="border-l-4 border-none border-l-red-500 bg-red-50 shadow-sm">
+          <CardContent className="flex items-center justify-between p-6">
             <div className="space-y-1">
               <p className="text-sm font-medium text-red-600">本月总故障数</p>
               <h3 className="text-3xl font-bold text-red-900">24</h3>
-              <p className="text-xs text-red-700/60 mt-2 font-medium">比上月减少 12%</p>
+              <p className="mt-2 text-xs font-medium text-red-700/60">比上月减少 12%</p>
             </div>
-            <div className="p-4 bg-red-100 rounded-full text-red-600">
+            <div className="rounded-full bg-red-100 p-4 text-red-600">
               <AlertCircle size={32} />
             </div>
           </CardContent>
         </Card>
-        <Card className="border-none shadow-sm bg-blue-50 border-l-4 border-l-blue-500">
-          <CardContent className="p-6 flex items-center justify-between">
+        <Card className="border-l-4 border-none border-l-blue-500 bg-blue-50 shadow-sm">
+          <CardContent className="flex items-center justify-between p-6">
             <div className="space-y-1">
               <p className="text-sm font-medium text-blue-600">平均修复时间 (MTTR)</p>
               <h3 className="text-3xl font-bold text-blue-900">4.2h</h3>
-              <p className="text-xs text-blue-700/60 mt-2 font-medium">系统平均响应时间: 15min</p>
+              <p className="mt-2 text-xs font-medium text-blue-700/60">系统平均响应时间: 15min</p>
             </div>
-            <div className="p-4 bg-blue-100 rounded-full text-blue-600">
+            <div className="rounded-full bg-blue-100 p-4 text-blue-600">
               <Clock size={32} />
             </div>
           </CardContent>
@@ -58,7 +60,7 @@ export default function Faults() {
           </TabsTrigger>
           <TabsTrigger
             value="analytics"
-            className="gap-2 px-6 data-selected:bg-white data-selected:shadow-sm text-gray-500"
+            className="gap-2 px-6 text-gray-500 data-selected:bg-white data-selected:shadow-sm"
           >
             <BarChart3 size={16} />
             故障统计分析
@@ -74,13 +76,13 @@ export default function Faults() {
                     <TableHead className="px-6">设备名称</TableHead>
                     <TableHead className="text-center">故障等级</TableHead>
                     <TableHead className="text-center">发生时间</TableHead>
-                    <TableHead className="text-right px-6">状态</TableHead>
+                    <TableHead className="px-6 text-right">状态</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {FAULTS.map((fault) => (
                     <TableRow key={fault.id}>
-                      <TableCell className="font-semibold px-6">{fault.device}</TableCell>
+                      <TableCell className="px-6 font-semibold">{fault.device}</TableCell>
                       <TableCell className="text-center">
                         <Badge
                           className={
@@ -95,10 +97,10 @@ export default function Faults() {
                           {fault.level}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-center text-gray-500 font-mono text-sm">
+                      <TableCell className="text-center font-mono text-sm text-gray-500">
                         {fault.time}
                       </TableCell>
-                      <TableCell className="text-right px-6">
+                      <TableCell className="px-6 text-right">
                         <span
                           className={`text-sm font-medium ${fault.status === "待处理" ? "text-red-500" : fault.status === "维保中" ? "text-orange-500" : "text-green-500"}`}
                         >
@@ -114,7 +116,7 @@ export default function Faults() {
         </TabsContent>
 
         <TabsContent value="analytics" className="mt-4">
-          <Card className="border-none shadow-sm h-64 flex items-center justify-center bg-gray-50 border-2 border-dashed border-gray-200 rounded-lg">
+          <Card className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-none border-gray-200 bg-gray-50 shadow-sm">
             <div className="text-center text-gray-400">
               <BarChart3 className="mx-auto mb-2 opacity-50" />
               <p className="text-sm font-medium">统计分析图表加载中...</p>

@@ -1,8 +1,8 @@
-import React from "react";
 import { Bell, Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import React from "react";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 
 interface HeaderProps {
   activeTab: string;
@@ -34,29 +35,29 @@ export default function Header({ activeTab }: HeaderProps) {
   const currentTitle = tabTitleMap[activeTab] || "管理总览";
 
   return (
-    <header className="h-16 border-b border-border bg-card flex items-center justify-between px-8 sticky top-0 z-30">
-      <div className="flex items-center gap-4 flex-1 text-sm text-muted-foreground">
+    <header className="border-border bg-card sticky top-0 z-30 flex h-16 items-center justify-between border-b px-8">
+      <div className="text-muted-foreground flex flex-1 items-center gap-4 text-sm">
         <span>首页 /</span>
-        <span className="font-semibold text-foreground">{currentTitle}</span>
+        <span className="text-foreground font-semibold">{currentTitle}</span>
       </div>
 
       <div className="flex items-center gap-6">
-        <div className="relative w-64 hidden md:block">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+        <div className="relative hidden w-64 md:block">
+          <Search className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
           <Input
             type="search"
             placeholder="搜索设备..."
-            className="pl-10 h-9 bg-muted/50 border-none shadow-none focus-visible:ring-1 focus-visible:ring-primary/20"
+            className="bg-muted/50 focus-visible:ring-primary/20 h-9 border-none pl-10 shadow-none focus-visible:ring-1"
           />
         </div>
 
         <Button
           variant="ghost"
           size="icon"
-          className="relative text-muted-foreground hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground relative"
         >
           <Bell size={20} />
-          <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-destructive rounded-full border-2 border-card"></span>
+          <span className="bg-destructive border-card absolute top-2.5 right-2.5 h-1.5 w-1.5 rounded-full border-2"></span>
         </Button>
 
         <DropdownMenu>
@@ -64,17 +65,17 @@ export default function Header({ activeTab }: HeaderProps) {
             render={
               <Button
                 variant="ghost"
-                className="flex items-center gap-3 p-1 pl-3 hover:bg-muted rounded-md transition-all"
+                className="hover:bg-muted flex items-center gap-3 rounded-md p-1 pl-3 transition-all"
               >
-                <span className="text-sm font-medium text-foreground">Admin</span>
-                <Avatar className="h-8 w-8 ring-2 ring-muted ring-offset-2">
+                <span className="text-foreground text-sm font-medium">Admin</span>
+                <Avatar className="ring-muted h-8 w-8 ring-2 ring-offset-2">
                   <AvatarImage src={`https://avatar.vercel.sh/admin?size=32`} />
                   <AvatarFallback>AD</AvatarFallback>
                 </Avatar>
               </Button>
             }
           />
-          <DropdownMenuContent align="end" className="w-56 mt-2">
+          <DropdownMenuContent align="end" className="mt-2 w-56">
             <DropdownMenuGroup>
               <DropdownMenuLabel>我的账户</DropdownMenuLabel>
               <DropdownMenuSeparator />
