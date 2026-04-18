@@ -1,9 +1,16 @@
-import { Plus, Search, Edit2, ShieldAlert, Trash2, Download } from "lucide-react";
-import React, { useState } from "react";
+import { Plus, Search, Edit2, Trash2, Download } from "lucide-react";
+import React, { useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -14,176 +21,212 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import ExportDialog from "../components/ExportDialog";
-import UserSheet from "../components/UserSheet";
-import { USERS as INITIAL_USERS } from "../constants/mockData";
 import { User } from "../types";
 
 export default function Accounts() {
-  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [showAdd, setShowAdd] = useState(false);
+  const [newUser, setNewUser] = useState({ name: "", email: "", role: "" });
+  const [adding, setAdding] = useState(false);
 
-  const handleExport = (fileName: string) => {
-    const headers = ["姓名", "邮箱", "角色", "状态", "最后登录"];
-    const csvContent = [
-      headers.join(","),
-      ...users.map((user) =>
-        [
-          `"${user.name}"`,
-          `"${user.email}"`,
-          `"${user.role}"`,
-          user.status === "active" ? "在线" : "离线",
-          `"${user.lastLogin}"`,
-        ].join(","),
-      ),
-    ].join("\n");
-
-    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `${fileName}.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const handleCreate = (user: User) => {
-    setUsers((prev) => [...prev, user]);
-  };
-
-  const handleEdit = (updated: User) => {
-    setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
-  };
-
-  const handleDelete = (id: string, name: string) => {
-    if (window.confirm(`确定要删除用户 "${name}" 吗？`)) {
-      setUsers((prev) => prev.filter((u) => u.id !== id));
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch("/api/users");
+      if (!res.ok) throw new Error("Failed to fetch users");
+      const data = (await res.json()) as User[];
+      setUsers(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const handleAdd = async () => {
+    if (!newUser.name || !newUser.email || !newUser.role) return;
+    setAdding(true);
+    try {
+      const res = await fetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newUser),
+      });
+      if (!res.ok) throw new Error("Failed to add user");
+      await fetchUsers();
+      setShowAdd(false);
+      setNewUser({ name: "", email: "", role: "" });
+    } catch (err) {
+      console.error(err);
+      alert("添加用户失败");
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!window.confirm(`确定要删除用户 "${name}" 吗？`)) return;
+    try {
+      const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete user");
+      await fetchUsers();
+    } catch (err) {
+      console.error(err);
+      alert("删除用户失败");
+    }
+  };
+
+  const filtered = users.filter(
+    (u) => u.name.includes(search) || u.email.includes(search) || u.role.includes(search),
+  );
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div className="flex items-center gap-3">
-          <ExportDialog
-            trigger={
-              <Button variant="outline" className="gap-2">
-                <Download size={18} />
-                导出表格
-              </Button>
-            }
-            title="导出用户列表"
-            description="请确认报表导出信息，系统将根据选定参数生成文件。"
-            defaultFileName={`用户列表_${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}`}
-            defaultFormat="CSV"
-            defaultOperator="系统管理员"
-            onExport={({ fileName }) => handleExport(fileName)}
-          />
-
-          <UserSheet
-            mode="create"
-            trigger={
-              <Button className="gap-2">
-                <Plus size={18} />
-                新增账户
-              </Button>
-            }
-            onSave={handleCreate}
+          <Button variant="outline" className="gap-2" onClick={() => setShowAdd(true)}>
+            <Plus size={18} />
+            新增用户
+          </Button>
+          <Button variant="outline" className="gap-2">
+            <Download size={18} />
+            导出表格
+          </Button>
+        </div>
+        <div className="relative w-full sm:w-72">
+          <Search className="absolute top-2.5 left-3 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="搜索用户..."
+            className="pl-10"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
           />
         </div>
       </div>
 
-      <Card className="overflow-hidden border-none shadow-sm">
-        <CardHeader className="border-b border-gray-50 bg-white px-6 pb-4">
-          <div className="flex items-center gap-4">
-            <div className="relative max-w-sm flex-1">
-              <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-gray-500" />
-              <Input
-                type="search"
-                placeholder="搜索账户姓名或角色..."
-                className="h-10 border-gray-200 pl-9"
-              />
-            </div>
-            <Button variant="outline" className="h-10">
-              筛选
-            </Button>
-          </div>
+      <Card className="border-none shadow-sm">
+        <CardHeader className="px-6">
+          <CardTitle className="text-lg">用户列表</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-gray-50/50">
-              <TableRow className="border-b border-gray-100">
-                <TableHead className="w-[200px] px-6 font-semibold text-gray-600">姓名</TableHead>
-                <TableHead className="font-semibold text-gray-600">邮箱</TableHead>
-                <TableHead className="font-semibold text-gray-600">角色</TableHead>
-                <TableHead className="font-semibold text-gray-600">状态</TableHead>
-                <TableHead className="font-semibold text-gray-600">最后登录</TableHead>
-                <TableHead className="pr-6 text-right font-semibold text-gray-600">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id} className="hover:bg-gray-50/50">
-                  <TableCell className="px-6 font-medium">{user.name}</TableCell>
-                  <TableCell className="text-sm text-gray-600">{user.email}</TableCell>
-                  <TableCell>{user.role}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="secondary"
-                      className={
-                        user.status === "active"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-gray-100 text-gray-600"
-                      }
-                    >
-                      {user.status === "active" ? "在线" : "离线"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm text-gray-500 italic">{user.lastLogin}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <UserSheet
-                        mode="edit"
-                        user={user}
-                        trigger={
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-                            title="编辑"
-                          >
-                            <Edit2 size={16} />
-                          </Button>
-                        }
-                        onSave={handleEdit}
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
-                        title="权限分配"
-                        onClick={() => console.log("Assign permissions for:", user.name)}
-                      >
-                        <ShieldAlert size={16} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700"
-                        title="删除"
-                        onClick={() => handleDelete(user.id, user.name)}
-                      >
-                        <Trash2 size={16} />
-                      </Button>
-                    </div>
-                  </TableCell>
+          {loading ? (
+            <div className="py-16 text-center text-sm text-gray-400">加载中...</div>
+          ) : (
+            <Table>
+              <TableHeader className="bg-gray-50/50">
+                <TableRow>
+                  <TableHead className="px-6">姓名</TableHead>
+                  <TableHead>邮箱</TableHead>
+                  <TableHead>角色</TableHead>
+                  <TableHead className="text-center">状态</TableHead>
+                  <TableHead className="px-6 text-right">操作</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell className="px-6 font-medium">{user.name}</TableCell>
+                    <TableCell className="text-sm text-gray-500">{user.email}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="font-normal">
+                        {user.role}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span
+                        className={`inline-flex h-2 w-2 rounded-full ${user.status === "active" ? "bg-green-500" : "bg-gray-300"}`}
+                      />
+                    </TableCell>
+                    <TableCell className="px-6 text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Edit2 size={14} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-red-500 hover:text-red-600"
+                          onClick={() => handleDelete(user.id, user.name)}
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filtered.length === 0 && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={5}
+                      className="text-center py-8 text-sm text-muted-foreground"
+                    >
+                      未找到用户
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
+
+      <Dialog open={showAdd} onOpenChange={(open) => !open && setShowAdd(false)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>新增用户</DialogTitle>
+            <DialogDescription>填写新用户信息并添加到系统。</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <p className="mb-1 text-xs text-muted-foreground">姓名</p>
+              <Input
+                value={newUser.name}
+                onChange={(e) => setNewUser((u) => ({ ...u, name: e.target.value }))}
+                placeholder="请输入姓名"
+              />
+            </div>
+            <div>
+              <p className="mb-1 text-xs text-muted-foreground">邮箱</p>
+              <Input
+                type="email"
+                value={newUser.email}
+                onChange={(e) => setNewUser((u) => ({ ...u, email: e.target.value }))}
+                placeholder="请输入邮箱"
+              />
+            </div>
+            <div>
+              <p className="mb-1 text-xs text-muted-foreground">角色</p>
+              <Input
+                value={newUser.role}
+                onChange={(e) => setNewUser((u) => ({ ...u, role: e.target.value }))}
+                placeholder="请输入角色"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAdd(false)}
+                disabled={adding}
+              >
+                取消
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleAdd}
+                disabled={adding || !newUser.name || !newUser.email || !newUser.role}
+              >
+                {adding ? "添加中..." : "添加"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
