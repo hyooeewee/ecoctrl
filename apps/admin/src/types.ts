@@ -36,6 +36,12 @@ export interface MaintenanceReminder {
   task: string;
   dueDate: string;
   priority: "high" | "medium" | "low";
+  description?: string;
+  status?: string;
+  assignee?: string;
+  location?: string;
+  estimatedHours?: number;
+  lastCompleted?: string;
 }
 
 export interface ReportPlan {
