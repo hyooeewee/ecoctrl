@@ -3,7 +3,7 @@ import type { MaintenanceReminder, MaintenanceReminderDetail } from "../types/in
 
 const REMINDERS: MaintenanceReminderDetail[] = [
   {
-    id: "1",
+    id: "290348b7-e3aa-4df6-bf18-da2e43fdc367",
     task: "发电机组季度维保",
     description: "对主发电机组进行全面检查，包括机油更换、滤清器清洁、皮带张力检测及运行参数校准，确保备用电源可靠性。",
     dueDate: "2026-04-25",
@@ -15,7 +15,7 @@ const REMINDERS: MaintenanceReminderDetail[] = [
     lastCompleted: "2025-10-20",
   },
   {
-    id: "2",
+    id: "52ee7449-6028-4b1c-b2ee-86d26562977c",
     task: "冷水机组滤网更换",
     description: "更换中央空调冷水机组进风滤网，清洗冷凝器翅片，检查冷媒压力及压缩机运行电流。",
     dueDate: "2026-04-18",
@@ -27,7 +27,7 @@ const REMINDERS: MaintenanceReminderDetail[] = [
     lastCompleted: "2025-12-15",
   },
   {
-    id: "3",
+    id: "532921b3-563e-419c-b3db-bf68f03c93c0",
     task: "楼宇控制系统备份",
     description: "对 BAS（楼宇自动化系统）数据库进行完整备份，导出控制器程序及点位配置，验证备份文件可恢复性。",
     dueDate: "2026-04-28",
@@ -39,7 +39,7 @@ const REMINDERS: MaintenanceReminderDetail[] = [
     lastCompleted: "2025-11-30",
   },
   {
-    id: "4",
+    id: "dec61c4c-39a4-4fc6-962d-9b540341ccaf",
     task: "消防水泵月度试运行",
     description: "手动启停主备消防水泵，检查压力表读数、阀门启闭状态、电机温升及控制柜信号反馈。",
     dueDate: "2026-04-20",
@@ -51,7 +51,7 @@ const REMINDERS: MaintenanceReminderDetail[] = [
     lastCompleted: "2026-03-20",
   },
   {
-    id: "5",
+    id: "2bde77ac-d2d3-4328-9022-013adeb182fd",
     task: "电梯限速器校验",
     description: "委托第三方机构对全部客梯限速器进行动作速度测试，出具校验报告并更新电梯台账。",
     dueDate: "2026-05-05",
@@ -63,7 +63,7 @@ const REMINDERS: MaintenanceReminderDetail[] = [
     lastCompleted: "2025-04-10",
   },
   {
-    id: "6",
+    id: "e3f7c971-721e-4724-8a80-e56712a9cc90",
     task: "变压器红外测温",
     description: "使用红外热像仪对高低压配电变压器进行非接触式测温，记录各相绕组及接线端子温升数据。",
     dueDate: "2026-04-22",
@@ -75,7 +75,7 @@ const REMINDERS: MaintenanceReminderDetail[] = [
     lastCompleted: "2025-10-22",
   },
   {
-    id: "7",
+    id: "00e6b46e-2f00-4082-8674-c87af4a2fa61",
     task: "生活水箱清洗消毒",
     description: "排空生活水箱，进行内壁刷洗、消毒药剂投加及水质检测，确保符合国家生活饮用水卫生标准。",
     dueDate: "2026-05-10",
@@ -87,7 +87,7 @@ const REMINDERS: MaintenanceReminderDetail[] = [
     lastCompleted: "2025-11-10",
   },
   {
-    id: "8",
+    id: "99489b62-b18f-4260-8d85-0524cae02337",
     task: "UPS 蓄电池组检测",
     description: "对不间断电源蓄电池组进行内阻测试、容量放电试验，更换内阻超标或容量衰减超过 30% 的单体电池。",
     dueDate: "2026-05-15",
