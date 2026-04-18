@@ -72,16 +72,16 @@ export default function Faults() {
                 <TableHeader className="bg-gray-50/50">
                   <TableRow>
                     <TableHead className="px-6">设备名称</TableHead>
-                    <TableHead>故障等级</TableHead>
-                    <TableHead>发生时间</TableHead>
-                    <TableHead className="text-right pr-6">状态</TableHead>
+                    <TableHead className="text-center">故障等级</TableHead>
+                    <TableHead className="text-center">发生时间</TableHead>
+                    <TableHead className="text-right px-6">状态</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {FAULTS.map((fault) => (
                     <TableRow key={fault.id}>
                       <TableCell className="font-semibold px-6">{fault.device}</TableCell>
-                      <TableCell>
+                      <TableCell className="text-center">
                         <Badge
                           className={
                             fault.level === "严重"
@@ -95,10 +95,10 @@ export default function Faults() {
                           {fault.level}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-gray-500 font-mono text-sm">
+                      <TableCell className="text-center text-gray-500 font-mono text-sm">
                         {fault.time}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right px-6">
                         <span
                           className={`text-sm font-medium ${fault.status === "待处理" ? "text-red-500" : fault.status === "维保中" ? "text-orange-500" : "text-green-500"}`}
                         >
