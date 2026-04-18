@@ -11,6 +11,7 @@ import ExportDialog from "../components/ExportDialog";
 import ReportPlanSheet from "../components/ReportPlanSheet";
 import TemplateDialog from "../components/TemplateDialog";
 import { ReportPlan } from "../types";
+import { reportsApi } from "../api/reports";
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
@@ -27,12 +28,12 @@ export default function Reports() {
 
   const fetchData = async () => {
     try {
-      const [plansRes, templatesRes] = await Promise.all([
-        fetch("/api/reports/plans"),
-        fetch("/api/reports/templates"),
+      const [plansData, templatesData] = await Promise.all([
+        reportsApi.plans.list(),
+        reportsApi.templates(),
       ]);
-      if (plansRes.ok) setReportPlans((await plansRes.json()) as ReportPlan[]);
-      if (templatesRes.ok) setTemplates((await templatesRes.json()) as string[]);
+      setReportPlans(plansData);
+      setTemplates(templatesData);
     } catch (err) {
       console.error(err);
     } finally {
@@ -71,12 +72,7 @@ export default function Reports() {
 
   const handleAddPlan = async (plan: Omit<ReportPlan, "id">) => {
     try {
-      const res = await fetch("/api/reports/plans", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(plan),
-      });
-      if (!res.ok) throw new Error("Failed to add plan");
+      await reportsApi.plans.create(plan);
       await fetchData();
     } catch (err) {
       console.error(err);
@@ -86,12 +82,7 @@ export default function Reports() {
 
   const handleTogglePlan = async (id: string, checked: boolean) => {
     try {
-      const res = await fetch(`/api/reports/plans/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: checked }),
-      });
-      if (!res.ok) throw new Error("Failed to update plan");
+      await reportsApi.plans.update(id, { status: checked });
       await fetchData();
     } catch (err) {
       console.error(err);

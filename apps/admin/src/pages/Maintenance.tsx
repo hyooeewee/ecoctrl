@@ -18,6 +18,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { cn } from "@/lib/utils";
 import { MaintenanceReminder } from "../types";
+import { filesApi } from "../api/files";
+import { maintenanceApi } from "../api/maintenance";
 
 interface Manual {
   id: string;
@@ -181,9 +183,7 @@ export default function Maintenance() {
 
   const fetchManuals = async () => {
     try {
-      const res = await fetch("/api/files");
-      if (!res.ok) throw new Error("Failed to fetch files");
-      const data = (await res.json()) as Manual[];
+      const data = await filesApi.list();
       setManuals(data);
     } catch (err) {
       console.error(err);
@@ -194,9 +194,7 @@ export default function Maintenance() {
 
   const fetchReminders = async () => {
     try {
-      const res = await fetch("/api/maintenance/reminders");
-      if (!res.ok) throw new Error("Failed to fetch reminders");
-      const data = (await res.json()) as MaintenanceReminder[];
+      const data = await maintenanceApi.reminders.list();
       setReminders(data);
     } catch (err) {
       console.error(err);
@@ -219,15 +217,7 @@ export default function Maintenance() {
     setUploading(true);
     try {
       for (const file of Array.from(files)) {
-        const formData = new FormData();
-        formData.append("file", file);
-
-        const res = await fetch("/api/files", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!res.ok) throw new Error("Upload failed");
+        await filesApi.upload(file);
       }
       await fetchManuals();
     } catch (err) {
@@ -249,8 +239,7 @@ export default function Maintenance() {
 
   const handleDelete = async (id: string) => {
     try {
-      const res = await fetch(`/api/files/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Delete failed");
+      await filesApi.delete(id);
       await fetchManuals();
     } catch (err) {
       console.error(err);
@@ -260,9 +249,7 @@ export default function Maintenance() {
 
   const handleViewDetail = async (id: string) => {
     try {
-      const res = await fetch(`/api/maintenance/reminders/${id}`);
-      if (!res.ok) throw new Error("Failed to fetch reminder detail");
-      const data = (await res.json()) as MaintenanceReminder;
+      const data = await maintenanceApi.reminders.detail(id);
       setSelectedReminder(data);
       setIsEditing(false);
       setEditForm({});
@@ -282,13 +269,7 @@ export default function Maintenance() {
     if (!selectedReminder || !editForm) return;
     setSaving(true);
     try {
-      const res = await fetch(`/api/maintenance/reminders/${selectedReminder.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editForm),
-      });
-      if (!res.ok) throw new Error("Save failed");
-      const updated = (await res.json()) as MaintenanceReminder;
+      const updated = await maintenanceApi.reminders.update(selectedReminder.id, editForm);
       setSelectedReminder(updated);
       setIsEditing(false);
       await fetchReminders();

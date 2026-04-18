@@ -14,6 +14,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { Fault, FaultStats } from "../types";
+import { faultsApi } from "../api/faults";
 
 export default function Faults() {
   const [faults, setFaults] = useState<Fault[]>([]);
@@ -23,20 +24,9 @@ export default function Faults() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [listRes, statsRes] = await Promise.all([
-          fetch("/api/faults"),
-          fetch("/api/faults/stats"),
-        ]);
-
-        if (listRes.ok) {
-          const data = (await listRes.json()) as Fault[];
-          setFaults(data);
-        }
-
-        if (statsRes.ok) {
-          const data = (await statsRes.json()) as FaultStats;
-          setStats(data);
-        }
+        const [listData, statsData] = await Promise.all([faultsApi.list(), faultsApi.stats()]);
+        setFaults(listData);
+        setStats(statsData);
       } catch (err) {
         console.error(err);
       } finally {
