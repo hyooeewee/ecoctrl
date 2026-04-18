@@ -11,6 +11,8 @@ import threeDConfigRoutes from "./src/routes/threeDConfig.js";
 import energyRoutes from "./src/routes/energy.js";
 import reportRoutes from "./src/routes/reports.js";
 import accountRoutes from "./src/routes/accounts.js";
+import dashboardRoutes from "./src/routes/dashboard.js";
+import alertRoutes from "./src/routes/alerts.js";
 import modelRoutes from "./src/routes/models.js";
 
 const fastify = Fastify({ logger: true });
@@ -35,7 +37,9 @@ await fastify.register(configRoutes, { prefix: "/api/config" });
 await fastify.register(threeDConfigRoutes, { prefix: "/api/three-d-config" });
 await fastify.register(energyRoutes, { prefix: "/api/energy" });
 await fastify.register(reportRoutes, { prefix: "/api/reports" });
-await fastify.register(accountRoutes, { prefix: "/api/accounts" });
+await fastify.register(accountRoutes, { prefix: "/api/users" });
+await fastify.register(dashboardRoutes, { prefix: "/api/dashboard" });
+await fastify.register(alertRoutes, { prefix: "/api/alerts" });
 await fastify.register(modelRoutes, { prefix: "/api/models" });
 
 fastify.get("/documentation/json", async () => fastify.swagger());
