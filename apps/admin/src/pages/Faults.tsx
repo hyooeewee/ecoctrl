@@ -1,5 +1,5 @@
 import { AlertCircle, History, BarChart3, Clock } from "lucide-react";
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,9 +13,40 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { FAULTS } from "../constants/mockData";
+import { Fault, FaultStats } from "../types";
 
 export default function Faults() {
+  const [faults, setFaults] = useState<Fault[]>([]);
+  const [stats, setStats] = useState<FaultStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [listRes, statsRes] = await Promise.all([
+          fetch("/api/faults"),
+          fetch("/api/faults/stats"),
+        ]);
+
+        if (listRes.ok) {
+          const data = (await listRes.json()) as Fault[];
+          setFaults(data);
+        }
+
+        if (statsRes.ok) {
+          const data = (await statsRes.json()) as FaultStats;
+          setStats(data);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -23,8 +54,13 @@ export default function Faults() {
           <CardContent className="flex items-center justify-between p-6">
             <div className="space-y-1">
               <p className="text-sm font-medium text-red-600">本月总故障数</p>
-              <h3 className="text-3xl font-bold text-red-900">24</h3>
-              <p className="mt-2 text-xs font-medium text-red-700/60">比上月减少 12%</p>
+              <h3 className="text-3xl font-bold text-red-900">{stats?.totalCount ?? "-"}</h3>
+              {stats && (
+                <p className="mt-2 text-xs font-medium text-red-700/60">
+                  比上月{stats.trend.startsWith("-") ? "减少" : "增加"}{" "}
+                  {stats.trend.replace(/[+-]/, "")}
+                </p>
+              )}
             </div>
             <div className="rounded-full bg-red-100 p-4 text-red-600">
               <AlertCircle size={32} />
@@ -35,8 +71,12 @@ export default function Faults() {
           <CardContent className="flex items-center justify-between p-6">
             <div className="space-y-1">
               <p className="text-sm font-medium text-blue-600">平均修复时间 (MTTR)</p>
-              <h3 className="text-3xl font-bold text-blue-900">4.2h</h3>
-              <p className="mt-2 text-xs font-medium text-blue-700/60">系统平均响应时间: 15min</p>
+              <h3 className="text-3xl font-bold text-blue-900">{stats?.mttr ?? "-"}h</h3>
+              {stats && (
+                <p className="mt-2 text-xs font-medium text-blue-700/60">
+                  系统平均响应时间: {stats.avgResponseTime}
+                </p>
+              )}
             </div>
             <div className="rounded-full bg-blue-100 p-4 text-blue-600">
               <Clock size={32} />
@@ -66,47 +106,64 @@ export default function Faults() {
         <TabsContent value="list" className="mt-4">
           <Card className="border-none shadow-sm">
             <CardContent className="p-0">
-              <Table>
-                <TableHeader className="bg-gray-50/50">
-                  <TableRow>
-                    <TableHead className="px-6">设备名称</TableHead>
-                    <TableHead className="text-center">故障等级</TableHead>
-                    <TableHead className="text-center">发生时间</TableHead>
-                    <TableHead className="px-6 text-right">状态</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {FAULTS.map((fault) => (
-                    <TableRow key={fault.id}>
-                      <TableCell className="px-6 font-semibold">{fault.device}</TableCell>
-                      <TableCell className="text-center">
-                        <Badge
-                          className={
-                            fault.level === "严重"
-                              ? "bg-red-50 text-red-600"
-                              : fault.level === "一般"
-                                ? "bg-orange-50 text-orange-600"
-                                : "bg-blue-50 text-blue-600"
-                          }
-                          variant="outline"
-                        >
-                          {fault.level}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center font-mono text-sm text-gray-500">
-                        {fault.time}
-                      </TableCell>
-                      <TableCell className="px-6 text-right">
-                        <span
-                          className={`text-sm font-medium ${fault.status === "待处理" ? "text-red-500" : fault.status === "维保中" ? "text-orange-500" : "text-green-500"}`}
-                        >
-                          {fault.status}
-                        </span>
-                      </TableCell>
+              {loading ? (
+                <div className="flex items-center justify-center py-16 text-sm text-gray-400">
+                  加载中...
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader className="bg-gray-50/50">
+                    <TableRow>
+                      <TableHead className="px-6">设备名称</TableHead>
+                      <TableHead className="text-center">故障等级</TableHead>
+                      <TableHead className="text-center">发生时间</TableHead>
+                      <TableHead className="px-6 text-right">状态</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {faults.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={4}
+                          className="text-center py-8 text-sm text-muted-foreground"
+                        >
+                          暂无故障数据
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      faults.map((fault) => (
+                        <TableRow key={fault.id}>
+                          <TableCell className="px-6 font-semibold">{fault.device}</TableCell>
+                          <TableCell className="text-center">
+                            <Badge
+                              className={
+                                fault.level === "严重"
+                                  ? "bg-red-50 text-red-600"
+                                  : fault.level === "一般"
+                                    ? "bg-orange-50 text-orange-600"
+                                    : "bg-blue-50 text-blue-600"
+                              }
+                              variant="outline"
+                            >
+                              {fault.level}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center font-mono text-sm text-gray-500">
+                            {fault.time}
+                          </TableCell>
+                          <TableCell className="px-6 text-right">
+                            <span
+                              className={`text-sm font-medium ${fault.status === "待处理" ? "text-red-500" : fault.status === "维保中" ? "text-orange-500" : "text-green-500"}`}
+                            >
+                              {fault.status}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

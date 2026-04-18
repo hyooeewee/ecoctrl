@@ -59,3 +59,10 @@ export interface Fault {
   time: string;
   status: string;
 }
+
+export interface FaultStats {
+  totalCount: number;
+  trend: string;
+  mttr: number;
+  avgResponseTime: string;
+}

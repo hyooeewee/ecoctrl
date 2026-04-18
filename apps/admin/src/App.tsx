@@ -58,7 +58,7 @@ export default function App() {
 
         <main className="bg-background flex-1 overflow-hidden">
           <ScrollArea className="h-full w-full">
-            <div className="mx-auto max-w-[1440px] p-8 pb-24">{renderContent()}</div>
+            <div className="mx-auto max-w-[1440px] p-8 pb-12">{renderContent()}</div>
           </ScrollArea>
         </main>
       </div>

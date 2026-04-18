@@ -1,5 +1,5 @@
 import { FileDown, PlusCircle, Settings2, CalendarDays, ExternalLink } from "lucide-react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -10,7 +10,6 @@ import { cn } from "@/lib/utils";
 import ExportDialog from "../components/ExportDialog";
 import ReportPlanSheet from "../components/ReportPlanSheet";
 import TemplateDialog from "../components/TemplateDialog";
-import { REPORT_PLANS } from "../constants/mockData";
 import { ReportPlan } from "../types";
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
@@ -22,12 +21,28 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
 }
 
 export default function Reports() {
-  const [reportPlans, setReportPlans] = useState<ReportPlan[]>(REPORT_PLANS);
-  const [templates, setTemplates] = useState<string[]>([
-    "能耗日报",
-    "故障分析月报",
-    "系统审计简报",
-  ]);
+  const [reportPlans, setReportPlans] = useState<ReportPlan[]>([]);
+  const [templates, setTemplates] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchData = async () => {
+    try {
+      const [plansRes, templatesRes] = await Promise.all([
+        fetch("/api/reports/plans"),
+        fetch("/api/reports/templates"),
+      ]);
+      if (plansRes.ok) setReportPlans((await plansRes.json()) as ReportPlan[]);
+      if (templatesRes.ok) setTemplates((await templatesRes.json()) as string[]);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const handleExport = (fileName: string) => {
     const headers = ["报表名称", "收件人", "发送频率", "状态"];
@@ -54,12 +69,34 @@ export default function Reports() {
     document.body.removeChild(link);
   };
 
-  const handleAddPlan = (plan: ReportPlan) => {
-    setReportPlans((prev) => [...prev, plan]);
+  const handleAddPlan = async (plan: Omit<ReportPlan, "id">) => {
+    try {
+      const res = await fetch("/api/reports/plans", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(plan),
+      });
+      if (!res.ok) throw new Error("Failed to add plan");
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+      alert("添加计划失败");
+    }
   };
 
-  const handleTogglePlan = (id: string, checked: boolean) => {
-    setReportPlans((prev) => prev.map((p) => (p.id === id ? { ...p, status: checked } : p)));
+  const handleTogglePlan = async (id: string, checked: boolean) => {
+    try {
+      const res = await fetch(`/api/reports/plans/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: checked }),
+      });
+      if (!res.ok) throw new Error("Failed to update plan");
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+      alert("更新状态失败");
+    }
   };
 
   return (
@@ -108,41 +145,55 @@ export default function Reports() {
           <CardDescription>配置自动生成的周期性数据概览并发送至指定邮箱。</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-gray-50/50">
-              <TableRow>
-                <TableHead className="w-[30%] px-6">报表名称</TableHead>
-                <TableHead>收件人</TableHead>
-                <TableHead>
-                  <div className="flex items-center gap-1.5">
-                    <CalendarDays size={14} className="text-gray-400" />
-                    发送频率
-                  </div>
-                </TableHead>
-                <TableHead className="pr-6 text-right">状态控制</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {reportPlans.map((plan) => (
-                <TableRow key={plan.id} className="group hover:bg-muted/30 transition-colors">
-                  <TableCell className="px-6 font-medium">{plan.name}</TableCell>
-                  <TableCell
-                    className="cursor-pointer text-sm text-blue-600 underline underline-offset-4"
-                    onClick={() => console.log("Edit receiver for:", plan.name)}
-                  >
-                    {plan.receiver}
-                  </TableCell>
-                  <TableCell className="text-sm text-gray-600">{plan.frequency}</TableCell>
-                  <TableCell className="text-right">
-                    <Switch
-                      checked={plan.status}
-                      onCheckedChange={(checked) => handleTogglePlan(plan.id, checked)}
-                    />
-                  </TableCell>
+          {loading ? (
+            <div className="py-16 text-center text-sm text-gray-400">加载中...</div>
+          ) : (
+            <Table>
+              <TableHeader className="bg-gray-50/50">
+                <TableRow>
+                  <TableHead className="w-[30%] px-6">报表名称</TableHead>
+                  <TableHead>收件人</TableHead>
+                  <TableHead>
+                    <div className="flex items-center gap-1.5">
+                      <CalendarDays size={14} className="text-gray-400" />
+                      发送频率
+                    </div>
+                  </TableHead>
+                  <TableHead className="pr-6 text-right">状态控制</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {reportPlans.map((plan) => (
+                  <TableRow key={plan.id} className="group hover:bg-muted/30 transition-colors">
+                    <TableCell className="px-6 font-medium">{plan.name}</TableCell>
+                    <TableCell
+                      className="cursor-pointer text-sm text-blue-600 underline underline-offset-4"
+                      onClick={() => console.log("Edit receiver for:", plan.name)}
+                    >
+                      {plan.receiver}
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-600">{plan.frequency}</TableCell>
+                    <TableCell className="text-right">
+                      <Switch
+                        checked={plan.status}
+                        onCheckedChange={(checked) => handleTogglePlan(plan.id, checked)}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {reportPlans.length === 0 && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={4}
+                      className="text-center py-8 text-sm text-muted-foreground"
+                    >
+                      暂无定时计划
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 

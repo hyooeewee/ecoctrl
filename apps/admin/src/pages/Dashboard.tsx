@@ -1,5 +1,5 @@
 import { Zap, Activity, AlertCircle, Droplets } from "lucide-react";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -21,8 +21,26 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import { cn } from "@/lib/utils";
 import ExportDialog from "../components/ExportDialog";
-import { ALERTS, ENERGY_CHART_DATA } from "../constants/mockData";
+import { Alert } from "../types";
+
+interface DashboardStats {
+  totalEnergy: { value: string; unit: string; trend: string; trendType: "up" | "down" | "neutral" };
+  onlineRate: { value: string; unit: string; trend: string; trendType: "up" | "down" | "neutral" };
+  pendingAlerts: {
+    value: string;
+    unit: string;
+    trend: string;
+    trendType: "up" | "down" | "neutral";
+  };
+  carbonEmission: {
+    value: string;
+    unit: string;
+    trend: string;
+    trendType: "up" | "down" | "neutral";
+  };
+}
 
 const Indicator = ({
   title,
@@ -37,7 +55,6 @@ const Indicator = ({
   const isTrendPositive = trendType === "up";
   const isTrendNegative = trendType === "down";
 
-  // Determine trend color based on semantics (e.g., alerts down is GOOD)
   let trendColorClass = "text-slate-500";
   if (isTrendPositive) {
     trendColorClass = isGood ? "text-emerald-600" : "text-rose-600";
@@ -80,52 +97,88 @@ const Indicator = ({
   );
 };
 
-import { cn } from "@/lib/utils";
-
 export default function DashboardContent() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [energyData, setEnergyData] = useState<{ name: string; value: number }[]>([]);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [statsRes, energyRes, alertsRes] = await Promise.all([
+          fetch("/api/dashboard/stats"),
+          fetch("/api/dashboard/energy-chart"),
+          fetch("/api/alerts?limit=5"),
+        ]);
+
+        if (statsRes.ok) setStats((await statsRes.json()) as DashboardStats);
+        if (energyRes.ok)
+          setEnergyData((await energyRes.json()) as { name: string; value: number }[]);
+        if (alertsRes.ok) setAlerts((await alertsRes.json()) as Alert[]);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center text-sm text-gray-400">加载中...</div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Indicator
-          title="总能耗"
-          value="12,840"
-          unit="kWh"
-          trend="+12%"
-          trendType="up"
-          icon={Zap}
-          color="text-amber-500"
-          isGood={false}
-        />
-        <Indicator
-          title="设备在线率"
-          value="98.2"
-          unit="%"
-          trend="+0.5%"
-          trendType="up"
-          icon={Activity}
-          color="text-blue-500"
-          isGood={true}
-        />
-        <Indicator
-          title="未处理告警"
-          value="04"
-          unit="项"
-          trend="-2"
-          trendType="down"
-          icon={AlertCircle}
-          color="text-rose-500"
-          isGood={false}
-        />
-        <Indicator
-          title="本月碳排"
-          value="842"
-          unit="kg"
-          trend="-4.2%"
-          trendType="down"
-          icon={Droplets}
-          color="text-emerald-500"
-          isGood={false}
-        />
+        {stats && (
+          <>
+            <Indicator
+              title="总能耗"
+              value={stats.totalEnergy.value}
+              unit={stats.totalEnergy.unit}
+              trend={stats.totalEnergy.trend}
+              trendType={stats.totalEnergy.trendType}
+              icon={Zap}
+              color="text-amber-500"
+              isGood={false}
+            />
+            <Indicator
+              title="设备在线率"
+              value={stats.onlineRate.value}
+              unit={stats.onlineRate.unit}
+              trend={stats.onlineRate.trend}
+              trendType={stats.onlineRate.trendType}
+              icon={Activity}
+              color="text-blue-500"
+              isGood={true}
+            />
+            <Indicator
+              title="未处理告警"
+              value={stats.pendingAlerts.value}
+              unit={stats.pendingAlerts.unit}
+              trend={stats.pendingAlerts.trend}
+              trendType={stats.pendingAlerts.trendType}
+              icon={AlertCircle}
+              color="text-rose-500"
+              isGood={false}
+            />
+            <Indicator
+              title="本月碳排"
+              value={stats.carbonEmission.value}
+              unit={stats.carbonEmission.unit}
+              trend={stats.carbonEmission.trend}
+              trendType={stats.carbonEmission.trendType}
+              icon={Droplets}
+              color="text-emerald-500"
+              isGood={false}
+            />
+          </>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -150,44 +203,50 @@ export default function DashboardContent() {
           </CardHeader>
           <CardContent className="px-6 pt-8">
             <div className="h-[280px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={ENERGY_CHART_DATA}>
-                  <defs>
-                    <linearGradient id="colorPrimary" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1} />
-                      <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#e2e8f0" />
-                  <XAxis
-                    dataKey="name"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 11, fill: "#64748b" }}
-                    dy={10}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 11, fill: "#64748b" }}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: "12px",
-                      border: "1px solid #e2e8f0",
-                      boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.05)",
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#2563eb"
-                    strokeWidth={2.5}
-                    fillOpacity={1}
-                    fill="url(#colorPrimary)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              {energyData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={energyData}>
+                    <defs>
+                      <linearGradient id="colorPrimary" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1} />
+                        <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#e2e8f0" />
+                    <XAxis
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fill: "#64748b" }}
+                      dy={10}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fill: "#64748b" }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: "12px",
+                        border: "1px solid #e2e8f0",
+                        boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.05)",
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="value"
+                      stroke="#2563eb"
+                      strokeWidth={2.5}
+                      fillOpacity={1}
+                      fill="url(#colorPrimary)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-gray-400">
+                  暂无数据
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -224,35 +283,47 @@ export default function DashboardContent() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {ALERTS.slice(0, 5).map((alert) => (
-                  <TableRow key={alert.id} className="group hover:bg-muted/50 border-border">
-                    <TableCell className="px-6 py-4">
-                      <span className="text-foreground text-sm font-medium">{alert.device}</span>
-                    </TableCell>
-                    <TableCell className="py-4">
-                      <span
-                        className={cn(
-                          "status-badge rounded-sm px-2 py-0.5 text-[10px] font-bold tracking-tight uppercase",
-                          alert.level === "high"
-                            ? "bg-red-100 text-red-700"
-                            : "bg-orange-100 text-orange-700",
-                        )}
-                      >
-                        {alert.level === "high" ? "紧急" : "次要"}
-                      </span>
-                    </TableCell>
-                    <TableCell className="py-4 pr-6 text-right">
-                      <span className="text-muted-foreground text-xs">未处理</span>
+                {alerts.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={3}
+                      className="text-center py-8 text-sm text-muted-foreground"
+                    >
+                      暂无告警
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  alerts.map((alert) => (
+                    <TableRow key={alert.id} className="group hover:bg-muted/50 border-border">
+                      <TableCell className="px-6 py-4">
+                        <span className="text-foreground text-sm font-medium">{alert.device}</span>
+                      </TableCell>
+                      <TableCell className="py-4">
+                        <span
+                          className={cn(
+                            "status-badge rounded-sm px-2 py-0.5 text-[10px] font-bold tracking-tight uppercase",
+                            alert.level === "high"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-orange-100 text-orange-700",
+                          )}
+                        >
+                          {alert.level === "high" ? "紧急" : "次要"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="py-4 pr-6 text-right">
+                        <span className="text-muted-foreground text-xs">
+                          {alert.status === "pending" ? "未处理" : "已处理"}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
       </div>
 
-      {/* Quick Access / Bottom Bar */}
       <div className="bg-muted/30 border-border flex flex-col items-center justify-between rounded-md border p-6 sm:flex-row">
         <div className="mb-4 flex flex-wrap gap-8 sm:mb-0">
           <div className="flex items-center gap-2 text-sm">
