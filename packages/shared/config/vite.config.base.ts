@@ -1,6 +1,6 @@
 import type { UserConfig } from "vite-plus";
 
-export const shared = {
+export const viteConfig = {
   staged: {
     "*": "vp check --fix",
   },

@@ -1,7 +1,7 @@
 import path from "path";
 import { fileURLToPath } from "url";
 
-import { shared } from "@ecoctrl/config/shared";
+import { viteConfig } from "@ecoctrl/shared";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv, mergeConfig } from "vite-plus";
@@ -22,7 +22,7 @@ export default defineConfig(({ mode }) => {
         }
       : undefined;
 
-  return mergeConfig(shared, {
+  return mergeConfig(viteConfig, {
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
