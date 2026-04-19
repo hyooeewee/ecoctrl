@@ -3,10 +3,8 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// dev:  __dirname = .../server/src/lib  → go up 2 levels to package root
-// prod: __dirname = .../server/dist     → go up 1 level to package root
-const isCompiled = __dirname.endsWith("/dist") || __dirname.endsWith("\\dist");
-const ROOT = path.resolve(__dirname, isCompiled ? ".." : "../..");
+const isDev = process.env.NODE_ENV === "development";
+const ROOT = path.resolve(__dirname, isDev ? "../.." : "..");
 
 export const DATA_DIR = path.join(ROOT, "data");
 export const UPLOAD_DIR = path.join(ROOT, "uploads");
