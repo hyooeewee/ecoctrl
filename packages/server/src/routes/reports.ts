@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import crypto from "node:crypto";
+import { z } from "zod";
 import type { ReportPlan } from "@/types/index";
 import {
   getReportPlans,
@@ -8,33 +9,36 @@ import {
   getReportTemplates,
 } from "@/repositories/reports";
 
-const planSchema = {
-  type: "object",
-  properties: {
-    id: { type: "string" },
-    name: { type: "string" },
-    receiver: { type: "string" },
-    frequency: { type: "string" },
-    status: { type: "boolean" },
-  },
-};
+const planSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  receiver: z.string(),
+  frequency: z.string(),
+  status: z.boolean(),
+});
 
-const templateSchema = {
-  type: "object",
-  properties: {
-    id: { type: "number" },
-    name: { type: "string" },
-    count: { type: "string" },
-    icon: { type: "string" },
-  },
-};
+const templateSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  count: z.string(),
+  icon: z.string(),
+});
 
-const errorResponseSchema = {
-  type: "object",
-  properties: {
-    error: { type: "string" },
-  },
-};
+const errorResponseSchema = z.object({ error: z.string() });
+
+const planBodySchema = z.object({
+  name: z.string(),
+  receiver: z.string(),
+  frequency: z.string(),
+  status: z.boolean(),
+});
+
+const planUpdateBodySchema = z.object({
+  name: z.string().optional(),
+  receiver: z.string().optional(),
+  frequency: z.string().optional(),
+  status: z.boolean().optional(),
+});
 
 export default async function reportRoutes(fastify: FastifyInstance) {
   fastify.get(
@@ -42,12 +46,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Get report plans",
-        response: {
-          200: {
-            type: "array",
-            items: planSchema,
-          },
-        },
+        response: { 200: z.array(planSchema) },
       },
     },
     async (_request, reply) => {
@@ -61,24 +60,14 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Create a report plan",
-        body: {
-          type: "object",
-          required: ["name", "receiver", "frequency", "status"],
-          properties: {
-            name: { type: "string" },
-            receiver: { type: "string" },
-            frequency: { type: "string" },
-            status: { type: "boolean" },
-          },
-        },
-        response: {
-          201: planSchema,
-        },
+        body: planBodySchema,
+        response: { 201: planSchema },
       },
     },
     async (request, reply) => {
       const body = request.body as Omit<ReportPlan, "id">;
-      const plan: ReportPlan = { id: crypto.randomUUID(), ...body };
+      const id = crypto.randomUUID();
+      const plan: ReportPlan = { id, ...body };
       await addReportPlan(plan);
       return reply.status(201).send(plan);
     },
@@ -89,22 +78,8 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Update a report plan",
-        params: {
-          type: "object",
-          properties: {
-            id: { type: "string", description: "Plan ID" },
-          },
-          required: ["id"],
-        },
-        body: {
-          type: "object",
-          properties: {
-            name: { type: "string" },
-            receiver: { type: "string" },
-            frequency: { type: "string" },
-            status: { type: "boolean" },
-          },
-        },
+        params: z.object({ id: z.string().describe("Plan ID") }),
+        body: planUpdateBodySchema,
         response: {
           200: planSchema,
           404: errorResponseSchema,
@@ -127,12 +102,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Get report templates",
-        response: {
-          200: {
-            type: "array",
-            items: templateSchema,
-          },
-        },
+        response: { 200: z.array(templateSchema) },
       },
     },
     async (_request, reply) => {

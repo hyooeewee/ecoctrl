@@ -19,23 +19,11 @@ export async function getReminders(): Promise<MaintenanceReminderDetail[]> {
   }));
 }
 
-export async function saveData(data: MaintenanceReminderDetail[]): Promise<void> {
-  // Simple approach: delete all then re-insert
-  await db.delete(maintenanceReminders);
-  if (data.length) {
-    await db.insert(maintenanceReminders).values(
-      data.map((d) => ({
-        id: d.id,
-        task: d.task,
-        description: d.description,
-        dueDate: d.dueDate,
-        priority: d.priority,
-        status: d.status,
-        assignee: d.assignee,
-        location: d.location,
-        estimatedHours: d.estimatedHours,
-        lastCompleted: d.lastCompleted,
-      })),
-    );
-  }
+export async function updateReminder(data: Partial<MaintenanceReminderDetail> & { id: string }): Promise<void> {
+  await db.update(maintenanceReminders).set(data).where(eq(maintenanceReminders.id, data.id));
+}
+
+export async function deleteReminder(id: string): Promise<boolean> {
+  const result = await db.delete(maintenanceReminders).where(eq(maintenanceReminders.id, id)).returning();
+  return result.length > 0;
 }

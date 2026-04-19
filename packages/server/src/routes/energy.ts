@@ -1,19 +1,28 @@
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 import { getEnergyAreas, saveEnergyAreas } from "@/repositories/energyAreas";
 import type { EnergyArea } from "@/repositories/energyAreas";
 
-const areaSchema = {
-  type: "object",
-  properties: {
-    id: { type: "number" },
-    title: { type: "string" },
-    current: { type: "number" },
-    target: { type: "number" },
-    color: { type: "string" },
-    powerFactor: { type: "number" },
-    loadRate: { type: "string" },
-  },
-};
+const areaSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  current: z.number(),
+  target: z.number(),
+  color: z.string(),
+  powerFactor: z.number(),
+  loadRate: z.string(),
+});
+
+const areaBodySchema = z.array(
+  z.object({
+    title: z.string(),
+    current: z.number(),
+    target: z.number(),
+    color: z.string(),
+    powerFactor: z.number(),
+    loadRate: z.string(),
+  }),
+);
 
 export default async function energyRoutes(fastify: FastifyInstance) {
   fastify.get("/", async (_request, reply) => reply.send([]));
@@ -23,12 +32,7 @@ export default async function energyRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Get energy areas",
-        response: {
-          200: {
-            type: "array",
-            items: areaSchema,
-          },
-        },
+        response: { 200: z.array(areaSchema) },
       },
     },
     async (_request, reply) => {
@@ -42,27 +46,8 @@ export default async function energyRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Update energy areas",
-        body: {
-          type: "array",
-          items: {
-            type: "object",
-            required: ["title", "current", "target", "color", "powerFactor", "loadRate"],
-            properties: {
-              title: { type: "string" },
-              current: { type: "number" },
-              target: { type: "number" },
-              color: { type: "string" },
-              powerFactor: { type: "number" },
-              loadRate: { type: "string" },
-            },
-          },
-        },
-        response: {
-          200: {
-            type: "array",
-            items: areaSchema,
-          },
-        },
+        body: areaBodySchema,
+        response: { 200: z.array(areaSchema) },
       },
     },
     async (request, reply) => {

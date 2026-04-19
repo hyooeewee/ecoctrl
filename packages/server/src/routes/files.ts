@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 import fs from "node:fs";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
@@ -27,29 +28,17 @@ function saveMeta(meta: FileMeta[]) {
 
 let fileMeta = loadMeta();
 
-const fileItemSchema = {
-  type: "object",
-  properties: {
-    id: { type: "string" },
-    name: { type: "string" },
-    url: { type: "string" },
-  },
-};
+const fileItemSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  url: z.string(),
+});
 
-const fileParamsSchema = {
-  type: "object",
-  properties: {
-    id: { type: "string", description: "File ID" },
-  },
-  required: ["id"],
-};
+const fileParamsSchema = z.object({
+  id: z.string().describe("File ID"),
+});
 
-const errorResponseSchema = {
-  type: "object",
-  properties: {
-    error: { type: "string" },
-  },
-};
+const errorResponseSchema = z.object({ error: z.string() });
 
 export default async function fileRoutes(fastify: FastifyInstance) {
   fastify.get(
@@ -57,12 +46,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "List uploaded files",
-        response: {
-          200: {
-            type: "array",
-            items: fileItemSchema,
-          },
-        },
+        response: { 200: z.array(fileItemSchema) },
       },
     },
     async (_request, reply) => {
@@ -83,12 +67,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
         consumes: ["multipart/form-data"],
         response: {
           200: fileItemSchema,
-          400: {
-            type: "object",
-            properties: {
-              error: { type: "string" },
-            },
-          },
+          400: errorResponseSchema,
         },
       },
     },
@@ -127,9 +106,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
       schema: {
         summary: "Get HTML preview page for a file",
         params: fileParamsSchema,
-        response: {
-          404: errorResponseSchema,
-        },
+        response: { 404: errorResponseSchema },
       },
     },
     async (request, reply) => {
@@ -169,12 +146,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
         summary: "Delete a file",
         params: fileParamsSchema,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-            },
-          },
+          200: z.object({ success: z.boolean() }),
           404: errorResponseSchema,
         },
       },
@@ -203,9 +175,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
         summary: "Download raw PDF file",
         params: fileParamsSchema,
         produces: ["application/pdf"],
-        response: {
-          404: errorResponseSchema,
-        },
+        response: { 404: errorResponseSchema },
       },
     },
     async (request, reply) => {

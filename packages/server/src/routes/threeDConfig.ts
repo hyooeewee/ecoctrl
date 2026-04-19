@@ -1,15 +1,20 @@
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 import { getThreeDConfig, setThreeDConfig } from "@/repositories/threeDConfig";
 
-const configSchema = {
-  type: "object",
-  properties: {
-    cameraPreset: { type: "string" },
-    ambientLightIntensity: { type: "number" },
-    hotspots: { type: "array" },
-    labels: { type: "array" },
-  },
-};
+const configSchema = z.object({
+  cameraPreset: z.string(),
+  ambientLightIntensity: z.number(),
+  hotspots: z.array(z.unknown()),
+  labels: z.array(z.unknown()),
+});
+
+const configBodySchema = z.object({
+  cameraPreset: z.string().optional(),
+  ambientLightIntensity: z.number().optional(),
+  hotspots: z.array(z.unknown()).optional(),
+  labels: z.array(z.unknown()).optional(),
+});
 
 export default async function threeDConfigRoutes(fastify: FastifyInstance) {
   fastify.get(
@@ -17,9 +22,7 @@ export default async function threeDConfigRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Get 3D config",
-        response: {
-          200: configSchema,
-        },
+        response: { 200: configSchema },
       },
     },
     async (_request, reply) => {
@@ -33,18 +36,8 @@ export default async function threeDConfigRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Update 3D config",
-        body: {
-          type: "object",
-          properties: {
-            cameraPreset: { type: "string" },
-            ambientLightIntensity: { type: "number" },
-            hotspots: { type: "array" },
-            labels: { type: "array" },
-          },
-        },
-        response: {
-          200: configSchema,
-        },
+        body: configBodySchema,
+        response: { 200: configSchema },
       },
     },
     async (request, reply) => {

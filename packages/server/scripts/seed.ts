@@ -90,13 +90,13 @@ async function seedUsers() {
       },
     },
   }));
-  // Set avatar for the first active user to match mock data
-  const activeUsers = await db.select().from(schema.users).where(eq(schema.users.status, "active")).limit(1);
-  if (activeUsers.length > 0) {
+  // Set avatar for the first online user to match mock data
+  const onlineUsers = await db.select().from(schema.users).where(eq(schema.users.status, "online")).limit(1);
+  if (onlineUsers.length > 0) {
     await db
       .update(schema.users)
       .set({ avatarUrl: "https://avatar.vercel.sh/admin?size=32" })
-      .where(eq(schema.users.id, activeUsers[0].id));
+      .where(eq(schema.users.id, onlineUsers[0].id));
   }
   console.log("Seeded users");
 }
