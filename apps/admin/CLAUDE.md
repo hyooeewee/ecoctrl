@@ -62,6 +62,10 @@ This is a single-page app **without React Router**. Navigation is handled via ta
 - 如需定制或复用，请在 `src/components/` 下创建二次封装组件，而不是修改 `components/ui/` 的源文件。
 - **优先抽象和复用组件。** 在新增页面或功能时，先检查是否已有可复用的组件或布局模式；避免大量复制粘贴相似代码。若同一结构在多处出现，应提取为 `src/components/` 下的共享组件。
 
+## 工作范围
+
+- 仅修改 `apps/admin` 内文件；`packages/*`、`apps/web` 、`./` 等其他目录只读并且积极获取最新的状态，如需修改请给出修改建议。
+
 ## 交互规则
 
 - 任何编码或修改前，必须先输出执行计划。

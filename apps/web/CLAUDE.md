@@ -78,3 +78,7 @@ Use `@tabler/icons-react` for all icons.
 - [ ] Update i18n keys if user-facing text changes.
 - [ ] Run `uv run scripts/check-locale-dead-code.py` after modifying `app/locales/` to ensure no orphaned keys.
 - [ ] Remove dead code, unused constants, and orphaned i18n keys when replacing hard-coded values. Do not leave tails behind.
+
+## 工作范围
+
+- 仅修改 `apps/web` 内文件；`packages/*`、`apps/admin` 、`./` 等其他目录只读并且积极获取最新的状态，如需修改请给出修改建议。

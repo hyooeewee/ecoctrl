@@ -3,10 +3,15 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./config/vite.config.base.ts",
+    ".": "./index.ts",
     "./tsconfig.base.json": "./config/tsconfig.base.json",
     "./tsconfig.app.json": "./config/tsconfig.app.json",
-    "./tsconfig.node.json": "./config/tsconfig.node.json"
+    "./tsconfig.node.json": "./config/tsconfig.node.json",
+    "./types": "./types/index.ts",
+    "./types/*": "./types/*.ts"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "vite-plus": "catalog:"
