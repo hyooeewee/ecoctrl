@@ -58,7 +58,9 @@ export default function SystemConfig() {
 
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center text-sm text-gray-400">加载中...</div>
+      <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+        加载中...
+      </div>
     );
   }
 
@@ -66,7 +68,6 @@ export default function SystemConfig() {
     platformName: "",
     refreshInterval: 30,
     realtimeAlertEnabled: false,
-    darkModeFollowSystem: false,
   };
 
   return (
@@ -135,27 +136,13 @@ export default function SystemConfig() {
                 }
               />
             </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-semibold">深色模式跟随系统</Label>
-                <p className="text-muted-foreground text-xs">
-                  自动根据操作系统的显示偏好切换应用主题。
-                </p>
-              </div>
-              <Switch
-                checked={currentConfig.darkModeFollowSystem}
-                onCheckedChange={(checked) =>
-                  setConfig((prev) => (prev ? { ...prev, darkModeFollowSystem: checked } : prev))
-                }
-              />
-            </div>
           </div>
         </CardContent>
         <CardFooter className="border-border/50 bg-muted/20 flex justify-end border-t px-6 py-6">
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="bg-primary hover:bg-primary/90 shadow-primary/20 gap-2 px-6 font-semibold text-white shadow-sm"
+            className="bg-primary hover:bg-primary/90 shadow-primary/20 gap-2 px-6 font-semibold text-primary-foreground shadow-sm"
           >
             <Save size={18} />
             {saving ? "保存中..." : "保存配置"}

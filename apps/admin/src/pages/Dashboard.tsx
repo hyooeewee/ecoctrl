@@ -56,7 +56,7 @@ const Indicator = ({
   const isTrendPositive = trendType === "up";
   const isTrendNegative = trendType === "down";
 
-  let trendColorClass = "text-slate-500";
+  let trendColorClass = "text-muted-foreground";
   if (isTrendPositive) {
     trendColorClass = isGood ? "text-emerald-600" : "text-rose-600";
   } else if (isTrendNegative) {
@@ -137,7 +137,9 @@ export default function DashboardContent() {
 
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center text-sm text-gray-400">加载中...</div>
+      <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+        加载中...
+      </div>
     );
   }
 
@@ -205,7 +207,7 @@ export default function DashboardContent() {
                 <span className="text-muted-foreground text-[11px] font-medium">照明</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="h-2.5 w-2.5 rounded-full bg-slate-300"></div>
+                <div className="h-2.5 w-2.5 rounded-full bg-muted-foreground"></div>
                 <span className="text-muted-foreground text-[11px] font-medium">空调</span>
               </div>
             </div>
@@ -252,7 +254,7 @@ export default function DashboardContent() {
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex h-full items-center justify-center text-sm text-gray-400">
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
                   暂无数据
                 </div>
               )}
@@ -359,7 +361,40 @@ export default function DashboardContent() {
           defaultFormat="PDF"
           defaultOperator="系统管理员"
           onExport={({ fileName }) => {
-            console.log("Exporting today report:", fileName);
+            const lines: string[] = [];
+            lines.push("指标,数值,单位,趋势");
+            if (stats) {
+              lines.push(
+                `总能耗,${stats.totalEnergy.value},${stats.totalEnergy.unit},${stats.totalEnergy.trend}`,
+              );
+              lines.push(
+                `设备在线率,${stats.onlineRate.value},${stats.onlineRate.unit},${stats.onlineRate.trend}`,
+              );
+              lines.push(
+                `未处理告警,${stats.pendingAlerts.value},${stats.pendingAlerts.unit},${stats.pendingAlerts.trend}`,
+              );
+              lines.push(
+                `本月碳排,${stats.carbonEmission.value},${stats.carbonEmission.unit},${stats.carbonEmission.trend}`,
+              );
+            }
+            lines.push("");
+            lines.push("能耗趋势");
+            lines.push("时间,数值(kWh)");
+            energyData.forEach((d) => lines.push(`${d.name},${d.value}`));
+            lines.push("");
+            lines.push("实时告警");
+            lines.push("设备,级别,状态,时间");
+            alerts.forEach((a) => lines.push(`${a.device},${a.level},${a.status},${a.time}`));
+            const csvContent = lines.join("\n");
+            const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `${fileName}.csv`);
+            link.style.visibility = "hidden";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
           }}
         />
       </div>

@@ -138,22 +138,22 @@ export default function Reports() {
       </div>
 
       <Card className="overflow-hidden border-none shadow-sm">
-        <CardHeader className="bg-white px-6">
+        <CardHeader className="bg-card px-6">
           <CardTitle className="text-lg">定时发送计划</CardTitle>
           <CardDescription>配置自动生成的周期性数据概览并发送至指定邮箱。</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <div className="py-16 text-center text-sm text-gray-400">加载中...</div>
+            <div className="py-16 text-center text-sm text-muted-foreground">加载中...</div>
           ) : (
             <Table>
-              <TableHeader className="bg-gray-50/50">
+              <TableHeader className="bg-muted/50">
                 <TableRow>
                   <TableHead className="w-[30%] px-6">报表名称</TableHead>
                   <TableHead>收件人</TableHead>
                   <TableHead>
                     <div className="flex items-center gap-1.5">
-                      <CalendarDays size={14} className="text-gray-400" />
+                      <CalendarDays size={14} className="text-muted-foreground" />
                       发送频率
                     </div>
                   </TableHead>
@@ -170,7 +170,9 @@ export default function Reports() {
                     >
                       {plan.receiver}
                     </TableCell>
-                    <TableCell className="text-sm text-gray-600">{plan.frequency}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {plan.frequency}
+                    </TableCell>
                     <TableCell className="text-right">
                       <Switch
                         checked={plan.status}
@@ -204,10 +206,10 @@ export default function Reports() {
             <CardContent className="flex items-center gap-4 p-6">
               <div className="text-3xl">{template.icon}</div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-gray-500">{template.name}</p>
+                <p className="text-sm font-medium text-muted-foreground">{template.name}</p>
                 <p className="text-xl font-bold">{template.count}</p>
               </div>
-              <div className="absolute top-2 right-2 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100">
+              <div className="absolute top-2 right-2 text-muted-foreground/40 opacity-0 transition-opacity group-hover:opacity-100">
                 <ExternalLink size={14} />
               </div>
             </CardContent>

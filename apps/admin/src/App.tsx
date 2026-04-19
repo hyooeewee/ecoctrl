@@ -4,7 +4,7 @@
  */
 
 import { ScrollArea } from "@ui/scroll-area";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
@@ -18,9 +18,14 @@ import Models from "@/pages/Models";
 import Monitoring from "@/pages/Monitoring";
 import Reports from "@/pages/Reports";
 import ThreeDConfig from "@/pages/ThreeDConfig";
+import { initTheme } from "@/lib/darkMode";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("dashboard");
+
+  useEffect(() => {
+    initTheme();
+  }, []);
 
   const renderContent = () => {
     switch (activeTab) {

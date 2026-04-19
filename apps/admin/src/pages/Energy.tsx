@@ -40,7 +40,7 @@ export default function Energy() {
 
       <TabsContent value="overview" className="space-y-6">
         {loading ? (
-          <div className="flex h-64 items-center justify-center text-sm text-gray-400">
+          <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
             加载中...
           </div>
         ) : error ? (
@@ -48,7 +48,7 @@ export default function Energy() {
             数据加载失败，请稍后重试
           </div>
         ) : areas.length === 0 ? (
-          <div className="flex h-64 items-center justify-center text-sm text-gray-400">
+          <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
             暂无能耗分区数据
           </div>
         ) : (
@@ -124,8 +124,8 @@ export default function Energy() {
             <CardTitle className="text-base font-bold">今日分项能耗分布</CardTitle>
             <CardDescription className="text-xs">分系统电耗占比分析</CardDescription>
           </CardHeader>
-          <CardContent className="mx-6 my-6 flex h-64 items-center justify-center rounded-lg bg-gray-50/50">
-            <div className="text-center text-gray-400">
+          <CardContent className="mx-6 my-6 flex h-64 items-center justify-center rounded-lg bg-muted/50">
+            <div className="text-center text-muted-foreground">
               <PieChart className="mx-auto mb-2 opacity-30" size={48} />
               <p className="text-sm">饼图组件加载中...</p>
             </div>

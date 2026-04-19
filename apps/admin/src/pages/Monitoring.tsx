@@ -7,7 +7,7 @@ export default function Monitoring() {
     <div className="flex h-[calc(100vh-140px)] items-center justify-center">
       <Card className="relative flex w-full max-w-2xl items-center justify-center overflow-hidden border-none p-20 shadow-sm">
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center select-none">
-          <span className="rotate-[-25deg] text-[120px] font-bold text-gray-50 opacity-[0.03]">
+          <span className="rotate-[-25deg] text-[120px] font-bold text-muted/10 opacity-[0.03]">
             MONITORING
           </span>
         </div>
@@ -23,12 +23,12 @@ export default function Monitoring() {
               />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-gray-900">流程图实时监控模块</h2>
-          <p className="font-medium text-gray-500">功能模块正在开发中，敬请期待...</p>
+          <h2 className="text-xl font-bold text-foreground">流程图实时监控模块</h2>
+          <p className="font-medium text-muted/100">功能模块正在开发中，敬请期待...</p>
           <div className="flex justify-center gap-1.5 pt-4">
-            <span className="h-2 w-2 rounded-full bg-gray-200"></span>
+            <span className="h-2 w-2 rounded-full bg-muted"></span>
             <span className="bg-primary h-2 w-2 rounded-full px-3"></span>
-            <span className="h-2 w-2 rounded-full bg-gray-200"></span>
+            <span className="h-2 w-2 rounded-full bg-muted"></span>
           </div>
         </div>
       </Card>
