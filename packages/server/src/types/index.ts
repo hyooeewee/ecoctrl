@@ -39,43 +39,6 @@ export interface FaultStats {
   avgResponseTime: string;
 }
 
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  status: "active" | "inactive";
-  lastLogin: string;
-}
-
-export interface DashboardStatItem {
-  value: string;
-  unit: string;
-  trend: string;
-  trendType: "up" | "down";
-}
-
-export interface DashboardStats {
-  totalEnergy: DashboardStatItem;
-  onlineRate: DashboardStatItem;
-  pendingAlerts: DashboardStatItem;
-  carbonEmission: DashboardStatItem;
-}
-
-export interface EnergyChartItem {
-  name: string;
-  value: number;
-}
-
-export interface Alert {
-  id: string;
-  device: string;
-  level: "high" | "medium" | "low";
-  message: string;
-  time: string;
-  status: "pending" | "resolved";
-}
-
 export interface ReportPlan {
   id: string;
   name: string;
@@ -84,53 +47,17 @@ export interface ReportPlan {
   status: boolean;
 }
 
-export interface SparkPoint {
-  v: number;
-}
-
-export interface TrendPoint {
-  h: string;
-  kWh: number;
-}
-
-export interface BreakdownItem {
-  name: string;
-  value: number;
-  color: string;
-}
-
-export type DeltaVariant = "up-good" | "up-bad" | "down-good" | "down-bad" | "neutral";
-export type ChartType = "area" | "bar" | "line" | "progress";
-
-export interface DashboardCard {
-  titleKey: string;
-  value: string;
-  unit: string;
-  delta?: string;
-  deltaVariant: DeltaVariant;
-  chartType: ChartType;
-  chartData: SparkPoint[];
-  chartColor: string;
-  footerKey?: string;
-  progressValue?: number;
-}
-
-export interface DeviceStatusItem {
-  category: "hvac" | "lighting" | "elevator" | "server";
-  count: number;
-  status: "ok" | "warn" | "critical";
-}
-
-export interface AiSuggestionItem {
-  category: "hvac" | "lighting" | "server";
-  text: string;
-  saving?: string;
-}
-
-export interface DashboardData {
-  cards: DashboardCard[];
-  trend: TrendPoint[];
-  breakdown: BreakdownItem[];
-  devices: DeviceStatusItem[];
-  aiSuggestions: AiSuggestionItem[];
-}
+export type {
+  DashboardStats,
+  EnergyChartItem,
+  Alert,
+  DashboardCard,
+  DashboardData,
+  TrendPoint,
+  BreakdownItem,
+  DeviceStatusItem,
+  AiSuggestionItem,
+  DashboardStatItem,
+  DeltaVariant,
+  ChartType,
+} from "@ecoctrl/shared";

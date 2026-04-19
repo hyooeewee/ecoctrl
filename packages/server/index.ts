@@ -5,6 +5,7 @@ import Fastify from "fastify";
 import multipart from "@fastify/multipart";
 import cors from "@fastify/cors";
 import swagger from "@fastify/swagger";
+import { validatorCompiler, serializerCompiler, ZodTypeProvider } from "fastify-type-provider-zod";
 
 import { ensureDatabase } from "@/lib/ensureDatabase";
 import databasePlugin from "@/plugins/database";
@@ -12,7 +13,10 @@ import apiRoutes from "@/routes/api";
 
 await ensureDatabase();
 
-const fastify = Fastify({ logger: true });
+const fastify = Fastify({ logger: true }).withTypeProvider<ZodTypeProvider>();
+
+fastify.setValidatorCompiler(validatorCompiler);
+fastify.setSerializerCompiler(serializerCompiler);
 
 await fastify.register(databasePlugin);
 await fastify.register(cors, { origin: true });
