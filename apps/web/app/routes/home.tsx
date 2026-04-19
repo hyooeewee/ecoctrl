@@ -147,18 +147,16 @@ export default function Home() {
         {/* Full-page 3D building background */}
         <BuildingView ref={buildingRef} className="absolute inset-0 z-0 h-full w-full" />
 
-        {/* Overlay layout */}
-        <div className="absolute inset-0 z-10 flex flex-col">
+        {/* Overlay layout — let pointer events pass through to the 3D canvas;
+             individual interactive children re-enable events below. */}
+        <div className="absolute inset-0 z-10 flex flex-col pointer-events-none">
           {/* Header */}
-          <DashboardHeader onLogoClick={handleLogoClick} navVisible={navVisible} />
+          <div className="pointer-events-auto">
+            <DashboardHeader onLogoClick={handleLogoClick} navVisible={navVisible} />
+          </div>
 
-          {/* Main bento grid layout */}
-          <main
-            className={cn(
-              "relative flex min-h-0 flex-1 overflow-hidden",
-              fullscreen && "pointer-events-none",
-            )}
-          >
+          {/* Main bento grid layout — cards re-enable events individually */}
+          <main className="relative flex min-h-0 flex-1 overflow-hidden">
             <BentoGrid
               className={cn("transition-all duration-300 ease-in-out", fullscreen && "opacity-0")}
             >
@@ -168,7 +166,7 @@ export default function Home() {
 
           {/* Bottom navigation — slides in/out from bottom */}
           <div
-            className="shrink-0 overflow-hidden transition-all duration-300 ease-in-out"
+            className="shrink-0 overflow-hidden transition-all duration-300 ease-in-out pointer-events-auto"
             style={{
               maxHeight: fullscreen ? "0px" : navVisible ? "60px" : "0px",
               opacity: fullscreen ? 0 : navVisible ? 1 : 0,
@@ -180,7 +178,7 @@ export default function Home() {
           {/* Floating controls — fullscreen / zoom / reset */}
           <div
             className={cn(
-              "absolute top-[72px] z-30 flex flex-col overflow-hidden rounded-lg border border-white/10 bg-black/40 backdrop-blur-md transition-all duration-300",
+              "absolute top-[72px] z-30 flex flex-col overflow-hidden rounded-lg border border-white/10 bg-black/40 backdrop-blur-md transition-all duration-300 pointer-events-auto",
               bentoDragEnabled && "opacity-0 pointer-events-none",
             )}
             style={{ right: controlsRight }}
@@ -224,7 +222,7 @@ export default function Home() {
 
           {/* Edit layout floating toolbar */}
           {bentoDragEnabled && (
-            <div className="absolute bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/10 bg-black/60 px-2 py-1.5 shadow-lg backdrop-blur-md transition-all">
+            <div className="absolute bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/10 bg-black/60 px-2 py-1.5 shadow-lg backdrop-blur-md transition-all pointer-events-auto">
               <button
                 type="button"
                 onClick={() => setBentoDragEnabled(false)}

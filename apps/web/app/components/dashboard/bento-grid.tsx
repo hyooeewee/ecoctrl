@@ -319,7 +319,7 @@ export function BentoItem({ id, children, className }: BentoItemProps) {
       data-bento-id={id}
       onDragStart={(e) => e.preventDefault()}
       className={cn(
-        "group relative flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border backdrop-blur-sm transition-all duration-200",
+        "group pointer-events-auto relative flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border backdrop-blur-sm transition-all duration-200",
         dragEnabled && !isBeingDragged && !isHidden && "cursor-move select-none touch-none",
         isBeingDragged
           ? "border-cyber-cyan/30 border-dashed bg-white/[0.02] opacity-20"
