@@ -151,15 +151,7 @@ export const enUS = {
   // ── Right Panel — Real-time Alerts ─────────────────────────────────────────
   alerts: {
     title: "Real-time Alerts",
-    active: "8 Active",
-    serverTempTitle: "Server Room Temp High",
-    serverTempSub: "T3 Room temperature exceeded",
-    hvacWarnTitle: "HVAC Unit 3 Alert",
-    hvacWarnSub: "HVAC Unit 2 abnormal",
-    powerSurgeTitle: "Power Surge Detected",
-    powerSurgeSub: "Surge event detected",
-    upsBatteryTitle: "UPS Battery Low",
-    upsBatterySub: "Backup power remaining 18%",
+    activeSuffix: "Active",
   },
 
   // ── Bento Widgets ──────────────────────────────────────────────────────────

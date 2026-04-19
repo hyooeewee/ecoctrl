@@ -107,9 +107,7 @@ export const useSettingsStore = create<SettingsStore>()(
         }),
       moveBentoItem: (id, x, y) =>
         set((state) => ({
-          bentoLayout: state.bentoLayout.map((item) =>
-            item.id === id ? { ...item, x, y } : item,
-          ),
+          bentoLayout: state.bentoLayout.map((item) => (item.id === id ? { ...item, x, y } : item)),
         })),
       setBentoLayout: (layout) => set({ bentoLayout: layout }),
       resetBentoLayout: () => set({ bentoLayout: defaultBentoLayout }),
