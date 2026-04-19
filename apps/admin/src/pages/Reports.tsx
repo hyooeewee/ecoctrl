@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import ExportDialog from "../components/ExportDialog";
 import ReportPlanSheet from "../components/ReportPlanSheet";
 import TemplateDialog from "../components/TemplateDialog";
-import { ReportPlan } from "../types";
+import { ReportPlan, ReportTemplate } from "../types";
 import { reportsApi } from "../api/reports";
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
@@ -23,7 +23,7 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
 
 export default function Reports() {
   const [reportPlans, setReportPlans] = useState<ReportPlan[]>([]);
-  const [templates, setTemplates] = useState<string[]>([]);
+  const [templates, setTemplates] = useState<ReportTemplate[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
@@ -101,8 +101,15 @@ export default function Reports() {
                 管理模板
               </Button>
             }
-            initialTemplates={templates}
-            onChange={setTemplates}
+            initialTemplates={templates.map((t) => t.name)}
+            onChange={(names) =>
+              setTemplates((prev) =>
+                names.map(
+                  (name) =>
+                    prev.find((t) => t.name === name) ?? { name, count: "0 份", icon: "📄" },
+                ),
+              )
+            }
           />
           <ReportPlanSheet
             trigger={
@@ -189,27 +196,23 @@ export default function Reports() {
       </Card>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        {templates.map((label, i) => {
-          const counts = ["1,245 份", "48 份", "12 份"];
-          const icons = ["📄", "📊", "🔍"];
-          return (
-            <Card
-              key={label + i}
-              className="group relative cursor-pointer overflow-hidden border-none shadow-sm transition-all hover:translate-y-[-2px]"
-            >
-              <CardContent className="flex items-center gap-4 p-6">
-                <div className="text-3xl">{icons[i % icons.length]}</div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-500">{label}</p>
-                  <p className="text-xl font-bold">{counts[i % counts.length]}</p>
-                </div>
-                <div className="absolute top-2 right-2 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100">
-                  <ExternalLink size={14} />
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+        {templates.map((template) => (
+          <Card
+            key={template.name}
+            className="group relative cursor-pointer overflow-hidden border-none shadow-sm transition-all hover:translate-y-[-2px]"
+          >
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="text-3xl">{template.icon}</div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-500">{template.name}</p>
+                <p className="text-xl font-bold">{template.count}</p>
+              </div>
+              <div className="absolute top-2 right-2 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100">
+                <ExternalLink size={14} />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     </div>
   );

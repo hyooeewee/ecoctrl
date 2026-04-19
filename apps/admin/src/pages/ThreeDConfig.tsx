@@ -1,11 +1,37 @@
 import { Upload, MapPin, Tag } from "lucide-react";
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+import { ThreeDConfig } from "../types";
+import { threeDConfigApi } from "../api/3dConfig";
+
 export default function ThreeDConfig() {
+  const [config, setConfig] = useState<ThreeDConfig | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const data = await threeDConfigApi.get();
+        setConfig(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchConfig();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center text-sm text-gray-400">加载中...</div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -29,11 +55,11 @@ export default function ThreeDConfig() {
             <div className="space-y-4">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-500">预设视角</span>
-                <span className="font-mono text-xs">Default_View_01</span>
+                <span className="font-mono text-xs">{config?.cameraPreset ?? "--"}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-500">环境光强度</span>
-                <span className="font-mono text-xs">0.85</span>
+                <span className="font-mono text-xs">{config?.ambientLightIntensity ?? "--"}</span>
               </div>
             </div>
           </CardContent>

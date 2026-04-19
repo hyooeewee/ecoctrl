@@ -23,7 +23,7 @@ import {
 
 import { cn } from "@/lib/utils";
 import ExportDialog from "../components/ExportDialog";
-import { Alert } from "../types";
+import { Alert, BackupSchedule } from "../types";
 import { dashboardApi } from "../api/dashboard";
 
 interface DashboardStats {
@@ -98,23 +98,33 @@ const Indicator = ({
   );
 };
 
+function formatDateRange(data: { name: string; value: number }[]) {
+  if (data.length === 0) return "暂无数据";
+  const first = data[0].name;
+  const last = data[data.length - 1].name;
+  return `${first} - ${last}`;
+}
+
 export default function DashboardContent() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [energyData, setEnergyData] = useState<{ name: string; value: number }[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [backupSchedule, setBackupSchedule] = useState<BackupSchedule | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [statsData, energyData, alertsData] = await Promise.all([
+        const [statsData, energyData, alertsData, backupData] = await Promise.all([
           dashboardApi.stats(),
           dashboardApi.energyChart(),
           dashboardApi.alerts(),
+          dashboardApi.backupSchedule(),
         ]);
         setStats(statsData);
         setEnergyData(energyData);
         setAlerts(alertsData);
+        setBackupSchedule(backupData);
       } catch (err) {
         console.error(err);
       } finally {
@@ -187,7 +197,7 @@ export default function DashboardContent() {
               <CardTitle className="text-foreground text-base font-bold">
                 近一周能耗趋势 (分项)
               </CardTitle>
-              <CardDescription className="text-xs">2024年3月14日 - 2024年3月20日</CardDescription>
+              <CardDescription className="text-xs">{formatDateRange(energyData)}</CardDescription>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-1.5">
@@ -332,7 +342,9 @@ export default function DashboardContent() {
           </div>
           <div className="border-border/50 flex items-center gap-2 border-l pl-4 text-sm">
             <span className="text-muted-foreground">下次备份:</span>
-            <span className="text-foreground font-medium">2023-11-20 03:00</span>
+            <span className="text-foreground font-medium">
+              {backupSchedule?.nextBackup ?? "--"}
+            </span>
           </div>
         </div>
         <ExportDialog

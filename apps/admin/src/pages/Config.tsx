@@ -1,5 +1,5 @@
 import { Save } from "lucide-react";
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,9 +21,52 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 
+import { SystemConfig } from "../types";
+import { systemConfigApi } from "../api/systemConfig";
+
 export default function SystemConfig() {
-  const handleSave = () => {
-    console.log("Saving system configurations...");
+  const [config, setConfig] = useState<SystemConfig | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const data = await systemConfigApi.get();
+        setConfig(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchConfig();
+  }, []);
+
+  const handleSave = async () => {
+    if (!config) return;
+    setSaving(true);
+    try {
+      await systemConfigApi.update(config);
+    } catch (err) {
+      console.error(err);
+      alert("保存配置失败，请重试");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center text-sm text-gray-400">加载中...</div>
+    );
+  }
+
+  const currentConfig = config ?? {
+    platformName: "",
+    refreshInterval: 30,
+    realtimeAlertEnabled: false,
+    darkModeFollowSystem: false,
   };
 
   return (
@@ -44,7 +87,10 @@ export default function SystemConfig() {
               </Label>
               <Input
                 id="platform-name"
-                defaultValue="EcoCtrl 能管平台"
+                value={currentConfig.platformName}
+                onChange={(e) =>
+                  setConfig((prev) => (prev ? { ...prev, platformName: e.target.value } : prev))
+                }
                 className="bg-muted/30 border-border focus:ring-primary/20"
               />
             </div>
@@ -55,7 +101,12 @@ export default function SystemConfig() {
               >
                 数据刷新间隔 (秒)
               </Label>
-              <Select defaultValue="30">
+              <Select
+                value={String(currentConfig.refreshInterval)}
+                onValueChange={(v) =>
+                  setConfig((prev) => (prev ? { ...prev, refreshInterval: Number(v) } : prev))
+                }
+              >
                 <SelectTrigger id="refresh-interval" className="bg-muted/30 border-border">
                   <SelectValue placeholder="请选择" />
                 </SelectTrigger>
@@ -77,7 +128,12 @@ export default function SystemConfig() {
                   当设备发生严重故障时，系统会自动发送桌面通知。
                 </p>
               </div>
-              <Switch defaultChecked />
+              <Switch
+                checked={currentConfig.realtimeAlertEnabled}
+                onCheckedChange={(checked) =>
+                  setConfig((prev) => (prev ? { ...prev, realtimeAlertEnabled: checked } : prev))
+                }
+              />
             </div>
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
@@ -86,17 +142,23 @@ export default function SystemConfig() {
                   自动根据操作系统的显示偏好切换应用主题。
                 </p>
               </div>
-              <Switch />
+              <Switch
+                checked={currentConfig.darkModeFollowSystem}
+                onCheckedChange={(checked) =>
+                  setConfig((prev) => (prev ? { ...prev, darkModeFollowSystem: checked } : prev))
+                }
+              />
             </div>
           </div>
         </CardContent>
         <CardFooter className="border-border/50 bg-muted/20 flex justify-end border-t px-6 py-6">
           <Button
             onClick={handleSave}
+            disabled={saving}
             className="bg-primary hover:bg-primary/90 shadow-primary/20 gap-2 px-6 font-semibold text-white shadow-sm"
           >
             <Save size={18} />
-            保存配置
+            {saving ? "保存中..." : "保存配置"}
           </Button>
         </CardFooter>
       </Card>

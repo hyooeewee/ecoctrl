@@ -1,13 +1,34 @@
 import { Box, Layers, Image as ImageIcon, ExternalLink, FileText } from "lucide-react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+import { Model3D } from "../types";
+import { modelsApi } from "../api/models";
+
 export default function Models() {
+  const [models, setModels] = useState<Model3D[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [previewModel, setPreviewModel] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchModels = async () => {
+      try {
+        const data = await modelsApi.list();
+        setModels(data);
+      } catch (err) {
+        console.error(err);
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchModels();
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -36,36 +57,60 @@ export default function Models() {
               <CardDescription>展示系统中已导入的所有 3D 资产模型。</CardDescription>
             </CardHeader>
             <CardContent className="px-6 pb-6">
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <Card
-                    key={i}
-                    className="group relative cursor-pointer transition-colors hover:border-blue-200"
-                  >
-                    <div className="border-border/50 relative flex aspect-video items-center justify-center overflow-hidden border-b bg-gray-100">
-                      <ImageIcon className="h-12 w-12 text-gray-300 transition-transform group-hover:scale-110" />
-                      <div className="absolute inset-0 bg-black/5 transition-colors group-hover:bg-transparent"></div>
+              {loading ? (
+                <div className="flex h-64 items-center justify-center text-sm text-gray-400">
+                  加载中...
+                </div>
+              ) : error ? (
+                <div className="flex h-64 items-center justify-center text-sm text-red-400">
+                  数据加载失败，请稍后重试
+                </div>
+              ) : models.length === 0 ? (
+                <div className="flex h-64 items-center justify-center text-sm text-gray-400">
+                  暂无模型数据
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {models.map((model) => (
+                    <Card
+                      key={model.id}
+                      className="group relative cursor-pointer transition-colors hover:border-blue-200"
+                    >
+                      <div className="border-border/50 relative flex aspect-video items-center justify-center overflow-hidden border-b bg-gray-100">
+                        {model.thumbnailUrl ? (
+                          <img
+                            src={model.thumbnailUrl}
+                            alt={model.name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <ImageIcon className="h-12 w-12 text-gray-300 transition-transform group-hover:scale-110" />
+                        )}
+                        <div className="absolute inset-0 bg-black/5 transition-colors group-hover:bg-transparent"></div>
 
-                      {/* Navigate/Arrow button */}
-                      <Button
-                        variant="secondary"
-                        size="icon-sm"
-                        className="border-border absolute top-2 right-2 z-10 h-8 w-8 rounded-full border bg-white/80 opacity-0 shadow-sm backdrop-blur-sm transition-opacity group-hover:opacity-100 hover:bg-white hover:text-blue-600"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setPreviewModel(`冷却塔模型_${i}`);
-                        }}
-                      >
-                        <ExternalLink size={14} />
-                      </Button>
-                    </div>
-                    <CardContent className="px-4 py-3">
-                      <p className="text-sm font-semibold">冷却塔模型_{i}</p>
-                      <p className="mt-1 text-xs text-nowrap text-gray-500">v2.1 / GLB / 12.4MB</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                        {/* Navigate/Arrow button */}
+                        <Button
+                          variant="secondary"
+                          size="icon-sm"
+                          className="border-border absolute top-2 right-2 z-10 h-8 w-8 rounded-full border bg-white/80 opacity-0 shadow-sm backdrop-blur-sm transition-opacity group-hover:opacity-100 hover:bg-white hover:text-blue-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreviewModel(model.name);
+                          }}
+                        >
+                          <ExternalLink size={14} />
+                        </Button>
+                      </div>
+                      <CardContent className="px-4 py-3">
+                        <p className="text-sm font-semibold">{model.name}</p>
+                        <p className="mt-1 text-xs text-nowrap text-gray-500">
+                          {model.version} / {model.format} / {model.size}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -75,7 +120,7 @@ export default function Models() {
             <div className="text-center">
               <Layers className="mx-auto h-12 w-12 text-gray-300" />
               <h3 className="mt-2 text-sm font-semibold text-gray-900">对象列表暂无数据</h3>
-              <p className="mt-1 text-sm text-gray-500">点击“新增对象”按钮开始管理系统资产。</p>
+              <p className="mt-1 text-sm text-gray-500">点击"新增对象"按钮开始管理系统资产。</p>
             </div>
           </div>
         </TabsContent>

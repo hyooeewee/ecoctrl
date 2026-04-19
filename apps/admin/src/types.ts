@@ -66,3 +66,51 @@ export interface FaultStats {
   mttr: number;
   avgResponseTime: string;
 }
+
+export interface EnergyArea {
+  title: string;
+  current: number;
+  target: number;
+  color: string;
+  powerFactor: number;
+  loadRate: string;
+}
+
+export interface Model3D {
+  id: string;
+  name: string;
+  version: string;
+  format: string;
+  size: string;
+  thumbnailUrl?: string | null;
+  docUrl?: string | null;
+}
+
+export interface ThreeDConfig {
+  cameraPreset: string;
+  ambientLightIntensity: number;
+  hotspots?: unknown[];
+  labels?: unknown[];
+}
+
+export interface SystemConfig {
+  platformName: string;
+  refreshInterval: number;
+  realtimeAlertEnabled: boolean;
+  darkModeFollowSystem: boolean;
+}
+
+export interface ReportTemplate {
+  name: string;
+  count: string;
+  icon: string;
+}
+
+export interface AuthUser {
+  username: string;
+  avatarUrl: string;
+}
+
+export interface BackupSchedule {
+  nextBackup: string;
+}

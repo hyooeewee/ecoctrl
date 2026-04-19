@@ -1,5 +1,5 @@
 import { get, post, put } from "./request";
-import { ReportPlan } from "../types";
+import { ReportPlan, ReportTemplate } from "../types";
 
 export const reportsApi = {
   plans: {
@@ -8,5 +8,5 @@ export const reportsApi = {
     update: (id: string, data: Partial<ReportPlan>) =>
       put<ReportPlan>(`/api/reports/plans/${id}`, data),
   },
-  templates: () => get<string[]>("/api/reports/templates"),
+  templates: () => get<ReportTemplate[]>("/api/reports/templates"),
 };
