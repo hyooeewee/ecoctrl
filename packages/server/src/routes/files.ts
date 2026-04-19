@@ -3,12 +3,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import crypto from "node:crypto";
-import { fileURLToPath } from "node:url";
-import type { FileMeta } from "../types/index.js";
+import { UPLOAD_DIR } from "@/lib/paths";
+import type { FileMeta } from "@/types/index";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const UPLOAD_DIR = path.join(__dirname, "../../uploads");
-const META_FILE = path.join(__dirname, "../../uploads/files.json");
+const META_FILE = path.join(UPLOAD_DIR, "files.json");
 
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });

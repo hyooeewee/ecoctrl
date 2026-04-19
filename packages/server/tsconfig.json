@@ -1,4 +1,14 @@
 {
   "extends": "@ecoctrl/config/tsconfig.node.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "baseUrl": ".",
+    "outDir": "./dist",
+    "noEmit": false,
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
   "include": ["**/*.ts"]
 }

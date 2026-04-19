@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
-import type { Fault, FaultStats } from "../types/index.js";
-import { getFaults, getFaultStats } from "../db/faults.js";
+import type { Fault, FaultStats } from "@/types/index";
+import { getFaults, getFaultStats } from "@/db/faults";
 
 const faultItemSchema = {
   type: "object",

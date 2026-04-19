@@ -1,10 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import type { Fault, FaultStats } from "../types/index.js";
+import { DATA_DIR } from "@/lib/paths";
+import type { Fault, FaultStats } from "@/types/index";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_FILE = path.join(__dirname, "../../data/faults.json");
+const DATA_FILE = path.join(DATA_DIR, "faults.json");
 
 interface FaultData {
   items: Fault[];

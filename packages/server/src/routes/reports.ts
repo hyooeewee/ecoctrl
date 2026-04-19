@@ -1,12 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import crypto from "node:crypto";
-import type { ReportPlan } from "../types/index.js";
+import type { ReportPlan } from "@/types/index";
 import {
   getReportPlans,
   addReportPlan,
   updateReportPlan,
   getReportTemplates,
-} from "../db/reports.js";
+} from "@/db/reports";
 
 const planSchema = {
   type: "object",

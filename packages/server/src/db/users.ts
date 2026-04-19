@@ -1,10 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import type { User } from "../types/index.js";
+import { DATA_DIR } from "@/lib/paths";
+import type { User } from "@/types/index";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_FILE = path.join(__dirname, "../../data/users.json");
+const DATA_FILE = path.join(DATA_DIR, "users.json");
 
 function loadData(): User[] {
   if (!fs.existsSync(DATA_FILE)) return [];

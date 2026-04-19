@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
-import type { Alert } from "../types/index.js";
-import { getAlerts } from "../db/dashboard.js";
+import type { Alert } from "@/types/index";
+import { getAlerts } from "@/db/dashboard";
 
 const alertSchema = {
   type: "object",
