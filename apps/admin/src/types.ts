@@ -13,15 +13,6 @@ export interface MetricCardProps {
   icon: any;
 }
 
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  status: "active" | "inactive";
-  lastLogin: string;
-}
-
 export interface Alert {
   id: string;
   device: string;
@@ -104,11 +95,6 @@ export interface ReportTemplate {
   name: string;
   count: string;
   icon: string;
-}
-
-export interface AuthUser {
-  username: string;
-  avatarUrl: string;
 }
 
 export interface BackupSchedule {

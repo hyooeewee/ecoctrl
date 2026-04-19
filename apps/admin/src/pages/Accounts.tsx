@@ -13,6 +13,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -21,16 +28,38 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import { User } from "../types";
+import ExportDialog from "../components/ExportDialog";
+import UserSheet from "../components/UserSheet";
+import { authApi } from "../api/auth";
 import { usersApi } from "../api/users";
+import type { User, UserRole } from "@ecoctrl/shared";
+import { USER_ROLE_LIST } from "@ecoctrl/shared";
 
 export default function Accounts() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
-  const [newUser, setNewUser] = useState({ name: "", email: "", role: "" });
+  const [newUser, setNewUser] = useState({ username: "", email: "", password: "", role: "viewer" });
   const [adding, setAdding] = useState(false);
+  const [currentUser, setCurrentUser] = useState<Pick<User, "username" | "avatarUrl"> | null>(null);
+
+  const STATUS_MAP: Record<string, { label: string; color: string }> = {
+    online: { label: "在线", color: "bg-green-500" },
+    offline: { label: "离线", color: "bg-gray-300" },
+    disabled: { label: "禁用", color: "bg-red-500" },
+    busy: { label: "繁忙", color: "bg-orange-500" },
+  };
+
+  const getStatus = (status: string) => STATUS_MAP[status] ?? STATUS_MAP.offline;
+
+  const ROLE_LABELS: Record<UserRole, string> = {
+    super_admin: "超级管理员",
+    admin: "管理员",
+    operator: "运维工程师",
+    analyst: "分析师",
+    viewer: "查看员",
+  };
 
   const fetchUsers = async () => {
     try {
@@ -45,16 +74,25 @@ export default function Accounts() {
 
   useEffect(() => {
     fetchUsers();
+    const fetchCurrentUser = async () => {
+      try {
+        const data = await authApi.me();
+        setCurrentUser(data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchCurrentUser();
   }, []);
 
   const handleAdd = async () => {
-    if (!newUser.name || !newUser.email || !newUser.role) return;
+    if (!newUser.username || !newUser.email || !newUser.password || !newUser.role) return;
     setAdding(true);
     try {
       await usersApi.create(newUser);
       await fetchUsers();
       setShowAdd(false);
-      setNewUser({ name: "", email: "", role: "" });
+      setNewUser({ username: "", email: "", password: "", role: "viewer" });
     } catch (err) {
       console.error(err);
       alert("添加用户失败");
@@ -63,8 +101,8 @@ export default function Accounts() {
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!window.confirm(`确定要删除用户 "${name}" 吗？`)) return;
+  const handleDelete = async (id: string, username: string) => {
+    if (!window.confirm(`确定要删除用户 "${username}" 吗？`)) return;
     try {
       await usersApi.delete(id);
       await fetchUsers();
@@ -74,8 +112,44 @@ export default function Accounts() {
     }
   };
 
+  const handleEdit = async (user: User) => {
+    try {
+      await usersApi.update(user.id, user);
+      await fetchUsers();
+    } catch (err) {
+      console.error(err);
+      alert("修改用户失败");
+    }
+  };
+
+  const handleExport = (fileName: string) => {
+    const headers = ["用户名", "邮箱", "角色", "状态", "最后登录时间"];
+    const csvContent = [
+      headers.join(","),
+      ...filtered.map((user) =>
+        [
+          `"${user.username}"`,
+          `"${user.email}"`,
+          `"${user.role}"`,
+          getStatus(user.status).label,
+          `"${user.lastLogin}"`,
+        ].join(","),
+      ),
+    ].join("\n");
+
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${fileName}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const filtered = users.filter(
-    (u) => u.name.includes(search) || u.email.includes(search) || u.role.includes(search),
+    (u) => u.username.includes(search) || u.email.includes(search) || u.role.includes(search),
   );
 
   return (
@@ -86,10 +160,20 @@ export default function Accounts() {
             <Plus size={18} />
             新增用户
           </Button>
-          <Button variant="outline" className="gap-2">
-            <Download size={18} />
-            导出表格
-          </Button>
+          <ExportDialog
+            trigger={
+              <Button variant="outline" className="gap-2">
+                <Download size={18} />
+                导出表格
+              </Button>
+            }
+            title="导出用户数据"
+            description="请确认导出信息，系统将生成包含当前用户列表的文件。"
+            defaultFileName={`用户数据_${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}`}
+            defaultFormat="CSV"
+            defaultOperator={currentUser?.username ?? "系统管理员"}
+            onExport={({ fileName }) => handleExport(fileName)}
+          />
         </div>
         <div className="relative w-full sm:w-72">
           <Search className="absolute top-2.5 left-3 h-4 w-4 text-gray-400" />
@@ -123,28 +207,38 @@ export default function Accounts() {
               <TableBody>
                 {filtered.map((user) => (
                   <TableRow key={user.id}>
-                    <TableCell className="px-6 font-medium">{user.name}</TableCell>
+                    <TableCell className="px-6 font-medium">{user.username}</TableCell>
                     <TableCell className="text-sm text-gray-500">{user.email}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="font-normal">
-                        {user.role}
+                        {ROLE_LABELS[user.role] ?? user.role}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-center">
-                      <span
-                        className={`inline-flex h-2 w-2 rounded-full ${user.status === "active" ? "bg-green-500" : "bg-gray-300"}`}
-                      />
+                      <span className="inline-flex items-center gap-2 text-sm">
+                        <span
+                          className={`inline-block h-2 w-2 rounded-full ${getStatus(user.status).color}`}
+                        />
+                        {getStatus(user.status).label}
+                      </span>
                     </TableCell>
                     <TableCell className="px-6 text-right">
                       <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <Edit2 size={14} />
-                        </Button>
+                        <UserSheet
+                          mode="edit"
+                          user={user}
+                          trigger={
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <Edit2 size={14} />
+                            </Button>
+                          }
+                          onSave={handleEdit}
+                        />
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-red-500 hover:text-red-600"
-                          onClick={() => handleDelete(user.id, user.name)}
+                          onClick={() => handleDelete(user.id, user.username)}
                         >
                           <Trash2 size={14} />
                         </Button>
@@ -176,11 +270,11 @@ export default function Accounts() {
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div>
-              <p className="mb-1 text-xs text-muted-foreground">姓名</p>
+              <p className="mb-1 text-xs text-muted-foreground">用户名</p>
               <Input
-                value={newUser.name}
-                onChange={(e) => setNewUser((u) => ({ ...u, name: e.target.value }))}
-                placeholder="请输入姓名"
+                value={newUser.username}
+                onChange={(e) => setNewUser((u) => ({ ...u, username: e.target.value }))}
+                placeholder="请输入用户名"
               />
             </div>
             <div>
@@ -193,12 +287,33 @@ export default function Accounts() {
               />
             </div>
             <div>
-              <p className="mb-1 text-xs text-muted-foreground">角色</p>
+              <p className="mb-1 text-xs text-muted-foreground">密码</p>
               <Input
-                value={newUser.role}
-                onChange={(e) => setNewUser((u) => ({ ...u, role: e.target.value }))}
-                placeholder="请输入角色"
+                type="password"
+                value={newUser.password}
+                onChange={(e) => setNewUser((u) => ({ ...u, password: e.target.value }))}
+                placeholder="请输入密码"
               />
+            </div>
+            <div>
+              <p className="mb-1 text-xs text-muted-foreground">角色</p>
+              <Select
+                value={newUser.role}
+                onValueChange={(v) => setNewUser((u) => ({ ...u, role: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="选择角色">
+                    {newUser.role ? ROLE_LABELS[newUser.role as UserRole] : ""}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {USER_ROLE_LIST.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {ROLE_LABELS[r]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button
@@ -212,7 +327,13 @@ export default function Accounts() {
               <Button
                 size="sm"
                 onClick={handleAdd}
-                disabled={adding || !newUser.name || !newUser.email || !newUser.role}
+                disabled={
+                  adding ||
+                  !newUser.username ||
+                  !newUser.email ||
+                  !newUser.password ||
+                  !newUser.role
+                }
               >
                 {adding ? "添加中..." : "添加"}
               </Button>

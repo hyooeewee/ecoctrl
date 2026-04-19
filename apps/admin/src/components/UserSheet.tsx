@@ -4,6 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -13,7 +20,8 @@ import {
   SheetFooter,
 } from "@/components/ui/sheet";
 
-import { User } from "../types";
+import type { User, UserRole } from "@ecoctrl/shared";
+import { USER_ROLE_LIST } from "@ecoctrl/shared";
 
 interface UserSheetProps {
   mode: "create" | "edit";
@@ -22,41 +30,73 @@ interface UserSheetProps {
   onSave: (user: User) => void;
 }
 
+const STATUS_LABELS: Record<User["status"], string> = {
+  online: "在线",
+  offline: "离线",
+  disabled: "禁用",
+  busy: "繁忙",
+};
+
+const ROLE_LABELS: Record<UserRole, string> = {
+  super_admin: "超级管理员",
+  admin: "管理员",
+  operator: "运维工程师",
+  analyst: "分析师",
+  viewer: "查看员",
+};
+
+const VALID_STATUSES: User["status"][] = ["online", "offline", "disabled", "busy"];
+
+function normalizeStatus(s: string): User["status"] {
+  return VALID_STATUSES.includes(s as User["status"]) ? (s as User["status"]) : "offline";
+}
+
+function normalizeRole(s: string): UserRole {
+  return USER_ROLE_LIST.includes(s as UserRole) ? (s as UserRole) : "viewer";
+}
+
 export default function UserSheet({ mode, user, trigger, onSave }: UserSheetProps) {
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
-  const [status, setStatus] = useState<User["status"]>("active");
+  const [status, setStatus] = useState<User["status"]>("online");
 
   useEffect(() => {
     if (open && mode === "edit" && user) {
-      setName(user.name);
+      setUsername(user.username);
       setEmail(user.email);
       setRole(user.role);
-      setStatus(user.status);
+      setStatus(normalizeStatus(user.status));
     } else if (open && mode === "create") {
-      setName("");
+      setUsername("");
       setEmail("");
-      setRole("");
-      setStatus("active");
+      setRole("viewer");
+      setStatus("online");
     }
   }, [open, mode, user]);
 
   const handleSubmit = () => {
-    if (!name.trim() || !email.trim() || !role.trim()) return;
+    if (!username.trim() || !email.trim() || !role.trim()) return;
 
     if (mode === "edit" && user) {
-      onSave({ ...user, name: name.trim(), email: email.trim(), role: role.trim(), status });
+      onSave({
+        ...user,
+        username: username.trim(),
+        email: email.trim(),
+        role: normalizeRole(role.trim()),
+        status,
+      });
     } else {
       const lastLogin = "-";
       onSave({
         id: Date.now().toString(),
-        name: name.trim(),
+        username: username.trim(),
         email: email.trim(),
-        role: role.trim(),
+        role: normalizeRole(role.trim()),
         status,
         lastLogin,
+        avatarUrl: null,
       });
     }
     setOpen(false);
@@ -76,12 +116,12 @@ export default function UserSheet({ mode, user, trigger, onSave }: UserSheetProp
         </SheetHeader>
         <div className="grid gap-4 px-4 py-6">
           <div className="grid space-y-2">
-            <Label htmlFor={`${mode}-name`}>姓名</Label>
+            <Label htmlFor={`${mode}-name`}>用户名</Label>
             <Input
               id={`${mode}-name`}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="请输入真实姓名"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="请输入用户名"
             />
           </div>
           <div className="grid space-y-2">
@@ -96,33 +136,34 @@ export default function UserSheet({ mode, user, trigger, onSave }: UserSheetProp
           </div>
           <div className="grid space-y-2">
             <Label htmlFor={`${mode}-role`}>角色</Label>
-            <Input
-              id={`${mode}-role`}
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              placeholder="运维工程师"
-            />
+            <Select value={role} onValueChange={(v) => setRole(v)}>
+              <SelectTrigger id={`${mode}-role`}>
+                <SelectValue placeholder="选择角色">
+                  {role ? ROLE_LABELS[role as UserRole] : ""}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {USER_ROLE_LIST.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {ROLE_LABELS[r]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="grid space-y-2">
             <Label htmlFor={`${mode}-status`}>状态</Label>
-            <div className="flex items-center gap-3">
-              <Button
-                type="button"
-                variant={status === "active" ? "default" : "outline"}
-                className="flex-1"
-                onClick={() => setStatus("active")}
-              >
-                在线
-              </Button>
-              <Button
-                type="button"
-                variant={status === "inactive" ? "default" : "outline"}
-                className="flex-1"
-                onClick={() => setStatus("inactive")}
-              >
-                离线
-              </Button>
-            </div>
+            <Select value={status} onValueChange={(v) => setStatus(v as User["status"])}>
+              <SelectTrigger id={`${mode}-status`}>
+                <SelectValue placeholder="选择状态">{STATUS_LABELS[status]}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="online">在线</SelectItem>
+                <SelectItem value="offline">离线</SelectItem>
+                <SelectItem value="disabled">禁用</SelectItem>
+                <SelectItem value="busy">繁忙</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <SheetFooter>
