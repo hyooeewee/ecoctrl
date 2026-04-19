@@ -83,3 +83,40 @@ export interface ReportPlan {
   frequency: string;
   status: boolean;
 }
+
+export interface SparkPoint {
+  v: number;
+}
+
+export interface TrendPoint {
+  h: string;
+  kWh: number;
+}
+
+export interface BreakdownItem {
+  name: string;
+  value: number;
+  color: string;
+}
+
+export type DeltaVariant = "up-good" | "up-bad" | "down-good" | "down-bad" | "neutral";
+export type ChartType = "area" | "bar" | "line" | "progress";
+
+export interface DashboardCard {
+  titleKey: string;
+  value: string;
+  unit: string;
+  delta?: string;
+  deltaVariant: DeltaVariant;
+  chartType: ChartType;
+  chartData: SparkPoint[];
+  chartColor: string;
+  footerKey?: string;
+  progressValue?: number;
+}
+
+export interface DashboardData {
+  cards: DashboardCard[];
+  trend: TrendPoint[];
+  breakdown: BreakdownItem[];
+}
