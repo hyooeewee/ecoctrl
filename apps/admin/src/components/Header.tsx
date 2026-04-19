@@ -21,6 +21,7 @@ import type { Theme } from "@/lib/darkMode";
 
 interface HeaderProps {
   activeTab: string;
+  setActiveTab: (tab: string) => void;
 }
 
 const tabTitleMap: Record<string, string> = {
@@ -34,6 +35,7 @@ const tabTitleMap: Record<string, string> = {
   maintenance: "维保管理",
   faults: "故障管理",
   energy: "能耗管理",
+  profile: "个人信息",
 };
 
 const THEME_CYCLE: Theme[] = ["light", "dark", "system"];
@@ -50,7 +52,7 @@ const ThemeLabel: Record<Theme, string> = {
   system: "跟随系统",
 };
 
-export default function Header({ activeTab }: HeaderProps) {
+export default function Header({ activeTab, setActiveTab }: HeaderProps) {
   const currentTitle = tabTitleMap[activeTab] || "管理总览";
   const [user, setUser] = useState<Pick<User, "username" | "avatarUrl"> | null>(null);
   const [theme, setTheme] = useState<Theme>("system");
@@ -138,7 +140,7 @@ export default function Header({ activeTab }: HeaderProps) {
             <DropdownMenuGroup>
               <DropdownMenuLabel>我的账户</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>个人信息</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setActiveTab("profile")}>个人信息</DropdownMenuItem>
               <DropdownMenuItem>偏好设置</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-red-500">退出登录</DropdownMenuItem>

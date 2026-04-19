@@ -89,6 +89,16 @@ export interface SystemConfig {
   refreshInterval: number;
   realtimeAlertEnabled: boolean;
   theme: "light" | "dark" | "system";
+  timezone: string;
+  alertSound: boolean;
+  smtpHost: string;
+  smtpPort: number;
+  smtpUser: string;
+  smtpPass: string;
+  smtpSecure: boolean;
+  autoBackup: boolean;
+  backupRetentionDays: number;
+  sessionTimeout: number;
 }
 
 export interface ReportTemplate {
