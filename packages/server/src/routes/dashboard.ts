@@ -1,48 +1,26 @@
 import type { FastifyInstance } from "fastify";
-import type { DashboardStats, EnergyChartItem, Alert } from "@/types/index";
-import { getDashboardStats, getEnergyChart, getAlerts } from "@/db/dashboard";
-
-const statItemSchema = {
-  type: "object",
-  properties: {
-    value: { type: "string" },
-    unit: { type: "string" },
-    trend: { type: "string" },
-    trendType: { type: "string", enum: ["up", "down"] },
-  },
-};
-
-const alertSchema = {
-  type: "object",
-  properties: {
-    id: { type: "string" },
-    device: { type: "string" },
-    level: { type: "string", enum: ["high", "medium", "low"] },
-    message: { type: "string" },
-    time: { type: "string" },
-    status: { type: "string", enum: ["pending", "resolved"] },
-  },
-};
+import type { DashboardStats, EnergyChartItem, Alert, DashboardData } from "@/types/index";
+import { getDashboardStats, getEnergyChart, getAlerts, getDashboardData } from "@/db/dashboard";
+import {
+  dashboardDataSchema,
+  statsSchema,
+  energyChartSchema,
+  alertsSchema,
+} from "@/schemas/dashboard";
 
 export default async function dashboardRoutes(fastify: FastifyInstance) {
   fastify.get(
-    "/stats",
-    {
-      schema: {
-        summary: "Get dashboard statistics",
-        response: {
-          200: {
-            type: "object",
-            properties: {
-              totalEnergy: statItemSchema,
-              onlineRate: statItemSchema,
-              pendingAlerts: statItemSchema,
-              carbonEmission: statItemSchema,
-            },
-          },
-        },
-      },
+    "/",
+    { schema: dashboardDataSchema },
+    async (_request, reply) => {
+      const data: DashboardData = getDashboardData();
+      return reply.send(data);
     },
+  );
+
+  fastify.get(
+    "/stats",
+    { schema: statsSchema },
     async (_request, reply) => {
       const stats: DashboardStats = getDashboardStats();
       return reply.send(stats);
@@ -51,23 +29,7 @@ export default async function dashboardRoutes(fastify: FastifyInstance) {
 
   fastify.get(
     "/energy-chart",
-    {
-      schema: {
-        summary: "Get weekly energy chart data",
-        response: {
-          200: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                name: { type: "string" },
-                value: { type: "number" },
-              },
-            },
-          },
-        },
-      },
-    },
+    { schema: energyChartSchema },
     async (_request, reply) => {
       const chart: EnergyChartItem[] = getEnergyChart();
       return reply.send(chart);
@@ -76,23 +38,7 @@ export default async function dashboardRoutes(fastify: FastifyInstance) {
 
   fastify.get(
     "/alerts",
-    {
-      schema: {
-        summary: "Get recent alerts",
-        querystring: {
-          type: "object",
-          properties: {
-            limit: { type: "integer", description: "Max number of alerts to return" },
-          },
-        },
-        response: {
-          200: {
-            type: "array",
-            items: alertSchema,
-          },
-        },
-      },
-    },
+    { schema: alertsSchema },
     async (request, reply) => {
       const { limit } = request.query as { limit?: string };
       const alerts: Alert[] = getAlerts(limit ? parseInt(limit, 10) : undefined);
