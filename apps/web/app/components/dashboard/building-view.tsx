@@ -7,7 +7,6 @@ import {
   GlowLayer,
   HemisphericLight,
   Matrix,
-  PointerEventTypes,
   Scene,
   TransformNode,
   SceneLoader,
@@ -39,13 +38,23 @@ const AreaLabel = forwardRef<HTMLDivElement, { label: string }>(function AreaLab
   );
 });
 
-// Label definitions: fallback world positions + mesh name keywords
+// Label definitions: key + fallback world positions + mesh name keywords.
+// Text labels are mapped at render time via the current locale so the
+// array can live outside the component body.
 interface LabelDef {
   key: string;
-  label: string;
   fallbackPosition: Vector3;
   meshKeywords: string[];
 }
+
+const LABELS: LabelDef[] = [
+  { key: "office1", fallbackPosition: new Vector3(-4, 2.5, -3), meshKeywords: ["office", "办公"] },
+  { key: "meeting", fallbackPosition: new Vector3(0, 3.2, -3), meshKeywords: ["meeting", "会议"] },
+  { key: "dataCenter", fallbackPosition: new Vector3(-1.5, 1.5, 0), meshKeywords: ["data", "server", "机房", "数据"] },
+  { key: "exhibition", fallbackPosition: new Vector3(2.5, 2.2, -2), meshKeywords: ["exhibition", "hall", "展示", "展厅"] },
+  { key: "office2", fallbackPosition: new Vector3(3.5, 2.5, -3), meshKeywords: ["office", "办公"] },
+  { key: "lobby", fallbackPosition: new Vector3(3.5, 0.8, 2), meshKeywords: ["lobby", "大堂", "大厅", "entrance"] },
+];
 
 export interface BuildingViewRef {
   zoomIn: () => void;
@@ -96,44 +105,25 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
     } = useSettingsStore();
     const t = useLocale();
 
-    const LABELS: LabelDef[] = [
-      {
-        key: "office1",
-        label: t.building.officeArea,
-        fallbackPosition: new Vector3(-4, 2.5, -3),
-        meshKeywords: ["office", "办公"],
-      },
-      {
-        key: "meeting",
-        label: t.building.meetingArea,
-        fallbackPosition: new Vector3(0, 3.2, -3),
-        meshKeywords: ["meeting", "会议"],
-      },
-      {
-        key: "dataCenter",
-        label: t.building.dataCenter,
-        fallbackPosition: new Vector3(-1.5, 1.5, 0),
-        meshKeywords: ["data", "server", "机房", "数据"],
-      },
-      {
-        key: "exhibition",
-        label: t.building.exhibitionHall,
-        fallbackPosition: new Vector3(2.5, 2.2, -2),
-        meshKeywords: ["exhibition", "hall", "展示", "展厅"],
-      },
-      {
-        key: "office2",
-        label: t.building.officeArea,
-        fallbackPosition: new Vector3(3.5, 2.5, -3),
-        meshKeywords: ["office", "办公"],
-      },
-      {
-        key: "lobby",
-        label: t.building.lobby,
-        fallbackPosition: new Vector3(3.5, 0.8, 2),
-        meshKeywords: ["lobby", "大堂", "大厅", "entrance"],
-      },
-    ];
+    // Use refs so runRenderLoop always sees the latest values without
+    // closing over stale snapshots.
+    const autoRotateRef = useRef(autoRotate);
+    const rotateSpeedRef = useRef(rotateSpeed);
+    const showLabelsRef = useRef(showLabels);
+    useEffect(() => { autoRotateRef.current = autoRotate; }, [autoRotate]);
+    useEffect(() => { rotateSpeedRef.current = rotateSpeed; }, [rotateSpeed]);
+    useEffect(() => { showLabelsRef.current = showLabels; }, [showLabels]);
+
+    // Map locale strings to label keys so the static LABELS array stays
+    // outside the component body.
+    const labelText: Record<string, string> = {
+      office1: t.building.officeArea,
+      meeting: t.building.meetingArea,
+      dataCenter: t.building.dataCenter,
+      exhibition: t.building.exhibitionHall,
+      office2: t.building.officeArea,
+      lobby: t.building.lobby,
+    };
 
     // Sync glow intensity in real time
     useEffect(() => {
@@ -194,18 +184,14 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
       camera.upperBetaLimit = Math.PI / 2.2;
       cameraRef.current = camera;
 
-      // Use BabylonJS built-in camera controls; observe pointer events via
-      // onPointerObservable so we can pause auto-rotate during interaction.
-      const pointerObserver = scene.onPointerObservable.add((eventData) => {
-        if (eventData.type === PointerEventTypes.POINTERDOWN) {
-          isInteractingRef.current = true;
-        } else if (
-          eventData.type === PointerEventTypes.POINTERUP ||
-          eventData.type === PointerEventTypes.POINTERCANCEL
-        ) {
-          isInteractingRef.current = false;
-        }
-      });
+      // Track user interaction via canvas native events so auto-rotate pauses
+      // while the user is dragging the camera.
+      const onPointerDown = () => { isInteractingRef.current = true; };
+      const onPointerUp = () => { isInteractingRef.current = false; };
+      canvas.addEventListener("pointerdown", onPointerDown);
+      canvas.addEventListener("pointerup", onPointerUp);
+      canvas.addEventListener("pointercancel", onPointerUp);
+      canvas.addEventListener("pointerleave", onPointerUp);
 
       const hemi = new HemisphericLight("hemi", new Vector3(0, 1, 0), scene);
       hemi.intensity = 0.6;
@@ -220,12 +206,8 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
       pivot.rotation.y = (defaultRotationY * Math.PI) / 180;
       rootMeshRef.current = pivot;
 
-      SceneLoader.ImportMeshAsync("", "/", "building.glb", scene, (event) => {
-        if (event.lengthComputable) {
-          const pct = (event.loaded / event.total) * 100;
-          // eslint-disable-next-line no-console
-          console.log(`Loading building.glb: ${pct.toFixed(0)}%`);
-        }
+      SceneLoader.ImportMeshAsync("", "/", "building.glb", scene, (_event) => {
+        /* progress callback intentionally empty to avoid stale closures */
       })
         .then((result) => {
           const firstMesh = result.meshes[0];
@@ -266,30 +248,21 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
               } else {
                 worldPos = cfg.fallbackPosition.clone();
               }
-              // eslint-disable-next-line no-console
-              console.log(
-                `[ecoctrl] label "${cfg.key}" anchored to`,
-                node ? node.name : "fallback",
-                worldPos,
-              );
               return { key: cfg.key, worldPos };
             });
-
-            // eslint-disable-next-line no-console
-            console.log("[ecoctrl] GLB loaded, pivot created, root parented:", glbRoot.name);
           }
           scene.stopAllAnimations();
           setLoaded(true);
         })
-        .catch((err) => {
-          // eslint-disable-next-line no-console
-          console.error("Failed to load building.glb:", err);
+        .catch((_err) => {
+          /* silently ignore load errors so the UI stays intact */
         });
 
       engine.runRenderLoop(() => {
-        // Auto-rotate camera alpha when idle
-        if (autoRotate && !isInteractingRef.current) {
-          camera.alpha += 0.002 * rotateSpeed;
+        // Auto-rotate camera alpha when idle — read latest values from refs
+        // so setting changes take effect immediately without recreating the loop.
+        if (autoRotateRef.current && !isInteractingRef.current) {
+          camera.alpha += 0.002 * rotateSpeedRef.current;
         }
 
         scene.render();
@@ -306,7 +279,7 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
             if (!el) return;
             const p = Vector3.Project(worldPos, Matrix.Identity(), transformMatrix, globalViewport);
             const visible =
-              showLabels &&
+              showLabelsRef.current &&
               p.z > 0 &&
               p.z < 1 &&
               p.x >= 0 &&
@@ -326,9 +299,12 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
 
       return () => {
         window.removeEventListener("resize", handleResize);
+        canvas.removeEventListener("pointerdown", onPointerDown);
+        canvas.removeEventListener("pointerup", onPointerUp);
+        canvas.removeEventListener("pointercancel", onPointerUp);
+        canvas.removeEventListener("pointerleave", onPointerUp);
         engine.stopRenderLoop();
-        camera.detachControl(canvas);
-        scene.onPointerObservable.remove(pointerObserver);
+        camera.detachControl();
         engine.dispose();
         engineRef.current = null;
         sceneRef.current = null;
@@ -371,7 +347,7 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
           }
         },
       }),
-      [],
+      [defaultCameraRadius, defaultRotationY],
     );
 
     return (
@@ -394,7 +370,7 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
         {LABELS.map((cfg) => (
           <AreaLabel
             key={cfg.key}
-            label={cfg.label}
+            label={labelText[cfg.key]}
             ref={(el) => {
               labelElsRef.current[cfg.key] = el;
             }}
