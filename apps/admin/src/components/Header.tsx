@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 
-import { AuthUser } from "../types";
+import type { User } from "@ecoctrl/shared";
 import { authApi } from "../api/auth";
 
 interface HeaderProps {
@@ -36,7 +36,7 @@ const tabTitleMap: Record<string, string> = {
 
 export default function Header({ activeTab }: HeaderProps) {
   const currentTitle = tabTitleMap[activeTab] || "管理总览";
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<Pick<User, "username" | "avatarUrl"> | null>(null);
 
   useEffect(() => {
     const fetchUser = async () => {
