@@ -55,6 +55,21 @@ export const enUS = {
     language: "Language",
     reducedMotion: "Reduce Motion",
     reducedMotionDesc: "Disable unnecessary animations for accessibility",
+    bentoTitle: "Dashboard Layout",
+    bentoSubtitle: "Customize homepage Bento grid arrangement and visibility",
+    bentoEditLayout: "Edit Layout",
+    bentoResetLayout: "Reset Layout",
+    bentoResetConfirm: "Layout reset to default",
+    editAutoExitDelay: "Edit Mode Auto-Exit",
+    editAutoExitDelayDesc: "Automatically exit edit mode after a period of inactivity",
+    editAutoExitNever: "Never",
+  },
+
+  // ── Edit Layout Floating Toolbar ────────────────────────────────────────────
+  editLayout: {
+    done: "Done",
+    cancel: "Cancel",
+    reset: "Reset",
   },
 
   // ── 3D Building View ───────────────────────────────────────────────────────
@@ -144,6 +159,21 @@ export const enUS = {
     powerSurgeSub: "Surge event detected",
     upsBatteryTitle: "UPS Battery Low",
     upsBatterySub: "Backup power remaining 18%",
+  },
+
+  // ── Bento Widgets ──────────────────────────────────────────────────────────
+  bentoWidgets: {
+    "stat-totalEnergy": "Today's Total Power",
+    "stat-carbonEmission": "Today's Carbon Emission",
+    "stat-energyIntensity": "Energy Intensity",
+    "stat-todayCost": "Today's Electricity Cost",
+    "stat-renewableRate": "Renewable Energy Ratio",
+    "stat-loadStatus": "Load Status",
+    "panel-devices": "Device Status",
+    "panel-alerts": "Real-time Alerts",
+    "panel-ai": "AI Optimization",
+    "chart-trend": "24h Energy Trend",
+    "chart-breakdown": "Energy Breakdown",
   },
 
   // ── Right Panel — AI Optimization Suggestions ──────────────────────────────

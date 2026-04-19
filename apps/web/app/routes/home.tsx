@@ -1,33 +1,25 @@
 import {
-  IconActivity,
-  IconBolt,
-  IconCoin,
-  IconLeaf,
+  IconArrowBackUp,
+  IconCheck,
   IconMaximize,
   IconMinimize,
   IconMinus,
   IconPlus,
   IconReload,
-  IconSun,
-  IconWind,
+  IconX,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLoaderData } from "react-router";
 
+import { BentoGrid } from "~/components/dashboard/bento-grid";
 import { BuildingView, type BuildingViewRef } from "~/components/dashboard/building-view";
 import { DashboardHeader } from "~/components/dashboard/dashboard-header";
 import { DashboardNav } from "~/components/dashboard/dashboard-nav";
-import { EnergyBreakdownChart, EnergyTrendChart } from "~/components/dashboard/energy-charts";
-import {
-  GraphButtonBlock,
-  GraphButtonBlockDetail,
-} from "~/components/dashboard/graph-button-block";
-import { AISuggestions, AlertsPanel, DeviceStatus } from "~/components/dashboard/right-panels";
-import { ExpandableModal } from "~/components/expandable-modal";
+import { DashboardWidgets } from "~/components/dashboard/widgets";
 import { fetchDashboardData, type DashboardData } from "~/lib/dashboard-api";
 import { cn } from "~/lib/utils";
 import { locale, useLocale } from "~/locales";
-import { useSettingsStore } from "~/store/settings";
+import { useSettingsStore, type BentoLayoutItem } from "~/store/settings";
 
 import type { Route } from "./+types/home";
 
@@ -50,45 +42,20 @@ export default function Home() {
   const t = useLocale();
   const loaderData = useLoaderData() as DashboardData;
   const navHideDelay = useSettingsStore((state) => state.navHideDelay);
+  const bentoDragEnabled = useSettingsStore((state) => state.bentoDragEnabled);
+  const bentoLayout = useSettingsStore((state) => state.bentoLayout);
+  const editAutoExitDelay = useSettingsStore((state) => state.editAutoExitDelay);
+  const setBentoDragEnabled = useSettingsStore((state) => state.setBentoDragEnabled);
+  const setBentoLayout = useSettingsStore((state) => state.setBentoLayout);
+  const resetBentoLayout = useSettingsStore((state) => state.resetBentoLayout);
 
-  const CARDS = loaderData.cards.map((card) => ({
-    title: t.cards[card.titleKey as keyof typeof t.cards] ?? card.titleKey,
-    icon:
-      card.titleKey === "totalEnergy" ? (
-        <IconBolt size={12} />
-      ) : card.titleKey === "carbonEmission" ? (
-        <IconLeaf size={12} />
-      ) : card.titleKey === "energyIntensity" ? (
-        <IconActivity size={12} />
-      ) : card.titleKey === "todayCost" ? (
-        <IconCoin size={12} />
-      ) : card.titleKey === "renewableRate" ? (
-        <IconSun size={12} />
-      ) : (
-        <IconWind size={12} />
-      ),
-    value: card.value,
-    unit: card.unit.startsWith("cost")
-      ? (t.cards[card.unit as keyof typeof t.cards] ?? card.unit)
-      : card.unit,
-    delta: card.delta
-      ? card.delta.startsWith("renewable") || card.delta.startsWith("load")
-        ? (t.cards[card.delta as keyof typeof t.cards] ?? card.delta)
-        : card.delta
-      : undefined,
-    deltaVariant: card.deltaVariant,
-    chartType: card.chartType,
-    chartData: card.chartData,
-    chartColor: card.chartColor,
-    footer: card.footerKey ? t.cards[card.footerKey as keyof typeof t.cards] : undefined,
-    progressValue: card.progressValue,
-  }));
   const [navVisible, setNavVisible] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const buildingRef = useRef<BuildingViewRef>(null);
+  const layoutSnapshotRef = useRef<BentoLayoutItem[] | null>(null);
 
-  // Start/reset the 30s auto-hide countdown
+  // Start/reset the auto-hide countdown
   const resetTimer = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => setNavVisible(false), navHideDelay);
@@ -98,11 +65,9 @@ export default function Home() {
   const handleLogoClick = useCallback(() => {
     setNavVisible((prev) => {
       if (!prev) {
-        // Opening — start countdown
         if (timerRef.current) clearTimeout(timerRef.current);
         timerRef.current = setTimeout(() => setNavVisible(false), navHideDelay);
       } else {
-        // Closing — cancel countdown
         if (timerRef.current) clearTimeout(timerRef.current);
       }
       return !prev;
@@ -130,6 +95,38 @@ export default function Home() {
     [],
   );
 
+  // Capture snapshot only when entering edit mode, not on every layout change.
+  // Including bentoLayout in deps would overwrite the snapshot after every swap,
+  // making "cancel" unable to restore the pre-edit state.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (bentoDragEnabled) {
+      layoutSnapshotRef.current = JSON.parse(JSON.stringify(bentoLayout));
+    }
+  }, [bentoDragEnabled]);
+
+  // Auto-exit edit mode after editAutoExitDelay ms of inactivity.
+  // Timer resets on any pointer interaction. Disabled when delay === 0.
+  useEffect(() => {
+    if (!bentoDragEnabled || editAutoExitDelay === 0) return;
+
+    let timer = setTimeout(() => setBentoDragEnabled(false), editAutoExitDelay);
+
+    const reset = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => setBentoDragEnabled(false), editAutoExitDelay);
+    };
+
+    window.addEventListener("pointermove", reset);
+    window.addEventListener("pointerdown", reset);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("pointermove", reset);
+      window.removeEventListener("pointerdown", reset);
+    };
+  }, [bentoDragEnabled, editAutoExitDelay, setBentoDragEnabled]);
+
   return (
     <div className="dark">
       <div className="text-foreground relative h-screen overflow-hidden font-mono">
@@ -141,69 +138,19 @@ export default function Home() {
           {/* Header */}
           <DashboardHeader onLogoClick={handleLogoClick} navVisible={navVisible} />
 
-          {/* Main 3-column layout */}
-          <div className="flex min-h-0 flex-1 overflow-hidden">
-            {/* Left Panel: 6 graph-button-blocks */}
-            <aside
-              className={cn(
-                "relative flex w-[280px] shrink-0 flex-col gap-1.5 overflow-hidden p-1.5 transition-all duration-300 ease-in-out",
-                fullscreen && "pointer-events-none -translate-x-full opacity-0",
-              )}
+          {/* Main bento grid layout */}
+          <main
+            className={cn(
+              "relative flex min-h-0 flex-1 overflow-hidden",
+              fullscreen && "pointer-events-none",
+            )}
+          >
+            <BentoGrid
+              className={cn("transition-all duration-300 ease-in-out", fullscreen && "opacity-0")}
             >
-              {/* Left accent glow */}
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-y-0 left-0 z-10 w-[2px]"
-                style={{
-                  background:
-                    "linear-gradient(to bottom, transparent, var(--color-cyber-cyan), transparent)",
-                  opacity: 0.5,
-                }}
-              />
-              {CARDS.map((card) => (
-                <ExpandableModal
-                  key={card.title}
-                  className="flex min-h-0 flex-1 flex-col"
-                  trigger={<GraphButtonBlock {...card} className="flex-1" />}
-                >
-                  <GraphButtonBlockDetail {...card} />
-                </ExpandableModal>
-              ))}
-            </aside>
-
-            {/* Center: transparent pass-through to background building */}
-            <main
-              className={cn(
-                "flex min-h-0 flex-1 flex-col overflow-hidden",
-                fullscreen && "pointer-events-none",
-              )}
-            >
-              {/* Spacer to let building show through */}
-              <div className="min-h-0 flex-1" />
-              {/* Bottom charts — bento row */}
-              <div
-                className={cn(
-                  "flex shrink-0 gap-1.5 p-1.5 transition-all duration-300 ease-in-out",
-                  fullscreen && "translate-y-full opacity-0",
-                )}
-              >
-                <EnergyTrendChart className="min-w-0 flex-[3]" data={loaderData.trend} />
-                <EnergyBreakdownChart className="min-w-0 flex-[2]" data={loaderData.breakdown} />
-              </div>
-            </main>
-
-            {/* Right Panel: device status / alerts / AI */}
-            <aside
-              className={cn(
-                "flex min-h-0 w-[320px] shrink-0 flex-col gap-1.5 overflow-hidden border-white/15 p-1.5 transition-all duration-300 ease-in-out",
-                fullscreen && "pointer-events-none translate-x-full opacity-0",
-              )}
-            >
-              <DeviceStatus />
-              <AlertsPanel />
-              <AISuggestions />
-            </aside>
-          </div>
+              <DashboardWidgets data={loaderData} />
+            </BentoGrid>
+          </main>
 
           {/* Bottom navigation — slides in/out from bottom */}
           <div
@@ -220,7 +167,8 @@ export default function Home() {
           <div
             className={cn(
               "absolute top-[72px] z-30 flex flex-col overflow-hidden rounded-lg border border-white/10 bg-black/40 backdrop-blur-md transition-all duration-300",
-              fullscreen ? "right-4" : "right-[calc(320px+theme(space.4))]",
+              "right-4",
+              bentoDragEnabled && "opacity-0 pointer-events-none",
             )}
           >
             <button
@@ -259,6 +207,43 @@ export default function Home() {
               <IconReload size={16} />
             </button>
           </div>
+
+          {/* Edit layout floating toolbar */}
+          {bentoDragEnabled && (
+            <div className="absolute bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/10 bg-black/60 px-2 py-1.5 shadow-lg backdrop-blur-md transition-all">
+              <button
+                type="button"
+                onClick={() => setBentoDragEnabled(false)}
+                className="text-foreground/80 hover:text-cyber-cyan flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/5"
+              >
+                <IconCheck size={14} />
+                {t.editLayout.done}
+              </button>
+              <div className="h-4 w-px bg-white/10" />
+              <button
+                type="button"
+                onClick={() => {
+                  if (layoutSnapshotRef.current) {
+                    setBentoLayout(layoutSnapshotRef.current);
+                  }
+                  setBentoDragEnabled(false);
+                }}
+                className="text-foreground/80 hover:text-cyber-cyan flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/5"
+              >
+                <IconX size={14} />
+                {t.editLayout.cancel}
+              </button>
+              <div className="h-4 w-px bg-white/10" />
+              <button
+                type="button"
+                onClick={() => resetBentoLayout()}
+                className="text-foreground/80 hover:text-cyber-cyan flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/5"
+              >
+                <IconArrowBackUp size={14} />
+                {t.editLayout.reset}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
