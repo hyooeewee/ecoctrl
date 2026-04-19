@@ -58,6 +58,17 @@ export default function Home() {
   const buildingRef = useRef<BuildingViewRef>(null);
   const layoutSnapshotRef = useRef<BentoLayoutItem[] | null>(null);
 
+  // Find the leftmost column of any visible widget in the top-right area
+  // so we can place controls just to its left with a fixed 1rem margin.
+  const rightmostTopWidget = bentoLayout
+    .filter((item) => !item.hidden && item.y <= 4)
+    .sort((a, b) => b.x - a.x)[0];
+
+  const colsFromRight = rightmostTopWidget ? 16 - rightmostTopWidget.x + 1 : 0;
+  const controlsRight = fullscreen || colsFromRight === 0
+    ? "1rem"
+    : `calc(${(colsFromRight / 16) * 100}% + 1rem)`;
+
   // Start/reset the auto-hide countdown
   const resetTimer = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -170,9 +181,9 @@ export default function Home() {
           <div
             className={cn(
               "absolute top-[72px] z-30 flex flex-col overflow-hidden rounded-lg border border-white/10 bg-black/40 backdrop-blur-md transition-all duration-300",
-              "right-4",
               bentoDragEnabled && "opacity-0 pointer-events-none",
             )}
+            style={{ right: controlsRight }}
           >
             <button
               type="button"
