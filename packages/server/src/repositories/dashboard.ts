@@ -2,7 +2,7 @@ import { db } from "@/config/database";
 import { dashboardStats, dashboardCards } from "@/schemas/dashboard";
 import { energyReadings, energyBreakdowns } from "@/schemas/energy";
 import { alerts } from "@/schemas/alerts";
-import type { DashboardStats, EnergyChartItem, Alert, DashboardCard, DashboardData, TrendPoint, BreakdownItem, DeviceStatusItem, AiSuggestionItem } from "@/types/index";
+import type { DashboardStats, EnergyChartItem, Alert, DashboardCard, DashboardData, TrendPoint, BreakdownItem, DeviceStatusItem, AiSuggestionItem } from "@ecoctrl/shared";
 
 export async function getDashboardStats(): Promise<DashboardStats> {
   const rows = await db.select().from(dashboardStats);
@@ -41,11 +41,12 @@ export async function getAlerts(limit?: number): Promise<Alert[]> {
 }
 
 export async function getDashboardData(): Promise<DashboardData> {
-  const [stats, cardsRows, trendRows, breakdownRows] = await Promise.all([
+  const [stats, cardsRows, trendRows, breakdownRows, alertsRows] = await Promise.all([
     getDashboardStats(),
     db.select().from(dashboardCards).orderBy(dashboardCards.sortOrder),
     db.select().from(energyReadings),
     db.select().from(energyBreakdowns),
+    db.select().from(alerts),
   ]);
 
   const cards: DashboardCard[] = cardsRows.map((r) => ({
@@ -81,5 +82,14 @@ export async function getDashboardData(): Promise<DashboardData> {
     { category: "server", text: "将非关键服务器任务迁移至低峰期 (02:00–06:00)", saving: "预计节省 5% 费用" },
   ];
 
-  return { cards, trend, breakdown, devices, aiSuggestions };
+  const alertsData: Alert[] = alertsRows.map((r) => ({
+    id: r.id,
+    device: r.device,
+    level: r.level as "high" | "medium" | "low",
+    message: r.message,
+    time: r.time,
+    status: r.status as "pending" | "resolved",
+  }));
+
+  return { cards, trend, breakdown, devices, aiSuggestions, alerts: alertsData };
 }

@@ -7,9 +7,10 @@ import * as schema from "@/schemas/index";
 const client = postgres(process.env.DATABASE_URL!, { prepare: false });
 const db = drizzle(client, { schema });
 
+import { USER_ROLE_LIST } from "@ecoctrl/shared";
+
 // Custom Chinese data pools for realistic business data
 const CN_NAMES = ["张三", "李四", "王五", "赵六", "孙七", "周八", "吴九", "郑十"];
-const CN_ROLES = ["超级管理员", "运维工程师", "财务分析师", "系统管理员", "观察员"];
 const CN_TASKS = [
   "发电机组季度维保",
   "冷水机组滤网更换",
@@ -72,10 +73,10 @@ async function seedUsers() {
       count: 5,
       columns: {
         id: f.uuid(),
-        name: f.valuesFromArray({ values: CN_NAMES, isUnique: true }),
+        username: f.valuesFromArray({ values: CN_NAMES, isUnique: true }),
         email: f.email(),
-        role: f.valuesFromArray({ values: CN_ROLES }),
-        status: f.valuesFromArray({ values: ["active", "inactive"] }),
+        role: f.valuesFromArray({ values: [...USER_ROLE_LIST] }),
+        status: f.valuesFromArray({ values: ["online", "offline", "disabled", "busy"] }),
         lastLogin: f.valuesFromArray({
           values: [
             "2024-03-20 10:00",

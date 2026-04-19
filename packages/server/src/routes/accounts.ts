@@ -1,26 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import crypto from "node:crypto";
-import type { User } from "@/types/index";
+import { z } from "zod";
+import { UserSchema, UserCreateBodySchema } from "@ecoctrl/shared";
+import type { User, UserCreateBody } from "@ecoctrl/shared";
 import { getUsers, addUser, removeUser } from "@/repositories/users";
 
-const userSchema = {
-  type: "object",
-  properties: {
-    id: { type: "string" },
-    name: { type: "string" },
-    email: { type: "string" },
-    role: { type: "string" },
-    status: { type: "string", enum: ["active", "inactive"] },
-    lastLogin: { type: "string" },
-  },
-};
-
-const errorResponseSchema = {
-  type: "object",
-  properties: {
-    error: { type: "string" },
-  },
-};
+const successSchema = z.object({ success: z.boolean() });
+const errorResponseSchema = z.object({ error: z.string() });
 
 export default async function accountRoutes(fastify: FastifyInstance) {
   fastify.get(
@@ -28,12 +14,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Get user list",
-        response: {
-          200: {
-            type: "array",
-            items: userSchema,
-          },
-        },
+        response: { 200: z.array(UserSchema) },
       },
     },
     async (_request, reply) => {
@@ -47,29 +28,20 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Create a user",
-        body: {
-          type: "object",
-          required: ["name", "email", "role"],
-          properties: {
-            name: { type: "string" },
-            email: { type: "string" },
-            role: { type: "string" },
-          },
-        },
-        response: {
-          201: userSchema,
-        },
+        body: UserCreateBodySchema,
+        response: { 201: UserSchema },
       },
     },
     async (request, reply) => {
-      const body = request.body as { name: string; email: string; role: string };
+      const body: UserCreateBody = request.body;
       const newUser: User = {
         id: crypto.randomUUID(),
-        name: body.name,
+        username: body.username || null,
         email: body.email,
         role: body.role,
-        status: "active",
-        lastLogin: "-",
+        status: "offline",
+        lastLogin: null,
+        avatarUrl: null,
       };
       await addUser(newUser);
       return reply.status(201).send(newUser);
@@ -81,20 +53,9 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Delete a user",
-        params: {
-          type: "object",
-          properties: {
-            id: { type: "string", description: "User ID" },
-          },
-          required: ["id"],
-        },
+        params: z.object({ id: z.string().describe("User ID") }),
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-            },
-          },
+          200: successSchema,
           404: errorResponseSchema,
         },
       },

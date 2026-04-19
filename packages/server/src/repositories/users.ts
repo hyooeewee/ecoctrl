@@ -1,28 +1,30 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/config/database";
 import { users } from "@/schemas/users";
-import type { User } from "@/types/index";
+import type { User, UserRole, UserStatus } from "@ecoctrl/shared";
 
 export async function getUsers(): Promise<User[]> {
   const rows = await db.select().from(users);
   return rows.map((r) => ({
     id: r.id,
-    name: r.name,
+    username: r.username,
     email: r.email,
-    role: r.role,
-    status: r.status as "active" | "inactive",
-    lastLogin: r.lastLogin ?? "-",
+    role: r.role as UserRole,
+    status: r.status as UserStatus,
+    lastLogin: r.lastLogin,
+    avatarUrl: r.avatarUrl,
   }));
 }
 
 export async function addUser(user: User): Promise<void> {
   await db.insert(users).values({
     id: user.id,
-    name: user.name,
+    username: user.username,
     email: user.email,
     role: user.role,
     status: user.status,
     lastLogin: user.lastLogin,
+    avatarUrl: user.avatarUrl,
   });
 }
 
