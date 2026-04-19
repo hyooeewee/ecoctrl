@@ -1,5 +1,6 @@
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
+import { eq } from "drizzle-orm";
 import { seed, reset } from "drizzle-seed";
 import * as schema from "@/schemas/index";
 
@@ -84,9 +85,18 @@ async function seedUsers() {
             "2024-03-15 11:20",
           ],
         }),
+        avatarUrl: f.default({ defaultValue: null }),
       },
     },
   }));
+  // Set avatar for the first active user to match mock data
+  const activeUsers = await db.select().from(schema.users).where(eq(schema.users.status, "active")).limit(1);
+  if (activeUsers.length > 0) {
+    await db
+      .update(schema.users)
+      .set({ avatarUrl: "https://avatar.vercel.sh/admin?size=32" })
+      .where(eq(schema.users.id, activeUsers[0].id));
+  }
   console.log("Seeded users");
 }
 
@@ -157,8 +167,12 @@ async function seedReports() {
     },
   }));
 
-  const templates = ["能耗日报", "故障分析月报", "系统审计简报"];
-  await db.insert(schema.reportTemplates).values(templates.map((name) => ({ name })));
+  const templates = [
+    { name: "能耗日报", count: "1,245 份", icon: "📄" },
+    { name: "月度汇总", count: "48 份", icon: "📊" },
+    { name: "异常分析", count: "12 份", icon: "🔍" },
+  ];
+  await db.insert(schema.reportTemplates).values(templates);
   console.log("Seeded reports");
 }
 
@@ -212,6 +226,54 @@ async function seedDashboard() {
   console.log("Seeded dashboard data");
 }
 
+async function seedBackupSchedule() {
+  await db.insert(schema.backupSchedules).values({ nextBackup: "2023-11-20 03:00" });
+  console.log("Seeded backup schedule");
+}
+
+async function seedEnergyAreas() {
+  const areas = [
+    { title: "A 栋办公区", current: 4200, target: 5000, color: "bg-primary", powerFactor: 0.94, loadRate: "72%" },
+    { title: "B 栋研发中心", current: 8500, target: 7000, color: "bg-red-500", powerFactor: 0.94, loadRate: "72%" },
+    { title: "C 栋生产车间", current: 15400, target: 20000, color: "bg-green-500", powerFactor: 0.94, loadRate: "72%" },
+  ];
+  await db.insert(schema.energyAreas).values(areas);
+  console.log("Seeded energy areas");
+}
+
+async function seedModels() {
+  const models = [
+    { id: "1", name: "冷却塔模型_1", version: "v2.1", format: "GLB", size: "12.4MB", thumbnailUrl: null, docUrl: null },
+    { id: "2", name: "冷却塔模型_2", version: "v2.1", format: "GLB", size: "12.4MB", thumbnailUrl: null, docUrl: null },
+    { id: "3", name: "冷却塔模型_3", version: "v2.1", format: "GLB", size: "12.4MB", thumbnailUrl: null, docUrl: null },
+    { id: "4", name: "冷却塔模型_4", version: "v2.1", format: "GLB", size: "12.4MB", thumbnailUrl: null, docUrl: null },
+    { id: "5", name: "冷却塔模型_5", version: "v2.1", format: "GLB", size: "12.4MB", thumbnailUrl: null, docUrl: null },
+    { id: "6", name: "冷却塔模型_6", version: "v2.1", format: "GLB", size: "12.4MB", thumbnailUrl: null, docUrl: null },
+  ];
+  await db.insert(schema.models).values(models);
+  console.log("Seeded models");
+}
+
+async function seedThreeDConfig() {
+  await db.insert(schema.threeDConfigs).values({
+    cameraPreset: "Default_View_01",
+    ambientLightIntensity: 0.85,
+    hotspots: [],
+    labels: [],
+  });
+  console.log("Seeded 3D config");
+}
+
+async function seedPlatformConfig() {
+  await db.insert(schema.platformConfigs).values({
+    platformName: "EcoCtrl 能管平台",
+    refreshInterval: 30,
+    realtimeAlertEnabled: true,
+    darkModeFollowSystem: false,
+  });
+  console.log("Seeded platform config");
+}
+
 async function seedIotTokens() {
   await db.insert(schema.iotTokens).values({
     accessToken:
@@ -231,6 +293,11 @@ async function main() {
   await seedFaults();
   await seedReports();
   await seedDashboard();
+  await seedBackupSchedule();
+  await seedEnergyAreas();
+  await seedModels();
+  await seedThreeDConfig();
+  await seedPlatformConfig();
   await seedIotTokens();
   console.log("Done!");
   await client.end();

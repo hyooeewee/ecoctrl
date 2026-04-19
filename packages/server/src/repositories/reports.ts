@@ -21,7 +21,19 @@ export async function updateReportPlan(id: string, patch: Partial<ReportPlan>): 
   return result[0] as ReportPlan;
 }
 
-export async function getReportTemplates(): Promise<string[]> {
+export interface ReportTemplate {
+  id: number;
+  name: string;
+  count: string;
+  icon: string;
+}
+
+export async function getReportTemplates(): Promise<ReportTemplate[]> {
   const rows = await db.select().from(reportTemplates);
-  return rows.map((r) => r.name);
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    count: r.count,
+    icon: r.icon,
+  }));
 }
