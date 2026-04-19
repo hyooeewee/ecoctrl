@@ -27,7 +27,6 @@ interface SidebarProps {
 
 const navItems = [
   { id: "dashboard", label: "管理总览", icon: LayoutDashboard },
-  { id: "config", label: "系统配置", icon: Settings },
   { id: "accounts", label: "账户控制", icon: Users },
   { id: "models", label: "模型与对象", icon: Box },
   { id: "settingsGroup", label: "3D 模型设置", icon: BoxSelect },
@@ -36,6 +35,7 @@ const navItems = [
   { id: "maintenance", label: "维保管理", icon: Wrench },
   { id: "faults", label: "故障管理", icon: AlertTriangle },
   { id: "energy", label: "能耗管理", icon: Zap },
+  { id: "config", label: "系统配置", icon: Settings },
 ];
 
 export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
