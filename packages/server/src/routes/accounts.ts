@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import crypto from "node:crypto";
-import type { User } from "../types/index.js";
-import { getUsers, addUser, removeUser } from "../db/users.js";
+import type { User } from "@/types/index";
+import { getUsers, addUser, removeUser } from "@/db/users";
 
 const userSchema = {
   type: "object",

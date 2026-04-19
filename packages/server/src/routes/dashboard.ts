@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
-import type { DashboardStats, EnergyChartItem, Alert } from "../types/index.js";
-import { getDashboardStats, getEnergyChart, getAlerts } from "../db/dashboard.js";
+import type { DashboardStats, EnergyChartItem, Alert } from "@/types/index";
+import { getDashboardStats, getEnergyChart, getAlerts } from "@/db/dashboard";
 
 const statItemSchema = {
   type: "object",

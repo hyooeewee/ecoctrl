@@ -1,10 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import type { MaintenanceReminderDetail } from "../types/index.js";
+import { DATA_DIR } from "@/lib/paths";
+import type { MaintenanceReminderDetail } from "@/types/index";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_FILE = path.join(__dirname, "../../data/maintenance.json");
+const DATA_FILE = path.join(DATA_DIR, "maintenance.json");
 
 export function loadData(): MaintenanceReminderDetail[] {
   if (!fs.existsSync(DATA_FILE)) return [];

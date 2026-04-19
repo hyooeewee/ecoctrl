@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import crypto from "node:crypto";
-import type { MaintenanceReminder, MaintenanceReminderDetail } from "../types/index.js";
-import { getReminders, saveData } from "../db/maintenance.js";
+import type { MaintenanceReminder, MaintenanceReminderDetail } from "@/types/index";
+import { getReminders, saveData } from "@/db/maintenance";
 
 const reminderItemSchema = {
   type: "object",

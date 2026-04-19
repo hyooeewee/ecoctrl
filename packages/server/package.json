@@ -5,7 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch index.ts",
-    "build": "echo \"\\033[34m[server]\\033[0m: No build step required\"",
+    "build": "pnpm clean && rolldown -c",
+    "build:watch": " pnpm clean && rolldown -c -w",
+    "preview": "NODE_ENV=staging pnpm build && node dist/index.js",
+    "start": "pm2 start ecosystem.config.cjs",
+    "stop": "pm2 stop ecosystem.config.cjs",
+    "restart": "pm2 restart ecosystem.config.cjs",
+    "clean": "rimraf dist",
     "check": "tsc --noEmit"
   },
   "dependencies": {
@@ -13,11 +19,15 @@
     "@fastify/multipart": "^9.0.0",
     "@fastify/static": "^8.0.0",
     "@fastify/swagger": "^9.7.0",
-    "fastify": "^5.0.0"
+    "dotenv": "^17.4.2",
+    "fastify": "^5.0.0",
+    "rolldown": "1.0.0-rc.16"
   },
   "devDependencies": {
     "@ecoctrl/config": "workspace:*",
     "@types/node": "catalog:",
+    "pm2": "^6.0.14",
+    "rimraf": "^6.1.3",
     "tsx": "^4.0.0",
     "typescript": "catalog:"
   }

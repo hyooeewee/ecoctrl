@@ -1,10 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import type { DashboardStats, EnergyChartItem, Alert } from "../types/index.js";
+import { DATA_DIR } from "@/lib/paths";
+import type { DashboardStats, EnergyChartItem, Alert } from "@/types/index";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_FILE = path.join(__dirname, "../../data/dashboard.json");
+const DATA_FILE = path.join(DATA_DIR, "dashboard.json");
 
 interface DashboardData {
   stats: DashboardStats;
