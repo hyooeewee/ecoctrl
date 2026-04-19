@@ -4,7 +4,7 @@ interface RequestOptions extends RequestInit {
   params?: Record<string, string>;
 }
 
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { params, ...init } = options;
 
   let url = `${BASE_URL}${path}`;
