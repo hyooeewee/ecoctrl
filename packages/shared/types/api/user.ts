@@ -37,5 +37,7 @@ export const UserCreateBodySchema = z
 export type UserCreateBody = z.infer<typeof UserCreateBodySchema>;
 
 // Update user: id comes from URL path
-export const UserUpdateBodySchema = UserBaseSchema.partial();
+export const UserUpdateBodySchema = UserBaseSchema.partial().extend({
+  password: z.string().optional(),
+});
 export type UserUpdateBody = z.infer<typeof UserUpdateBodySchema>;
