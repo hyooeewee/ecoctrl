@@ -1,12 +1,13 @@
 import type { FastifyInstance } from "fastify";
 import crypto from "node:crypto";
 import { z } from "zod";
-import { UserSchema, UserCreateBodySchema } from "@ecoctrl/shared";
-import type { User, UserCreateBody } from "@ecoctrl/shared";
-import { getUsers, addUser, removeUser } from "@/repositories/users";
+import { UserSchema, UserCreateBodySchema, UserUpdateBodySchema, USER_ROLE_LIST } from "@ecoctrl/shared";
+import type { User, UserCreateBody, UserUpdateBody } from "@ecoctrl/shared";
+import { getUsers, addUser, removeUser, updateUser } from "@/repositories/users";
 
 const successSchema = z.object({ success: z.boolean() });
 const errorResponseSchema = z.object({ error: z.string() });
+
 
 export default async function accountRoutes(fastify: FastifyInstance) {
   fastify.get(
@@ -33,18 +34,42 @@ export default async function accountRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const body: UserCreateBody = request.body;
+      const body = request.body as UserCreateBody;
       const newUser: User = {
         id: crypto.randomUUID(),
-        username: body.username || null,
+        username: body.username ?? "",
         email: body.email,
-        role: body.role,
+        role: body.role ?? USER_ROLE_LIST[USER_ROLE_LIST.length - 1],
         status: "offline",
         lastLogin: null,
         avatarUrl: null,
       };
       await addUser(newUser);
       return reply.status(201).send(newUser);
+    },
+  );
+
+  fastify.put(
+    "/:id",
+    {
+      schema: {
+        summary: "Update a user",
+        params: z.object({ id: z.string().describe("User ID") }),
+        body: UserUpdateBodySchema,
+        response: {
+          200: successSchema,
+          404: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const body = request.body as UserUpdateBody;
+      const ok = await updateUser(id, body);
+      if (!ok) {
+        return reply.status(404).send({ error: "User not found" });
+      }
+      return reply.send({ success: true });
     },
   );
 

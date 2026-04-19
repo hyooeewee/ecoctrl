@@ -1,72 +1,54 @@
 import type { FastifyInstance } from "fastify";
 import crypto from "node:crypto";
+import { z } from "zod";
 import type { MaintenanceReminder, MaintenanceReminderDetail } from "@/types/index";
-import { getReminders, saveData } from "@/repositories/maintenance";
+import { getReminders, updateReminder, deleteReminder } from "@/repositories/maintenance";
 
-const reminderItemSchema = {
-  type: "object",
-  properties: {
-    id: { type: "string" },
-    task: { type: "string" },
-    dueDate: { type: "string" },
-    priority: { type: "string" },
-  },
-};
+const reminderItemSchema = z.object({
+  id: z.string(),
+  task: z.string(),
+  dueDate: z.string(),
+  priority: z.string(),
+});
 
-const reminderDetailSchema = {
-  type: "object",
-  properties: {
-    id: { type: "string" },
-    task: { type: "string" },
-    description: { type: "string" },
-    dueDate: { type: "string" },
-    priority: { type: "string", enum: ["high", "medium", "low"] },
-    status: { type: "string", enum: ["pending", "in_progress", "completed", "overdue"] },
-    assignee: { type: "string" },
-    location: { type: "string" },
-    estimatedHours: { type: "number" },
-    lastCompleted: { type: "string", nullable: true },
-  },
-};
+const reminderDetailSchema = z.object({
+  id: z.string(),
+  task: z.string(),
+  description: z.string(),
+  dueDate: z.string(),
+  priority: z.enum(["high", "medium", "low"]),
+  status: z.enum(["pending", "in_progress", "completed", "overdue"]),
+  assignee: z.string(),
+  location: z.string(),
+  estimatedHours: z.number(),
+  lastCompleted: z.string().nullable(),
+});
 
-const errorResponseSchema = {
-  type: "object",
-  properties: {
-    error: { type: "string" },
-  },
-};
+const errorResponseSchema = z.object({ error: z.string() });
 
-const createBodySchema = {
-  type: "object",
-  required: ["task", "dueDate"],
-  properties: {
-    task: { type: "string" },
-    description: { type: "string" },
-    dueDate: { type: "string" },
-    priority: { type: "string", enum: ["high", "medium", "low"] },
-    status: { type: "string", enum: ["pending", "in_progress", "completed", "overdue"] },
-    assignee: { type: "string" },
-    location: { type: "string" },
-    estimatedHours: { type: "number" },
-    lastCompleted: { type: "string" },
-  },
-};
+const createBodySchema = z.object({
+  task: z.string(),
+  description: z.string().optional(),
+  dueDate: z.string(),
+  priority: z.enum(["high", "medium", "low"]).optional(),
+  status: z.enum(["pending", "in_progress", "completed", "overdue"]).optional(),
+  assignee: z.string().optional(),
+  location: z.string().optional(),
+  estimatedHours: z.number().optional(),
+  lastCompleted: z.string().optional(),
+});
 
-const replaceBodySchema = {
-  type: "object",
-  required: ["task", "description", "dueDate", "priority", "status", "assignee", "location", "estimatedHours"],
-  properties: {
-    task: { type: "string" },
-    description: { type: "string" },
-    dueDate: { type: "string" },
-    priority: { type: "string", enum: ["high", "medium", "low"] },
-    status: { type: "string", enum: ["pending", "in_progress", "completed", "overdue"] },
-    assignee: { type: "string" },
-    location: { type: "string" },
-    estimatedHours: { type: "number" },
-    lastCompleted: { type: "string" },
-  },
-};
+const replaceBodySchema = z.object({
+  task: z.string().optional(),
+  description: z.string().optional(),
+  dueDate: z.string().optional(),
+  priority: z.enum(["high", "medium", "low"]).optional(),
+  status: z.enum(["pending", "in_progress", "completed", "overdue"]).optional(),
+  assignee: z.string().optional(),
+  location: z.string().optional(),
+  estimatedHours: z.number().optional(),
+  lastCompleted: z.string().optional(),
+});
 
 export default async function maintenanceRoutes(fastify: FastifyInstance) {
   fastify.get(
@@ -74,12 +56,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Get maintenance reminders list",
-        response: {
-          200: {
-            type: "array",
-            items: reminderItemSchema,
-          },
-        },
+        response: { 200: z.array(reminderItemSchema) },
       },
     },
     async (_request, reply) => {
@@ -99,13 +76,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Get maintenance reminder detail",
-        params: {
-          type: "object",
-          properties: {
-            id: { type: "string", description: "Reminder ID" },
-          },
-          required: ["id"],
-        },
+        params: z.object({ id: z.string().describe("Reminder ID") }),
         response: {
           200: reminderDetailSchema,
           404: errorResponseSchema,
@@ -129,9 +100,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
       schema: {
         summary: "Create a maintenance reminder",
         body: createBodySchema,
-        response: {
-          201: reminderDetailSchema,
-        },
+        response: { 201: reminderDetailSchema },
       },
     },
     async (request, reply) => {
@@ -152,7 +121,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
       };
 
       reminders.push(newReminder);
-      await saveData(reminders);
+      await updateReminder(newReminder);
       return reply.status(201).send(newReminder);
     },
   );
@@ -162,13 +131,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Replace a maintenance reminder",
-        params: {
-          type: "object",
-          properties: {
-            id: { type: "string", description: "Reminder ID" },
-          },
-          required: ["id"],
-        },
+        params: z.object({ id: z.string().describe("Reminder ID") }),
         body: replaceBodySchema,
         response: {
           200: reminderDetailSchema,
@@ -186,9 +149,9 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
         return reply.status(404).send({ error: "Reminder not found" });
       }
 
-      const replaced: MaintenanceReminderDetail = { id, ...body };
+      const replaced: MaintenanceReminderDetail = { ...reminders[index], ...body };
       reminders[index] = replaced;
-      await saveData(reminders);
+      await updateReminder(replaced);
       return reply.send(replaced);
     },
   );
@@ -198,20 +161,9 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Delete a maintenance reminder",
-        params: {
-          type: "object",
-          properties: {
-            id: { type: "string", description: "Reminder ID" },
-          },
-          required: ["id"],
-        },
+        params: z.object({ id: z.string().describe("Reminder ID") }),
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-            },
-          },
+          200: z.object({ success: z.boolean() }),
           404: errorResponseSchema,
         },
       },
@@ -225,8 +177,10 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
         return reply.status(404).send({ error: "Reminder not found" });
       }
 
-      reminders.splice(index, 1);
-      await saveData(reminders);
+      const ok = await deleteReminder(id);
+      if (!ok) {
+        return reply.status(404).send({ error: "Reminder not found" });
+      }
       return reply.send({ success: true });
     },
   );

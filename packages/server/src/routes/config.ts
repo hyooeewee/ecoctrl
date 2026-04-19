@@ -1,15 +1,20 @@
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 import { getPlatformConfig, setPlatformConfig } from "@/repositories/platformConfig";
 
-const configSchema = {
-  type: "object",
-  properties: {
-    platformName: { type: "string" },
-    refreshInterval: { type: "number" },
-    realtimeAlertEnabled: { type: "boolean" },
-    darkModeFollowSystem: { type: "boolean" },
-  },
-};
+const configSchema = z.object({
+  platformName: z.string(),
+  refreshInterval: z.number(),
+  realtimeAlertEnabled: z.boolean(),
+  darkModeFollowSystem: z.boolean(),
+});
+
+const configBodySchema = z.object({
+  platformName: z.string().optional(),
+  refreshInterval: z.number().optional(),
+  realtimeAlertEnabled: z.boolean().optional(),
+  darkModeFollowSystem: z.boolean().optional(),
+});
 
 export default async function configRoutes(fastify: FastifyInstance) {
   fastify.get(
@@ -17,9 +22,7 @@ export default async function configRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Get platform config",
-        response: {
-          200: configSchema,
-        },
+        response: { 200: configSchema },
       },
     },
     async (_request, reply) => {
@@ -40,18 +43,8 @@ export default async function configRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Update platform config",
-        body: {
-          type: "object",
-          properties: {
-            platformName: { type: "string" },
-            refreshInterval: { type: "number" },
-            realtimeAlertEnabled: { type: "boolean" },
-            darkModeFollowSystem: { type: "boolean" },
-          },
-        },
-        response: {
-          200: configSchema,
-        },
+        body: configBodySchema,
+        response: { 200: configSchema },
       },
     },
     async (request, reply) => {

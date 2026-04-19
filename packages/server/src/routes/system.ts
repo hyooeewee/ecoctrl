@@ -1,12 +1,10 @@
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 import { getBackupSchedule, setBackupSchedule } from "@/repositories/backupSchedule";
 
-const scheduleSchema = {
-  type: "object",
-  properties: {
-    nextBackup: { type: "string" },
-  },
-};
+const scheduleSchema = z.object({
+  nextBackup: z.string(),
+});
 
 export default async function systemRoutes(fastify: FastifyInstance) {
   fastify.get(
@@ -14,9 +12,7 @@ export default async function systemRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Get backup schedule",
-        response: {
-          200: scheduleSchema,
-        },
+        response: { 200: scheduleSchema },
       },
     },
     async (_request, reply) => {
@@ -30,16 +26,8 @@ export default async function systemRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Update backup schedule",
-        body: {
-          type: "object",
-          required: ["nextBackup"],
-          properties: {
-            nextBackup: { type: "string" },
-          },
-        },
-        response: {
-          200: scheduleSchema,
-        },
+        body: z.object({ nextBackup: z.string() }),
+        response: { 200: scheduleSchema },
       },
     },
     async (request, reply) => {
