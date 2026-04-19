@@ -1,16 +1,33 @@
-import { IconAlertTriangle, IconFlame, IconTemperature, IconWind } from "@tabler/icons-react";
+import {
+  IconAlertTriangle,
+  IconBell,
+  IconFlame,
+  IconTemperature,
+  IconWind,
+} from "@tabler/icons-react";
 
 import { cn } from "~/lib/utils";
 import { useLocale } from "~/locales";
 
 import type { DashboardWidget } from "./types";
 
-function SectionHeader({ title, badge }: { title: string; badge?: React.ReactNode }) {
+function SectionHeader({
+  title,
+  icon,
+  badge,
+}: {
+  title: string;
+  icon?: React.ReactNode;
+  badge?: React.ReactNode;
+}) {
   return (
     <div className="flex items-center justify-between">
-      <h3 className="text-muted-foreground text-[11px] font-semibold tracking-widest uppercase">
-        {title}
-      </h3>
+      <div className="flex items-center gap-1.5">
+        {icon && <span className="text-cyber-red">{icon}</span>}
+        <h3 className="text-muted-foreground text-[11px] font-semibold tracking-widest uppercase">
+          {title}
+        </h3>
+      </div>
       {badge}
     </div>
   );
@@ -56,6 +73,7 @@ export function AlertsWidget() {
       <div className="shrink-0 px-3 pt-3">
         <SectionHeader
           title={t.alerts.title}
+          icon={<IconBell size={14} />}
           badge={
             <span className="border-cyber-red/30 bg-cyber-red/10 text-cyber-red inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[9px] font-semibold">
               <span className="bg-cyber-red size-1.5 animate-pulse rounded-full" />

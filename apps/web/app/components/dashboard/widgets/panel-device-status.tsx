@@ -1,16 +1,34 @@
-import { IconBolt, IconDeviceLaptop, IconElevator, IconWind } from "@tabler/icons-react";
+import {
+  IconBolt,
+  IconDeviceLaptop,
+  IconDevices,
+  IconElevator,
+  IconWind,
+} from "@tabler/icons-react";
 
 import { cn } from "~/lib/utils";
 import { useLocale } from "~/locales";
 
+import type { DashboardData } from "~/lib/dashboard-api";
 import type { DashboardWidget } from "./types";
 
-function SectionHeader({ title, badge }: { title: string; badge?: React.ReactNode }) {
+function SectionHeader({
+  title,
+  icon,
+  badge,
+}: {
+  title: string;
+  icon?: React.ReactNode;
+  badge?: React.ReactNode;
+}) {
   return (
     <div className="flex items-center justify-between">
-      <h3 className="text-muted-foreground text-[11px] font-semibold tracking-widest uppercase">
-        {title}
-      </h3>
+      <div className="flex items-center gap-1.5">
+        {icon && <span className="text-cyber-cyan">{icon}</span>}
+        <h3 className="text-muted-foreground text-[11px] font-semibold tracking-widest uppercase">
+          {title}
+        </h3>
+      </div>
       {badge}
     </div>
   );
@@ -40,46 +58,70 @@ function DeviceItem({ icon, label, count, status }: DeviceItemProps) {
   );
 }
 
-export function DeviceStatusWidget() {
+type DeviceCategory = NonNullable<DashboardData["devices"]>[number]["category"];
+
+function getDeviceIcon(category: DeviceCategory) {
+  switch (category) {
+    case "hvac":
+      return <IconWind size={14} />;
+    case "lighting":
+      return <IconBolt size={14} />;
+    case "elevator":
+      return <IconElevator size={14} />;
+    case "server":
+      return <IconDeviceLaptop size={14} />;
+  }
+}
+
+function getDeviceLabel(category: DeviceCategory, t: ReturnType<typeof useLocale>) {
+  switch (category) {
+    case "hvac":
+      return t.devices.airConditioning;
+    case "lighting":
+      return t.devices.lighting;
+    case "elevator":
+      return t.devices.elevators;
+    case "server":
+      return t.devices.servers;
+  }
+}
+
+export function DeviceStatusWidget({ data }: { data: DashboardData | null }) {
   const t = useLocale();
+  const devices = data?.devices ?? [];
+  const total = devices.reduce((sum, d) => sum + d.count, 0);
+
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <div className="shrink-0 px-3 pt-3">
         <SectionHeader
           title={t.devices.title}
+          icon={<IconDevices size={14} />}
           badge={
-            <span className="text-muted-foreground rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[9px]">
-              {t.devices.total}
-            </span>
+            total > 0 && (
+              <span className="text-muted-foreground rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[9px]">
+                {total}
+              </span>
+            )
           }
         />
       </div>
       <div className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto px-3 pt-2 pb-3">
         <div className="flex flex-col gap-1">
-          <DeviceItem
-            icon={<IconWind size={14} />}
-            label={t.devices.airConditioning}
-            count={6}
-            status="critical"
-          />
-          <DeviceItem
-            icon={<IconBolt size={14} />}
-            label={t.devices.lighting}
-            count={30}
-            status="warn"
-          />
-          <DeviceItem
-            icon={<IconElevator size={14} />}
-            label={t.devices.elevators}
-            count={10}
-            status="ok"
-          />
-          <DeviceItem
-            icon={<IconDeviceLaptop size={14} />}
-            label={t.devices.servers}
-            count={24}
-            status="ok"
-          />
+          {devices.map((device, index) => (
+            <DeviceItem
+              key={`${device.category}-${index}`}
+              icon={getDeviceIcon(device.category)}
+              label={getDeviceLabel(device.category, t)}
+              count={device.count}
+              status={device.status}
+            />
+          ))}
+          {devices.length === 0 && (
+            <div className="text-muted-foreground flex flex-1 items-center justify-center text-[11px]">
+              {t.charts.noData}
+            </div>
+          )}
         </div>
       </div>
     </div>

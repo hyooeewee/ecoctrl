@@ -1,3 +1,4 @@
+import { IconChartPie, IconTrendingUp } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import {
   Area,
@@ -98,9 +99,14 @@ export function EnergyTrendChart({ className, data }: { className?: string; data
 
   return (
     <div className={cn("flex h-full flex-col gap-2 p-3", className)}>
-      <p className="text-muted-foreground text-[11px] font-semibold tracking-widest uppercase">
-        {t.charts.trendTitle}
-      </p>
+      <div className="flex items-center gap-1.5">
+        <span style={{ color: "var(--color-chart-1)" }}>
+          <IconTrendingUp size={14} />
+        </span>
+        <p className="text-muted-foreground text-[11px] font-semibold tracking-widest uppercase">
+          {t.charts.trendTitle}
+        </p>
+      </div>
       <div ref={ref} className="min-h-0 w-full flex-1 overflow-hidden">
         <AreaChart
           width={width}
@@ -168,9 +174,14 @@ export function EnergyBreakdownChart({
 
   return (
     <div className={cn("flex h-full flex-col gap-2 p-3", className)}>
-      <p className="text-muted-foreground text-[11px] font-semibold tracking-widest uppercase">
-        {t.charts.breakdownTitle}
-      </p>
+      <div className="flex items-center gap-1.5">
+        <span style={{ color: "var(--color-chart-3)" }}>
+          <IconChartPie size={14} />
+        </span>
+        <p className="text-muted-foreground text-[11px] font-semibold tracking-widest uppercase">
+          {t.charts.breakdownTitle}
+        </p>
+      </div>
 
       <div className="flex min-h-0 flex-1 items-center gap-4">
         <div ref={ref} className="h-full flex-1 overflow-hidden">

@@ -1,3 +1,5 @@
+import { IconTrendingUp } from "@tabler/icons-react";
+
 import type { DashboardData } from "~/lib/dashboard-api";
 import { useLocale } from "~/locales";
 
@@ -9,10 +11,15 @@ export function TrendWidget({ data }: { data: DashboardData | null }) {
   if (!data || data.trend.length === 0) {
     return (
       <div className="flex h-full flex-col gap-2 p-3">
-        <p className="text-muted-foreground text-[11px] font-semibold tracking-widest uppercase">
-          {t.charts.trendTitle}
-        </p>
-        <div className="flex flex-1 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-xs text-muted-foreground">
+        <div className="flex items-center gap-1.5">
+          <span style={{ color: "var(--color-chart-1)" }}>
+            <IconTrendingUp size={14} />
+          </span>
+          <p className="text-muted-foreground text-[11px] font-semibold tracking-widest uppercase">
+            {t.charts.trendTitle}
+          </p>
+        </div>
+        <div className="flex flex-1 items-center justify-center text-xs text-muted-foreground">
           {t.charts.noData}
         </div>
       </div>
