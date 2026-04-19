@@ -1,4 +1,4 @@
-import { shared } from "@ecoctrl/config/shared";
+import { viteConfig } from "@ecoctrl/shared";
 import { reactRouter } from "@react-router/dev/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, mergeConfig, loadEnv } from "vite-plus";
@@ -17,7 +17,7 @@ export default defineConfig(({ mode }) => {
         }
       : undefined;
 
-  return mergeConfig(shared, {
+  return mergeConfig(viteConfig, {
     plugins: [tailwindcss(), reactRouter()],
     resolve: {
       tsconfigPaths: true,

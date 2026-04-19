@@ -35,7 +35,7 @@
     "rolldown": "1.0.0-rc.16"
   },
   "devDependencies": {
-    "@ecoctrl/config": "workspace:*",
+    "@ecoctrl/shared": "workspace:*",
     "@types/node": "catalog:",
     "dotenv-cli": "^11.0.0",
     "drizzle-kit": "^0.31.10",

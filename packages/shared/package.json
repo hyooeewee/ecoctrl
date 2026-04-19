@@ -1,0 +1,14 @@
+{
+  "name": "@ecoctrl/shared",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./config/vite.config.base.ts",
+    "./tsconfig.base.json": "./config/tsconfig.base.json",
+    "./tsconfig.app.json": "./config/tsconfig.app.json",
+    "./tsconfig.node.json": "./config/tsconfig.node.json"
+  },
+  "devDependencies": {
+    "vite-plus": "catalog:"
+  }
+}

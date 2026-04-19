@@ -30,7 +30,7 @@
     "tw-animate-css": "catalog:"
   },
   "devDependencies": {
-    "@ecoctrl/config": "workspace:*",
+    "@ecoctrl/shared": "workspace:*",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
