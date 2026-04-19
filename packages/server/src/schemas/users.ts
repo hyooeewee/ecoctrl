@@ -4,6 +4,7 @@ import { USER_ROLE_LIST } from "@ecoctrl/shared";
 export const users = pgTable("users", {
   id: uuid("id").primaryKey(),
   username: varchar("username", { length: 255 }).notNull().default(""),
+  password: varchar("password", { length: 255 }),
   email: varchar("email", { length: 255 }).notNull(),
   role: varchar("role", { length: 100 }).notNull().default(USER_ROLE_LIST[USER_ROLE_LIST.length - 1]),
   status: varchar("status", { length: 20 }).notNull().default("offline"),
