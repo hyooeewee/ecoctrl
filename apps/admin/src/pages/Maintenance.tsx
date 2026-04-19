@@ -137,10 +137,10 @@ function MaintenanceCalendar({
               className={cn(
                 "relative flex h-9 flex-col items-center justify-center rounded-md text-sm transition-colors",
                 isToday
-                  ? "bg-blue-500 text-white hover:bg-blue-600"
+                  ? "bg-blue-500 text-primary-foreground hover:bg-blue-600"
                   : isSelected
                     ? "bg-blue-50 text-blue-700 hover:bg-blue-100"
-                    : "hover:bg-gray-100",
+                    : "hover:bg-muted",
               )}
             >
               <span>{day.day}</span>
@@ -152,7 +152,7 @@ function MaintenanceCalendar({
                       className={cn(
                         "h-1 w-1 rounded-full",
                         isToday
-                          ? "bg-white/80"
+                          ? "bg-background/80"
                           : e.priority === "high"
                             ? "bg-red-500"
                             : e.priority === "medium"
@@ -297,7 +297,7 @@ export default function Maintenance() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
         {/* Left Side: Manuals */}
         <Card className="flex h-full flex-col border-none shadow-sm lg:col-span-1 gap-0">
-          <CardHeader className="flex flex-row items-center gap-3 border-b border-gray-50 px-6 pb-3">
+          <CardHeader className="flex flex-row items-center gap-3 border-b border-border/50 px-6 pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <BookOpen size={18} className="text-blue-600" />
               维保说明书
@@ -319,7 +319,7 @@ export default function Maintenance() {
             <ScrollArea className="h-[500px]">
               <div className="px-2 py-1">
                 {loading && (
-                  <div className="flex items-center justify-center py-8 text-sm text-gray-400">
+                  <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
                     加载中...
                   </div>
                 )}
@@ -388,15 +388,15 @@ export default function Maintenance() {
               {selectedDateReminders.map((reminder) => (
                 <div
                   key={reminder.id}
-                  className="group flex cursor-pointer items-center justify-between rounded-lg bg-gray-50 p-4 transition-colors hover:bg-gray-100"
+                  className="group flex cursor-pointer items-center justify-between rounded-lg bg-muted p-4 transition-colors hover:bg-muted/80"
                 >
                   <div className="flex items-center gap-4">
                     <div
                       className={`h-10 w-2 rounded-full ${reminder.priority === "high" ? "bg-red-500" : reminder.priority === "medium" ? "bg-orange-500" : "bg-blue-500"}`}
                     ></div>
                     <div>
-                      <p className="font-semibold text-gray-900">{reminder.task}</p>
-                      <p className="mt-1 flex items-center gap-1 text-xs text-gray-500">
+                      <p className="font-semibold text-foreground">{reminder.task}</p>
+                      <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                         <Calendar size={12} />
                         截止日期: {reminder.dueDate}
                       </p>
@@ -430,13 +430,13 @@ export default function Maintenance() {
               维保说明书预览: {previewManual}
             </DialogTitle>
           </DialogHeader>
-          <div className="flex-1 bg-gray-100 p-4">
-            <div className="relative flex h-full w-full flex-col items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-white shadow-inner">
+          <div className="flex-1 bg-muted p-4">
+            <div className="relative flex h-full w-full flex-col items-center justify-center overflow-hidden rounded-lg border border-border bg-background shadow-inner">
               <div className="absolute top-0 left-0 h-1.5 w-full animate-pulse bg-blue-500 opacity-50"></div>
-              <FileText size={64} className="mb-4 text-gray-200" />
+              <FileText size={64} className="mb-4 text-muted-foreground/30" />
               <div className="space-y-2 text-center">
-                <p className="text-lg font-semibold text-gray-700">正在加载文档内容...</p>
-                <p className="text-sm text-gray-400">正在从安全服务器检索 PDF 流</p>
+                <p className="text-lg font-semibold text-foreground">正在加载文档内容...</p>
+                <p className="text-sm text-muted-foreground">正在从安全服务器检索 PDF 流</p>
               </div>
               {/* PDF Viewer Placeholder */}
             </div>
@@ -460,7 +460,7 @@ export default function Maintenance() {
                 {reminders.map((reminder) => (
                   <div
                     key={reminder.id}
-                    className="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3"
+                    className="flex items-center justify-between rounded-lg bg-muted px-4 py-3"
                   >
                     <div className="flex items-center gap-4">
                       <div
@@ -474,8 +474,8 @@ export default function Maintenance() {
                         )}
                       />
                       <div>
-                        <p className="font-semibold text-gray-900">{reminder.task}</p>
-                        <p className="mt-1 flex items-center gap-1 text-xs text-gray-500">
+                        <p className="font-semibold text-foreground">{reminder.task}</p>
+                        <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                           <Calendar size={12} />
                           截止日期: {reminder.dueDate}
                         </p>
@@ -553,7 +553,7 @@ export default function Maintenance() {
               {selectedReminder.description && (
                 <div>
                   <p className="text-xs text-muted-foreground">任务描述</p>
-                  <p className="text-sm text-gray-700">{selectedReminder.description}</p>
+                  <p className="text-sm text-foreground">{selectedReminder.description}</p>
                 </div>
               )}
               <div className="grid grid-cols-2 gap-3">

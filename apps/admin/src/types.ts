@@ -88,7 +88,7 @@ export interface SystemConfig {
   platformName: string;
   refreshInterval: number;
   realtimeAlertEnabled: boolean;
-  darkModeFollowSystem: boolean;
+  theme: "light" | "dark" | "system";
 }
 
 export interface ReportTemplate {

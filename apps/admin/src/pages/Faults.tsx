@@ -76,18 +76,12 @@ export default function Faults() {
       </div>
 
       <Tabs defaultValue="list" className="w-full">
-        <TabsList className="bg-gray-100/80 p-1">
-          <TabsTrigger
-            value="list"
-            className="gap-2 px-6 data-selected:bg-white data-selected:shadow-sm"
-          >
+        <TabsList>
+          <TabsTrigger value="list" className="gap-2 px-6">
             <History size={16} />
             实时故障列表
           </TabsTrigger>
-          <TabsTrigger
-            value="analytics"
-            className="gap-2 px-6 text-gray-500 data-selected:bg-white data-selected:shadow-sm"
-          >
+          <TabsTrigger value="analytics" className="gap-2 px-6">
             <BarChart3 size={16} />
             故障统计分析
           </TabsTrigger>
@@ -97,12 +91,12 @@ export default function Faults() {
           <Card className="border-none shadow-sm">
             <CardContent className="p-0">
               {loading ? (
-                <div className="flex items-center justify-center py-16 text-sm text-gray-400">
+                <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
                   加载中...
                 </div>
               ) : (
                 <Table>
-                  <TableHeader className="bg-gray-50/50">
+                  <TableHeader className="bg-muted/50">
                     <TableRow>
                       <TableHead className="px-6">设备名称</TableHead>
                       <TableHead className="text-center">故障等级</TableHead>
@@ -138,7 +132,7 @@ export default function Faults() {
                               {fault.level}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-center font-mono text-sm text-gray-500">
+                          <TableCell className="text-center font-mono text-sm text-muted-foreground">
                             {fault.time}
                           </TableCell>
                           <TableCell className="px-6 text-right">
@@ -159,8 +153,8 @@ export default function Faults() {
         </TabsContent>
 
         <TabsContent value="analytics" className="mt-4">
-          <Card className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-none border-gray-200 bg-gray-50 shadow-sm">
-            <div className="text-center text-gray-400">
+          <Card className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-none border-border bg-muted shadow-sm">
+            <div className="text-center text-muted-foreground">
               <BarChart3 className="mx-auto mb-2 opacity-50" />
               <p className="text-sm font-medium">统计分析图表加载中...</p>
             </div>

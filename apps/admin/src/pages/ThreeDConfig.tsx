@@ -28,7 +28,9 @@ export default function ThreeDConfig() {
 
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center text-sm text-gray-400">加载中...</div>
+      <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+        加载中...
+      </div>
     );
   }
 
@@ -41,11 +43,13 @@ export default function ThreeDConfig() {
             <CardDescription>配置模型的基础加载参数和渲染风格。</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 px-6 pb-6">
-            <div className="flex flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/50 p-8 text-center">
-              <Upload className="text-gray-400" size={32} />
+            <div className="flex flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed border-border bg-muted/50 p-8 text-center">
+              <Upload className="text-muted-foreground" size={32} />
               <div>
-                <p className="text-sm font-medium text-gray-900">点击或将模型文件拖拽至此</p>
-                <p className="mt-1 text-xs text-gray-500">支持 OBJ, GLB, GLTF 格式 (最大 50MB)</p>
+                <p className="text-sm font-medium text-foreground">点击或将模型文件拖拽至此</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  支持 OBJ, GLB, GLTF 格式 (最大 50MB)
+                </p>
               </div>
               <Button variant="outline" size="sm">
                 选择文件
@@ -54,11 +58,11 @@ export default function ThreeDConfig() {
 
             <div className="space-y-4">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">预设视角</span>
+                <span className="text-muted-foreground">预设视角</span>
                 <span className="font-mono text-xs">{config?.cameraPreset ?? "--"}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">环境光强度</span>
+                <span className="text-muted-foreground">环境光强度</span>
                 <span className="font-mono text-xs">{config?.ambientLightIntensity ?? "--"}</span>
               </div>
             </div>
@@ -68,7 +72,7 @@ export default function ThreeDConfig() {
         <Card className="h-full border-none shadow-sm lg:col-span-2">
           <Tabs defaultValue="hotspots" className="flex h-full flex-col">
             <div className="px-6 pt-4">
-              <TabsList className="bg-gray-100">
+              <TabsList>
                 <TabsTrigger value="hotspots" className="gap-2">
                   <MapPin size={14} />
                   热点区域配置
@@ -81,7 +85,7 @@ export default function ThreeDConfig() {
             </div>
 
             <TabsContent value="hotspots" className="flex-1 p-6">
-              <div className="relative flex h-full min-h-[400px] w-full items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-gray-100">
+              <div className="relative flex h-full min-h-[400px] w-full items-center justify-center overflow-hidden rounded-xl border border-border bg-muted">
                 <div
                   className="pointer-events-none absolute inset-0 opacity-10"
                   style={{
@@ -89,14 +93,14 @@ export default function ThreeDConfig() {
                     backgroundSize: "20px 20px",
                   }}
                 ></div>
-                <p className="z-10 text-sm font-medium text-gray-400 italic">
+                <p className="z-10 text-sm font-medium text-muted-foreground italic">
                   热点区域配置面板（演示静态效果）
                 </p>
               </div>
             </TabsContent>
 
             <TabsContent value="labels" className="flex-1 p-6">
-              <div className="relative flex h-full min-h-[400px] w-full items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-gray-100">
+              <div className="relative flex h-full min-h-[400px] w-full items-center justify-center overflow-hidden rounded-xl border border-border bg-muted">
                 <div
                   className="pointer-events-none absolute inset-0 opacity-10"
                   style={{
@@ -104,7 +108,7 @@ export default function ThreeDConfig() {
                     backgroundSize: "20px 20px",
                   }}
                 ></div>
-                <p className="z-10 text-sm font-medium text-gray-400 italic">
+                <p className="z-10 text-sm font-medium text-muted-foreground italic">
                   标签配置面板（演示静态效果）
                 </p>
               </div>

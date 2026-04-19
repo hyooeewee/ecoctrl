@@ -46,7 +46,7 @@ export default function Accounts() {
 
   const STATUS_MAP: Record<string, { label: string; color: string }> = {
     online: { label: "在线", color: "bg-green-500" },
-    offline: { label: "离线", color: "bg-gray-300" },
+    offline: { label: "离线", color: "bg-muted-foreground" },
     disabled: { label: "禁用", color: "bg-red-500" },
     busy: { label: "繁忙", color: "bg-orange-500" },
   };
@@ -176,7 +176,7 @@ export default function Accounts() {
           />
         </div>
         <div className="relative w-full sm:w-72">
-          <Search className="absolute top-2.5 left-3 h-4 w-4 text-gray-400" />
+          <Search className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="搜索用户..."
             className="pl-10"
@@ -192,10 +192,10 @@ export default function Accounts() {
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <div className="py-16 text-center text-sm text-gray-400">加载中...</div>
+            <div className="py-16 text-center text-sm text-muted-foreground">加载中...</div>
           ) : (
             <Table>
-              <TableHeader className="bg-gray-50/50">
+              <TableHeader className="bg-muted/50">
                 <TableRow>
                   <TableHead className="px-6">姓名</TableHead>
                   <TableHead>邮箱</TableHead>
@@ -208,7 +208,7 @@ export default function Accounts() {
                 {filtered.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="px-6 font-medium">{user.username}</TableCell>
-                    <TableCell className="text-sm text-gray-500">{user.email}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="font-normal">
                         {ROLE_LABELS[user.role] ?? user.role}

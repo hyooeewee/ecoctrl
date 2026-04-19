@@ -1,4 +1,4 @@
-import { Bell, Search } from "lucide-react";
+import { Bell, Monitor, Moon, Search, Sun } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,6 +16,8 @@ import { Input } from "@/components/ui/input";
 
 import type { User } from "@ecoctrl/shared";
 import { authApi } from "../api/auth";
+import { applyDarkMode, getStoredTheme } from "@/lib/darkMode";
+import type { Theme } from "@/lib/darkMode";
 
 interface HeaderProps {
   activeTab: string;
@@ -34,9 +36,36 @@ const tabTitleMap: Record<string, string> = {
   energy: "能耗管理",
 };
 
+const THEME_CYCLE: Theme[] = ["light", "dark", "system"];
+
+const ThemeIcon: Record<Theme, React.ReactNode> = {
+  light: <Sun size={18} />,
+  dark: <Moon size={18} />,
+  system: <Monitor size={18} />,
+};
+
+const ThemeLabel: Record<Theme, string> = {
+  light: "浅色",
+  dark: "深色",
+  system: "跟随系统",
+};
+
 export default function Header({ activeTab }: HeaderProps) {
   const currentTitle = tabTitleMap[activeTab] || "管理总览";
   const [user, setUser] = useState<Pick<User, "username" | "avatarUrl"> | null>(null);
+  const [theme, setTheme] = useState<Theme>("system");
+
+  useEffect(() => {
+    const stored = getStoredTheme() ?? "system";
+    setTheme(stored);
+    applyDarkMode(stored);
+  }, []);
+
+  const toggleTheme = () => {
+    const next = THEME_CYCLE[(THEME_CYCLE.indexOf(theme) + 1) % THEME_CYCLE.length];
+    setTheme(next);
+    applyDarkMode(next);
+  };
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -66,6 +95,16 @@ export default function Header({ activeTab }: HeaderProps) {
             className="bg-muted/50 focus-visible:ring-primary/20 h-9 border-none pl-10 shadow-none focus-visible:ring-1"
           />
         </div>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-muted-foreground hover:text-foreground relative"
+          title={ThemeLabel[theme]}
+          onClick={toggleTheme}
+        >
+          {ThemeIcon[theme]}
+        </Button>
 
         <Button
           variant="ghost"
