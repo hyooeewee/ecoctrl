@@ -287,7 +287,9 @@ export function BentoItem({ id, children, className }: BentoItemProps) {
       e.stopPropagation();
       e.preventDefault();
 
-      const cardEl = (e.currentTarget as HTMLElement).closest("[data-bento-id]") as HTMLElement | null;
+      const cardEl = (e.currentTarget as HTMLElement).closest(
+        "[data-bento-id]",
+      ) as HTMLElement | null;
       if (!cardEl) return;
 
       const r = cardEl.getBoundingClientRect();

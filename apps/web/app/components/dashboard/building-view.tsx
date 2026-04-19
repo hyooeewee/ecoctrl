@@ -1,6 +1,5 @@
 import {
   ArcRotateCamera,
-  ArcRotateCameraPointersInput,
   Color4,
   CubicEase,
   EasingFunction,
@@ -8,12 +7,12 @@ import {
   GlowLayer,
   HemisphericLight,
   Matrix,
+  PointerEventTypes,
   Scene,
   TransformNode,
   SceneLoader,
   Vector3,
   Animation,
-  PointerEventTypes,
   type Nullable,
 } from "@babylonjs/core";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
@@ -83,9 +82,9 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
     const rootMeshRef = useRef<Nullable<TransformNode>>(null);
     const labelAnchorsRef = useRef<{ key: string; worldPos: Vector3 }[]>([]);
     const labelElsRef = useRef<Record<string, HTMLDivElement | null>>({});
-    const isDraggingRef = useRef(false);
     const glowRef = useRef<Nullable<GlowLayer>>(null);
     const [loaded, setLoaded] = useState(false);
+    const isInteractingRef = useRef(false);
 
     const {
       autoRotate,
@@ -191,14 +190,22 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
       camera.wheelPrecision = 50;
       camera.lowerRadiusLimit = 8;
       camera.upperRadiusLimit = 60;
-      // Disable default left-button rotation on camera; we will rotate the mesh instead.
-      const pointersInput = camera.inputs.attached.pointers as
-        | ArcRotateCameraPointersInput
-        | undefined;
-      if (pointersInput) {
-        pointersInput.buttons = [1, 2]; // middle (pan) and right (pan) only; exclude left (0)
-      }
+      camera.lowerBetaLimit = 0.1;
+      camera.upperBetaLimit = Math.PI / 2.2;
       cameraRef.current = camera;
+
+      // Use BabylonJS built-in camera controls; observe pointer events via
+      // onPointerObservable so we can pause auto-rotate during interaction.
+      const pointerObserver = scene.onPointerObservable.add((eventData) => {
+        if (eventData.type === PointerEventTypes.POINTERDOWN) {
+          isInteractingRef.current = true;
+        } else if (
+          eventData.type === PointerEventTypes.POINTERUP ||
+          eventData.type === PointerEventTypes.POINTERCANCEL
+        ) {
+          isInteractingRef.current = false;
+        }
+      });
 
       const hemi = new HemisphericLight("hemi", new Vector3(0, 1, 0), scene);
       hemi.intensity = 0.6;
@@ -271,6 +278,7 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
             // eslint-disable-next-line no-console
             console.log("[ecoctrl] GLB loaded, pivot created, root parented:", glbRoot.name);
           }
+          scene.stopAllAnimations();
           setLoaded(true);
         })
         .catch((err) => {
@@ -279,10 +287,9 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
         });
 
       engine.runRenderLoop(() => {
-        // Auto-rotate the building around Y when user is not dragging
-        const root = rootMeshRef.current;
-        if (root && !isDraggingRef.current && autoRotate) {
-          root.rotation.y += 0.002 * rotateSpeed;
+        // Auto-rotate camera alpha when idle
+        if (autoRotate && !isInteractingRef.current) {
+          camera.alpha += 0.002 * rotateSpeed;
         }
 
         scene.render();
@@ -312,61 +319,6 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
         }
       });
 
-      // ─── Long-press drag to rotate mesh around Y axis ───────────────────────────
-      let isPointerDown = false;
-      let isDragging = false;
-      let lastClientX = 0;
-      let longPressTimer: number | null = null;
-      const DRAG_SENSITIVITY = 0.008;
-      const LONG_PRESS_DELAY = 150;
-
-      const pointerObserver = scene.onPointerObservable.add((pointerInfo) => {
-        const evt = pointerInfo.event as PointerEvent;
-        switch (pointerInfo.type) {
-          case PointerEventTypes.POINTERDOWN: {
-            if (evt.button !== 0) return;
-            isPointerDown = true;
-            lastClientX = evt.clientX;
-            longPressTimer = window.setTimeout(() => {
-              isDragging = true;
-              isDraggingRef.current = true;
-              canvas.style.cursor = "grabbing";
-            }, LONG_PRESS_DELAY);
-            break;
-          }
-          case PointerEventTypes.POINTERMOVE: {
-            if (!isPointerDown) return;
-            if (!isDragging) {
-              if (Math.abs(evt.clientX - lastClientX) > 20 && longPressTimer) {
-                clearTimeout(longPressTimer);
-                longPressTimer = null;
-                isPointerDown = false;
-                isDraggingRef.current = false;
-              }
-              return;
-            }
-            const deltaX = evt.clientX - lastClientX;
-            lastClientX = evt.clientX;
-            const root = rootMeshRef.current;
-            if (root) {
-              root.rotation.y += deltaX * DRAG_SENSITIVITY;
-            }
-            break;
-          }
-          case PointerEventTypes.POINTERUP: {
-            if (longPressTimer) {
-              clearTimeout(longPressTimer);
-              longPressTimer = null;
-            }
-            isPointerDown = false;
-            isDragging = false;
-            isDraggingRef.current = false;
-            canvas.style.cursor = "";
-            break;
-          }
-        }
-      });
-
       const handleResize = () => {
         engine.resize();
       };
@@ -374,7 +326,8 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
 
       return () => {
         window.removeEventListener("resize", handleResize);
-        if (longPressTimer) clearTimeout(longPressTimer);
+        engine.stopRenderLoop();
+        camera.detachControl(canvas);
         scene.onPointerObservable.remove(pointerObserver);
         engine.dispose();
         engineRef.current = null;

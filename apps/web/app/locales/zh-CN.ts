@@ -151,15 +151,7 @@ export const zhCN = {
   // ── 右侧面板 — 实时告警 ────────────────────────────────────────────────────
   alerts: {
     title: "实时告警",
-    active: "8 条激活",
-    serverTempTitle: "机房温度过高",
-    serverTempSub: "T3 机房温度超限",
-    hvacWarnTitle: "暖通 3 号机组告警",
-    hvacWarnSub: "暖通 2 号机组异常",
-    powerSurgeTitle: "检测到电涌",
-    powerSurgeSub: "电涌事件已检测",
-    upsBatteryTitle: "UPS 电量不足",
-    upsBatterySub: "备用电源剩余 18%",
+    activeSuffix: "条激活",
   },
 
   // ── Bento Widgets ──────────────────────────────────────────────────────────
