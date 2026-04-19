@@ -1,5 +1,5 @@
 import { Bell, Search } from "lucide-react";
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+
+import { AuthUser } from "../types";
+import { authApi } from "../api/auth";
 
 interface HeaderProps {
   activeTab: string;
@@ -33,6 +36,19 @@ const tabTitleMap: Record<string, string> = {
 
 export default function Header({ activeTab }: HeaderProps) {
   const currentTitle = tabTitleMap[activeTab] || "管理总览";
+  const [user, setUser] = useState<AuthUser | null>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const data = await authApi.me();
+        setUser(data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchUser();
+  }, []);
 
   return (
     <header className="border-border bg-card sticky top-0 z-30 flex h-16 items-center justify-between border-b px-8">
@@ -67,10 +83,14 @@ export default function Header({ activeTab }: HeaderProps) {
                 variant="ghost"
                 className="hover:bg-muted flex items-center gap-3 rounded-md p-1 pl-3 transition-all"
               >
-                <span className="text-foreground text-sm font-medium">Admin</span>
+                <span className="text-foreground text-sm font-medium">
+                  {user?.username ?? "Admin"}
+                </span>
                 <Avatar className="ring-muted h-8 w-8 ring-2 ring-offset-2">
-                  <AvatarImage src={`https://avatar.vercel.sh/admin?size=32`} />
-                  <AvatarFallback>AD</AvatarFallback>
+                  <AvatarImage src={user?.avatarUrl ?? `https://avatar.vercel.sh/admin?size=32`} />
+                  <AvatarFallback>
+                    {(user?.username ?? "Admin").slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
                 </Avatar>
               </Button>
             }

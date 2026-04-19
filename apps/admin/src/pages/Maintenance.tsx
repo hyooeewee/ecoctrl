@@ -27,6 +27,10 @@ interface Manual {
   url?: string;
 }
 
+function formatDateKey(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function MaintenanceCalendar({
   reminders,
   onDateSelect,
@@ -34,8 +38,8 @@ function MaintenanceCalendar({
   reminders: MaintenanceReminder[];
   onDateSelect?: (dateStr: string) => void;
 }) {
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 3, 1));
-  const today = new Date(2026, 3, 18);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const today = new Date();
   const [selectedDate, setSelectedDate] = useState(today);
 
   const year = currentDate.getFullYear();
@@ -127,7 +131,7 @@ function MaintenanceCalendar({
               onClick={() => {
                 const date = new Date(year, month, day.day);
                 setSelectedDate(date);
-                const ds = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+                const ds = formatDateKey(date);
                 onDateSelect?.(ds);
               }}
               className={cn(
@@ -175,7 +179,8 @@ export default function Maintenance() {
   const [reminders, setReminders] = useState<MaintenanceReminder[]>([]);
   const [showAllPlans, setShowAllPlans] = useState(false);
   const [selectedReminder, setSelectedReminder] = useState<MaintenanceReminder | null>(null);
-  const [selectedDateStr, setSelectedDateStr] = useState<string>("2026-04-18");
+  const todayStr = formatDateKey(new Date());
+  const [selectedDateStr, setSelectedDateStr] = useState<string>(todayStr);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<MaintenanceReminder>>({});
   const [saving, setSaving] = useState(false);
@@ -367,12 +372,10 @@ export default function Maintenance() {
               <div className="space-y-1">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Clock size={18} className="text-orange-500" />
-                  {selectedDateStr === "2026-04-18"
-                    ? "今日维保提醒"
-                    : `${selectedDateStr} 维保提醒`}
+                  {selectedDateStr === todayStr ? "今日维保提醒" : `${selectedDateStr} 维保提醒`}
                 </CardTitle>
                 <CardDescription>
-                  {selectedDateStr === "2026-04-18"
+                  {selectedDateStr === todayStr
                     ? "今天需要关注的设备保养任务清单"
                     : `${selectedDateStr}需要关注的设备保养任务清单`}
                 </CardDescription>
@@ -411,7 +414,7 @@ export default function Maintenance() {
               ))}
               {selectedDateReminders.length === 0 && (
                 <div className="text-center py-8 text-sm text-muted-foreground">
-                  {selectedDateStr === "2026-04-18" ? "今日暂无维保任务" : "该日期暂无维保任务"}
+                  {selectedDateStr === todayStr ? "今日暂无维保任务" : "该日期暂无维保任务"}
                 </div>
               )}
             </CardContent>

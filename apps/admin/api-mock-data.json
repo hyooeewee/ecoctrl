@@ -1,0 +1,148 @@
+[
+  {
+    "methods": ["GET"],
+    "endpoint": "/api/system/backup-schedule",
+    "data": {
+      "nextBackup": "2023-11-20 03:00"
+    }
+  },
+  {
+    "methods": ["GET"],
+    "endpoint": "/api/energy/areas",
+    "data": [
+      {
+        "title": "A 栋办公区",
+        "current": 4200,
+        "target": 5000,
+        "color": "bg-primary",
+        "powerFactor": 0.94,
+        "loadRate": "72%"
+      },
+      {
+        "title": "B 栋研发中心",
+        "current": 8500,
+        "target": 7000,
+        "color": "bg-red-500",
+        "powerFactor": 0.94,
+        "loadRate": "72%"
+      },
+      {
+        "title": "C 栋生产车间",
+        "current": 15400,
+        "target": 20000,
+        "color": "bg-green-500",
+        "powerFactor": 0.94,
+        "loadRate": "72%"
+      }
+    ]
+  },
+  {
+    "methods": ["GET"],
+    "endpoint": "/api/models",
+    "data": [
+      {
+        "id": "1",
+        "name": "冷却塔模型_1",
+        "version": "v2.1",
+        "format": "GLB",
+        "size": "12.4MB",
+        "thumbnailUrl": null,
+        "docUrl": null
+      },
+      {
+        "id": "2",
+        "name": "冷却塔模型_2",
+        "version": "v2.1",
+        "format": "GLB",
+        "size": "12.4MB",
+        "thumbnailUrl": null,
+        "docUrl": null
+      },
+      {
+        "id": "3",
+        "name": "冷却塔模型_3",
+        "version": "v2.1",
+        "format": "GLB",
+        "size": "12.4MB",
+        "thumbnailUrl": null,
+        "docUrl": null
+      },
+      {
+        "id": "4",
+        "name": "冷却塔模型_4",
+        "version": "v2.1",
+        "format": "GLB",
+        "size": "12.4MB",
+        "thumbnailUrl": null,
+        "docUrl": null
+      },
+      {
+        "id": "5",
+        "name": "冷却塔模型_5",
+        "version": "v2.1",
+        "format": "GLB",
+        "size": "12.4MB",
+        "thumbnailUrl": null,
+        "docUrl": null
+      },
+      {
+        "id": "6",
+        "name": "冷却塔模型_6",
+        "version": "v2.1",
+        "format": "GLB",
+        "size": "12.4MB",
+        "thumbnailUrl": null,
+        "docUrl": null
+      }
+    ]
+  },
+  {
+    "methods": ["GET", "PUT"],
+    "endpoint": "/api/3d-config",
+    "data": {
+      "cameraPreset": "Default_View_01",
+      "ambientLightIntensity": 0.85,
+      "hotspots": [],
+      "labels": []
+    }
+  },
+  {
+    "methods": ["GET", "PUT"],
+    "endpoint": "/api/config",
+    "data": {
+      "platformName": "EcoCtrl 能管平台",
+      "refreshInterval": 30,
+      "realtimeAlertEnabled": true,
+      "darkModeFollowSystem": false
+    }
+  },
+  {
+    "methods": ["GET"],
+    "endpoint": "/api/reports/templates",
+    "data": [
+      {
+        "name": "能耗日报",
+        "count": "1,245 份",
+        "icon": "📄"
+      },
+      {
+        "name": "月度汇总",
+        "count": "48 份",
+        "icon": "📊"
+      },
+      {
+        "name": "异常分析",
+        "count": "12 份",
+        "icon": "🔍"
+      }
+    ]
+  },
+  {
+    "methods": ["GET"],
+    "endpoint": "/api/auth/me",
+    "data": {
+      "username": "Admin",
+      "avatarUrl": "https://avatar.vercel.sh/admin?size=32"
+    }
+  }
+]
