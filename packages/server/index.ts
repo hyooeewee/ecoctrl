@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
+
 import Fastify from "fastify";
 import multipart from "@fastify/multipart";
 import cors from "@fastify/cors";
