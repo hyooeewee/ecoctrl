@@ -19,6 +19,16 @@ const planSchema = {
   },
 };
 
+const templateSchema = {
+  type: "object",
+  properties: {
+    id: { type: "number" },
+    name: { type: "string" },
+    count: { type: "string" },
+    icon: { type: "string" },
+  },
+};
+
 const errorResponseSchema = {
   type: "object",
   properties: {
@@ -120,13 +130,13 @@ export default async function reportRoutes(fastify: FastifyInstance) {
         response: {
           200: {
             type: "array",
-            items: { type: "string" },
+            items: templateSchema,
           },
         },
       },
     },
     async (_request, reply) => {
-      const templates: string[] = await getReportTemplates();
+      const templates = await getReportTemplates();
       return reply.send(templates);
     },
   );

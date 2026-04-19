@@ -11,4 +11,6 @@ export const reportPlans = pgTable("report_plans", {
 export const reportTemplates = pgTable("report_templates", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
+  count: varchar("count", { length: 100 }).notNull(),
+  icon: varchar("icon", { length: 50 }).notNull(),
 });

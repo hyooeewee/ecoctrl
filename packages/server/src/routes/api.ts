@@ -12,6 +12,8 @@ import dashboardRoutes from "@/routes/dashboard";
 import alertRoutes from "@/routes/alerts";
 import modelRoutes from "@/routes/models";
 import iotRoutes from "@/routes/iot";
+import systemRoutes from "@/routes/system";
+import authRoutes from "@/routes/auth";
 
 export default async function apiRoutes(fastify: FastifyInstance) {
   await fastify.register(fileRoutes, { prefix: "/files" });
@@ -26,4 +28,6 @@ export default async function apiRoutes(fastify: FastifyInstance) {
   await fastify.register(alertRoutes, { prefix: "/alerts" });
   await fastify.register(iotRoutes, { prefix: "/iot" });
   await fastify.register(modelRoutes, { prefix: "/models" });
+  await fastify.register(systemRoutes, { prefix: "/system" });
+  await fastify.register(authRoutes, { prefix: "/auth" });
 }
