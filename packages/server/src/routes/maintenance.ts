@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import crypto from "node:crypto";
 import type { MaintenanceReminder, MaintenanceReminderDetail } from "@/types/index";
-import { getReminders, saveData } from "@/db/maintenance";
+import { getReminders, saveData } from "@/repositories/maintenance";
 
 const reminderItemSchema = {
   type: "object",
@@ -83,7 +83,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
       },
     },
     async (_request, reply) => {
-      const reminders = getReminders();
+      const reminders = await getReminders();
       const list: MaintenanceReminder[] = reminders.map((r) => ({
         id: r.id,
         task: r.task,
@@ -114,7 +114,8 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const reminder = getReminders().find((r) => r.id === id);
+      const reminders = await getReminders();
+      const reminder = reminders.find((r) => r.id === id);
       if (!reminder) {
         return reply.status(404).send({ error: "Reminder not found" });
       }
@@ -135,7 +136,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const body = request.body as Partial<MaintenanceReminderDetail>;
-      const reminders = getReminders();
+      const reminders = await getReminders();
 
       const newReminder: MaintenanceReminderDetail = {
         id: crypto.randomUUID(),
@@ -151,7 +152,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
       };
 
       reminders.push(newReminder);
-      saveData(reminders);
+      await saveData(reminders);
       return reply.status(201).send(newReminder);
     },
   );
@@ -178,7 +179,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       const { id } = request.params as { id: string };
       const body = request.body as Omit<MaintenanceReminderDetail, "id">;
-      const reminders = getReminders();
+      const reminders = await getReminders();
 
       const index = reminders.findIndex((r) => r.id === id);
       if (index === -1) {
@@ -187,7 +188,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
 
       const replaced: MaintenanceReminderDetail = { id, ...body };
       reminders[index] = replaced;
-      saveData(reminders);
+      await saveData(reminders);
       return reply.send(replaced);
     },
   );
@@ -217,7 +218,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const reminders = getReminders();
+      const reminders = await getReminders();
 
       const index = reminders.findIndex((r) => r.id === id);
       if (index === -1) {
@@ -225,7 +226,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
       }
 
       reminders.splice(index, 1);
-      saveData(reminders);
+      await saveData(reminders);
       return reply.send({ success: true });
     },
   );

@@ -1,11 +1,9 @@
-import fs from "node:fs";
-import path from "node:path";
-import { DATA_DIR } from "@/lib/paths";
+import { eq } from "drizzle-orm";
+import { db } from "@/config/database";
+import { iotTokens } from "@/schemas/iotTokens";
 
-const BASE_URL = process.env.BASE_URL?.replace(/\/$/, "") || "";
+const BASE_URL = process.env.BASE_URL?.replace(/\/+$/, "") || "";
 const APP_ID = process.env.APP_ID || "";
-
-const TOKEN_FILE = path.join(DATA_DIR, "iot-token.json");
 
 interface TokenData {
   accessToken: string;
@@ -15,22 +13,36 @@ interface TokenData {
 
 let tokenCache: TokenData | null = null;
 
-function loadToken(): TokenData | null {
-  if (!fs.existsSync(TOKEN_FILE)) return null;
-  try {
-    return JSON.parse(fs.readFileSync(TOKEN_FILE, "utf-8")) as TokenData;
-  } catch {
-    return null;
+async function loadToken(): Promise<TokenData | null> {
+  const rows = await db.select().from(iotTokens);
+  if (rows.length === 0) return null;
+  const r = rows[0];
+  return {
+    accessToken: r.accessToken,
+    refreshToken: r.refreshToken,
+    expiresAt: r.expiresAt,
+  };
+}
+
+async function saveToken(token: TokenData): Promise<void> {
+  const rows = await db.select().from(iotTokens);
+  if (rows.length > 0) {
+    await db
+      .update(iotTokens)
+      .set({
+        accessToken: token.accessToken,
+        refreshToken: token.refreshToken,
+        expiresAt: token.expiresAt,
+      })
+      .where(eq(iotTokens.id, rows[0].id));
+  } else {
+    await db.insert(iotTokens).values(token);
   }
 }
 
-function saveToken(token: TokenData) {
-  fs.writeFileSync(TOKEN_FILE, JSON.stringify(token, null, 2));
-}
-
-function getToken(): TokenData | null {
+async function getToken(): Promise<TokenData | null> {
   if (tokenCache) return tokenCache;
-  tokenCache = loadToken();
+  tokenCache = await loadToken();
   return tokenCache;
 }
 
@@ -71,8 +83,6 @@ async function fetchToken(grantType: "authorization" | "refresh", refreshTokenVa
 
   const body = (await res.json()) as Record<string, unknown>;
 
-  // Token endpoint returns { access_token, refresh_token, token_type } on success,
-  // without a "code" field. Business errors have "code".
   if (body.code !== undefined && body.code !== 200) {
     throw new Error(`Token ${grantType} failed: code=${body.code}, msg=${JSON.stringify(body)}`);
   }
@@ -86,31 +96,29 @@ async function fetchToken(grantType: "authorization" | "refresh", refreshTokenVa
 
 export async function authorize(): Promise<string> {
   const tokenData = await fetchToken("authorization");
-  saveToken(tokenData);
+  await saveToken(tokenData);
   tokenCache = tokenData;
   return tokenData.accessToken;
 }
 
 export async function refreshToken(): Promise<string> {
-  const current = getToken();
+  const current = await getToken();
   if (!current?.refreshToken) {
-    // No refresh token available, try full authorization
     return authorize();
   }
 
   try {
     const tokenData = await fetchToken("refresh", current.refreshToken);
-    saveToken(tokenData);
+    await saveToken(tokenData);
     tokenCache = tokenData;
     return tokenData.accessToken;
   } catch (err) {
-    // Refresh failed (code 305/306), fall back to authorization
     return authorize();
   }
 }
 
 export async function ensureToken(): Promise<string> {
-  const token = getToken();
+  const token = await getToken();
   if (!token || Date.now() >= token.expiresAt - 60000) {
     return refreshToken();
   }
@@ -136,7 +144,6 @@ export async function iotRequest(
   if (!headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
-  // Merge extra headers (e.g., prop from upstream request)
   if (extraHeaders) {
     for (const [k, v] of Object.entries(extraHeaders)) {
       if (v) headers.set(k, v);
@@ -146,10 +153,7 @@ export async function iotRequest(
   const res = await fetch(url, { ...options, headers });
   const body = (await res.json()) as IotResponse;
 
-  // Check business error codes from upstream
   if (body.code === 301 || body.code === 302) {
-    // 301: Token expired, 302: Token signature incorrect
-    // Clear cache and re-authorize, then retry once
     tokenCache = null;
     await authorize();
     return iotRequest(path, options, extraHeaders);

@@ -4,15 +4,21 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "NODE_ENV=development tsx watch index.ts",
+    "dev": "dotenv -e .env.local -- env NODE_ENV=development tsx watch index.ts",
     "build": "pnpm clean && rolldown -c",
-    "build:watch": " pnpm clean && rolldown -c -w",
-    "preview": "NODE_ENV=staging pnpm build && node dist/index.js",
+    "build:watch": "pnpm clean && rolldown -c -w",
+    "preview": "dotenv -e .env.local -- env NODE_ENV=staging pnpm build && node dist/index.js",
     "start": "pm2 start ecosystem.config.cjs",
     "stop": "pm2 stop ecosystem.config.cjs",
     "restart": "pm2 restart ecosystem.config.cjs",
     "clean": "rimraf dist",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "dotenv -e .env.local -- tsx scripts/seed.ts",
+    "db:drop": "drizzle-kit drop"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.0",
@@ -20,12 +26,16 @@
     "@fastify/static": "^8.0.0",
     "@fastify/swagger": "^9.7.0",
     "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
     "fastify": "^5.0.0",
+    "postgres": "^3.4.9",
     "rolldown": "1.0.0-rc.16"
   },
   "devDependencies": {
     "@ecoctrl/config": "workspace:*",
     "@types/node": "catalog:",
+    "dotenv-cli": "^11.0.0",
+    "drizzle-kit": "^0.31.10",
     "pm2": "^6.0.14",
     "rimraf": "^6.1.3",
     "tsx": "^4.0.0",

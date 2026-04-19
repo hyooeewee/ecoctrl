@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import crypto from "node:crypto";
 import type { User } from "@/types/index";
-import { getUsers, addUser, removeUser } from "@/db/users";
+import { getUsers, addUser, removeUser } from "@/repositories/users";
 
 const userSchema = {
   type: "object",
@@ -37,7 +37,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
       },
     },
     async (_request, reply) => {
-      const users: User[] = getUsers();
+      const users: User[] = await getUsers();
       return reply.send(users);
     },
   );
@@ -71,7 +71,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
         status: "active",
         lastLogin: "-",
       };
-      addUser(newUser);
+      await addUser(newUser);
       return reply.status(201).send(newUser);
     },
   );
@@ -101,7 +101,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const ok = removeUser(id);
+      const ok = await removeUser(id);
       if (!ok) {
         return reply.status(404).send({ error: "User not found" });
       }

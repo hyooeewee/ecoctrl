@@ -6,7 +6,7 @@ import {
   addReportPlan,
   updateReportPlan,
   getReportTemplates,
-} from "@/db/reports";
+} from "@/repositories/reports";
 
 const planSchema = {
   type: "object",
@@ -41,7 +41,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
       },
     },
     async (_request, reply) => {
-      const plans: ReportPlan[] = getReportPlans();
+      const plans: ReportPlan[] = await getReportPlans();
       return reply.send(plans);
     },
   );
@@ -69,7 +69,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       const body = request.body as Omit<ReportPlan, "id">;
       const plan: ReportPlan = { id: crypto.randomUUID(), ...body };
-      addReportPlan(plan);
+      await addReportPlan(plan);
       return reply.status(201).send(plan);
     },
   );
@@ -104,7 +104,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       const { id } = request.params as { id: string };
       const body = request.body as Partial<Omit<ReportPlan, "id">>;
-      const updated = updateReportPlan(id, body);
+      const updated = await updateReportPlan(id, body);
       if (!updated) {
         return reply.status(404).send({ error: "Plan not found" });
       }
@@ -126,7 +126,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
       },
     },
     async (_request, reply) => {
-      const templates: string[] = getReportTemplates();
+      const templates: string[] = await getReportTemplates();
       return reply.send(templates);
     },
   );
