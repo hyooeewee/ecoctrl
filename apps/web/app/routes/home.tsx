@@ -164,9 +164,9 @@ export default function Home() {
             </BentoGrid>
           </main>
 
-          {/* Bottom navigation — slides in/out from bottom */}
+          {/* Bottom navigation — absolute at bottom, floats above widgets */}
           <div
-            className="shrink-0 overflow-hidden transition-all duration-300 ease-in-out pointer-events-auto"
+            className="absolute bottom-0 left-2 right-2 z-20 overflow-hidden transition-all duration-300 ease-in-out pointer-events-auto"
             style={{
               maxHeight: navVisible ? "60px" : "0px",
               opacity: navVisible ? 1 : 0,
@@ -186,7 +186,11 @@ export default function Home() {
             <button
               type="button"
               onClick={() => {
-                if (!fullscreen) buildingRef.current?.ensureCloseUp(15);
+                if (!fullscreen) {
+                  buildingRef.current?.ensureCloseUp(15);
+                } else {
+                  buildingRef.current?.resetToDefaultRadius();
+                }
                 setFullscreen((v) => !v);
               }}
               className="text-cyber-cyan flex size-8 items-center justify-center transition-colors hover:bg-white/10"

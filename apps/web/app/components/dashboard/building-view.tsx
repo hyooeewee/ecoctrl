@@ -62,6 +62,8 @@ export interface BuildingViewRef {
   resetCamera: () => void;
   /** Animate closer only when currently farther than `minRadius`. */
   ensureCloseUp: (minRadius: number) => void;
+  /** Animate radius back to the user-configured default. */
+  resetToDefaultRadius: () => void;
 }
 
 // ─── Animate single camera property ───────────────────────────────────────────
@@ -354,6 +356,11 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
           if (camera.radius >= minRadius) {
             animateCameraRadius(camera, minRadius * 0.9);
           }
+        },
+        resetToDefaultRadius: () => {
+          const camera = cameraRef.current;
+          if (!camera) return;
+          animateCameraRadius(camera, defaultCameraRadius);
         },
       }),
       [defaultCameraRadius, defaultRotationY],
