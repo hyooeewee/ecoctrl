@@ -347,14 +347,23 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label className="text-sm font-medium">{t.settings.editAutoExitDelay}</Label>
-                    <p className="text-muted-foreground text-xs">{t.settings.editAutoExitDelayDesc}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {t.settings.editAutoExitDelayDesc}
+                    </p>
                   </div>
                   <Select
                     value={String(editAutoExitDelay)}
                     onValueChange={(v) => setEditAutoExitDelay(Number(v))}
                   >
                     <SelectTrigger className="w-32">
-                      <SelectValue />
+                      <SelectValue>
+                        {editAutoExitDelay === 0 && t.settings.editAutoExitNever}
+                        {editAutoExitDelay === 15000 && `15 ${t.settings.seconds}`}
+                        {editAutoExitDelay === 30000 && `30 ${t.settings.seconds}`}
+                        {editAutoExitDelay === 60000 && "1 min"}
+                        {editAutoExitDelay === 120000 && "2 min"}
+                        {editAutoExitDelay === 300000 && "5 min"}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="15000">15 {t.settings.seconds}</SelectItem>

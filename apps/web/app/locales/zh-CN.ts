@@ -142,7 +142,6 @@ export const zhCN = {
   // ── 右侧面板 — 设备状态 ────────────────────────────────────────────────────
   devices: {
     title: "设备状态",
-    total: "共 43 台",
     airConditioning: "空调系统",
     lighting: "照明系统",
     elevators: "电梯",
@@ -181,12 +180,6 @@ export const zhCN = {
   // ── 右侧面板 — AI 优化建议 ─────────────────────────────────────────────────
   ai: {
     title: "AI 优化建议",
-    hvacText: "优化暖通夜间计划——降低夜间温控设定值至 18°C",
-    hvacSaving: "预计节能 12%",
-    lightingText: "根据占用传感器调整照明——B2–B4 区域",
-    lightingSaving: "预计节能 8%",
-    serverText: "将非关键服务器任务迁移至低峰期 (02:00–06:00)",
-    serverSaving: "预计节省 5% 费用",
   },
 };
 

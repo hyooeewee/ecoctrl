@@ -15,6 +15,18 @@ export interface BreakdownItem {
   color: string;
 }
 
+export interface DeviceStatusItem {
+  category: "hvac" | "lighting" | "elevator" | "server";
+  count: number;
+  status: "ok" | "warn" | "critical";
+}
+
+export interface AiSuggestionItem {
+  category: "hvac" | "lighting" | "server";
+  text: string;
+  saving?: string;
+}
+
 export interface DashboardCard {
   titleKey: string;
   value: string;
@@ -32,6 +44,8 @@ export interface DashboardData {
   cards: DashboardCard[];
   trend: TrendPoint[];
   breakdown: BreakdownItem[];
+  devices?: DeviceStatusItem[];
+  aiSuggestions?: AiSuggestionItem[];
 }
 
 const API_PREFIX = import.meta.env.VITE_API_PREFIX ?? "";

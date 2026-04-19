@@ -142,7 +142,6 @@ export const enUS = {
   // ── Right Panel — Device Status ────────────────────────────────────────────
   devices: {
     title: "Device Status",
-    total: "43 Total",
     airConditioning: "Air Conditioning",
     lighting: "Lighting System",
     elevators: "Elevators",
@@ -181,11 +180,5 @@ export const enUS = {
   // ── Right Panel — AI Optimization Suggestions ──────────────────────────────
   ai: {
     title: "AI Optimization",
-    hvacText: "Optimize HVAC night schedule—lower night temp to 18°C",
-    hvacSaving: "Estimated energy saving 12%",
-    lightingText: "Adjust lighting based on occupancy sensors—B2–B4 areas",
-    lightingSaving: "Estimated energy saving 8%",
-    serverText: "Migrate non-critical server tasks to off-peak hours (02:00–06:00)",
-    serverSaving: "Estimated cost saving 5%",
   },
 };
