@@ -35,7 +35,7 @@ export async function removeUser(id: string): Promise<boolean> {
 
 export async function updateUser(
   id: string,
-  data: Partial<{ username: string; email: string; role: string; status: string; avatarUrl: string | null }>,
+  data: Partial<{ username: string; password: string; email: string; role: string; status: string; avatarUrl: string | null }>,
 ): Promise<boolean> {
   const result = await db.update(users).set(data).where(eq(users.id, id)).returning();
   return result.length > 0;
