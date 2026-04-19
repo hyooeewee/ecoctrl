@@ -88,6 +88,7 @@ export const zhCN = {
 
   // ── 左侧统计卡片 ───────────────────────────────────────────────────────────
   cards: {
+    noData: "无数据",
     totalEnergy: "今日总用电",
     totalEnergyFooter: "24 小时累计用量",
 
@@ -128,6 +129,7 @@ export const zhCN = {
 
   // ── 底部图表 ───────────────────────────────────────────────────────────────
   charts: {
+    noData: "无数据",
     trendTitle: "24 小时能耗趋势",
     trendTimeUnit: "时", // used in tooltip: "08时  420 kWh"
     breakdownTitle: "能耗分布",

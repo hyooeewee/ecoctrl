@@ -5,17 +5,18 @@ import { defineConfig, mergeConfig, loadEnv } from "vite-plus";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, "");
-  const backendUrl = env.BACKEND_URL;
+  const apiBaseUrl = env.VITE_API_BASE_URL;
 
   const proxy =
-    backendUrl && /^(https?:\/\/)?(localhost|127\.0\.0\.1)/.test(backendUrl)
+    apiBaseUrl && /^(https?:\/\/)?(localhost|127\.0\.0\.1)/.test(apiBaseUrl)
       ? {
           "/api": {
-            target: backendUrl,
+            target: apiBaseUrl,
             changeOrigin: true,
           },
         }
       : undefined;
+
   return mergeConfig(shared, {
     plugins: [tailwindcss(), reactRouter()],
     resolve: {

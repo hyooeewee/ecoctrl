@@ -88,6 +88,7 @@ export const enUS = {
 
   // ── Left Stat Cards ────────────────────────────────────────────────────────
   cards: {
+    noData: "No data",
     totalEnergy: "Today's Total Power",
     totalEnergyFooter: "24h cumulative usage",
 
@@ -128,6 +129,7 @@ export const enUS = {
 
   // ── Bottom Charts ──────────────────────────────────────────────────────────
   charts: {
+    noData: "No data",
     trendTitle: "24h Energy Trend",
     trendTimeUnit: "h",
     breakdownTitle: "Energy Breakdown",

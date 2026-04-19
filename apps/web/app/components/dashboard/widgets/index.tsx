@@ -4,7 +4,7 @@ import type { DashboardData } from "~/lib/dashboard-api";
 import { allWidgets } from "./registry";
 
 interface DashboardWidgetsProps {
-  data: DashboardData;
+  data: DashboardData | null;
 }
 
 export function DashboardWidgets({ data }: DashboardWidgetsProps) {
