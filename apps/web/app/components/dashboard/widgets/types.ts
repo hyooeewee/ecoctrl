@@ -12,5 +12,5 @@ export interface DashboardWidget {
   // Returns the display name for the widget (used in settings page)
   title: (t: { bentoWidgets: Record<string, string> }) => string;
   defaultLayout: WidgetDefaultLayout;
-  component: React.FC<{ data: DashboardData }>;
+  component: React.FC<{ data: DashboardData | null }>;
 }

@@ -31,16 +31,19 @@ export function meta(_args: Route.MetaArgs) {
 
 // ─── Loader ─────────────────────────────────────────────────────────────────────
 
-export async function clientLoader() {
-  const data = await fetchDashboardData();
-  return data;
+export async function clientLoader(): Promise<DashboardData | null> {
+  try {
+    return await fetchDashboardData();
+  } catch {
+    return null;
+  }
 }
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function Home() {
   const t = useLocale();
-  const loaderData = useLoaderData() as DashboardData;
+  const loaderData = useLoaderData() as DashboardData | null;
   const navHideDelay = useSettingsStore((state) => state.navHideDelay);
   const bentoDragEnabled = useSettingsStore((state) => state.bentoDragEnabled);
   const bentoLayout = useSettingsStore((state) => state.bentoLayout);

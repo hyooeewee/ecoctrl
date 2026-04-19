@@ -3,7 +3,7 @@ import type { DashboardData } from "~/lib/dashboard-api";
 import { StatCardWidget } from "./_stat-card";
 import type { DashboardWidget } from "./types";
 
-export function RenewableWidget({ data }: { data: DashboardData }) {
+export function RenewableWidget({ data }: { data: DashboardData | null }) {
   return <StatCardWidget data={data} titleKey="renewableRate" />;
 }
 

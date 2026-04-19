@@ -17,10 +17,16 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   loadStatus: <IconWind size={12} />,
 };
 
-export function StatCardWidget({ data, titleKey }: { data: DashboardData; titleKey: string }) {
+export function StatCardWidget({ data, titleKey }: { data: DashboardData | null; titleKey: string }) {
   const t = useLocale();
-  const card = data.cards.find((c) => c.titleKey === titleKey);
-  if (!card) return null;
+  const card = data?.cards.find((c) => c.titleKey === titleKey);
+  if (!card) {
+    return (
+      <div className="flex flex-1 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-xs text-muted-foreground">
+        {t.cards.noData}
+      </div>
+    );
+  }
 
   const props = {
     title: t.cards[card.titleKey as keyof typeof t.cards] ?? card.titleKey,

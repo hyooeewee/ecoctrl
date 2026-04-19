@@ -3,7 +3,7 @@ import type { DashboardData } from "~/lib/dashboard-api";
 import { StatCardWidget } from "./_stat-card";
 import type { DashboardWidget } from "./types";
 
-export function TotalEnergyWidget({ data }: { data: DashboardData }) {
+export function TotalEnergyWidget({ data }: { data: DashboardData | null }) {
   return <StatCardWidget data={data} titleKey="totalEnergy" />;
 }
 
