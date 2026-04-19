@@ -17,25 +17,32 @@ import { useLocale } from "~/locales";
 
 // ─── Measure hook ─────────────────
 
-function useMeasureWidth(fallback = 700): [React.RefObject<HTMLDivElement | null>, number] {
+function useMeasureSize(
+  fallbackW = 700,
+  fallbackH = 148,
+): [React.RefObject<HTMLDivElement | null>, number, number] {
   const ref = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(fallback);
+  const [width, setWidth] = useState(fallbackW);
+  const [height, setHeight] = useState(fallbackH);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const initial = el.getBoundingClientRect().width;
-    if (initial > 0) setWidth(initial);
+    const rect = el.getBoundingClientRect();
+    if (rect.width > 0) setWidth(rect.width);
+    if (rect.height > 0) setHeight(rect.height);
 
     const ro = new ResizeObserver(([entry]) => {
       const w = entry.contentRect.width;
+      const h = entry.contentRect.height;
       if (w > 0) setWidth(w);
+      if (h > 0) setHeight(h);
     });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
 
-  return [ref, width];
+  return [ref, width, height];
 }
 
 // ─── Custom tooltips ──────────────────────────────────────────────────────────
@@ -86,24 +93,18 @@ function PieCustomTooltip({
 
 export function EnergyTrendChart({ className, data }: { className?: string; data: TrendPoint[] }) {
   const t = useLocale();
-  const [ref, width] = useMeasureWidth(700);
-  const CHART_H = 148;
+  const [ref, width, height] = useMeasureSize(700, 148);
   const color = "var(--color-chart-1)";
 
   return (
-    <div
-      className={cn(
-        "flex flex-col gap-2 rounded-xl border border-white/10 bg-white/6 p-3",
-        className,
-      )}
-    >
+    <div className={cn("flex h-full flex-col gap-2 p-3", className)}>
       <p className="text-muted-foreground text-[11px] font-semibold tracking-widest uppercase">
         {t.charts.trendTitle}
       </p>
-      <div ref={ref} className="h-[148px] w-full overflow-hidden">
+      <div ref={ref} className="min-h-0 w-full flex-1 overflow-hidden">
         <AreaChart
           width={width}
-          height={CHART_H}
+          height={height}
           data={data}
           margin={{ top: 4, right: 4, bottom: 0, left: -20 }}
           style={{ outline: "none" }}
@@ -158,8 +159,7 @@ export function EnergyBreakdownChart({
   data: BreakdownItem[];
 }) {
   const t = useLocale();
-  const [ref, width] = useMeasureWidth(200);
-  const PIE_H = 148;
+  const [ref, width] = useMeasureSize(200, 148);
 
   const breakdownData = data.map((item) => ({
     ...item,
@@ -167,19 +167,14 @@ export function EnergyBreakdownChart({
   }));
 
   return (
-    <div
-      className={cn(
-        "flex flex-col gap-2 rounded-xl border border-white/10 bg-white/6 p-3",
-        className,
-      )}
-    >
+    <div className={cn("flex h-full flex-col gap-2 p-3", className)}>
       <p className="text-muted-foreground text-[11px] font-semibold tracking-widest uppercase">
         {t.charts.breakdownTitle}
       </p>
 
-      <div className="flex items-center gap-4" style={{ height: PIE_H }}>
+      <div className="flex min-h-0 flex-1 items-center gap-4">
         <div ref={ref} className="h-full flex-1 overflow-hidden">
-          <PieChart width={width} height={PIE_H} style={{ outline: "none" }}>
+          <PieChart width={width} height={width} style={{ outline: "none" }}>
             <Pie
               data={breakdownData}
               dataKey="value"

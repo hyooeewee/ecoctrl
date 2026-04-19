@@ -59,6 +59,21 @@ export const zhCN = {
     language: "界面语言",
     reducedMotion: "减少动态效果",
     reducedMotionDesc: "关闭不必要的动画以提升可访问性",
+    bentoTitle: "仪表盘布局",
+    bentoSubtitle: "自定义首页 Bento 网格排列与可见性",
+    bentoEditLayout: "编辑布局",
+    bentoResetLayout: "重置布局",
+    bentoResetConfirm: "布局已重置为默认",
+    editAutoExitDelay: "编辑模式自动退出",
+    editAutoExitDelayDesc: "无操作一段时间后自动退出编辑模式",
+    editAutoExitNever: "不自动退出",
+  },
+
+  // ── 编辑布局浮动工具栏 ──────────────────────────────────────────────────────
+  editLayout: {
+    done: "完成",
+    cancel: "取消",
+    reset: "还原",
   },
 
   // ── 三维建筑视图 ───────────────────────────────────────────────────────────
@@ -144,6 +159,21 @@ export const zhCN = {
     powerSurgeSub: "电涌事件已检测",
     upsBatteryTitle: "UPS 电量不足",
     upsBatterySub: "备用电源剩余 18%",
+  },
+
+  // ── Bento Widgets ──────────────────────────────────────────────────────────
+  bentoWidgets: {
+    "stat-totalEnergy": "今日总用电",
+    "stat-carbonEmission": "今日碳排放",
+    "stat-energyIntensity": "能耗强度",
+    "stat-todayCost": "今日电费",
+    "stat-renewableRate": "可再生能源占比",
+    "stat-loadStatus": "负载状态",
+    "panel-devices": "设备状态",
+    "panel-alerts": "实时告警",
+    "panel-ai": "AI 优化建议",
+    "chart-trend": "24 小时能耗趋势",
+    "chart-breakdown": "能耗分布",
   },
 
   // ── 右侧面板 — AI 优化建议 ─────────────────────────────────────────────────

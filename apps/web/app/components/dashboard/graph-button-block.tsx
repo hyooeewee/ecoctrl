@@ -12,7 +12,6 @@ import {
   YAxis,
 } from "recharts";
 
-import { Card, CardContent } from "~/components/ui/card";
 import { cn } from "~/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -354,10 +353,9 @@ export function GraphButtonBlock({
   className,
 }: GraphButtonBlockProps) {
   return (
-    <Card
+    <div
       className={cn(
-        // py-0 overrides the Card's default py-4, so CardContent owns all padding
-        "relative overflow-hidden rounded-xl border-white/10 bg-white/[0.04] py-0 backdrop-blur-sm transition-colors hover:bg-white/[0.07] hover:ring-white/20",
+        "relative flex h-full flex-col gap-1.5 overflow-hidden rounded-xl px-3 py-2",
         className,
       )}
     >
@@ -370,7 +368,7 @@ export function GraphButtonBlock({
         }}
       />
 
-      <CardContent className="relative flex h-full flex-col gap-1.5 px-3 py-2">
+      <div className="relative flex h-full flex-col gap-1.5">
         {/* ── Row 1: icon · title · delta ── */}
         <div className="flex items-start justify-between gap-1">
           <div className="flex min-w-0 items-center gap-1.5">
@@ -419,8 +417,8 @@ export function GraphButtonBlock({
         </div>
         {/* ── Row 4: footer ── */}
         {footer && <div className="text-muted-foreground text-[9px] leading-none">{footer}</div>}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 

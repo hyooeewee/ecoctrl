@@ -1,4 +1,4 @@
-import { IconArrowLeft } from "@tabler/icons-react";
+import { IconArrowBackUp, IconArrowLeft } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -16,7 +16,7 @@ import { Separator } from "~/components/ui/separator";
 import { Slider } from "~/components/ui/slider";
 import { Switch } from "~/components/ui/switch";
 import { locale, useLocale } from "~/locales";
-import { useSettingsStore } from "~/store/settings";
+import { defaultBentoLayout, useSettingsStore } from "~/store/settings";
 
 import type { Route } from "./+types/settings";
 
@@ -25,7 +25,7 @@ export function meta(_args: Route.MetaArgs) {
 }
 
 // Section definition with order preserved
-const sectionIds = ["general", "appearance", "data", "account"] as const;
+const sectionIds = ["general", "appearance", "layout", "data", "account"] as const;
 type SectionId = (typeof sectionIds)[number];
 
 export default function SettingsPage() {
@@ -47,6 +47,8 @@ export default function SettingsPage() {
     defaultRotationY,
     language,
     reducedMotion,
+    bentoLayout,
+    editAutoExitDelay,
     setAutoRotate,
     setRotateSpeed,
     setShowLabels,
@@ -57,12 +59,22 @@ export default function SettingsPage() {
     setDefaultRotationY,
     setLanguage,
     setReducedMotion,
+    setBentoDragEnabled,
+    setEditAutoExitDelay,
+    resetBentoLayout,
     reset,
   } = useSettingsStore();
+
+  const isLayoutModified = JSON.stringify(bentoLayout) !== JSON.stringify(defaultBentoLayout);
 
   const handleReset = () => {
     reset();
     toast.success(t.settings.resetConfirm);
+  };
+
+  const handleResetBento = () => {
+    resetBentoLayout();
+    toast.success(t.settings.bentoResetConfirm);
   };
 
   // Scroll spy with IntersectionObserver
@@ -160,6 +172,7 @@ export default function SettingsPage() {
           <nav className="flex flex-col gap-0.5 px-3">
             {tabItem("general", t.settings.general)}
             {tabItem("appearance", t.settings.appearance)}
+            {tabItem("layout", t.settings.bentoTitle)}
             {tabItem("data", t.settings.data)}
             {tabItem("account", t.settings.account)}
           </nav>
@@ -292,6 +305,66 @@ export default function SettingsPage() {
                     step={15}
                     onValueChange={(v) => setDefaultRotationY(Array.isArray(v) ? v[0] : v)}
                   />
+                </div>
+              </div>
+            </section>
+
+            <Separator className="bg-white/5" />
+
+            {/* Layout */}
+            <section id="layout" className="py-6">
+              <h3 className="mb-5 text-xl font-semibold tracking-tight">{t.settings.bentoTitle}</h3>
+              <div className="flex flex-col gap-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm font-medium">{t.settings.bentoTitle}</Label>
+                    <p className="text-muted-foreground text-xs">{t.settings.bentoSubtitle}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {isLayoutModified && (
+                      <button
+                        type="button"
+                        onClick={handleResetBento}
+                        className="text-foreground/70 hover:text-foreground inline-flex items-center gap-1.5 text-xs transition-colors"
+                      >
+                        <IconArrowBackUp size={14} />
+                        {t.settings.bentoResetLayout}
+                      </button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setBentoDragEnabled(true);
+                        navigate("/");
+                      }}
+                    >
+                      {t.settings.bentoEditLayout}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm font-medium">{t.settings.editAutoExitDelay}</Label>
+                    <p className="text-muted-foreground text-xs">{t.settings.editAutoExitDelayDesc}</p>
+                  </div>
+                  <Select
+                    value={String(editAutoExitDelay)}
+                    onValueChange={(v) => setEditAutoExitDelay(Number(v))}
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="15000">15 {t.settings.seconds}</SelectItem>
+                      <SelectItem value="30000">30 {t.settings.seconds}</SelectItem>
+                      <SelectItem value="60000">1 min</SelectItem>
+                      <SelectItem value="120000">2 min</SelectItem>
+                      <SelectItem value="300000">5 min</SelectItem>
+                      <SelectItem value="0">{t.settings.editAutoExitNever}</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </section>

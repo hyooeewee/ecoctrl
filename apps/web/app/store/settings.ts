@@ -1,6 +1,23 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+// ─── Bento layout types ───────────────────────────────────────────────────────
+
+export interface BentoLayoutItem {
+  id: string;
+  x: number; // 1-based column start
+  y: number; // 1-based row start
+  w: number;
+  h: number;
+  hidden: boolean;
+}
+
+import { buildDefaultBentoLayout } from "~/components/dashboard/widgets/registry";
+
+export const defaultBentoLayout: BentoLayoutItem[] = buildDefaultBentoLayout();
+
+// ─── Store ────────────────────────────────────────────────────────────────────
+
 export interface SettingsState {
   autoRotate: boolean;
   rotateSpeed: number;
@@ -12,6 +29,9 @@ export interface SettingsState {
   defaultRotationY: number;
   language: "zh-CN" | "en-US";
   reducedMotion: boolean;
+  bentoLayout: BentoLayoutItem[];
+  bentoDragEnabled: boolean;
+  editAutoExitDelay: number; // ms; 0 = disabled
 }
 
 interface SettingsStore extends SettingsState {
@@ -25,6 +45,13 @@ interface SettingsStore extends SettingsState {
   setDefaultRotationY: (value: number) => void;
   setLanguage: (value: SettingsState["language"]) => void;
   setReducedMotion: (value: boolean) => void;
+  setBentoDragEnabled: (value: boolean) => void;
+  setEditAutoExitDelay: (value: number) => void;
+  setBentoItemHidden: (id: string, hidden: boolean) => void;
+  swapBentoItems: (idA: string, idB: string) => void;
+  moveBentoItem: (id: string, x: number, y: number) => void;
+  setBentoLayout: (layout: BentoLayoutItem[]) => void;
+  resetBentoLayout: () => void;
   reset: () => void;
 }
 
@@ -39,6 +66,9 @@ const defaults: SettingsState = {
   defaultRotationY: 0,
   language: "zh-CN",
   reducedMotion: false,
+  bentoLayout: defaultBentoLayout,
+  bentoDragEnabled: false,
+  editAutoExitDelay: 30000,
 };
 
 export const useSettingsStore = create<SettingsStore>()(
@@ -55,6 +85,34 @@ export const useSettingsStore = create<SettingsStore>()(
       setDefaultRotationY: (value) => set({ defaultRotationY: value }),
       setLanguage: (value) => set({ language: value }),
       setReducedMotion: (value) => set({ reducedMotion: value }),
+      setBentoDragEnabled: (value) => set({ bentoDragEnabled: value }),
+      setEditAutoExitDelay: (value) => set({ editAutoExitDelay: value }),
+      setBentoItemHidden: (id, hidden) =>
+        set((state) => ({
+          bentoLayout: state.bentoLayout.map((item) =>
+            item.id === id ? { ...item, hidden } : item,
+          ),
+        })),
+      swapBentoItems: (idA, idB) =>
+        set((state) => {
+          const idxA = state.bentoLayout.findIndex((i) => i.id === idA);
+          const idxB = state.bentoLayout.findIndex((i) => i.id === idB);
+          if (idxA === -1 || idxB === -1) return state;
+          const a = state.bentoLayout[idxA];
+          const b = state.bentoLayout[idxB];
+          const next = [...state.bentoLayout];
+          next[idxA] = { ...a, x: b.x, y: b.y, w: b.w, h: b.h };
+          next[idxB] = { ...b, x: a.x, y: a.y, w: a.w, h: a.h };
+          return { bentoLayout: next };
+        }),
+      moveBentoItem: (id, x, y) =>
+        set((state) => ({
+          bentoLayout: state.bentoLayout.map((item) =>
+            item.id === id ? { ...item, x, y } : item,
+          ),
+        })),
+      setBentoLayout: (layout) => set({ bentoLayout: layout }),
+      resetBentoLayout: () => set({ bentoLayout: defaultBentoLayout }),
       reset: () => set(defaults),
     }),
     {

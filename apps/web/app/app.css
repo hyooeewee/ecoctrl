@@ -168,3 +168,18 @@ body {
 .recharts-surface {
   outline: none !important;
 }
+
+/* Bento grid snap pulse animation */
+@keyframes bento-snap {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 oklch(0.93 0.2 196 / 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 6px oklch(0.93 0.2 196 / 0.1);
+  }
+}
+
+.animate-bento-snap {
+  animation: bento-snap 1.2s ease-in-out infinite;
+}
