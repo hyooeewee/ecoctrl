@@ -60,6 +60,8 @@ export interface BuildingViewRef {
   zoomIn: () => void;
   zoomOut: () => void;
   resetCamera: () => void;
+  /** Animate closer only when currently farther than `minRadius`. */
+  ensureCloseUp: (minRadius: number) => void;
 }
 
 // ─── Animate single camera property ───────────────────────────────────────────
@@ -344,6 +346,13 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
             root.rotation.setAll(0);
             root.rotationQuaternion = null;
             root.rotation.y = (defaultRotationY * Math.PI) / 180;
+          }
+        },
+        ensureCloseUp: (minRadius: number) => {
+          const camera = cameraRef.current;
+          if (!camera) return;
+          if (camera.radius >= minRadius) {
+            animateCameraRadius(camera, minRadius * 0.9);
           }
         },
       }),

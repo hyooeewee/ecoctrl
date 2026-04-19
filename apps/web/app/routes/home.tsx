@@ -185,7 +185,10 @@ export default function Home() {
           >
             <button
               type="button"
-              onClick={() => setFullscreen((v) => !v)}
+              onClick={() => {
+                if (!fullscreen) buildingRef.current?.ensureCloseUp(15);
+                setFullscreen((v) => !v);
+              }}
               className="text-cyber-cyan flex size-8 items-center justify-center transition-colors hover:bg-white/10"
               title={fullscreen ? t.controls.exitFullscreen : t.controls.fullscreen}
             >
