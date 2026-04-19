@@ -168,8 +168,8 @@ export default function Home() {
           <div
             className="shrink-0 overflow-hidden transition-all duration-300 ease-in-out pointer-events-auto"
             style={{
-              maxHeight: fullscreen ? "0px" : navVisible ? "60px" : "0px",
-              opacity: fullscreen ? 0 : navVisible ? 1 : 0,
+              maxHeight: navVisible ? "60px" : "0px",
+              opacity: navVisible ? 1 : 0,
             }}
           >
             <DashboardNav />
