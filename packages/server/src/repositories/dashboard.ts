@@ -2,7 +2,7 @@ import { db } from "@/config/database";
 import { dashboardStats, dashboardCards } from "@/schemas/dashboard";
 import { energyReadings, energyBreakdowns } from "@/schemas/energy";
 import { alerts } from "@/schemas/alerts";
-import type { DashboardStats, EnergyChartItem, Alert, DashboardCard, DashboardData, TrendPoint, BreakdownItem } from "@/types/index";
+import type { DashboardStats, EnergyChartItem, Alert, DashboardCard, DashboardData, TrendPoint, BreakdownItem, DeviceStatusItem, AiSuggestionItem } from "@/types/index";
 
 export async function getDashboardStats(): Promise<DashboardStats> {
   const rows = await db.select().from(dashboardStats);
@@ -68,5 +68,18 @@ export async function getDashboardData(): Promise<DashboardData> {
     color: r.color ?? "",
   }));
 
-  return { cards, trend, breakdown };
+  const devices: DeviceStatusItem[] = [
+    { category: "hvac", count: 6, status: "critical" },
+    { category: "lighting", count: 30, status: "warn" },
+    { category: "elevator", count: 10, status: "ok" },
+    { category: "server", count: 24, status: "ok" },
+  ];
+
+  const aiSuggestions: AiSuggestionItem[] = [
+    { category: "hvac", text: "优化暖通夜间计划——降低夜间温控设定值至 18°C", saving: "预计节能 12%" },
+    { category: "lighting", text: "根据占用传感器调整照明——B2–B4 区域", saving: "预计节能 8%" },
+    { category: "server", text: "将非关键服务器任务迁移至低峰期 (02:00–06:00)", saving: "预计节省 5% 费用" },
+  ];
+
+  return { cards, trend, breakdown, devices, aiSuggestions };
 }

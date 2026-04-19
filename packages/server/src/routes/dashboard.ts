@@ -63,6 +63,24 @@ const breakdownSchema = {
   },
 } as const;
 
+const deviceStatusSchema = {
+  type: "object",
+  properties: {
+    category: { type: "string", enum: ["hvac", "lighting", "elevator", "server"] },
+    count: { type: "number" },
+    status: { type: "string", enum: ["ok", "warn", "critical"] },
+  },
+} as const;
+
+const aiSuggestionSchema = {
+  type: "object",
+  properties: {
+    category: { type: "string", enum: ["hvac", "lighting", "server"] },
+    text: { type: "string" },
+    saving: { type: "string" },
+  },
+} as const;
+
 const dashboardDataSchema = {
   summary: "Get full dashboard data",
   response: {
@@ -72,6 +90,8 @@ const dashboardDataSchema = {
         cards: { type: "array", items: cardSchema },
         trend: { type: "array", items: trendSchema },
         breakdown: { type: "array", items: breakdownSchema },
+        devices: { type: "array", items: deviceStatusSchema },
+        aiSuggestions: { type: "array", items: aiSuggestionSchema },
       },
     },
   },
