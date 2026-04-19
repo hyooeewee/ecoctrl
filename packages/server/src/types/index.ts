@@ -115,8 +115,22 @@ export interface DashboardCard {
   progressValue?: number;
 }
 
+export interface DeviceStatusItem {
+  category: "hvac" | "lighting" | "elevator" | "server";
+  count: number;
+  status: "ok" | "warn" | "critical";
+}
+
+export interface AiSuggestionItem {
+  category: "hvac" | "lighting" | "server";
+  text: string;
+  saving?: string;
+}
+
 export interface DashboardData {
   cards: DashboardCard[];
   trend: TrendPoint[];
   breakdown: BreakdownItem[];
+  devices: DeviceStatusItem[];
+  aiSuggestions: AiSuggestionItem[];
 }
