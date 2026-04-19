@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { Alert } from "@/types/index";
-import { getAlerts } from "@/db/dashboard";
+import { getAlerts } from "@/repositories/dashboard";
 
 const alertSchema = {
   type: "object",
@@ -36,7 +36,7 @@ export default async function alertRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const { limit } = request.query as { limit?: string };
-      const alerts: Alert[] = getAlerts(limit ? parseInt(limit, 10) : undefined);
+      const alerts: Alert[] = await getAlerts(limit ? parseInt(limit, 10) : undefined);
       return reply.send(alerts);
     },
   );

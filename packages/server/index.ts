@@ -1,16 +1,17 @@
-import dotenv from "dotenv";
-
-dotenv.config({ path: ".env.local" });
-
 import Fastify from "fastify";
 import multipart from "@fastify/multipart";
 import cors from "@fastify/cors";
 import swagger from "@fastify/swagger";
 
+import { ensureDatabase } from "@/lib/ensureDatabase";
+import databasePlugin from "@/plugins/database";
 import apiRoutes from "@/routes/api";
+
+await ensureDatabase();
 
 const fastify = Fastify({ logger: true });
 
+await fastify.register(databasePlugin);
 await fastify.register(cors, { origin: true });
 await fastify.register(multipart, { attachFieldsToBody: false });
 

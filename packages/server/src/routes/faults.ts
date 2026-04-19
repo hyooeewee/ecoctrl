@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { Fault, FaultStats } from "@/types/index";
-import { getFaults, getFaultStats } from "@/db/faults";
+import { getFaults, getFaultStats } from "@/repositories/faults";
 
 const faultItemSchema = {
   type: "object",
@@ -38,7 +38,7 @@ export default async function faultRoutes(fastify: FastifyInstance) {
       },
     },
     async (_request, reply) => {
-      const faults: Fault[] = getFaults();
+      const faults: Fault[] = await getFaults();
       return reply.send(faults);
     },
   );
@@ -54,7 +54,7 @@ export default async function faultRoutes(fastify: FastifyInstance) {
       },
     },
     async (_request, reply) => {
-      const stats: FaultStats = getFaultStats();
+      const stats: FaultStats = await getFaultStats();
       return reply.send(stats);
     },
   );
