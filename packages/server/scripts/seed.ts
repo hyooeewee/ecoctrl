@@ -696,7 +696,7 @@ async function seedDashboardWidgets() {
     // Devices
     {
       titleKey: "devices.title",
-      icon: "Devices",
+      icon: "Monitor",
       layoutX: 14,
       layoutY: 5,
       layoutW: 3,
