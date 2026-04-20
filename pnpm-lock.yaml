@@ -189,6 +189,9 @@ importers:
       isbot:
         specifier: ^5.1.36
         version: 5.1.39
+      lucide-react:
+        specifier: ^0.546.0
+        version: 0.546.0(react@19.2.5)
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -333,6 +336,8 @@ importers:
       vite-plus:
         specifier: 'catalog:'
         version: 0.1.18(@types/node@22.19.17)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(typescript@5.9.3)(vite@8.0.8(@types/node@22.19.17)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))(yaml@2.8.3)
+
+  packages/ui: {}
 
 packages:
 
