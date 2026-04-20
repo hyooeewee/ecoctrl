@@ -1,5 +1,11 @@
 # @ecoctrl/web
 
+## 0.0.2
+
+### Patch Changes
+
+- 2775f06: re-release
+
 ## 0.0.1
 
 ### Patch Changes
