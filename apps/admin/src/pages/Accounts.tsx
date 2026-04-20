@@ -1,4 +1,4 @@
-import { Plus, Search, Edit2, Trash2, Download } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, Download, ExternalLink } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -208,7 +208,15 @@ export default function Accounts() {
                 {filtered.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="px-6 font-medium">{user.username}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
+                    <TableCell>
+                      <a
+                        href={`mailto:${user.email}`}
+                        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
+                      >
+                        {user.email}
+                        <ExternalLink size={12} className="shrink-0 opacity-60" />
+                      </a>
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="font-normal">
                         {ROLE_LABELS[user.role] ?? user.role}

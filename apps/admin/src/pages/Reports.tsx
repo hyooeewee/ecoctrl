@@ -164,11 +164,14 @@ export default function Reports() {
                 {reportPlans.map((plan) => (
                   <TableRow key={plan.id} className="group hover:bg-muted/30 transition-colors">
                     <TableCell className="px-6 font-medium">{plan.name}</TableCell>
-                    <TableCell
-                      className="cursor-pointer text-sm text-blue-600 underline underline-offset-4"
-                      onClick={() => console.log("Edit receiver for:", plan.name)}
-                    >
-                      {plan.receiver}
+                    <TableCell>
+                      <a
+                        href={`mailto:${plan.receiver}`}
+                        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
+                      >
+                        {plan.receiver}
+                        <ExternalLink size={12} className="shrink-0 opacity-60" />
+                      </a>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {plan.frequency}
