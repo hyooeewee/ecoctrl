@@ -1,0 +1,83 @@
+name: Release to GitHub
+
+on:
+  push:
+    branches: [main]
+
+# Ensure write permissions for creating Releases and updating PRs
+permissions:
+  contents: write
+  pull-requests: write
+
+# Cancel in-progress runs for the same branch
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  release:
+    name: Build & Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Required for Changesets to generate accurate changelogs
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Step 1: Create Release Pull Request or push Git Tags
+      - name: Create Release PR or Publish Tags
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          # Script that updates package.json versions and CHANGELOG
+          version: pnpm run version
+          # Script that creates Git tags instead of publishing to npm
+          publish: pnpm run release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Step 2: Build artifacts only if a release was just published
+      - name: Build packages
+        if: steps.changesets.outputs.published == 'true'
+        run: pnpm run build
+
+      # Step 3: Package the build output for download
+      - name: Package artifacts
+        if: steps.changesets.outputs.published == 'true'
+        run: |
+          mkdir -p release-assets
+          # Iterate over each package published in this release
+          echo '${{ steps.changesets.outputs.publishedPackages }}' | jq -r '.[].name' | while read pkg; do
+            # Convert @scope/name to directory path packages/name
+            pkg_path=$(echo $pkg | cut -d'/' -f2)
+            pkg_version=$(echo '${{ steps.changesets.outputs.publishedPackages }}' | jq -r ".[] | select(.name==\"$pkg\") | .version")
+            # Create a tarball for each package's dist directory
+            if [ -d "packages/$pkg_path/dist" ]; then
+              tar -czf "release-assets/${pkg_path}-${pkg_version}.tar.gz" -C "packages/$pkg_path" dist
+            fi
+          done
+
+      # Step 4: Attach artifacts to the GitHub Release
+      - name: Upload assets to Release
+        if: steps.changesets.outputs.published == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          # Use the first published package's tag as the release identifier
+          tag_name: ${{ fromJson(steps.changesets.outputs.publishedPackages)[0].tag }}
+          # Upload all tarballs generated in the previous step
+          files: release-assets/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

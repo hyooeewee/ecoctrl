@@ -1,7 +1,7 @@
 export const enUS = {
   // ── Meta ──────────────────────────────────────────────────────────────────
   meta: {
-    title: "ECOCTRL Smart Control — Energy Management Platform",
+    title: "EcoCtrl Energy Management Platform",
     description: "Enterprise-grade 3D energy management platform",
   },
 

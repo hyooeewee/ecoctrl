@@ -5,7 +5,7 @@
 export const zhCN = {
   // ── Meta ──────────────────────────────────────────────────────────────────
   meta: {
-    title: "ECOCTRL 智慧精控 — 能源管理平台",
+    title: "EcoCtrl 能源管理平台",
     description: "企业级三维能源管理平台",
   },
 
