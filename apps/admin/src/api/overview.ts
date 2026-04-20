@@ -1,7 +1,7 @@
 import { get } from "./request";
 import { Alert, BackupSchedule } from "../types";
 
-export interface DashboardStats {
+export interface OverviewStats {
   totalEnergy: { value: string; unit: string; trend: string; trendType: "up" | "down" | "neutral" };
   onlineRate: { value: string; unit: string; trend: string; trendType: "up" | "down" | "neutral" };
   pendingAlerts: {
@@ -23,9 +23,9 @@ export interface EnergyChartPoint {
   value: number;
 }
 
-export const dashboardApi = {
-  stats: () => get<DashboardStats>("/api/dashboard/stats"),
-  energyChart: () => get<EnergyChartPoint[]>("/api/dashboard/energy-chart"),
+export const overviewApi = {
+  stats: () => get<OverviewStats>("/api/overview/stats"),
+  energyChart: () => get<EnergyChartPoint[]>("/api/overview/energy-chart"),
   alerts: (limit = 5) => get<Alert[]>("/api/alerts", { params: { limit: String(limit) } }),
   backupSchedule: () => get<BackupSchedule>("/api/system/backup-schedule"),
 };
