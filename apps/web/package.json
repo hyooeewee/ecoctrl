@@ -3,8 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "react-router dev --port 8080",
     "build": "react-router build",
-    "dev": "react-router dev",
+    "preview": "PORT=8081 react-router-serve ./build/server/index.js",
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc",
     "fmt": "vp fmt",

@@ -4,10 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vp dev --port=8080",
+    "dev": "vp dev",
     "build": "vp build",
-    "preview": "pnpm clean && vp preview",
-    "clean": "rm -rf dist",
+    "preview": "vp preview",
     "fmt": "vp fmt",
     "lint": "vp lint",
     "check": "vp check",
