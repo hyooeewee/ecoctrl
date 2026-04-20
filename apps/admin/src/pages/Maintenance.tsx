@@ -10,11 +10,11 @@ import {
 } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@ecoctrl/ui";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoctrl/ui";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@ecoctrl/ui";
+import { Input } from "@ecoctrl/ui";
+import { ScrollArea } from "@ecoctrl/ui";
 
 import { cn } from "@/lib/utils";
 import { MaintenanceReminder } from "../types";

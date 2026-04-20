@@ -1,17 +1,10 @@
 import { AlertCircle, History, BarChart3, Clock } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@ecoctrl/ui";
+import { Card, CardContent } from "@ecoctrl/ui";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ecoctrl/ui";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui";
 
 import { Fault, FaultStats } from "../types";
 import { faultsApi } from "../api/faults";

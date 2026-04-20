@@ -12,18 +12,12 @@ import {
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
+import { Button } from "@ecoctrl/ui";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoctrl/ui";
+import { Input } from "@ecoctrl/ui";
+import { Label } from "@ecoctrl/ui";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ecoctrl/ui";
+import { Switch } from "@ecoctrl/ui";
 import { cn } from "@/lib/utils";
 
 import type { SystemConfig } from "../types";

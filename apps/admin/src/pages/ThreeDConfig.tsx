@@ -1,9 +1,9 @@
 import { Upload, MapPin, Tag } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@ecoctrl/ui";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoctrl/ui";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui";
 
 import { ThreeDConfig } from "../types";
 import { threeDConfigApi } from "../api/3dConfig";

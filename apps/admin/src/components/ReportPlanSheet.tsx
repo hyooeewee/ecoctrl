@@ -1,15 +1,9 @@
 import React, { useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Button } from "@ecoctrl/ui";
+import { Input } from "@ecoctrl/ui";
+import { Label } from "@ecoctrl/ui";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ecoctrl/ui";
 import {
   Sheet,
   SheetContent,
@@ -18,7 +12,7 @@ import {
   SheetTitle,
   SheetTrigger,
   SheetFooter,
-} from "@/components/ui/sheet";
+} from "@ecoctrl/ui";
 
 import { ReportPlan } from "../types";
 

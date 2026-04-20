@@ -1,9 +1,9 @@
 import { Activity, PieChart, Sliders, ExternalLink } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Badge } from "@ecoctrl/ui";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoctrl/ui";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@ecoctrl/ui";
 
 import { Progress } from "../components/Progress";
 import { EnergyArea } from "../types";

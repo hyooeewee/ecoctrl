@@ -18,12 +18,12 @@ import {
   EyeOff,
 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@ecoctrl/ui";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoctrl/ui";
+import { Input } from "@ecoctrl/ui";
+import { Label } from "@ecoctrl/ui";
+import { Avatar, AvatarFallback, AvatarImage } from "@ecoctrl/ui";
+import { Badge } from "@ecoctrl/ui";
 
 import { authApi } from "@/api/auth";
 import { usersApi } from "@/api/users";

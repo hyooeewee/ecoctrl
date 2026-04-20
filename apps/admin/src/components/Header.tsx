@@ -1,8 +1,8 @@
 import { Bell, Monitor, Moon, Search, Sun } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@ecoctrl/ui";
+import { Button } from "@ecoctrl/ui";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,8 +11,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+} from "@ecoctrl/ui";
+import { Input } from "@ecoctrl/ui";
 
 import type { User } from "@ecoctrl/shared";
 import { authApi } from "../api/auth";
