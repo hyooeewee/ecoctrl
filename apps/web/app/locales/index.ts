@@ -25,14 +25,26 @@ export function useLocale() {
  * Example: getNestedLocaleValue(t, "cards.totalEnergy") → "今日总用电"
  */
 export function getNestedLocaleValue(t: Locale, key: string): string | undefined {
-  const parts = key.split(".");
-  let obj: unknown = t;
-  for (const part of parts) {
-    if (obj && typeof obj === "object" && part in obj) {
-      obj = (obj as Record<string, unknown>)[part];
-    } else {
-      return undefined;
+  const resolve = (parts: string[]): string | undefined => {
+    let obj: unknown = t;
+    for (const part of parts) {
+      if (obj && typeof obj === "object" && part in obj) {
+        obj = (obj as Record<string, unknown>)[part];
+      } else {
+        return undefined;
+      }
     }
+    return typeof obj === "string" ? obj : undefined;
+  };
+
+  // Try exact path first
+  const exact = resolve(key.split("."));
+  if (exact !== undefined) return exact;
+
+  // Fallback: bare keys like "totalEnergy" may live under "cards" namespace
+  if (!key.includes(".")) {
+    return resolve(["cards", key]);
   }
-  return typeof obj === "string" ? obj : undefined;
+
+  return undefined;
 }

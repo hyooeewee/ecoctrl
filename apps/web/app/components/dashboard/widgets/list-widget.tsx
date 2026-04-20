@@ -33,7 +33,7 @@ function SectionHeader({
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-1.5">
         {icon && <span className="text-cyber-cyan">{icon}</span>}
-        <h3 className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">
+        <h3 className="text-[11px] font-semibold tracking-widest text-muted-foreground">
           {title}
         </h3>
       </div>
