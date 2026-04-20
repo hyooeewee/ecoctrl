@@ -286,6 +286,7 @@ export function BentoItem({ id, children, className }: BentoItemProps) {
       if (!dragEnabled || !item || item.hidden) return;
       e.stopPropagation();
       e.preventDefault();
+      (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
 
       const cardEl = (e.currentTarget as HTMLElement).closest(
         "[data-bento-id]",

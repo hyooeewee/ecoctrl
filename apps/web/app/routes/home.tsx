@@ -57,6 +57,7 @@ export default function Home() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const buildingRef = useRef<BuildingViewRef>(null);
   const layoutSnapshotRef = useRef<BentoLayoutItem[] | null>(null);
+  const hasSnappedRef = useRef(false);
 
   // Find the leftmost column of any visible widget in the top-right area
   // so we can place controls just to its left with a fixed 1rem margin.
@@ -65,9 +66,39 @@ export default function Home() {
     .sort((a, b) => b.x - a.x)[0];
 
   const colsFromRight = rightmostTopWidget ? 16 - rightmostTopWidget.x + 1 : 0;
-  const controlsRight = fullscreen || colsFromRight === 0
-    ? "1rem"
-    : `calc(${(colsFromRight / 16) * 100}% + 1rem)`;
+  const controlsRight =
+    fullscreen || colsFromRight === 0 ? "1rem" : `calc(${(colsFromRight / 16) * 100}% + 1rem)`;
+
+  // Sync backend widgets → bentoLayout
+  useEffect(() => {
+    if (!loaderData?.widgets?.length) return;
+
+    const incomingIds = new Set(loaderData.widgets.map((w) => w.id));
+    const currentIds = new Set(bentoLayout.map((l) => l.id));
+
+    const cleaned = bentoLayout.filter((l) => incomingIds.has(l.id));
+    const newItems = loaderData.widgets
+      .filter((w) => !currentIds.has(w.id))
+      .map((w) => ({
+        id: w.id,
+        x: w.layout.x,
+        y: w.layout.y,
+        w: w.layout.w,
+        h: w.layout.h,
+        hidden: false,
+      }));
+
+    // First load or after reset: initialize from backend
+    if (bentoLayout.length === 0) {
+      setBentoLayout(newItems);
+      return;
+    }
+
+    // Sync additions / removals
+    if (cleaned.length !== bentoLayout.length || newItems.length > 0) {
+      setBentoLayout([...cleaned, ...newItems]);
+    }
+  }, [loaderData, bentoLayout, setBentoLayout]);
 
   // Start/reset the auto-hide countdown
   const resetTimer = useCallback(() => {
@@ -109,15 +140,16 @@ export default function Home() {
     [],
   );
 
-  // Capture snapshot only when entering edit mode, not on every layout change.
-  // Including bentoLayout in deps would overwrite the snapshot after every swap,
-  // making "cancel" unable to restore the pre-edit state.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Capture snapshot only when entering edit mode and layout is ready.
   useEffect(() => {
-    if (bentoDragEnabled) {
+    if (bentoDragEnabled && bentoLayout.length > 0 && !hasSnappedRef.current) {
       layoutSnapshotRef.current = JSON.parse(JSON.stringify(bentoLayout));
+      hasSnappedRef.current = true;
     }
-  }, [bentoDragEnabled]);
+    if (!bentoDragEnabled) {
+      hasSnappedRef.current = false;
+    }
+  }, [bentoDragEnabled, bentoLayout]);
 
   // Auto-exit edit mode after editAutoExitDelay ms of inactivity.
   // Timer resets on any pointer interaction. Disabled when delay === 0.

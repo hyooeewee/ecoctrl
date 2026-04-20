@@ -10,18 +10,6 @@ export const DeltaVariantSchema = z.enum([
 ]);
 export type DeltaVariant = z.infer<typeof DeltaVariantSchema>;
 
-export const ChartTypeSchema = z.enum(["area", "bar", "line", "progress"]);
-export type ChartType = z.infer<typeof ChartTypeSchema>;
-
-export const DeviceCategorySchema = z.enum(["hvac", "lighting", "elevator", "server"]);
-export type DeviceCategory = z.infer<typeof DeviceCategorySchema>;
-
-export const DeviceStatusSchema = z.enum(["ok", "warn", "critical"]);
-export type DeviceStatus = z.infer<typeof DeviceStatusSchema>;
-
-export const AiCategorySchema = z.enum(["hvac", "lighting", "server"]);
-export type AiCategory = z.infer<typeof AiCategorySchema>;
-
 export const AlertLevelSchema = z.enum(["high", "medium", "low"]);
 export type AlertLevel = z.infer<typeof AlertLevelSchema>;
 
@@ -39,55 +27,73 @@ export const AlertSchema = z.object({
 });
 export type Alert = z.infer<typeof AlertSchema>;
 
-// ─── Dashboard Data ────────────────────────────────────────────────────────────
-export const SparkPointSchema = z.object({ v: z.number() });
-export type SparkPoint = z.infer<typeof SparkPointSchema>;
-
-export const TrendPointSchema = z.object({ h: z.string(), kWh: z.number() });
-export type TrendPoint = z.infer<typeof TrendPointSchema>;
-
-export const BreakdownItemSchema = z.object({
-  name: z.string(),
-  value: z.number(),
-  color: z.string(),
+// ─── Layout ────────────────────────────────────────────────────────────────────
+export const WidgetLayoutSchema = z.object({
+  x: z.number().int().min(1),
+  y: z.number().int().min(1),
+  w: z.number().int().min(1),
+  h: z.number().int().min(1),
 });
-export type BreakdownItem = z.infer<typeof BreakdownItemSchema>;
+export type WidgetLayout = z.infer<typeof WidgetLayoutSchema>;
 
-export const DeviceStatusItemSchema = z.object({
-  category: DeviceCategorySchema,
-  count: z.number(),
-  status: DeviceStatusSchema,
-});
-export type DeviceStatusItem = z.infer<typeof DeviceStatusItemSchema>;
-
-export const AiSuggestionItemSchema = z.object({
-  category: AiCategorySchema,
-  text: z.string(),
-  saving: z.string().optional(),
-});
-export type AiSuggestionItem = z.infer<typeof AiSuggestionItemSchema>;
-
-export const DashboardCardSchema = z.object({
-  titleKey: z.string(),
+// ─── Data Shapes ───────────────────────────────────────────────────────────────
+// 1. Stat card data
+export const StatDataSchema = z.object({
   value: z.string(),
   unit: z.string(),
   delta: z.string().optional(),
-  deltaVariant: DeltaVariantSchema,
-  chartType: ChartTypeSchema,
-  chartData: z.array(SparkPointSchema),
-  chartColor: z.string(),
+  deltaVariant: z.enum(["up-good", "up-bad", "down-good", "down-bad", "neutral"]),
+  sparkline: z.array(z.number()).optional(),
+  sparklineColor: z.string().optional(),
   footerKey: z.string().optional(),
   progressValue: z.number().optional(),
 });
-export type DashboardCard = z.infer<typeof DashboardCardSchema>;
+export type StatData = z.infer<typeof StatDataSchema>;
 
+// 2. Chart data
+export const ChartPointSchema = z.object({
+  label: z.string(),
+  value: z.number(),
+});
+export type ChartPoint = z.infer<typeof ChartPointSchema>;
+
+export const ChartDataSchema = z.object({
+  chartType: z.enum(["area", "line", "bar", "donut"]),
+  points: z.array(ChartPointSchema).optional(), // area/line/bar
+  items: z
+    .array(
+      z.object({
+        label: z.string(),
+        value: z.number(),
+        color: z.string(),
+      }),
+    )
+    .optional(), // donut
+});
+export type ChartData = z.infer<typeof ChartDataSchema>;
+
+// 3. List data
+export const ListDataSchema = z.object({
+  items: z.array(z.record(z.string(), z.unknown())),
+});
+export type ListData = z.infer<typeof ListDataSchema>;
+
+// ─── Widget Config ─────────────────────────────────────────────────────────────
+export const WidgetDataSchema = z.union([StatDataSchema, ChartDataSchema, ListDataSchema]);
+export type WidgetData = z.infer<typeof WidgetDataSchema>;
+
+export const WidgetConfigSchema = z.object({
+  id: z.string().uuid(),
+  titleKey: z.string(),
+  icon: z.string(),
+  layout: WidgetLayoutSchema,
+  data: WidgetDataSchema,
+});
+export type WidgetConfig = z.infer<typeof WidgetConfigSchema>;
+
+// ─── Dashboard Data ────────────────────────────────────────────────────────────
 export const DashboardDataSchema = z.object({
-  cards: z.array(DashboardCardSchema),
-  trend: z.array(TrendPointSchema),
-  breakdown: z.array(BreakdownItemSchema),
-  devices: z.array(DeviceStatusItemSchema),
-  aiSuggestions: z.array(AiSuggestionItemSchema),
-  alerts: z.array(AlertSchema),
+  widgets: z.array(WidgetConfigSchema),
 });
 export type DashboardData = z.infer<typeof DashboardDataSchema>;
 

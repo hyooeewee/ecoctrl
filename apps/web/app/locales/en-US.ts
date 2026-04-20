@@ -154,21 +154,6 @@ export const enUS = {
     activeSuffix: "Active",
   },
 
-  // ── Bento Widgets ──────────────────────────────────────────────────────────
-  bentoWidgets: {
-    "stat-totalEnergy": "Today's Total Power",
-    "stat-carbonEmission": "Today's Carbon Emission",
-    "stat-energyIntensity": "Energy Intensity",
-    "stat-todayCost": "Today's Electricity Cost",
-    "stat-renewableRate": "Renewable Energy Ratio",
-    "stat-loadStatus": "Load Status",
-    "panel-devices": "Device Status",
-    "panel-alerts": "Real-time Alerts",
-    "panel-ai": "AI Optimization",
-    "chart-trend": "24h Energy Trend",
-    "chart-breakdown": "Energy Breakdown",
-  },
-
   // ── Right Panel — AI Optimization Suggestions ──────────────────────────────
   ai: {
     title: "AI Optimization",

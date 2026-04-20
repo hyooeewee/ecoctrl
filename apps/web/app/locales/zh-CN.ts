@@ -154,21 +154,6 @@ export const zhCN = {
     activeSuffix: "条激活",
   },
 
-  // ── Bento Widgets ──────────────────────────────────────────────────────────
-  bentoWidgets: {
-    "stat-totalEnergy": "今日总用电",
-    "stat-carbonEmission": "今日碳排放",
-    "stat-energyIntensity": "能耗强度",
-    "stat-todayCost": "今日电费",
-    "stat-renewableRate": "可再生能源占比",
-    "stat-loadStatus": "负载状态",
-    "panel-devices": "设备状态",
-    "panel-alerts": "实时告警",
-    "panel-ai": "AI 优化建议",
-    "chart-trend": "24 小时能耗趋势",
-    "chart-breakdown": "能耗分布",
-  },
-
   // ── 右侧面板 — AI 优化建议 ─────────────────────────────────────────────────
   ai: {
     title: "AI 优化建议",

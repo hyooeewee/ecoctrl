@@ -6,7 +6,7 @@ import {
   EnergyChartItemSchema,
   AlertSchema,
 } from "@ecoctrl/shared";
-import type { DashboardStats, EnergyChartItem, Alert, DashboardData } from "@ecoctrl/shared";
+import type { DashboardData, DashboardStats, EnergyChartItem, Alert } from "@ecoctrl/shared";
 import { getDashboardStats, getEnergyChart, getAlerts, getDashboardData } from "@/repositories/dashboard";
 
 export default async function dashboardRoutes(fastify: FastifyInstance) {

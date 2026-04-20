@@ -1,23 +1,23 @@
 import { BentoItem } from "~/components/dashboard/bento-grid";
 import type { DashboardData } from "~/lib/dashboard-api";
 
-import { allWidgets } from "./registry";
+import { WidgetRenderer } from "./widget-renderer";
 
 interface DashboardWidgetsProps {
   data: DashboardData | null;
 }
 
 export function DashboardWidgets({ data }: DashboardWidgetsProps) {
+  const widgets = data?.widgets ?? [];
   return (
     <>
-      {allWidgets.map((widget) => (
+      {widgets.map((widget) => (
         <BentoItem key={widget.id} id={widget.id}>
-          <widget.component data={data} />
+          <WidgetRenderer widget={widget} />
         </BentoItem>
       ))}
     </>
   );
 }
 
-export { allWidgets, buildDefaultBentoLayout } from "./registry";
-export type { DashboardWidget, WidgetDefaultLayout } from "./types";
+export type { DashboardData, WidgetConfig, WidgetData, WidgetLayout } from "./types";

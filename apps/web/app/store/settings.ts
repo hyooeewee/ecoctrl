@@ -12,9 +12,7 @@ export interface BentoLayoutItem {
   hidden: boolean;
 }
 
-import { buildDefaultBentoLayout } from "~/components/dashboard/widgets/registry";
-
-export const defaultBentoLayout: BentoLayoutItem[] = buildDefaultBentoLayout();
+export const defaultBentoLayout: BentoLayoutItem[] = [];
 
 // ─── Store ────────────────────────────────────────────────────────────────────
 

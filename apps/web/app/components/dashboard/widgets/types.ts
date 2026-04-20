@@ -1,16 +1,56 @@
-import type { DashboardData } from "~/lib/dashboard-api";
+// Widget system types — aligned with backend JSON contract
+// Backend controls: id, titleKey, icon, layout, data
+// Frontend controls: rendering based on data shape
 
-export interface WidgetDefaultLayout {
+export interface WidgetLayout {
   x: number;
   y: number;
   w: number;
   h: number;
 }
 
-export interface DashboardWidget {
+// ─── Data shapes (discriminated by content, not a type field) ─────────────────
+
+export interface StatData {
+  value: string;
+  unit: string;
+  delta?: string;
+  deltaVariant: "up-good" | "up-bad" | "down-good" | "down-bad" | "neutral";
+  sparkline?: number[];
+  sparklineColor?: string;
+  footerKey?: string;
+  progressValue?: number;
+}
+
+export interface ChartPoint {
+  label: string;
+  value: number;
+}
+
+export interface ChartData {
+  chartType: "area" | "line" | "bar" | "donut";
+  points?: ChartPoint[];
+  items?: { label: string; value: number; color: string }[];
+}
+
+export interface ListData {
+  items: Record<string, unknown>[];
+}
+
+export type WidgetData = StatData | ChartData | ListData;
+
+// ─── Widget Config (from backend) ─────────────────────────────────────────────
+
+export interface WidgetConfig {
   id: string;
-  // Returns the display name for the widget (used in settings page)
-  title: (t: { bentoWidgets: Record<string, string> }) => string;
-  defaultLayout: WidgetDefaultLayout;
-  component: React.FC<{ data: DashboardData | null }>;
+  titleKey: string;
+  icon: string;
+  layout: WidgetLayout;
+  data: WidgetData;
+}
+
+// ─── Dashboard Data ───────────────────────────────────────────────────────────
+
+export interface DashboardData {
+  widgets: WidgetConfig[];
 }

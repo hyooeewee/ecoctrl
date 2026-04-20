@@ -12,3 +12,4 @@ export * from "./energyAreas";
 export * from "./models";
 export * from "./threeDConfig";
 export * from "./platformConfig";
+export * from "./dashboardWidgets";

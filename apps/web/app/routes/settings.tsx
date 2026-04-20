@@ -16,7 +16,7 @@ import { Separator } from "~/components/ui/separator";
 import { Slider } from "~/components/ui/slider";
 import { Switch } from "~/components/ui/switch";
 import { locale, useLocale } from "~/locales";
-import { defaultBentoLayout, useSettingsStore } from "~/store/settings";
+import { useSettingsStore } from "~/store/settings";
 
 import type { Route } from "./+types/settings";
 
@@ -65,7 +65,7 @@ export default function SettingsPage() {
     reset,
   } = useSettingsStore();
 
-  const isLayoutModified = JSON.stringify(bentoLayout) !== JSON.stringify(defaultBentoLayout);
+  const isLayoutModified = bentoLayout.length > 0;
 
   const handleReset = () => {
     reset();
