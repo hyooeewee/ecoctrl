@@ -22,11 +22,10 @@ jobs:
         with:
           # Required for Changesets to generate accurate changelogs
           fetch-depth: 0
+          persist-credentials: true
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: latest
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -44,12 +43,31 @@ jobs:
         with:
           # Script that updates package.json versions and CHANGELOG
           version: pnpm run version
-          # Script that creates Git tags instead of publishing to npm
-          publish: pnpm run release
+
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Step 2: Build artifacts only if a release was just published
+      - name: Create unified version tag
+        if: steps.changesets.outputs.published == 'true'
+        id: create-tag
+        run: |
+          VERSION=$(echo '${{ steps.changesets.outputs.publishedPackages }}' | jq -r '.[0].version')
+          TAG_NAME="v${VERSION}"
+          
+          echo '${{ steps.changesets.outputs.publishedPackages }}' | jq -c '.[]' | while read pkg; do
+            pkg_name=$(echo "$pkg" | jq -r '.name')
+            pkg_version=$(echo "$pkg" | jq -r '.version')
+            tag="${pkg_name}@${pkg_version}"
+            git push origin --delete "$tag" 2>/dev/null || true
+          done
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
+          git push origin "$TAG_NAME"
+          
+          echo "release_tag=$TAG_NAME" >> $GITHUB_OUTPUT
+
       - name: Build packages
         if: steps.changesets.outputs.published == 'true'
         run: pnpm run build
@@ -59,14 +77,17 @@ jobs:
         if: steps.changesets.outputs.published == 'true'
         run: |
           mkdir -p release-assets
-          # Iterate over each package published in this release
-          echo '${{ steps.changesets.outputs.publishedPackages }}' | jq -r '.[].name' | while read pkg; do
-            # Convert @scope/name to directory path packages/name
-            pkg_path=$(echo $pkg | cut -d'/' -f2)
-            pkg_version=$(echo '${{ steps.changesets.outputs.publishedPackages }}' | jq -r ".[] | select(.name==\"$pkg\") | .version")
-            # Create a tarball for each package's dist directory
+
+          echo '${{ steps.changesets.outputs.publishedPackages }}' | jq -c '.[]' | while read pkg; do
+            pkg_name=$(echo "$pkg" | jq -r '.name')
+            pkg_version=$(echo "$pkg" | jq -r '.version')
+            pkg_path=$(echo "$pkg_name" | cut -d'/' -f2)
+            if [ -z "$pkg_path" ]; then
+              pkg_path="$pkg_name"
+            fi
+
             if [ -d "packages/$pkg_path/dist" ]; then
-              tar -czf "release-assets/${pkg_path}-${pkg_version}.tar.gz" -C "packages/$pkg_path" dist
+              zip -r "release-assets/${pkg_path}-v${pkg_version}.zip" -j "packages/$pkg_path/dist"/*
             fi
           done
 
@@ -75,9 +96,7 @@ jobs:
         if: steps.changesets.outputs.published == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          # Use the first published package's tag as the release identifier
-          tag_name: ${{ fromJson(steps.changesets.outputs.publishedPackages)[0].tag }}
-          # Upload all tarballs generated in the previous step
-          files: release-assets/*.tar.gz
+          tag_name: ${{ steps.create-tag.outputs.release_tag }}
+          files: release-assets/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

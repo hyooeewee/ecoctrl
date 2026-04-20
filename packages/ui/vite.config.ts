@@ -2,7 +2,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig } from "vite-plus";
 import dts from "vite-plugin-dts";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));

@@ -4,4 +4,4 @@
 "@ecoctrl/server": patch
 ---
 
-alpha test release
+test release
