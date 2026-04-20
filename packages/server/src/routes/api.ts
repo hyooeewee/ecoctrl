@@ -11,6 +11,7 @@ import accountRoutes from "@/routes/accounts";
 import dashboardRoutes from "@/routes/dashboard";
 import overviewRoutes from "@/routes/overview";
 import alertRoutes from "@/routes/alerts";
+import settingsRoutes from "@/routes/settings";
 import modelRoutes from "@/routes/models";
 import iotRoutes from "@/routes/iot";
 import systemRoutes from "@/routes/system";
@@ -28,6 +29,7 @@ export default async function apiRoutes(fastify: FastifyInstance) {
   await fastify.register(dashboardRoutes, { prefix: "/dashboard" });
   await fastify.register(overviewRoutes, { prefix: "/overview" });
   await fastify.register(alertRoutes, { prefix: "/alerts" });
+  await fastify.register(settingsRoutes, { prefix: "/dashboard/settings" });
   await fastify.register(iotRoutes, { prefix: "/iot" });
   await fastify.register(modelRoutes, { prefix: "/models" });
   await fastify.register(systemRoutes, { prefix: "/system" });

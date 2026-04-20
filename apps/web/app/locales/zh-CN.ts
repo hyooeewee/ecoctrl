@@ -64,6 +64,11 @@ export const zhCN = {
     bentoEditLayout: "编辑布局",
     bentoResetLayout: "重置布局",
     bentoResetConfirm: "布局已重置为默认",
+    autoSaving: "自动保存中…",
+    saved: "已保存",
+    save: "保存",
+    syncDebounce: "自动保存延迟",
+    syncDebounceDesc: "修改后自动同步到服务器的等待时间",
     editAutoExitDelay: "编辑模式自动退出",
     editAutoExitDelayDesc: "无操作一段时间后自动退出编辑模式",
     editAutoExitNever: "不自动退出",
@@ -131,7 +136,7 @@ export const zhCN = {
   charts: {
     noData: "无数据",
     trendTitle: "24 小时能耗趋势",
-    trendTimeUnit: "时", // used in tooltip: "08时  420 kWh"
+    trendTimeUnit: "时",
     breakdownTitle: "能耗分布",
     hvac: "暖通空调",
     lighting: "照明",

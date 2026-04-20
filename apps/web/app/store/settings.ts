@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+import {
+  fetchDashboardSettings,
+  patchDashboardSettings,
+} from "~/lib/dashboard-api";
+
 // ─── Bento layout types ───────────────────────────────────────────────────────
 
 export interface BentoLayoutItem {
@@ -14,7 +19,24 @@ export interface BentoLayoutItem {
 
 export const defaultBentoLayout: BentoLayoutItem[] = [];
 
-// ─── Store ────────────────────────────────────────────────────────────────────
+// ─── Fields synced to the backend ─────────────────────────────────────────────
+// Expand this list as new settings need server-side persistence.
+const SYNCABLE_FIELDS: (keyof SettingsState)[] = [
+  "language",
+  "reducedMotion",
+  "autoRotate",
+  "rotateSpeed",
+  "showLabels",
+  "glowIntensity",
+  "defaultCameraRadius",
+  "defaultRotationY",
+  "dataRefreshInterval",
+  "navHideDelay",
+  "editAutoExitDelay",
+  "bentoLayout",
+];
+
+// ─── Store state ──────────────────────────────────────────────────────────────
 
 export interface SettingsState {
   autoRotate: boolean;
@@ -30,6 +52,11 @@ export interface SettingsState {
   bentoLayout: BentoLayoutItem[];
   bentoDragEnabled: boolean;
   editAutoExitDelay: number; // ms; 0 = disabled
+
+  // --- Sync status (not persisted to localStorage) ---
+  syncStatus: "idle" | "syncing" | "saved" | "error";
+  hasUnsavedChanges: boolean;
+  syncDebounceMs: number;
 }
 
 interface SettingsStore extends SettingsState {
@@ -51,6 +78,12 @@ interface SettingsStore extends SettingsState {
   setBentoLayout: (layout: BentoLayoutItem[]) => void;
   resetBentoLayout: () => void;
   reset: () => void;
+
+  // --- Sync actions ---
+  loadSettings: () => Promise<void>;
+  syncSettings: () => Promise<void>;
+  flushSync: () => void;
+  setSyncDebounceMs: (value: number) => void;
 }
 
 const defaults: SettingsState = {
@@ -67,29 +100,94 @@ const defaults: SettingsState = {
   bentoLayout: defaultBentoLayout,
   bentoDragEnabled: false,
   editAutoExitDelay: 30000,
+  syncStatus: "idle",
+  hasUnsavedChanges: false,
+  syncDebounceMs: 500,
 };
+
+// Module-level debounce timer for auto-sync.
+let syncTimer: ReturnType<typeof setTimeout> | null = null;
+// Tracks whether we have already fetched server settings this session.
+let settingsLoadedOnce = false;
+
+function scheduleSync(getState: () => SettingsStore) {
+  if (syncTimer) {
+    clearTimeout(syncTimer);
+    syncTimer = null;
+  }
+
+  const { syncDebounceMs } = getState();
+  syncTimer = setTimeout(() => {
+    syncTimer = null;
+    const state = getState();
+    if (state.hasUnsavedChanges && state.syncStatus !== "syncing") {
+      state.syncSettings();
+    }
+  }, syncDebounceMs);
+}
 
 export const useSettingsStore = create<SettingsStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       ...defaults,
-      setAutoRotate: (value) => set({ autoRotate: value }),
-      setRotateSpeed: (value) => set({ rotateSpeed: value }),
-      setShowLabels: (value) => set({ showLabels: value }),
-      setGlowIntensity: (value) => set({ glowIntensity: value }),
-      setDataRefreshInterval: (value) => set({ dataRefreshInterval: value }),
-      setNavHideDelay: (value) => set({ navHideDelay: value }),
-      setDefaultCameraRadius: (value) => set({ defaultCameraRadius: value }),
-      setDefaultRotationY: (value) => set({ defaultRotationY: value }),
-      setLanguage: (value) => set({ language: value }),
-      setReducedMotion: (value) => set({ reducedMotion: value }),
+
+      // ─── Simple field setters (auto-sync) ─────────────────────────────────
+      setAutoRotate: (value) => {
+        set({ autoRotate: value, hasUnsavedChanges: true, syncStatus: "idle" });
+        scheduleSync(get);
+      },
+      setRotateSpeed: (value) => {
+        set({ rotateSpeed: value, hasUnsavedChanges: true, syncStatus: "idle" });
+        scheduleSync(get);
+      },
+      setShowLabels: (value) => {
+        set({ showLabels: value, hasUnsavedChanges: true, syncStatus: "idle" });
+        scheduleSync(get);
+      },
+      setGlowIntensity: (value) => {
+        set({ glowIntensity: value, hasUnsavedChanges: true, syncStatus: "idle" });
+        scheduleSync(get);
+      },
+      setDataRefreshInterval: (value) => {
+        set({ dataRefreshInterval: value, hasUnsavedChanges: true, syncStatus: "idle" });
+        scheduleSync(get);
+      },
+      setNavHideDelay: (value) => {
+        set({ navHideDelay: value, hasUnsavedChanges: true, syncStatus: "idle" });
+        scheduleSync(get);
+      },
+      setDefaultCameraRadius: (value) => {
+        set({ defaultCameraRadius: value, hasUnsavedChanges: true, syncStatus: "idle" });
+        scheduleSync(get);
+      },
+      setDefaultRotationY: (value) => {
+        set({ defaultRotationY: value, hasUnsavedChanges: true, syncStatus: "idle" });
+        scheduleSync(get);
+      },
+      setLanguage: (value) => {
+        set({ language: value, hasUnsavedChanges: true, syncStatus: "idle" });
+        scheduleSync(get);
+      },
+      setReducedMotion: (value) => {
+        set({ reducedMotion: value, hasUnsavedChanges: true, syncStatus: "idle" });
+        scheduleSync(get);
+      },
+      setEditAutoExitDelay: (value) => {
+        set({ editAutoExitDelay: value, hasUnsavedChanges: true, syncStatus: "idle" });
+        scheduleSync(get);
+      },
+
+      // bentoDragEnabled is transient UI state — NOT synced.
       setBentoDragEnabled: (value) => set({ bentoDragEnabled: value }),
-      setEditAutoExitDelay: (value) => set({ editAutoExitDelay: value }),
+
+      // ─── Bento layout setters (auto-sync) ─────────────────────────────────
       setBentoItemHidden: (id, hidden) =>
         set((state) => ({
           bentoLayout: state.bentoLayout.map((item) =>
             item.id === id ? { ...item, hidden } : item,
           ),
+          hasUnsavedChanges: true,
+          syncStatus: "idle",
         })),
       swapBentoItems: (idA, idB) =>
         set((state) => {
@@ -101,18 +199,95 @@ export const useSettingsStore = create<SettingsStore>()(
           const next = [...state.bentoLayout];
           next[idxA] = { ...a, x: b.x, y: b.y, w: b.w, h: b.h };
           next[idxB] = { ...b, x: a.x, y: a.y, w: a.w, h: a.h };
-          return { bentoLayout: next };
+          return { bentoLayout: next, hasUnsavedChanges: true, syncStatus: "idle" };
         }),
       moveBentoItem: (id, x, y) =>
         set((state) => ({
-          bentoLayout: state.bentoLayout.map((item) => (item.id === id ? { ...item, x, y } : item)),
+          bentoLayout: state.bentoLayout.map((item) =>
+            item.id === id ? { ...item, x, y } : item,
+          ),
+          hasUnsavedChanges: true,
+          syncStatus: "idle",
         })),
-      setBentoLayout: (layout) => set({ bentoLayout: layout }),
-      resetBentoLayout: () => set({ bentoLayout: defaultBentoLayout }),
-      reset: () => set(defaults),
+      setBentoLayout: (layout) => {
+        set({ bentoLayout: layout, hasUnsavedChanges: true, syncStatus: "idle" });
+        scheduleSync(get);
+      },
+      resetBentoLayout: () => {
+        set({ bentoLayout: defaultBentoLayout, hasUnsavedChanges: true, syncStatus: "idle" });
+        scheduleSync(get);
+      },
+
+      // ─── Reset (auto-sync) ────────────────────────────────────────────────
+      reset: () => {
+        if (syncTimer) {
+          clearTimeout(syncTimer);
+          syncTimer = null;
+        }
+        set({ ...defaults, hasUnsavedChanges: true, syncStatus: "idle" });
+        scheduleSync(get);
+      },
+
+      // ─── Server sync ────────────────────────────────────────────────────────
+      loadSettings: async () => {
+        if (settingsLoadedOnce) return;
+        settingsLoadedOnce = true;
+
+        const state = get();
+        const res = await fetchDashboardSettings();
+
+        if (res.ok && res.data) {
+          // If there are unsaved local changes, don't overwrite them.
+          if (state.hasUnsavedChanges) return;
+
+          const remote = res.data as Record<string, unknown>;
+          const updates: Record<string, unknown> = {};
+          for (const key of SYNCABLE_FIELDS) {
+            if (key in remote && remote[key] !== undefined) {
+              updates[key] = remote[key];
+            }
+          }
+          set(updates);
+        }
+      },
+
+      syncSettings: async () => {
+        const state = get();
+        const payload: Record<string, unknown> = {};
+        for (const key of SYNCABLE_FIELDS) {
+          payload[key] = state[key];
+        }
+
+        set({ syncStatus: "syncing" });
+        const res = await patchDashboardSettings(payload);
+
+        if (res.ok) {
+          set({ syncStatus: "saved", hasUnsavedChanges: false });
+        } else {
+          set({ syncStatus: "error" });
+        }
+      },
+
+      flushSync: () => {
+        if (syncTimer) {
+          clearTimeout(syncTimer);
+          syncTimer = null;
+        }
+        const state = get();
+        if (state.hasUnsavedChanges && state.syncStatus !== "syncing") {
+          state.syncSettings();
+        }
+      },
+
+      setSyncDebounceMs: (value) => set({ syncDebounceMs: value }),
     }),
     {
       name: "ecoctrl-settings",
+      // Exclude transient sync state from localStorage.
+      partialize: (state) => {
+        const { syncStatus: _, hasUnsavedChanges: __, ...persisted } = state;
+        return persisted;
+      },
     },
   ),
 );

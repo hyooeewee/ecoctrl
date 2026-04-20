@@ -51,6 +51,7 @@ export default function Home() {
   const setBentoDragEnabled = useSettingsStore((state) => state.setBentoDragEnabled);
   const setBentoLayout = useSettingsStore((state) => state.setBentoLayout);
   const resetBentoLayout = useSettingsStore((state) => state.resetBentoLayout);
+  const loadSettings = useSettingsStore((state) => state.loadSettings);
 
   const [navVisible, setNavVisible] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
@@ -68,6 +69,11 @@ export default function Home() {
   const colsFromRight = rightmostTopWidget ? 16 - rightmostTopWidget.x + 1 : 0;
   const controlsRight =
     fullscreen || colsFromRight === 0 ? "1rem" : `calc(${(colsFromRight / 16) * 100}% + 1rem)`;
+
+  // Load server settings on mount (non-blocking, server-side priority).
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
 
   // Sync backend widgets → bentoLayout
   useEffect(() => {

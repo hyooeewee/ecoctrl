@@ -13,3 +13,4 @@ export * from "./models";
 export * from "./threeDConfig";
 export * from "./platformConfig";
 export * from "./dashboardWidgets";
+export * from "./userSettings";
