@@ -214,7 +214,7 @@ export function BentoGrid({ children, className }: BentoGridProps) {
          */}
         {drag && (
           <div
-            className="fixed inset-0 z-[9998] cursor-grabbing"
+            className="pointer-events-auto fixed inset-0 z-[9998] cursor-grabbing"
             style={{ touchAction: "none" }}
             onPointerMove={handleOverlayMove}
             onPointerUp={() => endDrag(true)}
@@ -286,7 +286,7 @@ export function BentoItem({ id, children, className }: BentoItemProps) {
       if (!dragEnabled || !item || item.hidden) return;
       e.stopPropagation();
       e.preventDefault();
-      (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+      (e.target as HTMLElement | null)?.releasePointerCapture?.(e.pointerId);
 
       const cardEl = (e.currentTarget as HTMLElement).closest(
         "[data-bento-id]",
