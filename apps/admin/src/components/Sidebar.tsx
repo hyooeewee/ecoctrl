@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from "motion/react";
 import React from "react";
 
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 import { BrandLogo } from "./BrandLogo";
@@ -49,7 +50,7 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
         duration: 0.4,
         ease: [0.32, 0.72, 0, 1],
       }}
-      className="bg-card text-foreground border-border sticky top-0 z-50 flex h-screen flex-col overflow-hidden border-r"
+      className="bg-card text-foreground border-border sticky top-0 z-10 flex h-screen flex-col overflow-hidden border-r"
     >
       {/* Brand */}
       <div
@@ -106,58 +107,66 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
       </div>
 
       {/* Nav */}
-      <nav className="scrollbar-hide flex-1 overflow-x-hidden overflow-y-auto py-4">
-        <ul className="space-y-1 px-3">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            return (
-              <li key={item.id} className="relative">
-                <button
-                  onClick={() => setActiveTab(item.id)}
-                  className={cn(
-                    "group relative flex h-10 w-full items-center overflow-hidden rounded-md px-2.5 text-sm transition-all",
-                    isActive
-                      ? "bg-primary/5 text-primary active-nav-glow font-bold shadow-xs"
-                      : "text-muted-foreground hover:bg-accent hover:text-foreground",
-                  )}
-                >
-                  <div className="flex w-5 shrink-0 items-center justify-center">
-                    <Icon
-                      size={18}
-                      strokeWidth={isActive ? 2.5 : 2}
-                      className={cn("transition-transform duration-200", isActive && "scale-110")}
-                    />
-                  </div>
-
-                  <div className="flex-1 overflow-hidden text-left">
-                    <AnimatePresence mode="wait">
-                      {!collapsed && (
-                        <motion.span
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: -10 }}
-                          transition={{ duration: 0.2 }}
-                          className="ml-3 whitespace-nowrap"
-                        >
-                          {item.label}
-                        </motion.span>
+      <TooltipProvider>
+        <nav className="scrollbar-hide flex-1 overflow-x-hidden overflow-y-auto py-4">
+          <ul className="space-y-1 px-3">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <li key={item.id} className="relative">
+                  <Tooltip>
+                    <TooltipTrigger
+                      onClick={() => setActiveTab(item.id)}
+                      className={cn(
+                        "group relative flex h-10 w-full items-center overflow-hidden rounded-md px-2.5 text-sm transition-all",
+                        isActive
+                          ? "bg-primary/5 text-primary active-nav-glow font-bold shadow-xs"
+                          : "text-muted-foreground hover:bg-accent hover:text-foreground",
                       )}
-                    </AnimatePresence>
-                  </div>
+                    >
+                      <div className="flex w-5 shrink-0 items-center justify-center">
+                        <Icon
+                          size={18}
+                          strokeWidth={isActive ? 2.5 : 2}
+                          className={cn(
+                            "transition-transform duration-200",
+                            isActive && "scale-110",
+                          )}
+                        />
+                      </div>
 
-                  {isActive && (
-                    <motion.div
-                      layoutId="active-indicator"
-                      className="bg-primary absolute top-1/2 left-0 h-6 w-1 -translate-y-1/2 rounded-r-full"
-                    />
-                  )}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
+                      <div className="flex-1 overflow-hidden text-left">
+                        <AnimatePresence mode="wait">
+                          {!collapsed && (
+                            <motion.span
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              exit={{ opacity: 0, x: -10 }}
+                              transition={{ duration: 0.2 }}
+                              className="ml-3 whitespace-nowrap"
+                            >
+                              {item.label}
+                            </motion.span>
+                          )}
+                        </AnimatePresence>
+                      </div>
+
+                      {isActive && (
+                        <motion.div
+                          layoutId="active-indicator"
+                          className="bg-primary absolute top-1/2 left-0 h-6 w-1 -translate-y-1/2 rounded-r-full"
+                        />
+                      )}
+                    </TooltipTrigger>
+                    {collapsed && <TooltipContent side="right">{item.label}</TooltipContent>}
+                  </Tooltip>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      </TooltipProvider>
     </motion.aside>
   );
 }
