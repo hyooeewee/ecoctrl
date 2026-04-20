@@ -1,0 +1,33 @@
+import { eq } from "drizzle-orm";
+import { db } from "@/config/database";
+import { userSettings } from "@/schemas/userSettings";
+
+export async function getUserSettings(userId: string): Promise<Record<string, unknown>> {
+  const rows = await db.select().from(userSettings).where(eq(userSettings.userId, userId)).limit(1);
+  if (rows.length === 0) {
+    return {};
+  }
+  return (rows[0].settings as Record<string, unknown>) ?? {};
+}
+
+export async function upsertUserSettings(
+  userId: string,
+  settings: Record<string, unknown>,
+): Promise<void> {
+  const existing = await db.select().from(userSettings).where(eq(userSettings.userId, userId)).limit(1);
+  if (existing.length === 0) {
+    await db.insert(userSettings).values({
+      userId,
+      settings,
+      updatedAt: new Date(),
+    });
+  } else {
+    await db
+      .update(userSettings)
+      .set({
+        settings: { ...(existing[0].settings as Record<string, unknown>), ...settings },
+        updatedAt: new Date(),
+      })
+      .where(eq(userSettings.userId, userId));
+  }
+}

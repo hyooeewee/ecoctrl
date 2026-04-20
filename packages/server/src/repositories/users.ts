@@ -33,6 +33,14 @@ export async function removeUser(id: string): Promise<boolean> {
   return result.length > 0;
 }
 
+export async function getOnlineUser(): Promise<{ id: string; username: string } | null> {
+  const rows = await db.select().from(users).where(eq(users.status, "online")).limit(1);
+  if (rows.length === 0) {
+    return null;
+  }
+  return { id: rows[0].id, username: rows[0].username };
+}
+
 export async function updateUser(
   id: string,
   data: Partial<{ username: string; password: string; email: string; role: string; status: string; avatarUrl: string | null }>,

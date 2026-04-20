@@ -21,9 +21,17 @@ export async function apiPost<T>(
   return request<T>(endpoint, "POST", body, extraHeaders);
 }
 
+export async function apiPatch<T>(
+  endpoint: string,
+  body: unknown,
+  extraHeaders?: Record<string, string>,
+): Promise<ApiResponse<T>> {
+  return request<T>(endpoint, "PATCH", body, extraHeaders);
+}
+
 async function request<T>(
   endpoint: string,
-  method: "GET" | "POST",
+  method: "GET" | "POST" | "PATCH",
   body?: unknown,
   extraHeaders?: Record<string, string>,
   params?: Record<string, string>,

@@ -1,4 +1,8 @@
-import { IconArrowBackUp, IconArrowLeft } from "@tabler/icons-react";
+import {
+  IconArrowBackUp,
+  IconArrowLeft,
+  IconLoader2,
+} from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -49,6 +53,9 @@ export default function SettingsPage() {
     reducedMotion,
     bentoLayout,
     editAutoExitDelay,
+    syncStatus,
+    hasUnsavedChanges,
+    syncDebounceMs,
     setAutoRotate,
     setRotateSpeed,
     setShowLabels,
@@ -63,9 +70,25 @@ export default function SettingsPage() {
     setEditAutoExitDelay,
     resetBentoLayout,
     reset,
+    loadSettings,
+    flushSync,
+    syncSettings,
+    setSyncDebounceMs,
   } = useSettingsStore();
 
   const isLayoutModified = bentoLayout.length > 0;
+
+  // Load server settings on mount (server-side priority, non-blocking).
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
+  // Flush any pending sync on unmount.
+  useEffect(() => {
+    return () => {
+      flushSync();
+    };
+  }, [flushSync]);
 
   const handleReset = () => {
     reset();
@@ -86,7 +109,6 @@ export default function SettingsPage() {
       (entries) => {
         if (isScrollingRef.current) return;
 
-        // Find the entry with the largest intersection ratio in the viewport center
         const best = entries
           .filter((e) => e.isIntersecting)
           .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
@@ -149,6 +171,15 @@ export default function SettingsPage() {
     );
   };
 
+  // Save button state helpers
+  const isSyncing = syncStatus === "syncing";
+  const saveDisabled = !hasUnsavedChanges || isSyncing;
+  const saveLabel = isSyncing
+    ? t.settings.autoSaving
+    : hasUnsavedChanges
+      ? t.settings.save
+      : t.settings.saved;
+
   return (
     <div className="dark text-foreground relative h-screen overflow-hidden bg-[#060d18] font-sans">
       {/* Back button */}
@@ -178,6 +209,21 @@ export default function SettingsPage() {
           </nav>
 
           <div className="mt-auto px-4 pt-6">
+            {/* Save button */}
+            <Button
+              variant="default"
+              size="sm"
+              className="mb-2 w-full"
+              disabled={saveDisabled}
+              onClick={() => {
+                if (!saveDisabled) syncSettings();
+              }}
+            >
+              {isSyncing && (
+                <IconLoader2 size={14} className="mr-1.5 animate-spin" />
+              )}
+              {saveLabel}
+            </Button>
             <Button variant="outline" size="sm" className="w-full" onClick={handleReset}>
               {t.settings.reset}
             </Button>
@@ -413,6 +459,26 @@ export default function SettingsPage() {
                     max={15000}
                     step={1000}
                     onValueChange={(v) => setNavHideDelay(Array.isArray(v) ? v[0] : v)}
+                  />
+                </div>
+
+                {/* Auto-save debounce time */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm font-medium">{t.settings.syncDebounce}</Label>
+                      <p className="text-muted-foreground text-xs">{t.settings.syncDebounceDesc}</p>
+                    </div>
+                    <span className="text-muted-foreground text-xs">
+                      {syncDebounceMs} ms
+                    </span>
+                  </div>
+                  <Slider
+                    value={[syncDebounceMs]}
+                    min={100}
+                    max={3000}
+                    step={100}
+                    onValueChange={(v) => setSyncDebounceMs(Array.isArray(v) ? v[0] : v)}
                   />
                 </div>
               </div>
