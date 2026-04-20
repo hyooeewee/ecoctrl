@@ -1,8 +1,16 @@
 import { db } from "@/config/database";
-import { dashboardStats, dashboardCards } from "@/schemas/dashboard";
+import { dashboardStats } from "@/schemas/dashboard";
 import { energyReadings, energyBreakdowns } from "@/schemas/energy";
 import { alerts } from "@/schemas/alerts";
-import type { DashboardStats, EnergyChartItem, Alert, DashboardCard, DashboardData, TrendPoint, BreakdownItem, DeviceStatusItem, AiSuggestionItem } from "@ecoctrl/shared";
+import { dashboardWidgets } from "@/schemas/dashboardWidgets";
+import { eq, asc } from "drizzle-orm";
+import type {
+  DashboardStats,
+  EnergyChartItem,
+  Alert,
+  DashboardData,
+  WidgetConfig,
+} from "@ecoctrl/shared";
 
 export async function getDashboardStats(): Promise<DashboardStats> {
   const rows = await db.select().from(dashboardStats);
@@ -41,55 +49,19 @@ export async function getAlerts(limit?: number): Promise<Alert[]> {
 }
 
 export async function getDashboardData(): Promise<DashboardData> {
-  const [stats, cardsRows, trendRows, breakdownRows, alertsRows] = await Promise.all([
-    getDashboardStats(),
-    db.select().from(dashboardCards).orderBy(dashboardCards.sortOrder),
-    db.select().from(energyReadings),
-    db.select().from(energyBreakdowns),
-    db.select().from(alerts),
-  ]);
+  const rows = await db
+    .select()
+    .from(dashboardWidgets)
+    .where(eq(dashboardWidgets.enabled, true))
+    .orderBy(asc(dashboardWidgets.sortOrder));
 
-  const cards: DashboardCard[] = cardsRows.map((r) => ({
-    titleKey: r.titleKey,
-    value: r.value,
-    unit: r.unit,
-    delta: r.delta ?? undefined,
-    deltaVariant: r.deltaVariant as DashboardCard["deltaVariant"],
-    chartType: r.chartType as DashboardCard["chartType"],
-    chartData: (r.chartData as { v: number }[]) ?? [],
-    chartColor: r.chartColor,
-    footerKey: r.footerKey ?? undefined,
-    progressValue: r.progressValue ?? undefined,
-  }));
-
-  const trend: TrendPoint[] = trendRows.map((r) => ({ h: r.hour, kWh: r.kWh }));
-  const breakdown: BreakdownItem[] = breakdownRows.map((r) => ({
-    name: r.category,
-    value: r.value,
-    color: r.color ?? "",
-  }));
-
-  const devices: DeviceStatusItem[] = [
-    { category: "hvac", count: 6, status: "critical" },
-    { category: "lighting", count: 30, status: "warn" },
-    { category: "elevator", count: 10, status: "ok" },
-    { category: "server", count: 24, status: "ok" },
-  ];
-
-  const aiSuggestions: AiSuggestionItem[] = [
-    { category: "hvac", text: "优化暖通夜间计划——降低夜间温控设定值至 18°C", saving: "预计节能 12%" },
-    { category: "lighting", text: "根据占用传感器调整照明——B2–B4 区域", saving: "预计节能 8%" },
-    { category: "server", text: "将非关键服务器任务迁移至低峰期 (02:00–06:00)", saving: "预计节省 5% 费用" },
-  ];
-
-  const alertsData: Alert[] = alertsRows.map((r) => ({
+  const widgets: WidgetConfig[] = rows.map((r) => ({
     id: r.id,
-    device: r.device,
-    level: r.level as "high" | "medium" | "low",
-    message: r.message,
-    time: r.time,
-    status: r.status as "pending" | "resolved",
+    titleKey: r.titleKey,
+    icon: r.icon,
+    layout: { x: r.layoutX, y: r.layoutY, w: r.layoutW, h: r.layoutH },
+    data: r.dataJson as WidgetConfig["data"],
   }));
 
-  return { cards, trend, breakdown, devices, aiSuggestions, alerts: alertsData };
+  return { widgets };
 }

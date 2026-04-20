@@ -50,10 +50,22 @@ interface LabelDef {
 const LABELS: LabelDef[] = [
   { key: "office1", fallbackPosition: new Vector3(-4, 2.5, -3), meshKeywords: ["office", "办公"] },
   { key: "meeting", fallbackPosition: new Vector3(0, 3.2, -3), meshKeywords: ["meeting", "会议"] },
-  { key: "dataCenter", fallbackPosition: new Vector3(-1.5, 1.5, 0), meshKeywords: ["data", "server", "机房", "数据"] },
-  { key: "exhibition", fallbackPosition: new Vector3(2.5, 2.2, -2), meshKeywords: ["exhibition", "hall", "展示", "展厅"] },
+  {
+    key: "dataCenter",
+    fallbackPosition: new Vector3(-1.5, 1.5, 0),
+    meshKeywords: ["data", "server", "机房", "数据"],
+  },
+  {
+    key: "exhibition",
+    fallbackPosition: new Vector3(2.5, 2.2, -2),
+    meshKeywords: ["exhibition", "hall", "展示", "展厅"],
+  },
   { key: "office2", fallbackPosition: new Vector3(3.5, 2.5, -3), meshKeywords: ["office", "办公"] },
-  { key: "lobby", fallbackPosition: new Vector3(3.5, 0.8, 2), meshKeywords: ["lobby", "大堂", "大厅", "entrance"] },
+  {
+    key: "lobby",
+    fallbackPosition: new Vector3(3.5, 0.8, 2),
+    meshKeywords: ["lobby", "大堂", "大厅", "entrance"],
+  },
 ];
 
 export interface BuildingViewRef {
@@ -114,9 +126,15 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
     const autoRotateRef = useRef(autoRotate);
     const rotateSpeedRef = useRef(rotateSpeed);
     const showLabelsRef = useRef(showLabels);
-    useEffect(() => { autoRotateRef.current = autoRotate; }, [autoRotate]);
-    useEffect(() => { rotateSpeedRef.current = rotateSpeed; }, [rotateSpeed]);
-    useEffect(() => { showLabelsRef.current = showLabels; }, [showLabels]);
+    useEffect(() => {
+      autoRotateRef.current = autoRotate;
+    }, [autoRotate]);
+    useEffect(() => {
+      rotateSpeedRef.current = rotateSpeed;
+    }, [rotateSpeed]);
+    useEffect(() => {
+      showLabelsRef.current = showLabels;
+    }, [showLabels]);
 
     // Map locale strings to label keys so the static LABELS array stays
     // outside the component body.
@@ -190,8 +208,12 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
 
       // Track user interaction via canvas native events so auto-rotate pauses
       // while the user is dragging the camera.
-      const onPointerDown = () => { isInteractingRef.current = true; };
-      const onPointerUp = () => { isInteractingRef.current = false; };
+      const onPointerDown = () => {
+        isInteractingRef.current = true;
+      };
+      const onPointerUp = () => {
+        isInteractingRef.current = false;
+      };
       canvas.addEventListener("pointerdown", onPointerDown);
       canvas.addEventListener("pointerup", onPointerUp);
       canvas.addEventListener("pointercancel", onPointerUp);

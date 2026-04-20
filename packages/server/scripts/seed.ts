@@ -48,12 +48,7 @@ const CN_ALERT_MESSAGES = [
   "传感器故障",
   "通讯中断",
 ];
-const REPORT_NAMES = [
-  "周度能耗报表",
-  "碳排放统计报表",
-  "设备故障率分析",
-  "季度审计报表",
-];
+const REPORT_NAMES = ["周度能耗报表", "碳排放统计报表", "设备故障率分析", "季度审计报表"];
 const REPORT_RECEIVERS = [
   "admin@energy.com",
   "sustainability@energy.com",
@@ -91,7 +86,11 @@ async function seedUsers() {
     },
   }));
   // Set avatar for the first online user to match mock data
-  const onlineUsers = await db.select().from(schema.users).where(eq(schema.users.status, "online")).limit(1);
+  const onlineUsers = await db
+    .select()
+    .from(schema.users)
+    .where(eq(schema.users.status, "online"))
+    .limit(1);
   if (onlineUsers.length > 0) {
     await db
       .update(schema.users)
@@ -102,23 +101,27 @@ async function seedUsers() {
 }
 
 async function seedMaintenance() {
-  await seed(db, { maintenanceReminders: schema.maintenanceReminders }, { seed: 2 }).refine((f) => ({
-    maintenanceReminders: {
-      count: 8,
-      columns: {
-        id: f.uuid(),
-        task: f.valuesFromArray({ values: CN_TASKS }),
-        description: f.loremIpsum({ sentencesCount: 2 }),
-        dueDate: f.date({ minDate: "2026-04-18", maxDate: "2026-05-15" }),
-        priority: f.valuesFromArray({ values: ["high", "medium", "low"] }),
-        status: f.valuesFromArray({ values: ["pending", "in_progress", "completed"] }),
-        assignee: f.valuesFromArray({ values: ["张工", "李师傅", "王升级", "赵工", "维保单位", "刘工", "陈师傅", "周工"] }),
-        location: f.valuesFromArray({ values: CN_LOCATIONS }),
-        estimatedHours: f.int({ minValue: 1, maxValue: 8 }),
-        lastCompleted: f.date({ minDate: "2025-04-10", maxDate: "2026-03-20" }),
+  await seed(db, { maintenanceReminders: schema.maintenanceReminders }, { seed: 2 }).refine(
+    (f) => ({
+      maintenanceReminders: {
+        count: 8,
+        columns: {
+          id: f.uuid(),
+          task: f.valuesFromArray({ values: CN_TASKS }),
+          description: f.loremIpsum({ sentencesCount: 2 }),
+          dueDate: f.date({ minDate: "2026-04-18", maxDate: "2026-05-15" }),
+          priority: f.valuesFromArray({ values: ["high", "medium", "low"] }),
+          status: f.valuesFromArray({ values: ["pending", "in_progress", "completed"] }),
+          assignee: f.valuesFromArray({
+            values: ["张工", "李师傅", "王升级", "赵工", "维保单位", "刘工", "陈师傅", "周工"],
+          }),
+          location: f.valuesFromArray({ values: CN_LOCATIONS }),
+          estimatedHours: f.int({ minValue: 1, maxValue: 8 }),
+          lastCompleted: f.date({ minDate: "2025-04-10", maxDate: "2026-03-20" }),
+        },
       },
-    },
-  }));
+    }),
+  );
   console.log("Seeded maintenance reminders");
 }
 
@@ -187,32 +190,182 @@ async function seedDashboard() {
   await db.insert(schema.dashboardStats).values(stats);
 
   const energyChart = [
-    { name: "Mon", value: 400 }, { name: "Tue", value: 300 }, { name: "Wed", value: 500 },
-    { name: "Thu", value: 280 }, { name: "Fri", value: 590 }, { name: "Sat", value: 320 }, { name: "Sun", value: 250 },
+    { name: "Mon", value: 400 },
+    { name: "Tue", value: 300 },
+    { name: "Wed", value: 500 },
+    { name: "Thu", value: 280 },
+    { name: "Fri", value: 590 },
+    { name: "Sat", value: 320 },
+    { name: "Sun", value: 250 },
   ];
-  await db.insert(schema.energyReadings).values(energyChart.map((e) => ({ hour: e.name, kWh: e.value })));
+  await db
+    .insert(schema.energyReadings)
+    .values(energyChart.map((e) => ({ hour: e.name, kWh: e.value })));
 
   await seed(db, { alerts: schema.alerts }, { seed: 5 }).refine((f) => ({
     alerts: {
       count: 5,
       columns: {
         id: f.uuid(),
-        device: f.valuesFromArray({ values: ["中央空调 A1", "配电柜 B3", "水泵 C1", "电梯 #4", "照明控制系统"] }),
+        device: f.valuesFromArray({
+          values: ["中央空调 A1", "配电柜 B3", "水泵 C1", "电梯 #4", "照明控制系统"],
+        }),
         level: f.valuesFromArray({ values: ["high", "medium", "low"] }),
         message: f.valuesFromArray({ values: CN_ALERT_MESSAGES }),
-        time: f.valuesFromArray({ values: ["10:15:22", "09:45:10", "08:00:00", "11:20:05", "10:55:30"] }),
+        time: f.valuesFromArray({
+          values: ["10:15:22", "09:45:10", "08:00:00", "11:20:05", "10:55:30"],
+        }),
         status: f.valuesFromArray({ values: ["pending", "resolved"] }),
       },
     },
   }));
 
   const cards = [
-    { titleKey: "totalEnergy", value: "8,456", unit: "kWh", delta: "+12%", deltaVariant: "up-bad" as const, chartType: "area" as const, chartData: [{ v: 280 }, { v: 310 }, { v: 295 }, { v: 340 }, { v: 380 }, { v: 420 }, { v: 395 }, { v: 440 }, { v: 410 }, { v: 460 }, { v: 480 }, { v: 500 }], chartColor: "var(--color-chart-1)", footerKey: "totalEnergyFooter", sortOrder: 0 },
-    { titleKey: "carbonEmission", value: "2,340", unit: "kg CO₂", delta: "+2%", deltaVariant: "up-bad" as const, chartType: "bar" as const, chartData: [{ v: 280 }, { v: 320 }, { v: 290 }, { v: 350 }, { v: 310 }, { v: 270 }, { v: 340 }], chartColor: "var(--color-chart-2)", footerKey: "carbonFooter", sortOrder: 1 },
-    { titleKey: "energyIntensity", value: "98", unit: "kWh/m²", delta: "−7%", deltaVariant: "down-good" as const, chartType: "line" as const, chartData: [{ v: 120 }, { v: 115 }, { v: 112 }, { v: 108 }, { v: 105 }, { v: 103 }, { v: 100 }, { v: 99 }, { v: 97 }, { v: 96 }, { v: 97 }, { v: 98 }], chartColor: "var(--color-chart-1)", footerKey: "intensityFooter", sortOrder: 2 },
-    { titleKey: "todayCost", value: "5,240", unit: "costUnit", delta: "+8%", deltaVariant: "up-bad" as const, chartType: "area" as const, chartData: [{ v: 180 }, { v: 210 }, { v: 195 }, { v: 240 }, { v: 280 }, { v: 310 }, { v: 290 }, { v: 330 }, { v: 350 }, { v: 370 }, { v: 385 }, { v: 400 }], chartColor: "var(--color-chart-4)", footerKey: "costFooter", sortOrder: 3 },
-    { titleKey: "renewableRate", value: "85", unit: "%", delta: "renewableTarget", deltaVariant: "neutral" as const, chartType: "progress" as const, chartData: [{ v: 78 }, { v: 80 }, { v: 81 }, { v: 80 }, { v: 82 }, { v: 84 }, { v: 83 }, { v: 85 }, { v: 84 }, { v: 86 }, { v: 85 }, { v: 85 }], chartColor: "var(--color-cyber-green)", progressValue: 85, sortOrder: 4 },
-    { titleKey: "loadStatus", value: "60", unit: "%", delta: "loadNormal", deltaVariant: "up-good" as const, chartType: "progress" as const, chartData: [{ v: 55 }, { v: 58 }, { v: 60 }, { v: 63 }, { v: 61 }, { v: 60 }, { v: 58 }, { v: 59 }, { v: 60 }, { v: 62 }, { v: 61 }, { v: 60 }], chartColor: "var(--color-chart-2)", progressValue: 60, sortOrder: 5 },
+    {
+      titleKey: "totalEnergy",
+      value: "8,456",
+      unit: "kWh",
+      delta: "+12%",
+      deltaVariant: "up-bad" as const,
+      chartType: "area" as const,
+      chartData: [
+        { v: 280 },
+        { v: 310 },
+        { v: 295 },
+        { v: 340 },
+        { v: 380 },
+        { v: 420 },
+        { v: 395 },
+        { v: 440 },
+        { v: 410 },
+        { v: 460 },
+        { v: 480 },
+        { v: 500 },
+      ],
+      chartColor: "var(--color-chart-1)",
+      footerKey: "totalEnergyFooter",
+      sortOrder: 0,
+    },
+    {
+      titleKey: "carbonEmission",
+      value: "2,340",
+      unit: "kg CO₂",
+      delta: "+2%",
+      deltaVariant: "up-bad" as const,
+      chartType: "bar" as const,
+      chartData: [
+        { v: 280 },
+        { v: 320 },
+        { v: 290 },
+        { v: 350 },
+        { v: 310 },
+        { v: 270 },
+        { v: 340 },
+      ],
+      chartColor: "var(--color-chart-2)",
+      footerKey: "carbonFooter",
+      sortOrder: 1,
+    },
+    {
+      titleKey: "energyIntensity",
+      value: "98",
+      unit: "kWh/m²",
+      delta: "−7%",
+      deltaVariant: "down-good" as const,
+      chartType: "line" as const,
+      chartData: [
+        { v: 120 },
+        { v: 115 },
+        { v: 112 },
+        { v: 108 },
+        { v: 105 },
+        { v: 103 },
+        { v: 100 },
+        { v: 99 },
+        { v: 97 },
+        { v: 96 },
+        { v: 97 },
+        { v: 98 },
+      ],
+      chartColor: "var(--color-chart-1)",
+      footerKey: "intensityFooter",
+      sortOrder: 2,
+    },
+    {
+      titleKey: "todayCost",
+      value: "5,240",
+      unit: "costUnit",
+      delta: "+8%",
+      deltaVariant: "up-bad" as const,
+      chartType: "area" as const,
+      chartData: [
+        { v: 180 },
+        { v: 210 },
+        { v: 195 },
+        { v: 240 },
+        { v: 280 },
+        { v: 310 },
+        { v: 290 },
+        { v: 330 },
+        { v: 350 },
+        { v: 370 },
+        { v: 385 },
+        { v: 400 },
+      ],
+      chartColor: "var(--color-chart-4)",
+      footerKey: "costFooter",
+      sortOrder: 3,
+    },
+    {
+      titleKey: "renewableRate",
+      value: "85",
+      unit: "%",
+      delta: "renewableTarget",
+      deltaVariant: "neutral" as const,
+      chartType: "progress" as const,
+      chartData: [
+        { v: 78 },
+        { v: 80 },
+        { v: 81 },
+        { v: 80 },
+        { v: 82 },
+        { v: 84 },
+        { v: 83 },
+        { v: 85 },
+        { v: 84 },
+        { v: 86 },
+        { v: 85 },
+        { v: 85 },
+      ],
+      chartColor: "var(--color-cyber-green)",
+      progressValue: 85,
+      sortOrder: 4,
+    },
+    {
+      titleKey: "loadStatus",
+      value: "60",
+      unit: "%",
+      delta: "loadNormal",
+      deltaVariant: "up-good" as const,
+      chartType: "progress" as const,
+      chartData: [
+        { v: 55 },
+        { v: 58 },
+        { v: 60 },
+        { v: 63 },
+        { v: 61 },
+        { v: 60 },
+        { v: 58 },
+        { v: 59 },
+        { v: 60 },
+        { v: 62 },
+        { v: 61 },
+        { v: 60 },
+      ],
+      chartColor: "var(--color-chart-2)",
+      progressValue: 60,
+      sortOrder: 5,
+    },
   ];
   await db.insert(schema.dashboardCards).values(cards);
 
@@ -234,9 +387,30 @@ async function seedBackupSchedule() {
 
 async function seedEnergyAreas() {
   const areas = [
-    { title: "A 栋办公区", current: 4200, target: 5000, color: "bg-primary", powerFactor: 0.94, loadRate: "72%" },
-    { title: "B 栋研发中心", current: 8500, target: 7000, color: "bg-red-500", powerFactor: 0.94, loadRate: "72%" },
-    { title: "C 栋生产车间", current: 15400, target: 20000, color: "bg-green-500", powerFactor: 0.94, loadRate: "72%" },
+    {
+      title: "A 栋办公区",
+      current: 4200,
+      target: 5000,
+      color: "bg-primary",
+      powerFactor: 0.94,
+      loadRate: "72%",
+    },
+    {
+      title: "B 栋研发中心",
+      current: 8500,
+      target: 7000,
+      color: "bg-red-500",
+      powerFactor: 0.94,
+      loadRate: "72%",
+    },
+    {
+      title: "C 栋生产车间",
+      current: 15400,
+      target: 20000,
+      color: "bg-green-500",
+      powerFactor: 0.94,
+      loadRate: "72%",
+    },
   ];
   await db.insert(schema.energyAreas).values(areas);
   console.log("Seeded energy areas");
@@ -244,12 +418,60 @@ async function seedEnergyAreas() {
 
 async function seedModels() {
   const models = [
-    { id: "1", name: "冷却塔模型_1", version: "v2.1", format: "GLB", size: "12.4MB", thumbnailUrl: null, docUrl: null },
-    { id: "2", name: "冷却塔模型_2", version: "v2.1", format: "GLB", size: "12.4MB", thumbnailUrl: null, docUrl: null },
-    { id: "3", name: "冷却塔模型_3", version: "v2.1", format: "GLB", size: "12.4MB", thumbnailUrl: null, docUrl: null },
-    { id: "4", name: "冷却塔模型_4", version: "v2.1", format: "GLB", size: "12.4MB", thumbnailUrl: null, docUrl: null },
-    { id: "5", name: "冷却塔模型_5", version: "v2.1", format: "GLB", size: "12.4MB", thumbnailUrl: null, docUrl: null },
-    { id: "6", name: "冷却塔模型_6", version: "v2.1", format: "GLB", size: "12.4MB", thumbnailUrl: null, docUrl: null },
+    {
+      id: "1",
+      name: "冷却塔模型_1",
+      version: "v2.1",
+      format: "GLB",
+      size: "12.4MB",
+      thumbnailUrl: null,
+      docUrl: null,
+    },
+    {
+      id: "2",
+      name: "冷却塔模型_2",
+      version: "v2.1",
+      format: "GLB",
+      size: "12.4MB",
+      thumbnailUrl: null,
+      docUrl: null,
+    },
+    {
+      id: "3",
+      name: "冷却塔模型_3",
+      version: "v2.1",
+      format: "GLB",
+      size: "12.4MB",
+      thumbnailUrl: null,
+      docUrl: null,
+    },
+    {
+      id: "4",
+      name: "冷却塔模型_4",
+      version: "v2.1",
+      format: "GLB",
+      size: "12.4MB",
+      thumbnailUrl: null,
+      docUrl: null,
+    },
+    {
+      id: "5",
+      name: "冷却塔模型_5",
+      version: "v2.1",
+      format: "GLB",
+      size: "12.4MB",
+      thumbnailUrl: null,
+      docUrl: null,
+    },
+    {
+      id: "6",
+      name: "冷却塔模型_6",
+      version: "v2.1",
+      format: "GLB",
+      size: "12.4MB",
+      thumbnailUrl: null,
+      docUrl: null,
+    },
   ];
   await db.insert(schema.models).values(models);
   console.log("Seeded models");
@@ -275,6 +497,253 @@ async function seedPlatformConfig() {
   console.log("Seeded platform config");
 }
 
+async function seedDashboardWidgets() {
+  const widgets = [
+    // Stat cards
+    {
+      titleKey: "totalEnergy",
+      icon: "Wind",
+      layoutX: 1,
+      layoutY: 1,
+      layoutW: 3,
+      layoutH: 2,
+      dataType: "stat" as const,
+      dataJson: {
+        value: "8,456",
+        unit: "kWh",
+        delta: "+12%",
+        deltaVariant: "up-bad",
+        sparkline: [280, 310, 295, 340, 380, 420, 395, 440, 410, 460, 480, 500],
+        sparklineColor: "var(--color-chart-1)",
+        footerKey: "totalEnergyFooter",
+      },
+      sortOrder: 0,
+    },
+    {
+      titleKey: "carbonEmission",
+      icon: "Leaf",
+      layoutX: 1,
+      layoutY: 3,
+      layoutW: 3,
+      layoutH: 2,
+      dataType: "stat" as const,
+      dataJson: {
+        value: "2,340",
+        unit: "kg CO₂",
+        delta: "+2%",
+        deltaVariant: "up-bad",
+        sparkline: [280, 320, 290, 350, 310, 270, 340],
+        sparklineColor: "var(--color-chart-2)",
+        footerKey: "carbonFooter",
+      },
+      sortOrder: 1,
+    },
+    {
+      titleKey: "energyIntensity",
+      icon: "Gauge",
+      layoutX: 14,
+      layoutY: 1,
+      layoutW: 3,
+      layoutH: 2,
+      dataType: "stat" as const,
+      dataJson: {
+        value: "98",
+        unit: "kWh/m²",
+        delta: "−7%",
+        deltaVariant: "down-good",
+        sparkline: [120, 115, 112, 108, 105, 103, 100, 99, 97, 96, 97, 98],
+        sparklineColor: "var(--color-chart-1)",
+        footerKey: "intensityFooter",
+      },
+      sortOrder: 2,
+    },
+    {
+      titleKey: "todayCost",
+      icon: "Banknote",
+      layoutX: 1,
+      layoutY: 5,
+      layoutW: 3,
+      layoutH: 2,
+      dataType: "stat" as const,
+      dataJson: {
+        value: "5,240",
+        unit: "costUnit",
+        delta: "+8%",
+        deltaVariant: "up-bad",
+        sparkline: [180, 210, 195, 240, 280, 310, 290, 330, 350, 370, 385, 400],
+        sparklineColor: "var(--color-chart-4)",
+        footerKey: "costFooter",
+      },
+      sortOrder: 3,
+    },
+    {
+      titleKey: "renewableRate",
+      icon: "Sun",
+      layoutX: 1,
+      layoutY: 7,
+      layoutW: 3,
+      layoutH: 2,
+      dataType: "stat" as const,
+      dataJson: {
+        value: "85",
+        unit: "%",
+        delta: "renewableTarget",
+        deltaVariant: "neutral",
+        sparkline: [78, 80, 81, 80, 82, 84, 83, 85, 84, 86, 85, 85],
+        sparklineColor: "var(--color-cyber-green)",
+        progressValue: 85,
+      },
+      sortOrder: 4,
+    },
+    {
+      titleKey: "loadStatus",
+      icon: "Activity",
+      layoutX: 4,
+      layoutY: 1,
+      layoutW: 3,
+      layoutH: 2,
+      dataType: "stat" as const,
+      dataJson: {
+        value: "60",
+        unit: "%",
+        delta: "loadNormal",
+        deltaVariant: "up-good",
+        sparkline: [55, 58, 60, 63, 61, 60, 58, 59, 60, 62, 61, 60],
+        sparklineColor: "var(--color-chart-2)",
+        progressValue: 60,
+      },
+      sortOrder: 5,
+    },
+    // Trend chart
+    {
+      titleKey: "charts.trendTitle",
+      icon: "TrendingUp",
+      layoutX: 4,
+      layoutY: 6,
+      layoutW: 6,
+      layoutH: 3,
+      dataType: "chart" as const,
+      dataJson: {
+        chartType: "area",
+        points: [
+          { label: "Mon", value: 400 },
+          { label: "Tue", value: 300 },
+          { label: "Wed", value: 500 },
+          { label: "Thu", value: 280 },
+          { label: "Fri", value: 590 },
+          { label: "Sat", value: 320 },
+          { label: "Sun", value: 250 },
+        ],
+      },
+      sortOrder: 6,
+    },
+    // Breakdown chart
+    {
+      titleKey: "charts.breakdownTitle",
+      icon: "ChartPie",
+      layoutX: 10,
+      layoutY: 6,
+      layoutW: 4,
+      layoutH: 3,
+      dataType: "chart" as const,
+      dataJson: {
+        chartType: "donut",
+        items: [
+          { label: "hvac", value: 45, color: "var(--color-chart-1)" },
+          { label: "lighting", value: 30, color: "var(--color-chart-3)" },
+          { label: "equipment", value: 15, color: "var(--color-chart-4)" },
+          { label: "other", value: 10, color: "oklch(0.35 0.02 265)" },
+        ],
+      },
+      sortOrder: 7,
+    },
+    // Alerts
+    {
+      titleKey: "alerts.title",
+      icon: "Bell",
+      layoutX: 14,
+      layoutY: 3,
+      layoutW: 3,
+      layoutH: 2,
+      dataType: "list" as const,
+      dataJson: {
+        items: [
+          {
+            icon: "AlertTriangle",
+            title: "能耗异常波动 (超出阈值 20%)",
+            subtitle: "中央空调 A1",
+            severity: "critical",
+            time: "10:15:22",
+          },
+          {
+            icon: "ExclamationCircle",
+            title: "电压不稳定告警",
+            subtitle: "配电柜 B3",
+            severity: "warning",
+            time: "09:45:10",
+          },
+          {
+            icon: "InfoCircle",
+            title: "例行维保提醒",
+            subtitle: "水泵 C1",
+            severity: "info",
+            time: "08:00:00",
+          },
+        ],
+      },
+      sortOrder: 8,
+    },
+    // Devices
+    {
+      titleKey: "devices.title",
+      icon: "Devices",
+      layoutX: 14,
+      layoutY: 5,
+      layoutW: 3,
+      layoutH: 2,
+      dataType: "list" as const,
+      dataJson: {
+        items: [
+          { icon: "Wind", label: "devices.airConditioning", value: 6, status: "critical" },
+          { icon: "Zap", label: "devices.lighting", value: 30, status: "warn" },
+          { icon: "Elevator", label: "devices.elevators", value: 10, status: "ok" },
+          { icon: "Server", label: "devices.servers", value: 24, status: "ok" },
+        ],
+      },
+      sortOrder: 9,
+    },
+    // AI
+    {
+      titleKey: "ai.title",
+      icon: "BrainCircuit",
+      layoutX: 14,
+      layoutY: 7,
+      layoutW: 3,
+      layoutH: 2,
+      dataType: "list" as const,
+      dataJson: {
+        items: [
+          {
+            icon: "Wind",
+            text: "优化暖通夜间计划——降低夜间温控设定值至 18°C",
+            saving: "预计节能 12%",
+          },
+          { icon: "Zap", text: "根据占用传感器调整照明——B2–B4 区域", saving: "预计节能 8%" },
+          {
+            icon: "Server",
+            text: "将非关键服务器任务迁移至低峰期 (02:00–06:00)",
+            saving: "预计节省 5% 费用",
+          },
+        ],
+      },
+      sortOrder: 10,
+    },
+  ];
+
+  await db.insert(schema.dashboardWidgets).values(widgets);
+  console.log("Seeded dashboard widgets");
+}
+
 async function seedIotTokens() {
   await db.insert(schema.iotTokens).values({
     accessToken:
@@ -294,6 +763,7 @@ async function main() {
   await seedFaults();
   await seedReports();
   await seedDashboard();
+  await seedDashboardWidgets();
   await seedBackupSchedule();
   await seedEnergyAreas();
   await seedModels();

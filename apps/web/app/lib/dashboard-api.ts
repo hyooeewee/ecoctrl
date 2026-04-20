@@ -1,22 +1,4 @@
-import type {
-  BreakdownItem,
-  DashboardCard,
-  DashboardData,
-  DeviceStatusItem,
-  AiSuggestionItem,
-  SparkPoint,
-  TrendPoint,
-} from "@ecoctrl/shared";
-
-export type {
-  BreakdownItem,
-  DashboardCard,
-  DashboardData,
-  DeviceStatusItem,
-  AiSuggestionItem,
-  SparkPoint,
-  TrendPoint,
-};
+import type { DashboardData } from "~/components/dashboard/widgets/types";
 
 import { apiGet } from "~/lib/api";
 
@@ -32,3 +14,10 @@ export async function fetchDashboardData(): Promise<DashboardData | null> {
 
   return null;
 }
+
+export type {
+  DashboardData,
+  WidgetConfig,
+  WidgetData,
+  WidgetLayout,
+} from "~/components/dashboard/widgets/types";

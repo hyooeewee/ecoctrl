@@ -1,10 +1,13 @@
-import { IconChartPie, IconTrendingUp } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import {
   Area,
   AreaChart,
+  Bar,
+  BarChart,
   CartesianGrid,
   Cell,
+  Line,
+  LineChart,
   Pie,
   PieChart,
   Tooltip,
@@ -12,7 +15,6 @@ import {
   YAxis,
 } from "recharts";
 
-import type { BreakdownItem, TrendPoint } from "~/lib/dashboard-api";
 import { cn } from "~/lib/utils";
 import { useLocale } from "~/locales";
 
@@ -61,12 +63,12 @@ function TrendTooltip({
 }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-panel-dark/95 rounded border border-white/10 px-2 py-1.5 text-[10px] shadow-xl backdrop-blur">
+    <div className="rounded border border-white/10 bg-panel-dark/95 px-2 py-1.5 text-[10px] shadow-xl backdrop-blur">
       <span className="text-muted-foreground">
         {label}
         {timeUnit}
       </span>
-      <span className="text-foreground ml-2 font-semibold tabular-nums">
+      <span className="ml-2 font-semibold tabular-nums text-foreground">
         {payload[0].value} kWh
       </span>
     </div>
@@ -83,73 +85,163 @@ function PieCustomTooltip({
   if (!active || !payload?.length) return null;
   const entry = payload[0];
   return (
-    <div className="bg-panel-dark/95 rounded border border-white/10 px-2 py-1.5 text-[10px] shadow-xl backdrop-blur">
-      <span className="text-foreground font-medium">{entry.name}</span>
-      <span className="text-muted-foreground ml-2 tabular-nums">{entry.value}%</span>
+    <div className="rounded border border-white/10 bg-panel-dark/95 px-2 py-1.5 text-[10px] shadow-xl backdrop-blur">
+      <span className="font-medium text-foreground">{entry.name}</span>
+      <span className="ml-2 tabular-nums text-muted-foreground">{entry.value}%</span>
     </div>
   );
 }
 
 // ─── 24-Hour Energy Trend ─────────────────────────────────────────────────────
 
-export function EnergyTrendChart({ className, data }: { className?: string; data: TrendPoint[] }) {
+interface ChartPoint {
+  label: string;
+  value: number;
+}
+
+interface EnergyTrendChartProps {
+  className?: string;
+  data: ChartPoint[];
+  title: string;
+  icon: React.ReactNode;
+  chartType?: "area" | "line" | "bar";
+}
+
+export function EnergyTrendChart({
+  className,
+  data,
+  title,
+  icon,
+  chartType = "area",
+}: EnergyTrendChartProps) {
   const t = useLocale();
   const [ref, width, height] = useMeasureSize(700, 148);
   const color = "var(--color-chart-1)";
 
+  const chartData = data.map((d, i) => ({ ...d, t: i }));
+
   return (
     <div className={cn("flex h-full flex-col gap-2 p-3", className)}>
       <div className="flex items-center gap-1.5">
-        <span style={{ color: "var(--color-chart-1)" }}>
-          <IconTrendingUp size={14} />
-        </span>
-        <p className="text-muted-foreground text-[11px] font-semibold tracking-widest uppercase">
-          {t.charts.trendTitle}
+        <span style={{ color: "var(--color-chart-1)" }}>{icon}</span>
+        <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">
+          {title}
         </p>
       </div>
       <div ref={ref} className="min-h-0 w-full flex-1 overflow-hidden">
-        <AreaChart
-          width={width}
-          height={height}
-          data={data}
-          margin={{ top: 4, right: 4, bottom: 0, left: -20 }}
-          style={{ outline: "none" }}
-        >
-          <defs>
-            <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={color} stopOpacity={0.25} />
-              <stop offset="95%" stopColor={color} stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="oklch(1 0 0 / 6%)" />
-          <XAxis
-            dataKey="h"
-            tick={{ fontSize: 9, fill: "oklch(0.708 0 0)" }}
-            tickLine={false}
-            axisLine={false}
-            tickFormatter={(v) => `${v}${t.charts.trendTimeUnit}`}
-          />
-          <YAxis
-            tick={{ fontSize: 9, fill: "oklch(0.708 0 0)" }}
-            tickLine={false}
-            axisLine={false}
-            tickFormatter={(v) => `${v}`}
-          />
-          <Tooltip
-            content={<TrendTooltip timeUnit={t.charts.trendTimeUnit} />}
-            cursor={{ stroke: "oklch(1 0 0 / 10%)", strokeWidth: 1 }}
-          />
-          <Area
-            type="monotone"
-            dataKey="kWh"
-            stroke={color}
-            fill="url(#trendGrad)"
-            strokeWidth={1.5}
-            dot={false}
-            activeDot={{ r: 3, fill: color }}
-            isAnimationActive={false}
-          />
-        </AreaChart>
+        {chartType === "area" && (
+          <AreaChart
+            width={width}
+            height={height}
+            data={chartData}
+            margin={{ top: 4, right: 4, bottom: 0, left: -20 }}
+            style={{ outline: "none" }}
+          >
+            <defs>
+              <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={color} stopOpacity={0.25} />
+                <stop offset="95%" stopColor={color} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="oklch(1 0 0 / 6%)" />
+            <XAxis
+              dataKey="label"
+              tick={{ fontSize: 9, fill: "oklch(0.708 0 0)" }}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(v) => `${v}${t.charts.trendTimeUnit}`}
+            />
+            <YAxis
+              tick={{ fontSize: 9, fill: "oklch(0.708 0 0)" }}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(v) => `${v}`}
+            />
+            <Tooltip
+              content={<TrendTooltip timeUnit={t.charts.trendTimeUnit} />}
+              cursor={{ stroke: "oklch(1 0 0 / 10%)", strokeWidth: 1 }}
+            />
+            <Area
+              type="monotone"
+              dataKey="value"
+              stroke={color}
+              fill="url(#trendGrad)"
+              strokeWidth={1.5}
+              dot={false}
+              activeDot={{ r: 3, fill: color }}
+              isAnimationActive={false}
+            />
+          </AreaChart>
+        )}
+
+        {chartType === "line" && (
+          <LineChart
+            width={width}
+            height={height}
+            data={chartData}
+            margin={{ top: 4, right: 4, bottom: 0, left: -20 }}
+            style={{ outline: "none" }}
+          >
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="oklch(1 0 0 / 6%)" />
+            <XAxis
+              dataKey="label"
+              tick={{ fontSize: 9, fill: "oklch(0.708 0 0)" }}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(v) => `${v}${t.charts.trendTimeUnit}`}
+            />
+            <YAxis
+              tick={{ fontSize: 9, fill: "oklch(0.708 0 0)" }}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(v) => `${v}`}
+            />
+            <Tooltip
+              content={<TrendTooltip timeUnit={t.charts.trendTimeUnit} />}
+              cursor={{ stroke: "oklch(1 0 0 / 10%)", strokeWidth: 1 }}
+            />
+            <Line
+              type="monotone"
+              dataKey="value"
+              stroke={color}
+              strokeWidth={1.5}
+              dot={false}
+              activeDot={{ r: 3, fill: color }}
+              isAnimationActive={false}
+            />
+          </LineChart>
+        )}
+
+        {chartType === "bar" && (
+          <BarChart
+            width={width}
+            height={height}
+            data={chartData}
+            margin={{ top: 4, right: 4, bottom: 0, left: -20 }}
+            style={{ outline: "none" }}
+            barSize={12}
+          >
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="oklch(1 0 0 / 6%)" />
+            <XAxis
+              dataKey="label"
+              tick={{ fontSize: 9, fill: "oklch(0.708 0 0)" }}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(v) => `${v}${t.charts.trendTimeUnit}`}
+            />
+            <YAxis
+              tick={{ fontSize: 9, fill: "oklch(0.708 0 0)" }}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(v) => `${v}`}
+            />
+            <Tooltip
+              content={<TrendTooltip timeUnit={t.charts.trendTimeUnit} />}
+              cursor={{ fill: "oklch(1 0 0 / 5%)" }}
+            />
+            <Bar dataKey="value" fill={color} radius={[2, 2, 0, 0]} isAnimationActive={false} />
+          </BarChart>
+        )}
       </div>
     </div>
   );
@@ -157,29 +249,28 @@ export function EnergyTrendChart({ className, data }: { className?: string; data
 
 // ─── Energy Breakdown Pie ─────────────────────────────────────────────────────
 
-export function EnergyBreakdownChart({
-  className,
-  data,
-}: {
+interface BreakdownItem {
+  label: string;
+  value: number;
+  color: string;
+}
+
+interface EnergyBreakdownChartProps {
   className?: string;
   data: BreakdownItem[];
-}) {
-  const t = useLocale();
-  const [ref, width] = useMeasureSize(200, 148);
+  title: string;
+  icon: React.ReactNode;
+}
 
-  const breakdownData = data.map((item) => ({
-    ...item,
-    name: t.charts[item.name as keyof typeof t.charts] ?? item.name,
-  }));
+export function EnergyBreakdownChart({ className, data, title, icon }: EnergyBreakdownChartProps) {
+  const [ref, width] = useMeasureSize(200, 148);
 
   return (
     <div className={cn("flex h-full flex-col gap-2 p-3", className)}>
       <div className="flex items-center gap-1.5">
-        <span style={{ color: "var(--color-chart-3)" }}>
-          <IconChartPie size={14} />
-        </span>
-        <p className="text-muted-foreground text-[11px] font-semibold tracking-widest uppercase">
-          {t.charts.breakdownTitle}
+        <span style={{ color: "var(--color-chart-3)" }}>{icon}</span>
+        <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">
+          {title}
         </p>
       </div>
 
@@ -187,9 +278,9 @@ export function EnergyBreakdownChart({
         <div ref={ref} className="h-full flex-1 overflow-hidden">
           <PieChart width={width} height={width} style={{ outline: "none" }}>
             <Pie
-              data={breakdownData}
+              data={data}
               dataKey="value"
-              nameKey="name"
+              nameKey="label"
               cx="50%"
               cy="50%"
               innerRadius="50%"
@@ -197,7 +288,7 @@ export function EnergyBreakdownChart({
               strokeWidth={0}
               isAnimationActive={false}
             >
-              {breakdownData.map((entry, index) => (
+              {data.map((entry, index) => (
                 <Cell key={index} fill={entry.color} />
               ))}
             </Pie>
@@ -207,14 +298,14 @@ export function EnergyBreakdownChart({
 
         {/* Legend */}
         <div className="flex flex-col gap-1.5">
-          {breakdownData.map((entry) => (
-            <div key={entry.name} className="flex items-center gap-1.5">
+          {data.map((entry) => (
+            <div key={entry.label} className="flex items-center gap-1.5">
               <span
                 className="size-2 shrink-0 rounded-sm"
                 style={{ backgroundColor: entry.color }}
               />
-              <span className="text-muted-foreground text-[10px]">{entry.name}</span>
-              <span className="text-foreground ml-auto text-[10px] font-semibold tabular-nums">
+              <span className="text-[10px] text-muted-foreground">{entry.label}</span>
+              <span className="ml-auto text-[10px] font-semibold tabular-nums text-foreground">
                 {entry.value}%
               </span>
             </div>
