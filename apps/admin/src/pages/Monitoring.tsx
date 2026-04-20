@@ -1,6 +1,6 @@
 import React from "react";
 
-import { Card } from "@/components/ui/card";
+import { Card } from "@ecoctrl/ui";
 
 export default function Monitoring() {
   return (

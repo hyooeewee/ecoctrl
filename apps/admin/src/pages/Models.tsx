@@ -1,10 +1,10 @@
 import { Box, Layers, Image as ImageIcon, ExternalLink, FileText } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@ecoctrl/ui";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoctrl/ui";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@ecoctrl/ui";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui";
 
 import { Model3D } from "../types";
 import { modelsApi } from "../api/models";

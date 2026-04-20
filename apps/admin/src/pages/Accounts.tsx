@@ -1,32 +1,13 @@
 import { Plus, Search, Edit2, Trash2, Download, ExternalLink } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Badge } from "@ecoctrl/ui";
+import { Button } from "@ecoctrl/ui";
+import { Card, CardContent, CardHeader, CardTitle } from "@ecoctrl/ui";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@ecoctrl/ui";
+import { Input } from "@ecoctrl/ui";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ecoctrl/ui";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ecoctrl/ui";
 
 import ExportDialog from "../components/ExportDialog";
 import UserSheet from "../components/UserSheet";

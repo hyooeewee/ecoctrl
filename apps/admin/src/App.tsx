@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { ScrollArea } from "@ui/scroll-area";
+import { ScrollArea } from "@ecoctrl/ui";
 import React, { useEffect, useState } from "react";
 
 import Header from "@/components/Header";

@@ -1,10 +1,10 @@
 import { FileDown, PlusCircle, Settings2, CalendarDays, ExternalLink } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@ecoctrl/ui";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoctrl/ui";
+import { Switch } from "@ecoctrl/ui";
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ecoctrl/ui";
 import { cn } from "@/lib/utils";
 
 import ExportDialog from "../components/ExportDialog";

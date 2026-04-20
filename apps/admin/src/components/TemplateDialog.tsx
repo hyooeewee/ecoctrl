@@ -1,7 +1,7 @@
 import { Trash2, FileText } from "lucide-react";
 import React, { useState } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@ecoctrl/ui";
 import {
   Dialog,
   DialogContent,
@@ -10,9 +10,9 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@ecoctrl/ui";
+import { Input } from "@ecoctrl/ui";
+import { Label } from "@ecoctrl/ui";
 
 export interface TemplateDialogProps {
   trigger: React.ReactElement;

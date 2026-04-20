@@ -15,8 +15,8 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import React from "react";
 
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Button } from "@ecoctrl/ui";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@ecoctrl/ui";
 import { cn } from "@/lib/utils";
 
 import { BrandLogo } from "./BrandLogo";
