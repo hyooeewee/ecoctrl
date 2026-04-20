@@ -107,7 +107,7 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
       </div>
 
       {/* Nav */}
-      <TooltipProvider>
+      <TooltipProvider delay={100}>
         <nav className="scrollbar-hide flex-1 overflow-x-hidden overflow-y-auto py-4">
           <ul className="space-y-1 px-3">
             {navItems.map((item) => {
