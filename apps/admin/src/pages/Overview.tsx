@@ -24,9 +24,9 @@ import {
 import { cn } from "@/lib/utils";
 import ExportDialog from "../components/ExportDialog";
 import { Alert, BackupSchedule } from "../types";
-import { dashboardApi } from "../api/dashboard";
+import { overviewApi } from "../api/overview";
 
-interface DashboardStats {
+interface OverviewStats {
   totalEnergy: { value: string; unit: string; trend: string; trendType: "up" | "down" | "neutral" };
   onlineRate: { value: string; unit: string; trend: string; trendType: "up" | "down" | "neutral" };
   pendingAlerts: {
@@ -105,8 +105,8 @@ function formatDateRange(data: { name: string; value: number }[]) {
   return `${first} - ${last}`;
 }
 
-export default function DashboardContent() {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
+export default function OverviewContent() {
+  const [stats, setStats] = useState<OverviewStats | null>(null);
   const [energyData, setEnergyData] = useState<{ name: string; value: number }[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [backupSchedule, setBackupSchedule] = useState<BackupSchedule | null>(null);
@@ -116,10 +116,10 @@ export default function DashboardContent() {
     const fetchData = async () => {
       try {
         const [statsData, energyData, alertsData, backupData] = await Promise.all([
-          dashboardApi.stats(),
-          dashboardApi.energyChart(),
-          dashboardApi.alerts(),
-          dashboardApi.backupSchedule(),
+          overviewApi.stats(),
+          overviewApi.energyChart(),
+          overviewApi.alerts(),
+          overviewApi.backupSchedule(),
         ]);
         setStats(statsData);
         setEnergyData(energyData);

@@ -10,7 +10,7 @@ import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import Accounts from "@/pages/Accounts";
 import Config from "@/pages/Config";
-import Dashboard from "@/pages/Dashboard";
+import Overview from "@/pages/Overview";
 import Energy from "@/pages/Energy";
 import Faults from "@/pages/Faults";
 import Maintenance from "@/pages/Maintenance";
@@ -22,7 +22,7 @@ import ThreeDConfig from "@/pages/ThreeDConfig";
 import { initTheme } from "@/lib/darkMode";
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
     initTheme();
@@ -30,8 +30,8 @@ export default function App() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case "dashboard":
-        return <Dashboard />;
+      case "overview":
+        return <Overview />;
       case "config":
         return <Config />;
       case "accounts":
@@ -53,7 +53,7 @@ export default function App() {
       case "profile":
         return <Profile />;
       default:
-        return <Dashboard />;
+        return <Overview />;
     }
   };
 

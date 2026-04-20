@@ -25,7 +25,7 @@ interface HeaderProps {
 }
 
 const tabTitleMap: Record<string, string> = {
-  dashboard: "管理总览",
+  overview: "管理总览",
   config: "系统配置",
   accounts: "账户控制",
   models: "模型与对象",

@@ -27,7 +27,7 @@ interface SidebarProps {
 }
 
 const navItems = [
-  { id: "dashboard", label: "管理总览", icon: LayoutDashboard },
+  { id: "overview", label: "管理总览", icon: LayoutDashboard },
   { id: "accounts", label: "账户控制", icon: Users },
   { id: "models", label: "模型与对象", icon: Box },
   { id: "settingsGroup", label: "3D 模型设置", icon: BoxSelect },
