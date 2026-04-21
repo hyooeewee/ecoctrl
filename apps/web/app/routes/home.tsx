@@ -256,7 +256,10 @@ export default function Home() {
           {/* Main bento grid layout — cards re-enable events individually */}
           <main className="relative flex min-h-0 flex-1 overflow-hidden">
             <BentoGrid
-              className={cn("transition-all duration-300 ease-in-out", isImmersive && "opacity-0")}
+              className={cn(
+                "transition-all duration-300 ease-in-out",
+                isImmersive && "opacity-0 pointer-events-none",
+              )}
             >
               <DashboardWidgets data={loaderData} />
             </BentoGrid>
