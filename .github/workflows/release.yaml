@@ -1,0 +1,92 @@
+name: Release to GitHub
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  release:
+    name: Build & Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Consume changesets: either creates a "Version Packages" PR,
+      # or (when that PR is merged) does nothing.
+      - name: Create Release PR
+        uses: changesets/action@v1
+        with:
+          version: pnpm run version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Detect whether this push IS the merge of a version PR.
+      # changesets/action always uses "Version Packages" as the commit message.
+      - name: Check if version commit
+        id: check
+        run: |
+          MSG=$(git log -1 --pretty=%s)
+          echo "commit_message=$MSG"
+          if [ "$MSG" = "Version Packages" ]; then
+            VERSION=$(node -p "require('./apps/admin/package.json').version")
+            echo "is_release=true" >> $GITHUB_OUTPUT
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "is_release=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build packages
+        if: steps.check.outputs.is_release == 'true'
+        run: pnpm run build
+
+      - name: Package artifacts
+        if: steps.check.outputs.is_release == 'true'
+        run: |
+          VERSION="${{ steps.check.outputs.version }}"
+          mkdir -p release-assets
+
+          zip -r "release-assets/admin-v${VERSION}.zip" apps/admin/dist
+          zip -r "release-assets/web-v${VERSION}.zip"   apps/web/dist
+          zip -r "release-assets/server-v${VERSION}.zip" packages/server/dist
+
+      - name: Create unified git tag
+        if: steps.check.outputs.is_release == 'true'
+        run: |
+          TAG="${{ steps.check.outputs.tag }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
+
+      - name: Create GitHub Release
+        if: steps.check.outputs.is_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.check.outputs.tag }}
+          name: Release ${{ steps.check.outputs.tag }}
+          files: release-assets/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
