@@ -163,4 +163,39 @@ export const enUS = {
   ai: {
     title: "AI Optimization",
   },
+
+
+  // ── Label Info Panel ───────────────────────────────────────────────────────
+  labelInfo: {
+    office1: {
+      title: "Office Area A",
+      description:
+        "The primary office zone on the west side of the building. Houses approximately 120 workstations with smart lighting and HVAC automation. Average daily energy consumption: 340 kWh.",
+    },
+    meeting: {
+      title: "Meeting Area",
+      description:
+        "A centralized conference zone featuring 6 meeting rooms and 2 boardrooms. Equipped with intelligent occupancy sensors and automated blinds. Average daily energy consumption: 180 kWh.",
+    },
+    dataCenter: {
+      title: "Data Center",
+      description:
+        "The building's IT infrastructure hub containing 8 server racks with redundant cooling. Temperature maintained at 22±1°C. Equipped with UPS backup and precision air conditioning. Average daily energy consumption: 520 kWh.",
+    },
+    exhibition: {
+      title: "Exhibition Hall",
+      description:
+        "A spacious display area with dynamic lighting systems and digital signage. Used for product showcases and client presentations. Average daily energy consumption: 260 kWh.",
+    },
+    office2: {
+      title: "Office Area B",
+      description:
+        "The east-wing office zone with 95 workstations. Features open-plan layout with zoned climate control and daylight harvesting systems. Average daily energy consumption: 290 kWh.",
+    },
+    lobby: {
+      title: "Lobby",
+      description:
+        "The main entrance and reception area with high ceilings and natural lighting. Features smart glass facade and visitor flow monitoring. Average daily energy consumption: 110 kWh.",
+    },
+  },
 };

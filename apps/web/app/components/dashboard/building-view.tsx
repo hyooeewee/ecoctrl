@@ -13,6 +13,7 @@ import {
   Vector3,
   Animation,
   type Nullable,
+  Viewport,
 } from "@babylonjs/core";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import "@babylonjs/loaders/glTF";
@@ -22,13 +23,28 @@ import { useSettingsStore } from "~/store/settings";
 
 // ─── 3D-projected area label floating pill ────────────────────────────────────
 
-const AreaLabel = forwardRef<HTMLDivElement, { label: string }>(function AreaLabel({ label }, ref) {
+interface AreaLabelProps {
+  label: string;
+  isActive?: boolean;
+  onClick?: () => void;
+}
+
+const AreaLabel = forwardRef<HTMLDivElement, AreaLabelProps>(function AreaLabel(
+  { label, isActive, onClick },
+  ref,
+) {
   return (
     <div
       ref={ref}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick?.();
+      }}
       className={cn(
-        "border-cyber-cyan/40 bg-panel-dark/90 pointer-events-none absolute top-0 left-0 flex items-center gap-1.5 rounded border",
-        "px-2 py-1 text-[11px] font-medium tracking-wide text-cyan-200/90 backdrop-blur-sm",
+        "absolute top-0 left-0 flex cursor-pointer items-center gap-1.5 rounded border px-2 py-1 text-[11px] font-medium tracking-wide backdrop-blur-sm transition-all",
+        isActive
+          ? "border-cyber-cyan bg-cyber-cyan/20 text-cyber-cyan shadow-[0_0_12px_rgba(6,182,212,0.4)]"
+          : "border-cyber-cyan/40 bg-panel-dark/90 text-cyan-200/90 hover:border-cyber-cyan hover:bg-cyber-cyan/10 hover:text-cyber-cyan",
       )}
       style={{ willChange: "transform" }}
     >
@@ -38,33 +54,67 @@ const AreaLabel = forwardRef<HTMLDivElement, { label: string }>(function AreaLab
   );
 });
 
-// Label definitions: key + fallback world positions + mesh name keywords.
-// Text labels are mapped at render time via the current locale so the
-// array can live outside the component body.
+// ─── Label definitions ────────────────────────────────────────────────────────
+
 interface LabelDef {
   key: string;
   fallbackPosition: Vector3;
   meshKeywords: string[];
+  // Optimal camera angles for immersive focus on this label.
+  // Beta keeps the same elevation; radius zooms in slightly.
+  focusAlpha: number;
+  focusBeta: number;
+  focusRadius: number;
 }
 
 const LABELS: LabelDef[] = [
-  { key: "office1", fallbackPosition: new Vector3(-4, 2.5, -3), meshKeywords: ["office", "办公"] },
-  { key: "meeting", fallbackPosition: new Vector3(0, 3.2, -3), meshKeywords: ["meeting", "会议"] },
+  {
+    key: "office1",
+    fallbackPosition: new Vector3(-4, 2.5, -3),
+    meshKeywords: ["office", "办公"],
+    focusAlpha: Math.PI * 1.1,
+    focusBeta: Math.PI / 2.8,
+    focusRadius: 14,
+  },
+  {
+    key: "meeting",
+    fallbackPosition: new Vector3(0, 3.2, -3),
+    meshKeywords: ["meeting", "会议"],
+    focusAlpha: Math.PI / 2,
+    focusBeta: Math.PI / 2.8,
+    focusRadius: 14,
+  },
   {
     key: "dataCenter",
     fallbackPosition: new Vector3(-1.5, 1.5, 0),
     meshKeywords: ["data", "server", "机房", "数据"],
+    focusAlpha: Math.PI * 1.3,
+    focusBeta: Math.PI / 2.6,
+    focusRadius: 12,
   },
   {
     key: "exhibition",
     fallbackPosition: new Vector3(2.5, 2.2, -2),
     meshKeywords: ["exhibition", "hall", "展示", "展厅"],
+    focusAlpha: Math.PI * 0.4,
+    focusBeta: Math.PI / 2.8,
+    focusRadius: 14,
   },
-  { key: "office2", fallbackPosition: new Vector3(3.5, 2.5, -3), meshKeywords: ["office", "办公"] },
+  {
+    key: "office2",
+    fallbackPosition: new Vector3(3.5, 2.5, -3),
+    meshKeywords: ["office", "办公"],
+    focusAlpha: Math.PI * 0.8,
+    focusBeta: Math.PI / 2.8,
+    focusRadius: 14,
+  },
   {
     key: "lobby",
     fallbackPosition: new Vector3(3.5, 0.8, 2),
     meshKeywords: ["lobby", "大堂", "大厅", "entrance"],
+    focusAlpha: Math.PI * 0.15,
+    focusBeta: Math.PI / 2.4,
+    focusRadius: 13,
   },
 ];
 
@@ -72,13 +122,15 @@ export interface BuildingViewRef {
   zoomIn: () => void;
   zoomOut: () => void;
   resetCamera: () => void;
-  /** Animate closer only when currently farther than `minRadius`. */
   ensureCloseUp: (minRadius: number) => void;
-  /** Animate radius back to the user-configured default. */
   resetToDefaultRadius: () => void;
+  // NEW: animate camera to focus on a label
+  focusOnLabel: (key: string) => void;
+  // NEW: offset camera viewport when a sidebar is open
+  setViewportOffset: (px: number) => void;
 }
 
-// ─── Animate single camera property ───────────────────────────────────────────
+// ─── Camera animation helpers ─────────────────────────────────────────────────
 
 function animateCameraRadius(camera: ArcRotateCamera, toRadius: number, duration = 30) {
   const frameRate = 60;
@@ -96,10 +148,72 @@ function animateCameraRadius(camera: ArcRotateCamera, toRadius: number, duration
   });
 }
 
+// Animate alpha/beta/radius together for immersive label focus.
+// Uses shortest-path interpolation for alpha to handle 0↔2π wrap.
+function animateCameraTo(
+  camera: ArcRotateCamera,
+  toAlpha: number,
+  toBeta: number,
+  toRadius: number,
+  duration = 45,
+) {
+  const frameRate = 60;
+  const scene = camera.getScene();
+
+  // Shortest delta for alpha (handles wrap-around)
+  let deltaAlpha = toAlpha - camera.alpha;
+  while (deltaAlpha > Math.PI) deltaAlpha -= Math.PI * 2;
+  while (deltaAlpha < -Math.PI) deltaAlpha += Math.PI * 2;
+  const endAlpha = camera.alpha + deltaAlpha;
+
+  const animAlpha = new Animation("camAlpha", "alpha", frameRate, Animation.ANIMATIONTYPE_FLOAT);
+  const animBeta = new Animation("camBeta", "beta", frameRate, Animation.ANIMATIONTYPE_FLOAT);
+  const animRadius = new Animation(
+    "camRadius",
+    "radius",
+    frameRate,
+    Animation.ANIMATIONTYPE_FLOAT,
+  );
+
+  const easing = new CubicEase();
+  easing.setEasingMode(EasingFunction.EASINGMODE_EASEINOUT);
+
+  [animAlpha, animBeta, animRadius].forEach((a) => a.setEasingFunction(easing));
+
+  animAlpha.setKeys([
+    { frame: 0, value: camera.alpha },
+    { frame: duration, value: endAlpha },
+  ]);
+  animBeta.setKeys([
+    { frame: 0, value: camera.beta },
+    { frame: duration, value: toBeta },
+  ]);
+  animRadius.setKeys([
+    { frame: 0, value: camera.radius },
+    { frame: duration, value: toRadius },
+  ]);
+
+  camera.animations = [animAlpha, animBeta, animRadius];
+  scene.beginAnimation(camera, 0, duration, false, 1, () => {
+    camera.animations = [];
+  });
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
-  function BuildingView({ className }, ref) {
+interface BuildingViewProps {
+  className?: string;
+  activeLabel?: string | null;
+  sidebarWidth?: number;
+  onLabelClick?: (key: string) => void;
+  onCanvasClick?: () => void;
+}
+
+export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(
+  function BuildingView(
+    { className, activeLabel, sidebarWidth = 320, onLabelClick, onCanvasClick },
+    ref,
+  ) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const engineRef = useRef<Nullable<Engine>>(null);
     const sceneRef = useRef<Nullable<Scene>>(null);
@@ -121,11 +235,11 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
     } = useSettingsStore();
     const t = useLocale();
 
-    // Use refs so runRenderLoop always sees the latest values without
-    // closing over stale snapshots.
+    // Refs so runRenderLoop always sees the latest values
     const autoRotateRef = useRef(autoRotate);
     const rotateSpeedRef = useRef(rotateSpeed);
     const showLabelsRef = useRef(showLabels);
+    const activeLabelRef = useRef(activeLabel);
     useEffect(() => {
       autoRotateRef.current = autoRotate;
     }, [autoRotate]);
@@ -135,9 +249,10 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
     useEffect(() => {
       showLabelsRef.current = showLabels;
     }, [showLabels]);
+    useEffect(() => {
+      activeLabelRef.current = activeLabel;
+    }, [activeLabel]);
 
-    // Map locale strings to label keys so the static LABELS array stays
-    // outside the component body.
     const labelText: Record<string, string> = {
       office1: t.building.officeArea,
       meeting: t.building.meetingArea,
@@ -147,31 +262,40 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
       lobby: t.building.lobby,
     };
 
-    // Sync glow intensity in real time
+    // Sync glow intensity
     useEffect(() => {
       const glow = glowRef.current;
-      if (glow) {
-        glow.intensity = glowIntensity;
-      }
+      if (glow) glow.intensity = glowIntensity;
     }, [glowIntensity]);
 
-    // Sync default camera radius in real time
+    // Sync default camera radius
     useEffect(() => {
       const camera = cameraRef.current;
-      if (camera) {
-        animateCameraRadius(camera, defaultCameraRadius);
-      }
+      if (camera) animateCameraRadius(camera, defaultCameraRadius);
     }, [defaultCameraRadius]);
 
-    // Sync default rotation Y in real time
+    // Sync default rotation Y
     useEffect(() => {
       const root = rootMeshRef.current;
-      if (root) {
-        root.rotation.y = (defaultRotationY * Math.PI) / 180;
-      }
+      if (root) root.rotation.y = (defaultRotationY * Math.PI) / 180;
     }, [defaultRotationY]);
 
-    // Hard-coded initial camera values
+    // Sync viewport offset when sidebar width changes
+    useEffect(() => {
+      const camera = cameraRef.current;
+      const engine = engineRef.current;
+      const canvas = canvasRef.current;
+      if (!camera || !engine || !canvas) return;
+
+      const w = canvas.clientWidth;
+      if (sidebarWidth > 0 && w > 0) {
+        const x = sidebarWidth / w;
+        camera.viewport = new Viewport(x, 0, 1 - x, 1);
+      } else {
+        camera.viewport = new Viewport(0, 0, 1, 1);
+      }
+    }, [sidebarWidth]);
+
     const initialAlpha = Math.PI / 4;
     const initialBeta = Math.PI / 2.8;
     const initialTarget = new Vector3(0, 2, 0);
@@ -204,10 +328,10 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
       camera.upperRadiusLimit = 60;
       camera.lowerBetaLimit = 0.1;
       camera.upperBetaLimit = Math.PI / 2.2;
+      camera.viewport = new Viewport(0, 0, 1, 1);
       cameraRef.current = camera;
 
-      // Track user interaction via canvas native events so auto-rotate pauses
-      // while the user is dragging the camera.
+      // Track user interaction
       const onPointerDown = () => {
         isInteractingRef.current = true;
       };
@@ -219,27 +343,31 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
       canvas.addEventListener("pointercancel", onPointerUp);
       canvas.addEventListener("pointerleave", onPointerUp);
 
+      // Click on blank canvas to close immersive label view
+      scene.onPointerDown = (_evt, pickInfo) => {
+        if (activeLabelRef.current && pickInfo.hit === false && onCanvasClick) {
+          onCanvasClick();
+        }
+      };
+
       const hemi = new HemisphericLight("hemi", new Vector3(0, 1, 0), scene);
       hemi.intensity = 0.6;
 
-      // Glow layer for cyber aesthetic
       const glow = new GlowLayer("glow", scene);
       glow.intensity = glowIntensity;
       glowRef.current = glow;
 
-      // Create a pivot node that we explicitly rotate so we don't depend on GLB root naming.
       const pivot = new TransformNode("rotationPivot", scene);
       pivot.rotation.y = (defaultRotationY * Math.PI) / 180;
       rootMeshRef.current = pivot;
 
       SceneLoader.ImportMeshAsync("", "/", "building.glb", scene, (_event) => {
-        /* progress callback intentionally empty to avoid stale closures */
+        /* progress callback empty to avoid stale closures */
       })
         .then((result) => {
           const firstMesh = result.meshes[0];
           if (firstMesh) {
             const glbRoot = scene.getTransformNodeByName("__root__") ?? firstMesh;
-            // Parent the GLB root to our pivot so rotating the pivot rotates the whole building.
             glbRoot.parent = pivot;
 
             const { min, max } = firstMesh.getHierarchyBoundingVectors(true);
@@ -249,15 +377,13 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
             const scale = maxSize > 0 ? 10 / maxSize : 1;
 
             glbRoot.position.x = -center.x * scale;
-            glbRoot.position.y = -min.y * scale; // sit on ground
+            glbRoot.position.y = -min.y * scale;
             glbRoot.position.z = -center.z * scale;
             glbRoot.scaling.scaleInPlace(scale);
 
-            // Adjust camera target to model center after scaling
             const target = new Vector3(0, (size.y * scale) / 2, 0);
             camera.setTarget(target);
 
-            // Build label anchors by matching mesh names or falling back to preset positions
             const allNodes = [...scene.meshes, ...scene.transformNodes];
             const findNode = (keywords: string[]) =>
               allNodes.find((n) =>
@@ -281,23 +407,22 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
           setLoaded(true);
         })
         .catch((_err) => {
-          /* silently ignore load errors so the UI stays intact */
+          /* silently ignore load errors */
         });
 
       engine.runRenderLoop(() => {
-        // Auto-rotate camera alpha when idle — read latest values from refs
-        // so setting changes take effect immediately without recreating the loop.
         if (autoRotateRef.current && !isInteractingRef.current) {
           camera.alpha += 0.002 * rotateSpeedRef.current;
         }
 
         scene.render();
 
-        // Project 3D label anchors to 2D screen positions every frame
+        // Project 3D label anchors to 2D screen positions
         if (camera && labelAnchorsRef.current.length) {
           const renderWidth = engine.getRenderWidth();
           const renderHeight = engine.getRenderHeight();
           const transformMatrix = scene.getTransformMatrix();
+          // Use camera.viewport to calculate projection bounds
           const globalViewport = camera.viewport.toGlobal(renderWidth, renderHeight);
 
           labelAnchorsRef.current.forEach(({ key, worldPos }) => {
@@ -318,9 +443,7 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
         }
       });
 
-      const handleResize = () => {
-        engine.resize();
-      };
+      const handleResize = () => engine.resize();
       window.addEventListener("resize", handleResize);
 
       return () => {
@@ -384,6 +507,25 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
           if (!camera) return;
           animateCameraRadius(camera, defaultCameraRadius);
         },
+        focusOnLabel: (key: string) => {
+          const camera = cameraRef.current;
+          if (!camera) return;
+          const def = LABELS.find((l) => l.key === key);
+          if (!def) return;
+          animateCameraTo(camera, def.focusAlpha, def.focusBeta, def.focusRadius);
+        },
+        setViewportOffset: (px: number) => {
+          const camera = cameraRef.current;
+          const canvas = canvasRef.current;
+          if (!camera || !canvas) return;
+          const w = canvas.clientWidth;
+          if (px > 0 && w > 0) {
+            const x = px / w;
+            camera.viewport = new Viewport(x, 0, 1 - x, 1);
+          } else {
+            camera.viewport = new Viewport(0, 0, 1, 1);
+          }
+        },
       }),
       [defaultCameraRadius, defaultRotationY],
     );
@@ -404,11 +546,13 @@ export const BuildingView = forwardRef<BuildingViewRef, { className?: string }>(
           </div>
         )}
 
-        {/* ── Floating area labels (positioned absolutely over canvas) ── */}
+        {/* ── Floating area labels ── */}
         {LABELS.map((cfg) => (
           <AreaLabel
             key={cfg.key}
             label={labelText[cfg.key]}
+            isActive={activeLabel === cfg.key}
+            onClick={() => onLabelClick?.(cfg.key)}
             ref={(el) => {
               labelElsRef.current[cfg.key] = el;
             }}

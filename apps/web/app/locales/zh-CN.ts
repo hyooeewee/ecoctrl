@@ -163,6 +163,40 @@ export const zhCN = {
   ai: {
     title: "AI 优化建议",
   },
+
+  // ── 标签介绍面板 ───────────────────────────────────────────────────────────
+  labelInfo: {
+    office1: {
+      title: "办公区 A",
+      description:
+        "大楼西侧的主要办公区域，约有 120 个工位，配备智能照明和暖通空调自动化系统。日均能耗约 340 kWh。",
+    },
+    meeting: {
+      title: "会议区",
+      description:
+        "中央会议区域，设有 6 间会议室和 2 间董事会会议室。配备智能 occupancy 传感器和自动百叶窗。日均能耗约 180 kWh。",
+    },
+    dataCenter: {
+      title: "数据中心",
+      description:
+        "大楼的 IT 基础设施中心，包含 8 台服务器机架和冗余冷却系统。温度维持在 22±1°C。配备 UPS 后备电源和精密空调。日均能耗约 520 kWh。",
+    },
+    exhibition: {
+      title: "展示大厅",
+      description:
+        "宽敞的展示区域，配备动态照明系统和数字标牌。用于产品展示和客户演示。日均能耗约 260 kWh。",
+    },
+    office2: {
+      title: "办公区 B",
+      description:
+        "东侧翼办公区域，有 95 个工位。采用开放式布局，配备分区气候控制和日光采集系统。日均能耗约 290 kWh。",
+    },
+    lobby: {
+      title: "大堂",
+      description:
+        "主入口和接待区域，挑高设计，充分利用自然采光。配备智能玻璃幕墙和访客流量监测。日均能耗约 110 kWh。",
+    },
+  },
 };
 
 export type Locale = typeof zhCN;

@@ -39,6 +39,46 @@ export async function clientLoader(): Promise<DashboardData | null> {
   }
 }
 
+// ─── Label info sidebar ─────────────────────────────────────────────────────────
+
+const SIDEBAR_W = 320;
+
+function LabelInfoPanel({
+  labelKey,
+  onClose,
+}: {
+  labelKey: string;
+  onClose: () => void;
+}) {
+  const t = useLocale();
+  const info = t.labelInfo[labelKey as keyof typeof t.labelInfo];
+  if (!info) return null;
+
+  return (
+    <div
+      className="absolute top-0 bottom-0 left-0 z-30 flex flex-col border-r border-white/10 bg-black/80 backdrop-blur-md transition-transform duration-300 ease-out pointer-events-auto"
+      style={{ width: SIDEBAR_W }}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+        <h2 className="text-sm font-semibold text-foreground">{info.title}</h2>
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-foreground/60 hover:text-foreground flex size-7 items-center justify-center rounded-md transition-colors hover:bg-white/10"
+        >
+          <IconX size={16} />
+        </button>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        <p className="text-muted-foreground text-xs leading-relaxed">{info.description}</p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function Home() {
@@ -55,20 +95,22 @@ export default function Home() {
 
   const [navVisible, setNavVisible] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const [activeLabel, setActiveLabel] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const buildingRef = useRef<BuildingViewRef>(null);
   const layoutSnapshotRef = useRef<BentoLayoutItem[] | null>(null);
   const hasSnappedRef = useRef(false);
 
-  // Find the leftmost column of any visible widget in the top-right area
-  // so we can place controls just to its left with a fixed 1rem margin.
+  // Immersive mode is triggered by either fullscreen button or clicking a label.
+  const isImmersive = fullscreen || activeLabel !== null;
+
   const rightmostTopWidget = bentoLayout
     .filter((item) => !item.hidden && item.y <= 4)
     .sort((a, b) => b.x - a.x)[0];
 
   const colsFromRight = rightmostTopWidget ? 16 - rightmostTopWidget.x + 1 : 0;
   const controlsRight =
-    fullscreen || colsFromRight === 0 ? "1rem" : `calc(${(colsFromRight / 16) * 100}% + 1rem)`;
+    isImmersive || colsFromRight === 0 ? "1rem" : `calc(${(colsFromRight / 16) * 100}% + 1rem)`;
 
   // Load server settings on mount (non-blocking, server-side priority).
   useEffect(() => {
@@ -105,6 +147,13 @@ export default function Home() {
       setBentoLayout([...cleaned, ...newItems]);
     }
   }, [loaderData, bentoLayout, setBentoLayout]);
+
+  // When a label is selected, animate camera to focus on it.
+  useEffect(() => {
+    if (activeLabel) {
+      buildingRef.current?.focusOnLabel(activeLabel);
+    }
+  }, [activeLabel]);
 
   // Start/reset the auto-hide countdown
   const resetTimer = useCallback(() => {
@@ -158,7 +207,6 @@ export default function Home() {
   }, [bentoDragEnabled, bentoLayout]);
 
   // Auto-exit edit mode after editAutoExitDelay ms of inactivity.
-  // Timer resets on any pointer interaction. Disabled when delay === 0.
   useEffect(() => {
     if (!bentoDragEnabled || editAutoExitDelay === 0) return;
 
@@ -183,7 +231,19 @@ export default function Home() {
     <div className="dark">
       <div className="text-foreground relative h-screen overflow-hidden font-mono">
         {/* Full-page 3D building background */}
-        <BuildingView ref={buildingRef} className="absolute inset-0 z-0 h-full w-full" />
+        <BuildingView
+          ref={buildingRef}
+          className="absolute inset-0 z-0 h-full w-full"
+          activeLabel={activeLabel}
+          sidebarWidth={activeLabel ? SIDEBAR_W : 0}
+          onLabelClick={setActiveLabel}
+          onCanvasClick={() => setActiveLabel(null)}
+        />
+
+        {/* Label info sidebar (left panel) */}
+        {activeLabel && (
+          <LabelInfoPanel labelKey={activeLabel} onClose={() => setActiveLabel(null)} />
+        )}
 
         {/* Overlay layout — let pointer events pass through to the 3D canvas;
              individual interactive children re-enable events below. */}
@@ -196,7 +256,7 @@ export default function Home() {
           {/* Main bento grid layout — cards re-enable events individually */}
           <main className="relative flex min-h-0 flex-1 overflow-hidden">
             <BentoGrid
-              className={cn("transition-all duration-300 ease-in-out", fullscreen && "opacity-0")}
+              className={cn("transition-all duration-300 ease-in-out", isImmersive && "opacity-0")}
             >
               <DashboardWidgets data={loaderData} />
             </BentoGrid>
@@ -217,7 +277,7 @@ export default function Home() {
           <div
             className={cn(
               "absolute top-[72px] z-30 flex flex-col overflow-hidden rounded-lg border border-white/10 bg-black/40 backdrop-blur-md transition-all duration-300 pointer-events-auto",
-              bentoDragEnabled && "opacity-0 pointer-events-none",
+              (isImmersive || bentoDragEnabled) && "opacity-0 pointer-events-none",
             )}
             style={{ right: controlsRight }}
           >
