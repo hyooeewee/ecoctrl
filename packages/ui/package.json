@@ -32,7 +32,9 @@
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",
     "lucide-react": "^0.546.0",
+    "next-themes": "^0.4.6",
     "shadcn": "catalog:",
+    "sonner": "^2.0.7",
     "tailwind-merge": "catalog:",
     "tw-animate-css": "catalog:"
   },
@@ -42,7 +44,7 @@
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "^5.2.0",
     "typescript": "catalog:",
-    "vite-plus": "catalog:",
-    "vite-plugin-dts": "^4.5.4"
+    "vite-plugin-dts": "^4.5.4",
+    "vite-plus": "catalog:"
   }
 }
