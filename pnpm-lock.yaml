@@ -364,6 +364,9 @@ importers:
       lucide-react:
         specifier: ^0.546.0
         version: 0.546.0(react@19.2.5)
+      next-themes:
+        specifier: ^0.4.6
+        version: 0.4.6(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       react:
         specifier: ^19.0.0
         version: 19.2.5
@@ -373,6 +376,9 @@ importers:
       shadcn:
         specifier: 'catalog:'
         version: 4.3.1(@types/node@22.19.17)(typescript@5.9.3)
+      sonner:
+        specifier: ^2.0.7
+        version: 2.0.7(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       tailwind-merge:
         specifier: 'catalog:'
         version: 3.5.0
