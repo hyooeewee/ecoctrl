@@ -17,8 +17,8 @@
     "src/index.css"
   ],
   "scripts": {
-    "build": "vite build",
-    "dev": "vite build --watch"
+    "build": "vp build",
+    "dev": "vp build --watch"
   },
   "peerDependencies": {
     "react": "^19.0.0",
@@ -42,7 +42,7 @@
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "^5.2.0",
     "typescript": "catalog:",
-    "vite": "catalog:",
+    "vite-plus": "catalog:",
     "vite-plugin-dts": "^4.5.4"
   }
 }
