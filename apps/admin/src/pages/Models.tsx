@@ -3,7 +3,6 @@ import {
   Layers,
   Image as ImageIcon,
   ExternalLink,
-  FileText,
   Upload,
   Trash2,
   X,
@@ -18,9 +17,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@ecoctrl/ui";
 import { Input } from "@ecoctrl/ui";
 import { Label } from "@ecoctrl/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@ecoctrl/ui";
 
 import type { Model3D } from "../types";
 import { modelsApi } from "../api/models";
+import ModelViewer from "../components/ModelViewer";
 
 const ACCEPTED_FORMATS = ".glb,.gltf,.zip,.obj,.fbx";
 const FORMAT_MAP: Record<string, string> = {
@@ -43,7 +44,7 @@ export default function Models() {
   const [models, setModels] = useState<Model3D[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [previewModel, setPreviewModel] = useState<string | null>(null);
+  const [previewModel, setPreviewModel] = useState<Model3D | null>(null);
 
   // Upload dialog state
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -203,7 +204,10 @@ export default function Models() {
                       key={model.id}
                       className="group relative cursor-pointer transition-colors hover:border-blue-200"
                     >
-                      <div className="border-border/50 relative flex aspect-video items-center justify-center overflow-hidden border-b bg-muted">
+                      <div
+                        className="border-border/50 relative flex aspect-video items-center justify-center overflow-hidden border-b bg-muted"
+                        onClick={() => setPreviewModel(model)}
+                      >
                         {model.thumbnailUrl ? (
                           <img
                             src={model.thumbnailUrl}
@@ -228,14 +232,14 @@ export default function Models() {
                           <Trash2 size={14} />
                         </Button>
 
-                        {/* Navigate/Arrow button */}
+                        {/* Preview button */}
                         <Button
                           variant="secondary"
                           size="icon-sm"
                           className="border-border absolute top-2 right-2 z-10 h-8 w-8 rounded-full border bg-background/80 opacity-0 shadow-sm backdrop-blur-sm transition-opacity group-hover:opacity-100 hover:bg-background hover:text-blue-600"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setPreviewModel(model.name);
+                            setPreviewModel(model);
                           }}
                         >
                           <ExternalLink size={14} />
@@ -393,28 +397,41 @@ export default function Models() {
         </DialogContent>
       </Dialog>
 
-      {/* Preview Dialog — placeholder for now */}
+      {/* Preview Dialog */}
       <Dialog open={!!previewModel} onOpenChange={(open) => !open && setPreviewModel(null)}>
-        <DialogContent className="flex h-[80vh] max-w-4xl flex-col overflow-hidden p-0">
+        <DialogContent className="flex h-[80vh] max-w-5xl flex-col overflow-hidden p-0">
           <DialogHeader className="border-b p-4">
             <DialogTitle className="flex items-center gap-2">
-              <FileText className="text-blue-600" size={18} />
-              模型信息: {previewModel}
+              <Box className="text-blue-600 shrink-0" size={18} />
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="max-w-[240px] truncate text-base font-semibold">
+                      {previewModel?.name}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" align="start">
+                    {previewModel?.name}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <span className="text-muted-foreground ml-2 text-sm font-normal whitespace-nowrap">
+                {previewModel?.version} / {previewModel?.format}
+              </span>
             </DialogTitle>
           </DialogHeader>
-          <div className="flex-1 bg-muted p-4">
-            <div className="relative flex h-full w-full items-center justify-center rounded-lg border border-border bg-background shadow-inner">
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-muted-foreground">
-                <div className="relative flex h-80 w-64 items-center justify-center overflow-hidden rounded border-2 border-dashed border-border bg-muted">
-                  <div className="absolute top-0 left-0 h-2 w-full bg-blue-500/20" />
-                  <FileText size={48} className="opacity-20" />
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-medium text-foreground">3D 预览即将上线</p>
-                  <p className="text-xs">当前仅支持查看模型信息</p>
-                </div>
+          <div className="flex-1 overflow-hidden bg-muted p-4">
+            {previewModel ? (
+              <ModelViewer
+                src={previewModel.fileUrl ?? null}
+                alt={previewModel.name}
+                format={previewModel.format}
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                暂无模型文件
               </div>
-            </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

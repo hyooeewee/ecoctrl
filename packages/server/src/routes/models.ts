@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { z } from "zod";
 import fs from "node:fs";
 import path from "node:path";
@@ -193,6 +193,51 @@ export default async function modelRoutes(fastify: FastifyInstance) {
 
       await deleteModel(id);
       return reply.send({ success: true });
+    },
+  );
+
+  fastify.get(
+    "/:id/file",
+    {
+      preHandler: async (request: FastifyRequest, reply: FastifyReply) => {
+        try {
+          await request.jwtVerify();
+        } catch {
+          return reply.status(401).send({ error: "Unauthorized" });
+        }
+      },
+      schema: {
+        summary: "Get 3D model file",
+        params: z.object({ id: z.string().describe("Model ID") }),
+        response: {
+          200: z.unknown(),
+          401: z.object({ error: z.string() }),
+          404: z.object({ error: z.string() }),
+        },
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const model = await getModelById(id);
+      if (!model || !model.fileUrl) {
+        return reply.status(404).send({ error: "Model or file not found" });
+      }
+
+      const relativePath = model.fileUrl.replace("/uploads/", "");
+      const filePath = path.join(BASE_UPLOAD_DIR, relativePath);
+      if (!fs.existsSync(filePath)) {
+        return reply.status(404).send({ error: "File not found" });
+      }
+
+      const ext = path.extname(filePath).toLowerCase();
+      const contentTypeMap: Record<string, string> = {
+        ".glb": "model/gltf-binary",
+        ".gltf": "model/gltf+json",
+      };
+      const contentType = contentTypeMap[ext] || "application/octet-stream";
+
+      const stream = createReadStream(filePath);
+      return reply.type(contentType).send(stream);
     },
   );
 }
