@@ -13,6 +13,7 @@ import Config from "@/pages/Config";
 import Overview from "@/pages/Overview";
 import Energy from "@/pages/Energy";
 import Faults from "@/pages/Faults";
+import Login from "@/pages/Login";
 import Maintenance from "@/pages/Maintenance";
 import Models from "@/pages/Models";
 import Monitoring from "@/pages/Monitoring";
@@ -23,10 +24,15 @@ import { initTheme } from "@/lib/darkMode";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("overview");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     initTheme();
   }, []);
+
+  if (!isLoggedIn) {
+    return <Login onLogin={() => setIsLoggedIn(true)} />;
+  }
 
   const renderContent = () => {
     switch (activeTab) {
