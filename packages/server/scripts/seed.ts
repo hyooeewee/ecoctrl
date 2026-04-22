@@ -433,64 +433,8 @@ async function seedEnergyAreas() {
 }
 
 async function seedModels() {
-  const models = [
-    {
-      id: "1",
-      name: "冷却塔模型_1",
-      version: "v2.1",
-      format: "GLB",
-      size: "12.4MB",
-      thumbnailUrl: null,
-      docUrl: null,
-    },
-    {
-      id: "2",
-      name: "冷却塔模型_2",
-      version: "v2.1",
-      format: "GLB",
-      size: "12.4MB",
-      thumbnailUrl: null,
-      docUrl: null,
-    },
-    {
-      id: "3",
-      name: "冷却塔模型_3",
-      version: "v2.1",
-      format: "GLB",
-      size: "12.4MB",
-      thumbnailUrl: null,
-      docUrl: null,
-    },
-    {
-      id: "4",
-      name: "冷却塔模型_4",
-      version: "v2.1",
-      format: "GLB",
-      size: "12.4MB",
-      thumbnailUrl: null,
-      docUrl: null,
-    },
-    {
-      id: "5",
-      name: "冷却塔模型_5",
-      version: "v2.1",
-      format: "GLB",
-      size: "12.4MB",
-      thumbnailUrl: null,
-      docUrl: null,
-    },
-    {
-      id: "6",
-      name: "冷却塔模型_6",
-      version: "v2.1",
-      format: "GLB",
-      size: "12.4MB",
-      thumbnailUrl: null,
-      docUrl: null,
-    },
-  ];
-  await db.insert(schema.models).values(models);
-  console.log("Seeded models");
+  // Models are now created via file upload API; no mock data inserted.
+  console.log("Skipped seeding models (upload via API)");
 }
 
 async function seedThreeDConfig() {

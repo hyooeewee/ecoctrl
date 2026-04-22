@@ -48,11 +48,13 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 
   const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
 
+  const isFormData = init.body instanceof FormData;
+
   const execute = async (token: string | null): Promise<T> => {
     const res = await fetch(url, {
       headers: {
         Accept: "application/json",
-        ...(init.body ? { "Content-Type": "application/json" } : {}),
+        ...(!isFormData && init.body ? { "Content-Type": "application/json" } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(init.headers as Record<string, string>),
       },
