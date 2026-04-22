@@ -25,10 +25,31 @@ import { initTheme } from "@/lib/darkMode";
 export default function App() {
   const [activeTab, setActiveTab] = useState("overview");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
     initTheme();
   }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    if (token) {
+      authApi
+        .me()
+        .then(() => setIsLoggedIn(true))
+        .catch(() => {
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("refreshToken");
+        })
+        .finally(() => setAuthReady(true));
+    } else {
+      setAuthReady(true);
+    }
+  }, []);
+
+  if (!authReady) {
+    return null;
+  }
 
   if (!isLoggedIn) {
     return <Login onLogin={() => setIsLoggedIn(true)} />;

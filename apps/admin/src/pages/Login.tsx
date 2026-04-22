@@ -1,11 +1,9 @@
 import { Eye, EyeOff, LogIn } from "lucide-react";
 import React, { useState } from "react";
 
-import { Button } from "@ecoctrl/ui";
-import { Input } from "@ecoctrl/ui";
-import { Label } from "@ecoctrl/ui";
-import { Switch } from "@ecoctrl/ui";
+import { Button, Input, Label, Switch } from "@ecoctrl/ui";
 
+import { authApi } from "../api/auth";
 import { BrandLogo } from "../components/BrandLogo";
 
 interface LoginProps {
@@ -17,12 +15,23 @@ export default function Login({ onLogin }: LoginProps) {
   const [remember, setRemember] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: integrate with auth API
-    console.log({ username, password, remember });
-    onLogin();
+    setError("");
+    setIsSubmitting(true);
+    try {
+      const res = await authApi.login(username, password, remember);
+      localStorage.setItem("accessToken", res.accessToken);
+      localStorage.setItem("refreshToken", res.refreshToken);
+      onLogin();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "登录失败，请重试");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -117,20 +126,25 @@ export default function Login({ onLogin }: LoginProps) {
                 </a>
               </div>
 
+              {error && (
+                <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                  {error}
+                </div>
+              )}
+
               <Button
                 type="submit"
-                className="h-11 w-full gap-2 bg-white/90 text-sm font-semibold text-slate-900 hover:bg-white"
+                disabled={isSubmitting}
+                className="h-11 w-full gap-2 bg-white/90 text-sm font-semibold text-slate-900 hover:bg-white disabled:opacity-50"
               >
                 <LogIn size={16} />
-                登录
+                {isSubmitting ? "登录中..." : "登录"}
               </Button>
             </form>
 
             {/* Footer */}
             <div className="mt-6 text-center text-xs text-white/40">EcoCtrl 能管平台 v1.0</div>
           </div>
-
-        
         </div>
 
         {/* Right side: empty space letting the building show through */}
