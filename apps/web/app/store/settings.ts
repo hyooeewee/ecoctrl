@@ -74,6 +74,7 @@ interface SettingsStore extends SettingsState {
   setBentoDragEnabled: (value: boolean) => void;
   setEditAutoExitDelay: (value: number) => void;
   setBentoItemHidden: (id: string, hidden: boolean) => void;
+  resizeBentoItem: (id: string, w: number, h: number) => void;
   swapBentoItems: (idA: string, idB: string) => void;
   moveBentoItem: (id: string, x: number, y: number) => void;
   setBentoLayout: (layout: BentoLayoutItem[]) => void;
@@ -187,6 +188,14 @@ export const useSettingsStore = create<SettingsStore>()(
           bentoLayout: state.bentoLayout.map((item) =>
             item.id === id ? { ...item, hidden } : item,
           ),
+          hasUnsavedChanges: true,
+          syncStatus: "idle",
+        }));
+        scheduleSync(get);
+      },
+      resizeBentoItem: (id, w, h) => {
+        set((state) => ({
+          bentoLayout: state.bentoLayout.map((item) => (item.id === id ? { ...item, w, h } : item)),
           hasUnsavedChanges: true,
           syncStatus: "idle",
         }));
