@@ -1,14 +1,18 @@
 import dotenv from "dotenv";
 dotenv.config({ path: ".env.local" });
 
+import path from "node:path";
+
 import Fastify from "fastify";
 import multipart from "@fastify/multipart";
 import cors from "@fastify/cors";
 import swagger from "@fastify/swagger";
 import fastifyJwt from "@fastify/jwt";
+import fastifyStatic from "@fastify/static";
 import { validatorCompiler, serializerCompiler, ZodTypeProvider } from "fastify-type-provider-zod";
 
 import { ensureDatabase } from "@/lib/ensureDatabase";
+import { UPLOAD_DIR } from "@/lib/paths";
 import databasePlugin from "@/plugins/database";
 import apiRoutes from "@/routes/api";
 
@@ -26,7 +30,16 @@ await fastify.register(fastifyJwt, {
 });
 
 await fastify.register(cors, { origin: true });
-await fastify.register(multipart, { attachFieldsToBody: false });
+await fastify.register(multipart, {
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB
+    files: 1,
+  },
+});
+await fastify.register(fastifyStatic, {
+  root: UPLOAD_DIR,
+  prefix: "/uploads/",
+});
 
 await fastify.register(swagger, {
   openapi: {

@@ -1,13 +1,43 @@
-import { Box, Layers, Image as ImageIcon, ExternalLink, FileText } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import {
+  Box,
+  Layers,
+  Image as ImageIcon,
+  ExternalLink,
+  FileText,
+  Upload,
+  Trash2,
+  X,
+  File,
+  AlertCircle,
+} from "lucide-react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@ecoctrl/ui";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoctrl/ui";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@ecoctrl/ui";
+import { Input } from "@ecoctrl/ui";
+import { Label } from "@ecoctrl/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui";
 
-import { Model3D } from "../types";
+import type { Model3D } from "../types";
 import { modelsApi } from "../api/models";
+
+const ACCEPTED_FORMATS = ".glb,.gltf,.zip,.obj,.fbx";
+const FORMAT_MAP: Record<string, string> = {
+  glb: "GLB",
+  gltf: "GLTF",
+  zip: "GLTF (zip)",
+  obj: "OBJ",
+  fbx: "FBX",
+};
+
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`;
+}
 
 export default function Models() {
   const [models, setModels] = useState<Model3D[]>([]);
@@ -15,20 +45,103 @@ export default function Models() {
   const [error, setError] = useState(false);
   const [previewModel, setPreviewModel] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchModels = async () => {
-      try {
-        const data = await modelsApi.list();
-        setModels(data);
-      } catch (err) {
-        console.error(err);
-        setError(true);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchModels();
+  // Upload dialog state
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadName, setUploadName] = useState("");
+  const [uploadVersion, setUploadVersion] = useState("v1.0");
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [dragActive, setDragActive] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const fetchModels = useCallback(async () => {
+    setLoading(true);
+    setError(false);
+    try {
+      const data = await modelsApi.list();
+      setModels(data);
+    } catch (err) {
+      console.error(err);
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchModels();
+  }, [fetchModels]);
+
+  const handleFile = (file: File) => {
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+    if (!FORMAT_MAP[ext]) {
+      setUploadError(`不支持的格式: .${ext}，请上传 ${ACCEPTED_FORMATS} 文件`);
+      return;
+    }
+    setUploadFile(file);
+    setUploadError("");
+    if (!uploadName) {
+      setUploadName(file.name.replace(/\.[^.]+$/, ""));
+    }
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files?.[0]) {
+      handleFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!uploadFile || !uploadName.trim()) return;
+    setIsUploading(true);
+    setUploadError("");
+    try {
+      await modelsApi.upload(uploadFile, {
+        name: uploadName.trim(),
+        version: uploadVersion.trim() || "v1.0",
+      });
+      setUploadOpen(false);
+      resetUpload();
+      await fetchModels();
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "上传失败，请重试");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const resetUpload = () => {
+    setUploadFile(null);
+    setUploadName("");
+    setUploadVersion("v1.0");
+    setUploadError("");
+    setDragActive(false);
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!window.confirm(`确定要删除模型 "${name}" 吗？`)) return;
+    try {
+      await modelsApi.delete(id);
+      await fetchModels();
+    } catch (err) {
+      console.error(err);
+      alert("删除失败，请重试");
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -47,8 +160,16 @@ export default function Models() {
         <TabsContent value="models" className="mt-0">
           <Card className="border-none shadow-sm">
             <CardHeader className="px-6 pb-4">
-              <CardTitle>模型资源</CardTitle>
-              <CardDescription>展示系统中已导入的所有 3D 资产模型。</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>模型资源</CardTitle>
+                  <CardDescription>管理已导入的所有 3D 资产模型。</CardDescription>
+                </div>
+                <Button onClick={() => setUploadOpen(true)} className="gap-2">
+                  <Upload size={16} />
+                  上传模型
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="px-6 pb-6">
               {loading ? (
@@ -60,8 +181,20 @@ export default function Models() {
                   数据加载失败，请稍后重试
                 </div>
               ) : models.length === 0 ? (
-                <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
-                  暂无模型数据
+                <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted py-20">
+                  <Box className="h-12 w-12 text-muted-foreground/40" />
+                  <h3 className="mt-4 text-sm font-semibold text-foreground">暂无模型数据</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    点击右上角"上传模型"按钮导入 3D 资产。
+                  </p>
+                  <Button
+                    onClick={() => setUploadOpen(true)}
+                    className="mt-4 gap-2"
+                    variant="outline"
+                  >
+                    <Upload size={16} />
+                    上传模型
+                  </Button>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -80,7 +213,20 @@ export default function Models() {
                         ) : (
                           <ImageIcon className="h-12 w-12 text-muted-foreground/40 transition-transform group-hover:scale-110" />
                         )}
-                        <div className="absolute inset-0 bg-black/5 transition-colors group-hover:bg-transparent"></div>
+                        <div className="absolute inset-0 bg-black/5 transition-colors group-hover:bg-transparent" />
+
+                        {/* Delete button */}
+                        <Button
+                          variant="destructive"
+                          size="icon-sm"
+                          className="absolute top-2 left-2 z-10 h-8 w-8 rounded-full opacity-0 shadow-sm transition-opacity group-hover:opacity-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(model.id, model.name);
+                          }}
+                        >
+                          <Trash2 size={14} />
+                        </Button>
 
                         {/* Navigate/Arrow button */}
                         <Button
@@ -122,30 +268,152 @@ export default function Models() {
         </TabsContent>
       </Tabs>
 
+      {/* Upload Dialog */}
+      <Dialog
+        open={uploadOpen}
+        onOpenChange={(open) => {
+          setUploadOpen(open);
+          if (!open) resetUpload();
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload size={18} />
+              上传 3D 模型
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Drop zone */}
+            <div
+              className={`relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 transition-colors ${
+                dragActive
+                  ? "border-blue-400 bg-blue-50/50"
+                  : "border-border bg-muted hover:border-muted-foreground/50"
+              }`}
+              onDragEnter={handleDrag}
+              onDragOver={handleDrag}
+              onDragLeave={handleDrag}
+              onDrop={handleDrop}
+              onClick={() => inputRef.current?.click()}
+            >
+              {uploadFile ? (
+                <div className="flex items-center gap-3">
+                  <File size={32} className="text-blue-500" />
+                  <div className="text-left">
+                    <p className="text-sm font-medium">{uploadFile.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatFileSize(uploadFile.size)} /{" "}
+                      {FORMAT_MAP[uploadFile.name.split(".").pop()?.toLowerCase() ?? ""] ??
+                        "Unknown"}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="ml-2 h-7 w-7"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setUploadFile(null);
+                      setUploadName("");
+                    }}
+                  >
+                    <X size={14} />
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <Upload size={32} className="text-muted-foreground/40" />
+                  <p className="mt-2 text-sm font-medium">点击或拖拽文件到此处</p>
+                  <p className="mt-1 text-xs text-muted-foreground">支持 {ACCEPTED_FORMATS}</p>
+                </>
+              )}
+              <input
+                ref={inputRef}
+                type="file"
+                accept={ACCEPTED_FORMATS}
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+              />
+            </div>
+
+            {/* Fields */}
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="model-name">模型名称</Label>
+                <Input
+                  id="model-name"
+                  value={uploadName}
+                  onChange={(e) => setUploadName(e.target.value)}
+                  placeholder="请输入模型名称"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="model-version">版本</Label>
+                <Input
+                  id="model-version"
+                  value={uploadVersion}
+                  onChange={(e) => setUploadVersion(e.target.value)}
+                  placeholder="v1.0"
+                />
+              </div>
+            </div>
+
+            {uploadError && (
+              <div className="flex items-center gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
+                <AlertCircle size={14} />
+                {uploadError}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setUploadOpen(false)}>
+                取消
+              </Button>
+              <Button
+                onClick={handleUpload}
+                disabled={!uploadFile || !uploadName.trim() || isUploading}
+                className="gap-2"
+              >
+                {isUploading ? (
+                  <>
+                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    上传中...
+                  </>
+                ) : (
+                  <>
+                    <Upload size={16} />
+                    确认上传
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Dialog — placeholder for now */}
       <Dialog open={!!previewModel} onOpenChange={(open) => !open && setPreviewModel(null)}>
         <DialogContent className="flex h-[80vh] max-w-4xl flex-col overflow-hidden p-0">
           <DialogHeader className="border-b p-4">
             <DialogTitle className="flex items-center gap-2">
               <FileText className="text-blue-600" size={18} />
-              模型技术文档预览: {previewModel}
+              模型信息: {previewModel}
             </DialogTitle>
           </DialogHeader>
           <div className="flex-1 bg-muted p-4">
             <div className="relative flex h-full w-full items-center justify-center rounded-lg border border-border bg-background shadow-inner">
-              {/* Simulating a PDF viewer */}
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-muted-foreground">
                 <div className="relative flex h-80 w-64 items-center justify-center overflow-hidden rounded border-2 border-dashed border-border bg-muted">
-                  <div className="absolute top-0 left-0 h-2 w-full bg-blue-500/20"></div>
+                  <div className="absolute top-0 left-0 h-2 w-full bg-blue-500/20" />
                   <FileText size={48} className="opacity-20" />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium text-foreground">PDF 预览加载中...</p>
-                  <p className="text-xs">正在渲染技术规格书与维保手册</p>
+                  <p className="text-sm font-medium text-foreground">3D 预览即将上线</p>
+                  <p className="text-xs">当前仅支持查看模型信息</p>
                 </div>
               </div>
-              {/* In a real app, this would be:
-                  <iframe src={`/docs/${previewModel}.pdf`} className="w-full h-full" />
-               */}
             </div>
           </div>
         </DialogContent>

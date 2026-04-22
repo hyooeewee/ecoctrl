@@ -73,6 +73,7 @@ export interface Model3D {
   version: string;
   format: string;
   size: string;
+  fileUrl?: string | null;
   thumbnailUrl?: string | null;
   docUrl?: string | null;
 }
