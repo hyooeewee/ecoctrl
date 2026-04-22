@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
-import { Label, Separator, Slider, Switch } from "@ecoctrl/ui";
+import { Label, Separator, Switch } from "@ecoctrl/ui";
+import { Slider } from "~/components/ui-adapter/slider";
 
 import { Button } from "~/components/ui-adapter/button";
 import {
