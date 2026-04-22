@@ -21,6 +21,7 @@ import Profile from "@/pages/Profile";
 import Reports from "@/pages/Reports";
 import ThreeDConfig from "@/pages/ThreeDConfig";
 import { initTheme } from "@/lib/darkMode";
+import { authApi } from "./api/auth";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("overview");
