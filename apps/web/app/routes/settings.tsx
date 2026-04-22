@@ -1,24 +1,18 @@
-import {
-  IconArrowBackUp,
-  IconArrowLeft,
-  IconLoader2,
-} from "@tabler/icons-react";
+import { IconArrowBackUp, IconArrowLeft, IconLoader2 } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
-import { Button } from "~/components/ui/button";
-import { Label } from "~/components/ui/label";
+import { Label, Separator, Slider, Switch } from "@ecoctrl/ui";
+
+import { Button } from "~/components/ui-adapter/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "~/components/ui/select";
-import { Separator } from "~/components/ui/separator";
-import { Slider } from "~/components/ui/slider";
-import { Switch } from "~/components/ui/switch";
+} from "~/components/ui-adapter/select";
 import { locale, useLocale } from "~/locales";
 import { useSettingsStore } from "~/store/settings";
 
@@ -219,9 +213,7 @@ export default function SettingsPage() {
                 if (!saveDisabled) syncSettings();
               }}
             >
-              {isSyncing && (
-                <IconLoader2 size={14} className="mr-1.5 animate-spin" />
-              )}
+              {isSyncing && <IconLoader2 size={14} className="mr-1.5 animate-spin" />}
               {saveLabel}
             </Button>
             <Button variant="outline" size="sm" className="w-full" onClick={handleReset}>
@@ -469,9 +461,7 @@ export default function SettingsPage() {
                       <Label className="text-sm font-medium">{t.settings.syncDebounce}</Label>
                       <p className="text-muted-foreground text-xs">{t.settings.syncDebounceDesc}</p>
                     </div>
-                    <span className="text-muted-foreground text-xs">
-                      {syncDebounceMs} ms
-                    </span>
+                    <span className="text-muted-foreground text-xs">{syncDebounceMs} ms</span>
                   </div>
                   <Slider
                     value={[syncDebounceMs]}

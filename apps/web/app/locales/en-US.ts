@@ -164,7 +164,6 @@ export const enUS = {
     title: "AI Optimization",
   },
 
-
   // ── Label Info Panel ───────────────────────────────────────────────────────
   labelInfo: {
     office1: {

@@ -171,12 +171,7 @@ function animateCameraTo(
 
   const animAlpha = new Animation("camAlpha", "alpha", frameRate, Animation.ANIMATIONTYPE_FLOAT);
   const animBeta = new Animation("camBeta", "beta", frameRate, Animation.ANIMATIONTYPE_FLOAT);
-  const animRadius = new Animation(
-    "camRadius",
-    "radius",
-    frameRate,
-    Animation.ANIMATIONTYPE_FLOAT,
-  );
+  const animRadius = new Animation("camRadius", "radius", frameRate, Animation.ANIMATIONTYPE_FLOAT);
 
   const easing = new CubicEase();
   easing.setEasingMode(EasingFunction.EASINGMODE_EASEINOUT);
@@ -212,396 +207,395 @@ interface BuildingViewProps {
   onCanvasClick?: () => void;
 }
 
-export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(
-  function BuildingView(
-    { className, activeLabel, sidebarWidth = 320, onLabelClick, onCanvasClick },
-    ref,
-  ) {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const engineRef = useRef<Nullable<Engine>>(null);
-    const sceneRef = useRef<Nullable<Scene>>(null);
-    const cameraRef = useRef<Nullable<ArcRotateCamera>>(null);
-    const rootMeshRef = useRef<Nullable<TransformNode>>(null);
-    const labelAnchorsRef = useRef<{ key: string; worldPos: Vector3 }[]>([]);
-    const labelElsRef = useRef<Record<string, HTMLDivElement | null>>({});
-    const glowRef = useRef<Nullable<GlowLayer>>(null);
-    const [loaded, setLoaded] = useState(false);
-    const isInteractingRef = useRef(false);
+export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(function BuildingView(
+  { className, activeLabel, sidebarWidth = 320, onLabelClick, onCanvasClick },
+  ref,
+) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const engineRef = useRef<Nullable<Engine>>(null);
+  const sceneRef = useRef<Nullable<Scene>>(null);
+  const cameraRef = useRef<Nullable<ArcRotateCamera>>(null);
+  const rootMeshRef = useRef<Nullable<TransformNode>>(null);
+  const labelAnchorsRef = useRef<{ key: string; worldPos: Vector3 }[]>([]);
+  const labelElsRef = useRef<Record<string, HTMLDivElement | null>>({});
+  const glowRef = useRef<Nullable<GlowLayer>>(null);
+  const [loaded, setLoaded] = useState(false);
+  const isInteractingRef = useRef(false);
 
-    // ─── Horizontal clip-plane state for lobby cross-section ────────────────────
-    // clipTargetRef: the Y-height we want the clip plane at.
-    //   A large value (999) means "no clipping" (plane above everything).
-    // lobbyTopRef: world-space Y of the lobby mesh bounding box top.
-    //   Detected after GLB load; used as the actual clip height.
-    const clipYRef = useRef(999);
-    const clipTargetRef = useRef(999);
-    const lobbyTopRef = useRef(2);
+  // ─── Horizontal clip-plane state for lobby cross-section ────────────────────
+  // clipTargetRef: the Y-height we want the clip plane at.
+  //   A large value (999) means "no clipping" (plane above everything).
+  // lobbyTopRef: world-space Y of the lobby mesh bounding box top.
+  //   Detected after GLB load; used as the actual clip height.
+  const clipYRef = useRef(999);
+  const clipTargetRef = useRef(999);
+  const lobbyTopRef = useRef(2);
 
-    const {
-      autoRotate,
-      rotateSpeed,
-      showLabels,
-      glowIntensity,
+  const {
+    autoRotate,
+    rotateSpeed,
+    showLabels,
+    glowIntensity,
+    defaultCameraRadius,
+    defaultRotationY,
+  } = useSettingsStore();
+  const t = useLocale();
+
+  // Refs so runRenderLoop always sees the latest values
+  const autoRotateRef = useRef(autoRotate);
+  const rotateSpeedRef = useRef(rotateSpeed);
+  const showLabelsRef = useRef(showLabels);
+  const activeLabelRef = useRef(activeLabel);
+  useEffect(() => {
+    autoRotateRef.current = autoRotate;
+  }, [autoRotate]);
+  useEffect(() => {
+    rotateSpeedRef.current = rotateSpeed;
+  }, [rotateSpeed]);
+  useEffect(() => {
+    showLabelsRef.current = showLabels;
+  }, [showLabels]);
+  useEffect(() => {
+    activeLabelRef.current = activeLabel;
+  }, [activeLabel]);
+
+  const labelText: Record<string, string> = {
+    office1: t.building.officeArea,
+    meeting: t.building.meetingArea,
+    dataCenter: t.building.dataCenter,
+    exhibition: t.building.exhibitionHall,
+    office2: t.building.officeArea,
+    lobby: t.building.lobby,
+  };
+
+  // Sync glow intensity
+  useEffect(() => {
+    const glow = glowRef.current;
+    if (glow) glow.intensity = glowIntensity;
+  }, [glowIntensity]);
+
+  // Sync default camera radius
+  useEffect(() => {
+    const camera = cameraRef.current;
+    if (camera) animateCameraRadius(camera, defaultCameraRadius);
+  }, [defaultCameraRadius]);
+
+  // Sync default rotation Y
+  useEffect(() => {
+    const root = rootMeshRef.current;
+    if (root) root.rotation.y = (defaultRotationY * Math.PI) / 180;
+  }, [defaultRotationY]);
+
+  // Sync viewport offset when sidebar width changes
+  useEffect(() => {
+    const camera = cameraRef.current;
+    const engine = engineRef.current;
+    const canvas = canvasRef.current;
+    if (!camera || !engine || !canvas) return;
+
+    const w = canvas.clientWidth;
+    if (sidebarWidth > 0 && w > 0) {
+      const x = sidebarWidth / w;
+      camera.viewport = new Viewport(x, 0, 1 - x, 1);
+    } else {
+      camera.viewport = new Viewport(0, 0, 1, 1);
+    }
+  }, [sidebarWidth]);
+
+  const initialAlpha = Math.PI / 4;
+  const initialBeta = Math.PI / 2.8;
+  const initialTarget = new Vector3(0, 2, 0);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const engine = new Engine(canvas, true, {
+      preserveDrawingBuffer: true,
+      stencil: true,
+    });
+    engineRef.current = engine;
+
+    const scene = new Scene(engine);
+    sceneRef.current = scene;
+    scene.clearColor = new Color4(6 / 255, 13 / 255, 24 / 255, 1);
+
+    const camera = new ArcRotateCamera(
+      "camera",
+      initialAlpha,
+      initialBeta,
       defaultCameraRadius,
-      defaultRotationY,
-    } = useSettingsStore();
-    const t = useLocale();
+      initialTarget.clone(),
+      scene,
+    );
+    camera.attachControl(canvas, true);
+    camera.wheelPrecision = 50;
+    camera.lowerRadiusLimit = 8;
+    camera.upperRadiusLimit = 60;
+    camera.lowerBetaLimit = 0.1;
+    camera.upperBetaLimit = Math.PI / 2.2;
+    camera.viewport = new Viewport(0, 0, 1, 1);
+    cameraRef.current = camera;
 
-    // Refs so runRenderLoop always sees the latest values
-    const autoRotateRef = useRef(autoRotate);
-    const rotateSpeedRef = useRef(rotateSpeed);
-    const showLabelsRef = useRef(showLabels);
-    const activeLabelRef = useRef(activeLabel);
-    useEffect(() => {
-      autoRotateRef.current = autoRotate;
-    }, [autoRotate]);
-    useEffect(() => {
-      rotateSpeedRef.current = rotateSpeed;
-    }, [rotateSpeed]);
-    useEffect(() => {
-      showLabelsRef.current = showLabels;
-    }, [showLabels]);
-    useEffect(() => {
-      activeLabelRef.current = activeLabel;
-    }, [activeLabel]);
+    // Track user interaction
+    const onPointerDown = () => {
+      isInteractingRef.current = true;
+    };
+    const onPointerUp = () => {
+      isInteractingRef.current = false;
+    };
+    canvas.addEventListener("pointerdown", onPointerDown);
+    canvas.addEventListener("pointerup", onPointerUp);
+    canvas.addEventListener("pointercancel", onPointerUp);
+    canvas.addEventListener("pointerleave", onPointerUp);
 
-    const labelText: Record<string, string> = {
-      office1: t.building.officeArea,
-      meeting: t.building.meetingArea,
-      dataCenter: t.building.dataCenter,
-      exhibition: t.building.exhibitionHall,
-      office2: t.building.officeArea,
-      lobby: t.building.lobby,
+    // Click on blank canvas to close immersive label view
+    scene.onPointerDown = (_evt, pickInfo) => {
+      if (activeLabelRef.current && pickInfo.hit === false && onCanvasClick) {
+        onCanvasClick();
+      }
     };
 
-    // Sync glow intensity
-    useEffect(() => {
-      const glow = glowRef.current;
-      if (glow) glow.intensity = glowIntensity;
-    }, [glowIntensity]);
+    const hemi = new HemisphericLight("hemi", new Vector3(0, 1, 0), scene);
+    hemi.intensity = 0.6;
 
-    // Sync default camera radius
-    useEffect(() => {
-      const camera = cameraRef.current;
-      if (camera) animateCameraRadius(camera, defaultCameraRadius);
-    }, [defaultCameraRadius]);
+    const glow = new GlowLayer("glow", scene);
+    glow.intensity = glowIntensity;
+    glowRef.current = glow;
 
-    // Sync default rotation Y
-    useEffect(() => {
-      const root = rootMeshRef.current;
-      if (root) root.rotation.y = (defaultRotationY * Math.PI) / 180;
-    }, [defaultRotationY]);
+    const pivot = new TransformNode("rotationPivot", scene);
+    pivot.rotation.y = (defaultRotationY * Math.PI) / 180;
+    rootMeshRef.current = pivot;
 
-    // Sync viewport offset when sidebar width changes
-    useEffect(() => {
-      const camera = cameraRef.current;
-      const engine = engineRef.current;
-      const canvas = canvasRef.current;
-      if (!camera || !engine || !canvas) return;
+    SceneLoader.ImportMeshAsync("", "/", "building.glb", scene, (_event) => {
+      /* progress callback empty to avoid stale closures */
+    })
+      .then((result) => {
+        const firstMesh = result.meshes[0];
+        if (firstMesh) {
+          const glbRoot = scene.getTransformNodeByName("__root__") ?? firstMesh;
+          glbRoot.parent = pivot;
 
-      const w = canvas.clientWidth;
-      if (sidebarWidth > 0 && w > 0) {
-        const x = sidebarWidth / w;
-        camera.viewport = new Viewport(x, 0, 1 - x, 1);
-      } else {
-        camera.viewport = new Viewport(0, 0, 1, 1);
-      }
-    }, [sidebarWidth]);
+          const { min, max } = firstMesh.getHierarchyBoundingVectors(true);
+          const size = max.subtract(min);
+          const center = min.add(size.scale(0.5));
+          const maxSize = Math.max(size.x, size.y, size.z);
+          const scale = maxSize > 0 ? 10 / maxSize : 1;
 
-    const initialAlpha = Math.PI / 4;
-    const initialBeta = Math.PI / 2.8;
-    const initialTarget = new Vector3(0, 2, 0);
+          glbRoot.position.x = -center.x * scale;
+          glbRoot.position.y = -min.y * scale;
+          glbRoot.position.z = -center.z * scale;
+          glbRoot.scaling.scaleInPlace(scale);
 
-    useEffect(() => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
+          const target = new Vector3(0, (size.y * scale) / 2, 0);
+          camera.setTarget(target);
 
-      const engine = new Engine(canvas, true, {
-        preserveDrawingBuffer: true,
-        stencil: true,
-      });
-      engineRef.current = engine;
+          const allNodes = [...scene.meshes, ...scene.transformNodes];
+          const findNode = (keywords: string[]) =>
+            allNodes.find((n) =>
+              keywords.some((kw) => n.name.toLowerCase().includes(kw.toLowerCase())),
+            );
 
-      const scene = new Scene(engine);
-      sceneRef.current = scene;
-      scene.clearColor = new Color4(6 / 255, 13 / 255, 24 / 255, 1);
-
-      const camera = new ArcRotateCamera(
-        "camera",
-        initialAlpha,
-        initialBeta,
-        defaultCameraRadius,
-        initialTarget.clone(),
-        scene,
-      );
-      camera.attachControl(canvas, true);
-      camera.wheelPrecision = 50;
-      camera.lowerRadiusLimit = 8;
-      camera.upperRadiusLimit = 60;
-      camera.lowerBetaLimit = 0.1;
-      camera.upperBetaLimit = Math.PI / 2.2;
-      camera.viewport = new Viewport(0, 0, 1, 1);
-      cameraRef.current = camera;
-
-      // Track user interaction
-      const onPointerDown = () => {
-        isInteractingRef.current = true;
-      };
-      const onPointerUp = () => {
-        isInteractingRef.current = false;
-      };
-      canvas.addEventListener("pointerdown", onPointerDown);
-      canvas.addEventListener("pointerup", onPointerUp);
-      canvas.addEventListener("pointercancel", onPointerUp);
-      canvas.addEventListener("pointerleave", onPointerUp);
-
-      // Click on blank canvas to close immersive label view
-      scene.onPointerDown = (_evt, pickInfo) => {
-        if (activeLabelRef.current && pickInfo.hit === false && onCanvasClick) {
-          onCanvasClick();
-        }
-      };
-
-      const hemi = new HemisphericLight("hemi", new Vector3(0, 1, 0), scene);
-      hemi.intensity = 0.6;
-
-      const glow = new GlowLayer("glow", scene);
-      glow.intensity = glowIntensity;
-      glowRef.current = glow;
-
-      const pivot = new TransformNode("rotationPivot", scene);
-      pivot.rotation.y = (defaultRotationY * Math.PI) / 180;
-      rootMeshRef.current = pivot;
-
-      SceneLoader.ImportMeshAsync("", "/", "building.glb", scene, (_event) => {
-        /* progress callback empty to avoid stale closures */
-      })
-        .then((result) => {
-          const firstMesh = result.meshes[0];
-          if (firstMesh) {
-            const glbRoot = scene.getTransformNodeByName("__root__") ?? firstMesh;
-            glbRoot.parent = pivot;
-
-            const { min, max } = firstMesh.getHierarchyBoundingVectors(true);
-            const size = max.subtract(min);
-            const center = min.add(size.scale(0.5));
-            const maxSize = Math.max(size.x, size.y, size.z);
-            const scale = maxSize > 0 ? 10 / maxSize : 1;
-
-            glbRoot.position.x = -center.x * scale;
-            glbRoot.position.y = -min.y * scale;
-            glbRoot.position.z = -center.z * scale;
-            glbRoot.scaling.scaleInPlace(scale);
-
-            const target = new Vector3(0, (size.y * scale) / 2, 0);
-            camera.setTarget(target);
-
-            const allNodes = [...scene.meshes, ...scene.transformNodes];
-            const findNode = (keywords: string[]) =>
-              allNodes.find((n) =>
-                keywords.some((kw) => n.name.toLowerCase().includes(kw.toLowerCase())),
-              );
-
-            labelAnchorsRef.current = LABELS.map((cfg) => {
-              const node = findNode(cfg.meshKeywords);
-              let worldPos: Vector3;
-              if (node && (node as any).getBoundingInfo) {
-                worldPos = (node as any).getBoundingInfo().boundingBox.centerWorld.clone();
-              } else if (node) {
-                worldPos = node.getAbsolutePosition().clone();
-              } else {
-                worldPos = cfg.fallbackPosition.clone();
-              }
-              return { key: cfg.key, worldPos };
-            });
-
-            // Detect lobby top height for cross-section clip plane.
-            const lobbyNode = findNode(["lobby", "大堂", "大厅", "entrance"]);
-            if (lobbyNode && (lobbyNode as any).getBoundingInfo) {
-              // Generous margin above lobby top so the lobby itself stays fully visible.
-              lobbyTopRef.current = (lobbyNode as any).getBoundingInfo().boundingBox.maximumWorld.y + 1.5;
+          labelAnchorsRef.current = LABELS.map((cfg) => {
+            const node = findNode(cfg.meshKeywords);
+            let worldPos: Vector3;
+            if (node && (node as any).getBoundingInfo) {
+              worldPos = (node as any).getBoundingInfo().boundingBox.centerWorld.clone();
+            } else if (node) {
+              worldPos = node.getAbsolutePosition().clone();
             } else {
-              // Fallback: estimate lobby height as ~35% of total building height.
-              // After repositioning, building base sits at y=0.
-              // Estimate lobby top as ~35% of total building height.
-              lobbyTopRef.current = size.y * scale * 0.35;
+              worldPos = cfg.fallbackPosition.clone();
             }
-          }
-          scene.stopAllAnimations();
-          setLoaded(true);
-        })
-        .catch((_err) => {
-          /* silently ignore load errors */
-        });
-
-      engine.runRenderLoop(() => {
-        if (autoRotateRef.current && !isInteractingRef.current) {
-          camera.alpha += 0.002 * rotateSpeedRef.current;
-        }
-
-        scene.render();
-
-        // Smooth horizontal clip-plane animation for lobby cross-section.
-        // Plane(0, -1, 0, y) keeps everything where y <= clipY.
-        const targetY = clipTargetRef.current;
-        const currentY = clipYRef.current;
-        if (Math.abs(currentY - targetY) > 0.01) {
-          clipYRef.current += (targetY - currentY) * 0.08;
-        }
-        if (clipYRef.current < 900) {
-          // Plane(0, 1, 0, -clipY) → y - clipY = 0.
-          // Depending on BabylonJS clip-plane semantics this keeps y <= clipY.
-          scene.clipPlane = new Plane(0, 1, 0, -clipYRef.current);
-        } else {
-          scene.clipPlane = null;
-        }
-
-        // Project 3D label anchors to 2D screen positions
-        if (camera && labelAnchorsRef.current.length) {
-          const renderWidth = engine.getRenderWidth();
-          const renderHeight = engine.getRenderHeight();
-          const transformMatrix = scene.getTransformMatrix();
-          // Use camera.viewport to calculate projection bounds
-          const globalViewport = camera.viewport.toGlobal(renderWidth, renderHeight);
-
-          labelAnchorsRef.current.forEach(({ key, worldPos }) => {
-            const el = labelElsRef.current[key];
-            if (!el) return;
-            const p = Vector3.Project(worldPos, Matrix.Identity(), transformMatrix, globalViewport);
-            const visible =
-              showLabelsRef.current &&
-              p.z > 0 &&
-              p.z < 1 &&
-              p.x >= 0 &&
-              p.x <= renderWidth &&
-              p.y >= 0 &&
-              p.y <= renderHeight;
-            el.style.display = visible ? "flex" : "none";
-            el.style.transform = `translate(${p.x}px, ${p.y}px)`;
+            return { key: cfg.key, worldPos };
           });
+
+          // Detect lobby top height for cross-section clip plane.
+          const lobbyNode = findNode(["lobby", "大堂", "大厅", "entrance"]);
+          if (lobbyNode && (lobbyNode as any).getBoundingInfo) {
+            // Generous margin above lobby top so the lobby itself stays fully visible.
+            lobbyTopRef.current =
+              (lobbyNode as any).getBoundingInfo().boundingBox.maximumWorld.y + 1.5;
+          } else {
+            // Fallback: estimate lobby height as ~35% of total building height.
+            // After repositioning, building base sits at y=0.
+            // Estimate lobby top as ~35% of total building height.
+            lobbyTopRef.current = size.y * scale * 0.35;
+          }
         }
+        scene.stopAllAnimations();
+        setLoaded(true);
+      })
+      .catch((_err) => {
+        /* silently ignore load errors */
       });
 
-      const handleResize = () => engine.resize();
-      window.addEventListener("resize", handleResize);
+    engine.runRenderLoop(() => {
+      if (autoRotateRef.current && !isInteractingRef.current) {
+        camera.alpha += 0.002 * rotateSpeedRef.current;
+      }
 
-      return () => {
-        window.removeEventListener("resize", handleResize);
-        canvas.removeEventListener("pointerdown", onPointerDown);
-        canvas.removeEventListener("pointerup", onPointerUp);
-        canvas.removeEventListener("pointercancel", onPointerUp);
-        canvas.removeEventListener("pointerleave", onPointerUp);
-        engine.stopRenderLoop();
-        camera.detachControl();
-        engine.dispose();
-        engineRef.current = null;
-        sceneRef.current = null;
-        cameraRef.current = null;
-        rootMeshRef.current = null;
-        glowRef.current = null;
-      };
-    }, []);
+      scene.render();
 
-    useImperativeHandle(
-      ref,
-      () => ({
-        zoomIn: () => {
-          const camera = cameraRef.current;
-          if (!camera) return;
-          const next = Math.max(camera.radius * 0.8, camera.lowerRadiusLimit ?? 8);
-          animateCameraRadius(camera, next);
-        },
-        zoomOut: () => {
-          const camera = cameraRef.current;
-          if (!camera) return;
-          const next = Math.min(camera.radius * 1.25, camera.upperRadiusLimit ?? 60);
-          animateCameraRadius(camera, next);
-        },
-        resetCamera: () => {
-          const camera = cameraRef.current;
-          if (!camera) return;
-          const scene = camera.getScene();
-          scene.stopAnimation(camera);
-          camera.animations = [];
-          camera.alpha = initialAlpha;
-          camera.beta = initialBeta;
-          camera.radius = defaultCameraRadius;
-          camera.target = initialTarget.clone();
-          const root = rootMeshRef.current;
-          if (root) {
-            root.rotation.setAll(0);
-            root.rotationQuaternion = null;
-            root.rotation.y = (defaultRotationY * Math.PI) / 180;
-          }
-        },
-        ensureCloseUp: (minRadius: number) => {
-          const camera = cameraRef.current;
-          if (!camera) return;
-          if (camera.radius >= minRadius) {
-            animateCameraRadius(camera, minRadius * 0.9);
-          }
-        },
-        resetToDefaultRadius: () => {
-          const camera = cameraRef.current;
-          if (!camera) return;
-          animateCameraRadius(camera, defaultCameraRadius);
-        },
-        focusOnLabel: (key: string) => {
-          const camera = cameraRef.current;
-          if (!camera) return;
-          const def = LABELS.find((l) => l.key === key);
-          if (!def) return;
-          animateCameraTo(camera, def.focusAlpha, def.focusBeta, def.focusRadius);
-        },
-        setViewportOffset: (px: number) => {
-          const camera = cameraRef.current;
-          const canvas = canvasRef.current;
-          if (!camera || !canvas) return;
-          const w = canvas.clientWidth;
-          if (px > 0 && w > 0) {
-            const x = px / w;
-            camera.viewport = new Viewport(x, 0, 1 - x, 1);
-          } else {
-            camera.viewport = new Viewport(0, 0, 1, 1);
-          }
-        },
-        setClipping: (enabled: boolean) => {
-          // Animate clip plane toward lobbyTop (enabled) or above roof (disabled).
-          clipTargetRef.current = enabled ? lobbyTopRef.current : 999;
-        },
-      }),
-      [defaultCameraRadius, defaultRotationY],
-    );
+      // Smooth horizontal clip-plane animation for lobby cross-section.
+      // Plane(0, -1, 0, y) keeps everything where y <= clipY.
+      const targetY = clipTargetRef.current;
+      const currentY = clipYRef.current;
+      if (Math.abs(currentY - targetY) > 0.01) {
+        clipYRef.current += (targetY - currentY) * 0.08;
+      }
+      if (clipYRef.current < 900) {
+        // Plane(0, 1, 0, -clipY) → y - clipY = 0.
+        // Depending on BabylonJS clip-plane semantics this keeps y <= clipY.
+        scene.clipPlane = new Plane(0, 1, 0, -clipYRef.current);
+      } else {
+        scene.clipPlane = null;
+      }
 
-    return (
-      <div className={cn("relative overflow-hidden bg-[#060d18]", className)}>
-        <canvas
-          ref={canvasRef}
-          className="h-full w-full touch-none"
-          aria-label={t.building.ariaLabel}
-        />
+      // Project 3D label anchors to 2D screen positions
+      if (camera && labelAnchorsRef.current.length) {
+        const renderWidth = engine.getRenderWidth();
+        const renderHeight = engine.getRenderHeight();
+        const transformMatrix = scene.getTransformMatrix();
+        // Use camera.viewport to calculate projection bounds
+        const globalViewport = camera.viewport.toGlobal(renderWidth, renderHeight);
 
-        {!loaded && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="border-cyber-cyan/30 text-cyber-cyan rounded border bg-black/60 px-4 py-2 text-xs backdrop-blur-sm">
-              {t.common.loading}
-            </div>
+        labelAnchorsRef.current.forEach(({ key, worldPos }) => {
+          const el = labelElsRef.current[key];
+          if (!el) return;
+          const p = Vector3.Project(worldPos, Matrix.Identity(), transformMatrix, globalViewport);
+          const visible =
+            showLabelsRef.current &&
+            p.z > 0 &&
+            p.z < 1 &&
+            p.x >= 0 &&
+            p.x <= renderWidth &&
+            p.y >= 0 &&
+            p.y <= renderHeight;
+          el.style.display = visible ? "flex" : "none";
+          el.style.transform = `translate(${p.x}px, ${p.y}px)`;
+        });
+      }
+    });
+
+    const handleResize = () => engine.resize();
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      canvas.removeEventListener("pointerdown", onPointerDown);
+      canvas.removeEventListener("pointerup", onPointerUp);
+      canvas.removeEventListener("pointercancel", onPointerUp);
+      canvas.removeEventListener("pointerleave", onPointerUp);
+      engine.stopRenderLoop();
+      camera.detachControl();
+      engine.dispose();
+      engineRef.current = null;
+      sceneRef.current = null;
+      cameraRef.current = null;
+      rootMeshRef.current = null;
+      glowRef.current = null;
+    };
+  }, []);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      zoomIn: () => {
+        const camera = cameraRef.current;
+        if (!camera) return;
+        const next = Math.max(camera.radius * 0.8, camera.lowerRadiusLimit ?? 8);
+        animateCameraRadius(camera, next);
+      },
+      zoomOut: () => {
+        const camera = cameraRef.current;
+        if (!camera) return;
+        const next = Math.min(camera.radius * 1.25, camera.upperRadiusLimit ?? 60);
+        animateCameraRadius(camera, next);
+      },
+      resetCamera: () => {
+        const camera = cameraRef.current;
+        if (!camera) return;
+        const scene = camera.getScene();
+        scene.stopAnimation(camera);
+        camera.animations = [];
+        camera.alpha = initialAlpha;
+        camera.beta = initialBeta;
+        camera.radius = defaultCameraRadius;
+        camera.target = initialTarget.clone();
+        const root = rootMeshRef.current;
+        if (root) {
+          root.rotation.setAll(0);
+          root.rotationQuaternion = null;
+          root.rotation.y = (defaultRotationY * Math.PI) / 180;
+        }
+      },
+      ensureCloseUp: (minRadius: number) => {
+        const camera = cameraRef.current;
+        if (!camera) return;
+        if (camera.radius >= minRadius) {
+          animateCameraRadius(camera, minRadius * 0.9);
+        }
+      },
+      resetToDefaultRadius: () => {
+        const camera = cameraRef.current;
+        if (!camera) return;
+        animateCameraRadius(camera, defaultCameraRadius);
+      },
+      focusOnLabel: (key: string) => {
+        const camera = cameraRef.current;
+        if (!camera) return;
+        const def = LABELS.find((l) => l.key === key);
+        if (!def) return;
+        animateCameraTo(camera, def.focusAlpha, def.focusBeta, def.focusRadius);
+      },
+      setViewportOffset: (px: number) => {
+        const camera = cameraRef.current;
+        const canvas = canvasRef.current;
+        if (!camera || !canvas) return;
+        const w = canvas.clientWidth;
+        if (px > 0 && w > 0) {
+          const x = px / w;
+          camera.viewport = new Viewport(x, 0, 1 - x, 1);
+        } else {
+          camera.viewport = new Viewport(0, 0, 1, 1);
+        }
+      },
+      setClipping: (enabled: boolean) => {
+        // Animate clip plane toward lobbyTop (enabled) or above roof (disabled).
+        clipTargetRef.current = enabled ? lobbyTopRef.current : 999;
+      },
+    }),
+    [defaultCameraRadius, defaultRotationY],
+  );
+
+  return (
+    <div className={cn("relative overflow-hidden bg-[#060d18]", className)}>
+      <canvas
+        ref={canvasRef}
+        className="h-full w-full touch-none"
+        aria-label={t.building.ariaLabel}
+      />
+
+      {!loaded && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="border-cyber-cyan/30 text-cyber-cyan rounded border bg-black/60 px-4 py-2 text-xs backdrop-blur-sm">
+            {t.common.loading}
           </div>
-        )}
+        </div>
+      )}
 
-        {/* ── Floating area labels ── */}
-        {LABELS.map((cfg) => (
-          <AreaLabel
-            key={cfg.key}
-            label={labelText[cfg.key]}
-            isActive={activeLabel === cfg.key}
-            onClick={() => onLabelClick?.(cfg.key)}
-            ref={(el) => {
-              labelElsRef.current[cfg.key] = el;
-            }}
-          />
-        ))}
-      </div>
-    );
-  },
-);
+      {/* ── Floating area labels ── */}
+      {LABELS.map((cfg) => (
+        <AreaLabel
+          key={cfg.key}
+          label={labelText[cfg.key]}
+          isActive={activeLabel === cfg.key}
+          onClick={() => onLabelClick?.(cfg.key)}
+          ref={(el) => {
+            labelElsRef.current[cfg.key] = el;
+          }}
+        />
+      ))}
+    </div>
+  );
+});

@@ -42,9 +42,7 @@ export interface DashboardSettingsPayload {
   }>;
 }
 
-export async function fetchDashboardSettings(): Promise<
-  ApiResponse<DashboardSettingsPayload>
-> {
+export async function fetchDashboardSettings(): Promise<ApiResponse<DashboardSettingsPayload>> {
   return apiGet<DashboardSettingsPayload>(SETTINGS_ENDPOINT);
 }
 

@@ -43,13 +43,7 @@ export async function clientLoader(): Promise<DashboardData | null> {
 
 const SIDEBAR_W = 320;
 
-function LabelInfoPanel({
-  labelKey,
-  onClose,
-}: {
-  labelKey: string;
-  onClose: () => void;
-}) {
+function LabelInfoPanel({ labelKey, onClose }: { labelKey: string; onClose: () => void }) {
   const t = useLocale();
   const info = t.labelInfo[labelKey as keyof typeof t.labelInfo];
   if (!info) return null;
