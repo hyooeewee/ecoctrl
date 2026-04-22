@@ -5,6 +5,7 @@ import Fastify from "fastify";
 import multipart from "@fastify/multipart";
 import cors from "@fastify/cors";
 import swagger from "@fastify/swagger";
+import fastifyJwt from "@fastify/jwt";
 import { validatorCompiler, serializerCompiler, ZodTypeProvider } from "fastify-type-provider-zod";
 
 import { ensureDatabase } from "@/lib/ensureDatabase";
@@ -19,6 +20,11 @@ fastify.setValidatorCompiler(validatorCompiler);
 fastify.setSerializerCompiler(serializerCompiler);
 
 await fastify.register(databasePlugin);
+await fastify.register(fastifyJwt, {
+  secret: process.env.JWT_SECRET!,
+  sign: { expiresIn: "15m" },
+});
+
 await fastify.register(cors, { origin: true });
 await fastify.register(multipart, { attachFieldsToBody: false });
 
