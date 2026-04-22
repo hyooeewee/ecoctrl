@@ -452,7 +452,7 @@ export function BentoItem({ id, children, className }: BentoItemProps) {
       data-bento-id={id}
       onDragStart={(e) => e.preventDefault()}
       className={cn(
-        "group pointer-events-auto relative flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border backdrop-blur-sm transition-all duration-200",
+        "group pointer-events-auto relative flex min-h-0 min-w-0 flex-col rounded-xl border transition-all duration-200",
         dragEnabled && !isBeingDragged && !isHidden && "cursor-move select-none touch-none",
         isBeingDragged
           ? "border-cyber-cyan/30 border-dashed bg-white/[0.02] opacity-20"
@@ -460,6 +460,7 @@ export function BentoItem({ id, children, className }: BentoItemProps) {
             ? "border-white/5 bg-white/[0.02] opacity-50"
             : "border-white/10 bg-white/[0.04]",
         isSwapTarget && "ring-cyber-cyan/60 ring-4",
+        showSizePanel ? "z-20" : "overflow-hidden",
         className,
       )}
       style={{
@@ -468,6 +469,10 @@ export function BentoItem({ id, children, className }: BentoItemProps) {
         pointerEvents: isBeingDragged ? "none" : undefined,
       }}
     >
+      {/* Backdrop blur wrapper */}
+      {!isBeingDragged && !isHidden && (
+        <div className="pointer-events-none absolute inset-0 rounded-xl backdrop-blur-sm" />
+      )}
       {/* Drag handle */}
       {dragEnabled && !isBeingDragged && !isHidden && (
         <div
