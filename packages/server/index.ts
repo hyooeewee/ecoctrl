@@ -37,10 +37,9 @@ await fastify.register(multipart, {
   },
 });
 await fastify.register(fastifyStatic, {
-  root: UPLOAD_DIR,
-  prefix: "/uploads/",
+  root: path.join(UPLOAD_DIR, "models"),
+  prefix: "/uploads/models/",
 });
-
 await fastify.register(swagger, {
   openapi: {
     info: {

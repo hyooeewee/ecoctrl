@@ -1,4 +1,4 @@
-import { request, get, del } from "./request";
+import { request, fetchRaw, get, del } from "./request";
 import type { Model3D } from "../types";
 
 export const modelsApi = {
@@ -15,4 +15,9 @@ export const modelsApi = {
   },
 
   delete: (id: string) => del<void>(`/api/models/${id}`),
+
+  download: async (id: string): Promise<Blob> => {
+    const res = await fetchRaw(`/api/models/${id}/file`, { method: "GET" });
+    return res.blob();
+  },
 };

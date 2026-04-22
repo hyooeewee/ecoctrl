@@ -37,27 +37,20 @@ interface RequestOptions extends RequestInit {
   params?: Record<string, string>;
 }
 
-export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { params, ...init } = options;
-
-  let url = `${BASE_URL}${path}`;
-  if (params) {
-    const qs = new URLSearchParams(params).toString();
-    url += `?${qs}`;
-  }
-
-  const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
-
+function buildHeaders(init: RequestInit, token: string | null): Record<string, string> {
   const isFormData = init.body instanceof FormData;
+  return {
+    Accept: "application/json",
+    ...(!isFormData && init.body ? { "Content-Type": "application/json" } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(init.headers as Record<string, string>),
+  };
+}
 
-  const execute = async (token: string | null): Promise<T> => {
+async function doRequest(url: string, init: RequestInit, token: string | null): Promise<Response> {
+  const execute = async (tk: string | null): Promise<Response> => {
     const res = await fetch(url, {
-      headers: {
-        Accept: "application/json",
-        ...(!isFormData && init.body ? { "Content-Type": "application/json" } : {}),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(init.headers as Record<string, string>),
-      },
+      headers: buildHeaders(init, tk),
       ...init,
     });
 
@@ -76,9 +69,9 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
         return execute(newToken);
       }
 
-      return new Promise<T>((resolve, reject) => {
-        refreshQueue.push((tk) => {
-          if (tk) resolve(execute(tk));
+      return new Promise<Response>((resolve, reject) => {
+        refreshQueue.push((tk2) => {
+          if (tk2) resolve(execute(tk2));
           else reject(new Error("Session expired"));
         });
       });
@@ -89,10 +82,38 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
       throw new Error(`HTTP ${res.status}: ${text || res.statusText}`);
     }
 
-    return res.json() as Promise<T>;
+    return res;
   };
 
-  return execute(accessToken);
+  return execute(token);
+}
+
+export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const { params, ...init } = options;
+
+  let url = `${BASE_URL}${path}`;
+  if (params) {
+    const qs = new URLSearchParams(params).toString();
+    url += `?${qs}`;
+  }
+
+  const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
+  const res = await doRequest(url, init, accessToken);
+  return res.json() as Promise<T>;
+}
+
+// Like request but returns the raw Response for non-JSON bodies (e.g. file downloads).
+export async function fetchRaw(path: string, options: RequestOptions = {}): Promise<Response> {
+  const { params, ...init } = options;
+
+  let url = `${BASE_URL}${path}`;
+  if (params) {
+    const qs = new URLSearchParams(params).toString();
+    url += `?${qs}`;
+  }
+
+  const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
+  return doRequest(url, init, accessToken);
 }
 
 export const get = <T>(path: string, options?: RequestOptions) =>
