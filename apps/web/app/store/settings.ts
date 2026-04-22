@@ -16,6 +16,10 @@ export interface BentoLayoutItem {
 
 export const defaultBentoLayout: BentoLayoutItem[] = [];
 
+// Default grid position for each known widget (id → {x, y, w, h}).
+// Fallback to auto-placement if a widget id is not listed here.
+export const defaultWidgetLayouts: Record<string, Omit<BentoLayoutItem, "id" | "hidden">> = {};
+
 // ─── Fields synced to the backend ─────────────────────────────────────────────
 // Expand this list as new settings need server-side persistence.
 const SYNCABLE_FIELDS: (keyof SettingsState)[] = [
@@ -178,15 +182,17 @@ export const useSettingsStore = create<SettingsStore>()(
       setBentoDragEnabled: (value) => set({ bentoDragEnabled: value }),
 
       // ─── Bento layout setters (auto-sync) ─────────────────────────────────
-      setBentoItemHidden: (id, hidden) =>
+      setBentoItemHidden: (id, hidden) => {
         set((state) => ({
           bentoLayout: state.bentoLayout.map((item) =>
             item.id === id ? { ...item, hidden } : item,
           ),
           hasUnsavedChanges: true,
           syncStatus: "idle",
-        })),
-      swapBentoItems: (idA, idB) =>
+        }));
+        scheduleSync(get);
+      },
+      swapBentoItems: (idA, idB) => {
         set((state) => {
           const idxA = state.bentoLayout.findIndex((i) => i.id === idA);
           const idxB = state.bentoLayout.findIndex((i) => i.id === idB);
@@ -197,13 +203,17 @@ export const useSettingsStore = create<SettingsStore>()(
           next[idxA] = { ...a, x: b.x, y: b.y, w: b.w, h: b.h };
           next[idxB] = { ...b, x: a.x, y: a.y, w: a.w, h: a.h };
           return { bentoLayout: next, hasUnsavedChanges: true, syncStatus: "idle" };
-        }),
-      moveBentoItem: (id, x, y) =>
+        });
+        scheduleSync(get);
+      },
+      moveBentoItem: (id, x, y) => {
         set((state) => ({
           bentoLayout: state.bentoLayout.map((item) => (item.id === id ? { ...item, x, y } : item)),
           hasUnsavedChanges: true,
           syncStatus: "idle",
-        })),
+        }));
+        scheduleSync(get);
+      },
       setBentoLayout: (layout) => {
         set({ bentoLayout: layout, hasUnsavedChanges: true, syncStatus: "idle" });
         scheduleSync(get);

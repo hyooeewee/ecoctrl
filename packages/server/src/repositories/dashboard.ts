@@ -59,7 +59,6 @@ export async function getDashboardData(): Promise<DashboardData> {
     id: r.id,
     titleKey: r.titleKey,
     icon: r.icon,
-    layout: { x: r.layoutX, y: r.layoutY, w: r.layoutW, h: r.layoutH },
     data: r.dataJson as WidgetConfig["data"],
   }));
 
