@@ -7,6 +7,7 @@ import {
   GlowLayer,
   HemisphericLight,
   Matrix,
+  Plane,
   Scene,
   TransformNode,
   SceneLoader,
@@ -128,6 +129,8 @@ export interface BuildingViewRef {
   focusOnLabel: (key: string) => void;
   // NEW: offset camera viewport when a sidebar is open
   setViewportOffset: (px: number) => void;
+  // NEW: toggle horizontal clip plane for lobby cross-section
+  setClipping: (enabled: boolean) => void;
 }
 
 // ─── Camera animation helpers ─────────────────────────────────────────────────
@@ -224,6 +227,15 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(
     const glowRef = useRef<Nullable<GlowLayer>>(null);
     const [loaded, setLoaded] = useState(false);
     const isInteractingRef = useRef(false);
+
+    // ─── Horizontal clip-plane state for lobby cross-section ────────────────────
+    // clipTargetRef: the Y-height we want the clip plane at.
+    //   A large value (999) means "no clipping" (plane above everything).
+    // lobbyTopRef: world-space Y of the lobby mesh bounding box top.
+    //   Detected after GLB load; used as the actual clip height.
+    const clipYRef = useRef(999);
+    const clipTargetRef = useRef(999);
+    const lobbyTopRef = useRef(2);
 
     const {
       autoRotate,
@@ -402,6 +414,18 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(
               }
               return { key: cfg.key, worldPos };
             });
+
+            // Detect lobby top height for cross-section clip plane.
+            const lobbyNode = findNode(["lobby", "大堂", "大厅", "entrance"]);
+            if (lobbyNode && (lobbyNode as any).getBoundingInfo) {
+              // Generous margin above lobby top so the lobby itself stays fully visible.
+              lobbyTopRef.current = (lobbyNode as any).getBoundingInfo().boundingBox.maximumWorld.y + 1.5;
+            } else {
+              // Fallback: estimate lobby height as ~35% of total building height.
+              // After repositioning, building base sits at y=0.
+              // Estimate lobby top as ~35% of total building height.
+              lobbyTopRef.current = size.y * scale * 0.35;
+            }
           }
           scene.stopAllAnimations();
           setLoaded(true);
@@ -416,6 +440,21 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(
         }
 
         scene.render();
+
+        // Smooth horizontal clip-plane animation for lobby cross-section.
+        // Plane(0, -1, 0, y) keeps everything where y <= clipY.
+        const targetY = clipTargetRef.current;
+        const currentY = clipYRef.current;
+        if (Math.abs(currentY - targetY) > 0.01) {
+          clipYRef.current += (targetY - currentY) * 0.08;
+        }
+        if (clipYRef.current < 900) {
+          // Plane(0, 1, 0, -clipY) → y - clipY = 0.
+          // Depending on BabylonJS clip-plane semantics this keeps y <= clipY.
+          scene.clipPlane = new Plane(0, 1, 0, -clipYRef.current);
+        } else {
+          scene.clipPlane = null;
+        }
 
         // Project 3D label anchors to 2D screen positions
         if (camera && labelAnchorsRef.current.length) {
@@ -525,6 +564,10 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(
           } else {
             camera.viewport = new Viewport(0, 0, 1, 1);
           }
+        },
+        setClipping: (enabled: boolean) => {
+          // Animate clip plane toward lobbyTop (enabled) or above roof (disabled).
+          clipTargetRef.current = enabled ? lobbyTopRef.current : 999;
         },
       }),
       [defaultCameraRadius, defaultRotationY],

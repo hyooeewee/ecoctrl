@@ -149,9 +149,13 @@ export default function Home() {
   }, [loaderData, bentoLayout, setBentoLayout]);
 
   // When a label is selected, animate camera to focus on it.
+  // For lobby: enable horizontal cross-section clip plane.
   useEffect(() => {
     if (activeLabel) {
       buildingRef.current?.focusOnLabel(activeLabel);
+      buildingRef.current?.setClipping(activeLabel === "lobby");
+    } else {
+      buildingRef.current?.setClipping(false);
     }
   }, [activeLabel]);
 
