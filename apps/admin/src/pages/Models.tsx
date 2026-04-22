@@ -246,7 +246,9 @@ export default function Models() {
                         </Button>
                       </div>
                       <CardContent className="px-4 py-3">
-                        <p className="text-sm font-semibold">{model.name}</p>
+                        <p className="truncate text-sm font-semibold" title={model.name}>
+                          {model.name}
+                        </p>
                         <p className="mt-1 text-xs text-nowrap text-muted-foreground">
                           {model.version} / {model.format} / {model.size}
                         </p>
@@ -401,21 +403,21 @@ export default function Models() {
       <Dialog open={!!previewModel} onOpenChange={(open) => !open && setPreviewModel(null)}>
         <DialogContent className="flex h-[80vh] max-w-5xl flex-col overflow-hidden p-0">
           <DialogHeader className="border-b p-4">
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex min-w-0 items-center gap-2 overflow-hidden">
               <Box className="text-blue-600 shrink-0" size={18} />
               <TooltipProvider delayDuration={300}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className="max-w-[240px] truncate text-base font-semibold">
+                    <div className="min-w-0 flex-1 truncate text-base font-semibold">
                       {previewModel?.name}
-                    </span>
+                    </div>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" align="start">
                     {previewModel?.name}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              <span className="text-muted-foreground ml-2 text-sm font-normal whitespace-nowrap">
+              <span className="text-muted-foreground ml-2 shrink-0 text-sm font-normal">
                 {previewModel?.version} / {previewModel?.format}
               </span>
             </DialogTitle>
