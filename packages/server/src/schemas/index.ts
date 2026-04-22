@@ -1,3 +1,4 @@
+export * from "./files";
 export * from "./users";
 export * from "./maintenance";
 export * from "./faults";

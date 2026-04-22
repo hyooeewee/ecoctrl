@@ -4,7 +4,7 @@ import { request } from "./request";
 export interface FileMeta {
   id: string;
   name: string;
-  url: string;
+  fileUrl: string;
 }
 
 export const filesApi = {
