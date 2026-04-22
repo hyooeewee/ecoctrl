@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import { db } from "@/config/database";
 import { users } from "@/schemas/users";
 import type { User, UserRole, UserStatus } from "@ecoctrl/shared";
@@ -16,7 +16,7 @@ export async function getUsers(): Promise<User[]> {
   }));
 }
 
-export async function addUser(user: User): Promise<void> {
+export async function addUser(user: User & { password?: string | null }): Promise<void> {
   await db.insert(users).values({
     id: user.id,
     username: user.username,
@@ -25,7 +25,64 @@ export async function addUser(user: User): Promise<void> {
     status: user.status,
     lastLogin: user.lastLogin,
     avatarUrl: user.avatarUrl,
+    password: user.password ?? null,
   });
+}
+
+export async function getUserByUsername(
+  username: string,
+): Promise<
+  | {
+      id: string;
+      username: string;
+      email: string;
+      role: string;
+      avatarUrl: string | null;
+      password: string | null;
+      status: string;
+    }
+  | null
+> {
+  const rows = await db
+    .select()
+    .from(users)
+    .where(or(eq(users.username, username), eq(users.email, username)))
+    .limit(1);
+  if (rows.length === 0) return null;
+  const r = rows[0];
+  return {
+    id: r.id,
+    username: r.username,
+    email: r.email,
+    role: r.role,
+    avatarUrl: r.avatarUrl,
+    password: r.password,
+    status: r.status,
+  };
+}
+
+export async function getUserById(
+  id: string,
+): Promise<
+  | {
+      id: string;
+      username: string;
+      email: string;
+      role: string;
+      avatarUrl: string | null;
+    }
+  | null
+> {
+  const rows = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  if (rows.length === 0) return null;
+  const r = rows[0];
+  return {
+    id: r.id,
+    username: r.username,
+    email: r.email,
+    role: r.role,
+    avatarUrl: r.avatarUrl,
+  };
 }
 
 export async function removeUser(id: string): Promise<boolean> {

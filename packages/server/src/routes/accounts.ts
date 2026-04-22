@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import crypto from "node:crypto";
 import { z } from "zod";
+import bcrypt from "bcryptjs";
 import { UserSchema, UserCreateBodySchema, UserUpdateBodySchema, USER_ROLE_LIST } from "@ecoctrl/shared";
 import type { User, UserCreateBody, UserUpdateBody } from "@ecoctrl/shared";
 import { getUsers, addUser, removeUser, updateUser } from "@/repositories/users";
@@ -35,6 +36,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const body = request.body as UserCreateBody;
+      const hashedPassword = await bcrypt.hash(body.password, 10);
       const newUser: User = {
         id: crypto.randomUUID(),
         username: body.username ?? "",
@@ -44,7 +46,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
         lastLogin: null,
         avatarUrl: null,
       };
-      await addUser(newUser);
+      await addUser({ ...newUser, password: hashedPassword });
       return reply.status(201).send(newUser);
     },
   );
@@ -65,6 +67,9 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       const { id } = request.params as { id: string };
       const body = request.body as UserUpdateBody;
+      if (body.password) {
+        body.password = await bcrypt.hash(body.password, 10);
+      }
       const ok = await updateUser(id, body);
       if (!ok) {
         return reply.status(404).send({ error: "User not found" });

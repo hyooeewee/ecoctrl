@@ -1,3 +1,5 @@
+import crypto from "node:crypto";
+import bcrypt from "bcryptjs";
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { eq } from "drizzle-orm";
@@ -97,6 +99,20 @@ async function seedUsers() {
       .set({ avatarUrl: "https://avatar.vercel.sh/admin?size=32" })
       .where(eq(schema.users.id, onlineUsers[0].id));
   }
+
+  // Insert fixed mock user for authentication testing
+  const mockPassword = await bcrypt.hash("P@ssword4ecoctrl", 10);
+  await db.insert(schema.users).values({
+    id: crypto.randomUUID(),
+    username: "ecoctrl",
+    email: "ecoctrl@example.com",
+    password: mockPassword,
+    role: "admin",
+    status: "online",
+    lastLogin: null,
+    avatarUrl: null,
+  });
+
   console.log("Seeded users");
 }
 
