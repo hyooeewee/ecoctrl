@@ -141,7 +141,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
     "/:id/preview",
     {
       schema: {
-        summary: "Get HTML preview page for a file",
+        summary: "Preview a file",
         params: z.object({ id: z.string().describe("File ID") }),
         response: { 404: errorResponseSchema },
       },
@@ -156,26 +156,11 @@ export default async function fileRoutes(fastify: FastifyInstance) {
       if (!fs.existsSync(filePath)) {
         return reply.status(404).send({ error: "File not found" });
       }
-      const html = `<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${file.name}</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { width: 100%; height: 100%; overflow: hidden; background: #f3f4f6; }
-  iframe { width: 100%; height: 100%; border: none; }
-</style>
-</head>
-<body>
-<iframe src="/api/files/${file.id}" title="${file.name}"></iframe>
-</body>
-</html>`;
-      return reply.type("text/html").send(html);
+      const contentType = file.mimeType || "application/octet-stream";
+      const stream = createReadStream(filePath);
+      return reply.type(contentType).send(stream);
     },
   );
-
   fastify.delete(
     "/:id",
     {
