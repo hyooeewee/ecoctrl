@@ -36,12 +36,14 @@
     "fastify-type-provider-zod": "^6.1.0",
     "postgres": "^3.4.9",
     "rolldown": "1.0.0-rc.16",
+    "unzipper": "^0.12.3",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@ecoctrl/shared": "workspace:*",
     "@types/bcryptjs": "^3.0.0",
     "@types/node": "catalog:",
+    "@types/unzipper": "^0.10.11",
     "dotenv-cli": "^11.0.0",
     "drizzle-kit": "^0.31.10",
     "drizzle-seed": "^0.3.1",
