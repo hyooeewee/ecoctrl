@@ -24,7 +24,7 @@ import { maintenanceApi } from "../api/maintenance";
 interface Manual {
   id: string;
   name: string;
-  url?: string;
+  fileUrl?: string;
 }
 
 function formatDateKey(d: Date) {
@@ -235,8 +235,8 @@ export default function Maintenance() {
   };
 
   const handleManualClick = (manual: Manual) => {
-    if (manual.url) {
-      window.open(`${manual.url}/preview`, "_blank");
+    if (manual.fileUrl) {
+      window.open(`${manual.fileUrl}/preview`, "_blank");
     } else {
       setPreviewManual(manual.name);
     }
