@@ -86,7 +86,6 @@ export const WidgetConfigSchema = z.object({
   id: z.string().uuid(),
   titleKey: z.string(),
   icon: z.string(),
-  layout: WidgetLayoutSchema,
   data: WidgetDataSchema,
 });
 export type WidgetConfig = z.infer<typeof WidgetConfigSchema>;

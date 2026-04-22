@@ -45,7 +45,6 @@ export interface WidgetConfig {
   id: string;
   titleKey: string;
   icon: string;
-  layout: WidgetLayout;
   data: WidgetData;
 }
 
