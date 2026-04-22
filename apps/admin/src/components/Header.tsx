@@ -14,8 +14,8 @@ import {
 } from "@ecoctrl/ui";
 import { Input } from "@ecoctrl/ui";
 
-import type { User } from "@ecoctrl/shared";
 import { authApi } from "../api/auth";
+import type { AuthUser } from "../api/auth";
 import { applyDarkMode, getStoredTheme } from "@/lib/darkMode";
 import type { Theme } from "@/lib/darkMode";
 
@@ -54,7 +54,7 @@ const ThemeLabel: Record<Theme, string> = {
 
 export default function Header({ activeTab, setActiveTab }: HeaderProps) {
   const currentTitle = tabTitleMap[activeTab] || "管理总览";
-  const [user, setUser] = useState<Pick<User, "username" | "avatarUrl"> | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [theme, setTheme] = useState<Theme>("system");
 
   useEffect(() => {
@@ -143,7 +143,24 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
               <DropdownMenuItem onClick={() => setActiveTab("profile")}>个人信息</DropdownMenuItem>
               <DropdownMenuItem>偏好设置</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-red-500">退出登录</DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-red-500"
+                onClick={async () => {
+                  try {
+                    const refreshToken = localStorage.getItem("refreshToken");
+                    if (refreshToken) {
+                      await authApi.logout(refreshToken);
+                    }
+                  } catch {
+                    // ignore
+                  }
+                  localStorage.removeItem("accessToken");
+                  localStorage.removeItem("refreshToken");
+                  window.location.reload();
+                }}
+              >
+                退出登录
+              </DropdownMenuItem>
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
