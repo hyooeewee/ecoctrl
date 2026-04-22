@@ -1,5 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { eq, asc } from "drizzle-orm";
+import { db } from "@/config/database";
+import { dashboardWidgets } from "@/schemas/dashboardWidgets";
 import { getUserSettings, upsertUserSettings } from "@/repositories/userSettings";
 import { getOnlineUser } from "@/repositories/users";
 
@@ -50,8 +53,45 @@ export default async function settingsRoutes(fastify: FastifyInstance) {
       if (!user) {
         return reply.send({});
       }
+
+      const allWidgets = await db
+        .select()
+        .from(dashboardWidgets)
+        .where(eq(dashboardWidgets.enabled, true))
+        .orderBy(asc(dashboardWidgets.sortOrder));
+
+      const defaultLayout = allWidgets.map((w) => ({
+        id: w.id,
+        x: w.layoutX,
+        y: w.layoutY,
+        w: w.layoutW,
+        h: w.layoutH,
+      }));
+
       const settings = await getUserSettings(user.id);
-      return reply.send(settings);
+
+      const existingLayout = (settings.bentoLayout as Array<{
+        id: string;
+        x: number;
+        y: number;
+        w: number;
+        h: number;
+        hidden?: boolean;
+      }> | undefined) ?? [];
+      const existingMap = new Map(existingLayout.map((item) => [item.id, item]));
+
+      const mergedLayout = defaultLayout.map((item) => {
+        const existing = existingMap.get(item.id);
+        if (existing) {
+          return { ...item, hidden: existing.hidden };
+        }
+        return item;
+      });
+
+      return reply.send({
+        ...settings,
+        bentoLayout: mergedLayout,
+      });
     },
   );
 
