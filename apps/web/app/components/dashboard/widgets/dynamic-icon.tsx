@@ -8,7 +8,10 @@ interface DynamicIconProps {
 
 export function DynamicIcon({ name, size = 14, className }: DynamicIconProps) {
   const Icon = (
-    LucideIcons as unknown as Record<string, React.ComponentType<{ size?: number; className?: string }>>
+    LucideIcons as unknown as Record<
+      string,
+      React.ComponentType<{ size?: number; className?: string }>
+    >
   )[name];
   if (!Icon) return null;
   return <Icon size={size} className={className} />;

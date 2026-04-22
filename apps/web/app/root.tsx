@@ -9,8 +9,9 @@ import {
   useNavigate,
 } from "react-router";
 
-import { Toaster } from "~/components/ui/sonner";
-import { TooltipProvider } from "~/components/ui/tooltip";
+import { Toaster } from "@ecoctrl/ui";
+
+import { TooltipProvider } from "~/components/ui-adapter/tooltip";
 import { useLocale } from "~/locales";
 
 import "./app.css";
