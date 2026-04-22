@@ -236,7 +236,7 @@ export default function Maintenance() {
 
   const handleManualClick = (manual: Manual) => {
     if (manual.fileUrl) {
-      window.open(`${manual.fileUrl}/preview`, "_blank");
+      window.open(`/api/files/${manual.id}/preview`, "_blank");
     } else {
       setPreviewManual(manual.name);
     }
