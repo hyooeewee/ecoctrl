@@ -1,5 +1,12 @@
-import { IconEye, IconEyeOff, IconGripVertical } from "@tabler/icons-react";
-import { createContext, useCallback, useContext, useRef, useState } from "react";
+import {
+  IconEye,
+  IconEyeOff,
+  IconGripVertical,
+  IconSettings,
+  IconLink,
+  IconLinkOff,
+} from "@tabler/icons-react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
 import { cn } from "~/lib/utils";
 import { type BentoLayoutItem, useSettingsStore } from "~/store/settings";
@@ -269,13 +276,138 @@ export function BentoGrid({ children, className }: BentoGridProps) {
   );
 }
 
+// ─── Size Panel ───────────────────────────────────────────────────────────────
+
+function SizePanel({
+  w,
+  h,
+  onChange,
+  onClose,
+}: {
+  w: number;
+  h: number;
+  onChange: (w: number, h: number) => void;
+  onClose: () => void;
+}) {
+  const [localW, setLocalW] = useState(w);
+  const [localH, setLocalH] = useState(h);
+  const [locked, setLocked] = useState(w === h);
+  const ratioRef = useRef(w / h);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setLocalW(w);
+    setLocalH(h);
+    if (w === h) setLocked(true);
+    ratioRef.current = w / h;
+  }, [w, h]);
+
+  // Close when clicking outside
+  useEffect(() => {
+    const handler = (e: PointerEvent) => {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    window.addEventListener("pointerdown", handler);
+    return () => window.removeEventListener("pointerdown", handler);
+  }, [onClose]);
+
+  const commit = (nextW: number, nextH: number) => {
+    const clampedW = Math.max(1, Math.min(16, nextW));
+    const clampedH = Math.max(1, Math.min(8, nextH));
+    setLocalW(clampedW);
+    setLocalH(clampedH);
+    onChange(clampedW, clampedH);
+  };
+
+  const handleW = (val: number) => {
+    if (locked && ratioRef.current > 0) {
+      const nextH = Math.round(val / ratioRef.current);
+      commit(val, nextH);
+    } else {
+      commit(val, localH);
+    }
+  };
+
+  const handleH = (val: number) => {
+    if (locked && ratioRef.current > 0) {
+      const nextW = Math.round(val * ratioRef.current);
+      commit(nextW, val);
+    } else {
+      commit(localW, val);
+    }
+  };
+
+  const stepBtn = (label: string, onClick: () => void) => (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className="flex h-5 w-5 items-center justify-center rounded bg-white/10 text-[10px] text-foreground hover:bg-white/20"
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <div
+      ref={panelRef}
+      className="absolute top-1.5 right-7 z-30 flex flex-col gap-2 rounded-lg border border-white/10 bg-black/80 p-2 backdrop-blur-md"
+      onPointerDown={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-center gap-2">
+        {stepBtn("−", () => handleW(localW - 1))}
+        <div className="flex flex-col items-center">
+          <span className="text-[9px] text-muted-foreground">W</span>
+          <span className="min-w-[1.2rem] text-center text-[11px] font-mono text-foreground">
+            {localW}
+          </span>
+        </div>
+        {stepBtn("+", () => handleW(localW + 1))}
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setLocked((v) => !v);
+          }}
+          className={cn(
+            "flex h-5 w-5 items-center justify-center rounded transition-colors",
+            locked
+              ? "bg-cyber-cyan/20 text-cyber-cyan"
+              : "bg-white/10 text-muted-foreground hover:bg-white/20",
+          )}
+          title={locked ? "Unlock aspect ratio" : "Lock aspect ratio"}
+        >
+          {locked ? <IconLink size={10} /> : <IconLinkOff size={10} />}
+        </button>
+
+        {stepBtn("−", () => handleH(localH - 1))}
+        <div className="flex flex-col items-center">
+          <span className="text-[9px] text-muted-foreground">H</span>
+          <span className="min-w-[1.2rem] text-center text-[11px] font-mono text-foreground">
+            {localH}
+          </span>
+        </div>
+        {stepBtn("+", () => handleH(localH + 1))}
+      </div>
+    </div>
+  );
+}
+
 // ─── BentoItem ────────────────────────────────────────────────────────────────
 
 export function BentoItem({ id, children, className }: BentoItemProps) {
   const bentoLayout = useSettingsStore((s) => s.bentoLayout);
   const dragEnabled = useSettingsStore((s) => s.bentoDragEnabled);
   const setBentoItemHidden = useSettingsStore((s) => s.setBentoItemHidden);
+  const resizeBentoItem = useSettingsStore((s) => s.resizeBentoItem);
   const { draggingId, dropResult, startDrag } = useContext(DragContext);
+
+  const [showSizePanel, setShowSizePanel] = useState(false);
 
   const item = bentoLayout.find((l) => l.id === id);
   const isBeingDragged = draggingId === id;
@@ -346,22 +478,50 @@ export function BentoItem({ id, children, className }: BentoItemProps) {
         </div>
       )}
 
-      {/* Visibility toggle */}
+      {/* Size settings + Visibility toggles */}
       {dragEnabled && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setBentoItemHidden(id, !isHidden);
-          }}
-          className="absolute top-1.5 right-1.5 z-20 rounded-md bg-black/50 p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-white/10"
-        >
-          {isHidden ? (
-            <IconEye size={12} className="text-muted-foreground" />
-          ) : (
-            <IconEyeOff size={12} className="text-muted-foreground" />
-          )}
-        </button>
+        <div className="absolute top-1.5 right-1.5 z-20 flex items-center gap-1">
+          {/* Size settings gear */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowSizePanel((v) => !v);
+            }}
+            className={cn(
+              "rounded-md bg-black/50 p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-white/10",
+              showSizePanel && "opacity-100",
+            )}
+          >
+            <IconSettings size={12} className="text-muted-foreground" />
+          </button>
+
+          {/* Visibility toggle */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setBentoItemHidden(id, !isHidden);
+            }}
+            className="rounded-md bg-black/50 p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-white/10"
+          >
+            {isHidden ? (
+              <IconEye size={12} className="text-muted-foreground" />
+            ) : (
+              <IconEyeOff size={12} className="text-muted-foreground" />
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Size adjustment panel */}
+      {dragEnabled && showSizePanel && (
+        <SizePanel
+          w={item.w}
+          h={item.h}
+          onChange={(nw, nh) => resizeBentoItem(id, nw, nh)}
+          onClose={() => setShowSizePanel(false)}
+        />
       )}
 
       {isHidden ? (
@@ -371,7 +531,7 @@ export function BentoItem({ id, children, className }: BentoItemProps) {
           </span>
         </div>
       ) : (
-        children
+        <div className={cn(dragEnabled && "pointer-events-none")}>{children}</div>
       )}
     </div>
   );
