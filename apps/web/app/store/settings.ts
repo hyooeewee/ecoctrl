@@ -1,10 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-import {
-  fetchDashboardSettings,
-  patchDashboardSettings,
-} from "~/lib/dashboard-api";
+import { fetchDashboardSettings, patchDashboardSettings } from "~/lib/dashboard-api";
 
 // ─── Bento layout types ───────────────────────────────────────────────────────
 
@@ -203,9 +200,7 @@ export const useSettingsStore = create<SettingsStore>()(
         }),
       moveBentoItem: (id, x, y) =>
         set((state) => ({
-          bentoLayout: state.bentoLayout.map((item) =>
-            item.id === id ? { ...item, x, y } : item,
-          ),
+          bentoLayout: state.bentoLayout.map((item) => (item.id === id ? { ...item, x, y } : item)),
           hasUnsavedChanges: true,
           syncStatus: "idle",
         })),

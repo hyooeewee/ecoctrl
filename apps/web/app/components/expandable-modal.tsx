@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { Dialog, DialogContent } from "~/components/ui/dialog";
+import { Dialog, DialogContent } from "~/components/ui-adapter/dialog";
 import { cn } from "~/lib/utils";
 
 interface ExpandableModalProps {

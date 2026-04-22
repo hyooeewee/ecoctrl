@@ -124,9 +124,7 @@ export function EnergyTrendChart({
     <div className={cn("flex h-full flex-col gap-2 p-3", className)}>
       <div className="flex items-center gap-1.5">
         <span style={{ color: "var(--color-chart-1)" }}>{icon}</span>
-        <p className="text-[11px] font-semibold tracking-widest text-muted-foreground">
-          {title}
-        </p>
+        <p className="text-[11px] font-semibold tracking-widest text-muted-foreground">{title}</p>
       </div>
       <div ref={ref} className="min-h-0 w-full flex-1 overflow-hidden">
         {chartType === "area" && (
@@ -269,9 +267,7 @@ export function EnergyBreakdownChart({ className, data, title, icon }: EnergyBre
     <div className={cn("flex h-full flex-col gap-2 p-3", className)}>
       <div className="flex items-center gap-1.5">
         <span style={{ color: "var(--color-chart-3)" }}>{icon}</span>
-        <p className="text-[11px] font-semibold tracking-widest text-muted-foreground">
-          {title}
-        </p>
+        <p className="text-[11px] font-semibold tracking-widest text-muted-foreground">{title}</p>
       </div>
 
       <div className="flex min-h-0 flex-1 items-center gap-4">
