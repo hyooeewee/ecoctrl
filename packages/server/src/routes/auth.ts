@@ -18,8 +18,7 @@ import {
 } from "@/repositories/refreshTokens";
 import { sendMail } from "@/lib/mailer";
 
-const hashRefreshToken = (token: string) =>
-  crypto.createHash("sha256").update(token).digest("hex");
+const hashRefreshToken = (token: string) => crypto.createHash("sha256").update(token).digest("hex");
 
 // In-memory verification code store: email -> { code, expiresAt }
 const codeStore = new Map<string, { code: string; expiresAt: number }>();
@@ -246,7 +245,71 @@ export default async function authRoutes(fastify: FastifyInstance) {
         to: email,
         subject: "EcoCtrl 密码重置验证码",
         text: `您的验证码是：${code}，5分钟内有效。`,
-        html: `\u003cp\u003e您的验证码是：\u003cstrong\u003e${code}\u003c/strong\u003e，5分钟内有效。\u003c/p\u003e`,
+        html: `<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fb;padding:40px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <tr>
+    <td align="center">
+      
+      <!-- 卡片 -->
+      <table width="420" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.08);padding:32px;">
+        
+        <!-- 标题 -->
+        <tr>
+          <td align="center" style="font-size:20px;font-weight:600;color:#333;padding-bottom:16px;">
+            验证码确认
+          </td>
+        </tr>
+
+        <!-- 提示 -->
+        <tr>
+          <td align="center" style="font-size:14px;color:#666;padding-bottom:24px;">
+            您正在进行身份验证，请使用以下验证码：
+          </td>
+        </tr>
+
+        <!-- 验证码 -->
+        <tr>
+          <td align="center">
+            <div style="
+              display:inline-block;
+              font-size:32px;
+              letter-spacing:6px;
+              font-weight:700;
+              color:#4f46e5;
+              background:linear-gradient(135deg,#eef2ff,#f5f7ff);
+              padding:16px 32px;
+              border-radius:10px;
+              border:1px solid #e0e7ff;
+            ">
+              ${code}
+            </div>
+          </td>
+        </tr>
+
+        <!-- 有效期 -->
+        <tr>
+          <td align="center" style="font-size:13px;color:#999;padding-top:24px;">
+            验证码 5 分钟内有效，请勿泄露给他人
+          </td>
+        </tr>
+
+        <!-- 分割线 -->
+        <tr>
+          <td style="padding-top:24px;">
+            <hr style="border:none;border-top:1px solid #eee;">
+          </td>
+        </tr>
+
+        <!-- 底部 -->
+        <tr>
+          <td align="center" style="font-size:12px;color:#bbb;padding-top:12px;">
+            如果这不是您的操作，请忽略此邮件
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>`,
       });
 
       return reply.send({ ok: true });
