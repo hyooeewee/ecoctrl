@@ -11,6 +11,7 @@ import type {
   DashboardData,
   WidgetConfig,
 } from "@ecoctrl/shared";
+import { fetchWeather } from "@/lib/weather";
 
 export async function getDashboardStats(): Promise<DashboardStats> {
   const rows = await db.select().from(dashboardStats);
@@ -55,12 +56,22 @@ export async function getDashboardData(): Promise<DashboardData> {
     .where(eq(dashboardWidgets.enabled, true))
     .orderBy(asc(dashboardWidgets.sortOrder));
 
-  const widgets: WidgetConfig[] = rows.map((r) => ({
-    id: r.id,
-    titleKey: r.titleKey,
-    icon: r.icon,
-    data: r.dataJson as WidgetConfig["data"],
-  }));
+  const widgets: WidgetConfig[] = [];
+
+  for (const r of rows) {
+    let data = r.dataJson as WidgetConfig["data"];
+
+    if (r.dataType === "weather") {
+      data = await fetchWeather();
+    }
+
+    widgets.push({
+      id: r.id,
+      titleKey: r.titleKey,
+      icon: r.icon,
+      data,
+    });
+  }
 
   return { widgets };
 }
