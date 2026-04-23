@@ -36,6 +36,7 @@ const tabTitleMap: Record<string, string> = {
   faults: "故障管理",
   energy: "能耗管理",
   profile: "个人信息",
+  preferences: "偏好设置",
 };
 
 const THEME_CYCLE: Theme[] = ["light", "dark", "system"];
@@ -147,7 +148,9 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
               <DropdownMenuLabel>我的账户</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setActiveTab("profile")}>个人信息</DropdownMenuItem>
-              <DropdownMenuItem>偏好设置</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setActiveTab("preferences")}>
+                偏好设置
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-red-500"

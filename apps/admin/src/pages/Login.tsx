@@ -4,10 +4,11 @@ import React, { useState, useEffect } from "react";
 import { Button, Input, Label, Switch } from "@ecoctrl/ui";
 
 import { authApi } from "../api/auth";
+import type { AuthUser } from "../api/auth";
 import { BrandLogo } from "../components/BrandLogo";
 
 interface LoginProps {
-  onLogin: () => void;
+  onLogin: (user: AuthUser) => void;
 }
 
 export default function Login({ onLogin }: LoginProps) {
@@ -59,7 +60,8 @@ export default function Login({ onLogin }: LoginProps) {
       const res = await authApi.login(loginUsername, loginPassword, remember);
       localStorage.setItem("accessToken", res.accessToken);
       localStorage.setItem("refreshToken", res.refreshToken);
-      onLogin();
+      const user = await authApi.me();
+      onLogin(user);
     } catch (err) {
       setError(err instanceof Error ? err.message : "登录失败，请重试");
     } finally {
@@ -85,7 +87,8 @@ export default function Login({ onLogin }: LoginProps) {
       const res = await authApi.register(regUsername, regEmail, regPassword);
       localStorage.setItem("accessToken", res.accessToken);
       localStorage.setItem("refreshToken", res.refreshToken);
-      onLogin();
+      const user = await authApi.me();
+      onLogin(user);
     } catch (err) {
       setError(err instanceof Error ? err.message : "注册失败，请重试");
     } finally {

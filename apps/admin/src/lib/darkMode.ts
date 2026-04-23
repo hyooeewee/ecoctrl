@@ -1,3 +1,5 @@
+import { preferencesApi } from "@/api/preferences";
+
 export type Theme = "light" | "dark" | "system";
 
 const STORAGE_KEY = "theme";
@@ -45,4 +47,23 @@ export function getStoredTheme(): Theme | null {
 export function initTheme() {
   const stored = getStoredTheme() ?? "system";
   applyDarkMode(stored);
+}
+
+export async function loadThemeFromServer(userId: string) {
+  try {
+    const prefs = await preferencesApi.get(userId);
+    if (prefs.theme) {
+      applyDarkMode(prefs.theme);
+    }
+  } catch {
+    // fallback to localStorage already handled by initTheme
+  }
+}
+
+export async function saveThemeToServer(userId: string, theme: Theme) {
+  try {
+    await preferencesApi.update(userId, { theme });
+  } catch {
+    // silently fail; localStorage already saved
+  }
 }
