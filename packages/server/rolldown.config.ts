@@ -25,6 +25,12 @@ export default defineConfig({
     "@fastify/multipart",
     "@fastify/static",
     "@fastify/swagger",
+    "@fastify/jwt",
     "dotenv",
+    "drizzle-orm",
+    "postgres",
+    "bcryptjs",
+    "zod",
+    "unzipper",
   ],
 });

@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 
 import fileRoutes from "@/routes/files";
 import maintenanceRoutes from "@/routes/maintenance";
@@ -18,6 +18,16 @@ import systemRoutes from "@/routes/system";
 import authRoutes from "@/routes/auth";
 
 export default async function apiRoutes(fastify: FastifyInstance) {
+  fastify.addHook("onRequest", async (request: FastifyRequest, reply: FastifyReply) => {
+    const publicPaths = ["/api/auth/login", "/api/auth/refresh", "/api/dashboard"];
+    if (publicPaths.some((p) => request.url.startsWith(p))) return;
+    try {
+      await request.jwtVerify();
+    } catch {
+      return reply.status(401).send({ error: "Unauthorized" });
+    }
+  });
+
   await fastify.register(fileRoutes, { prefix: "/files" });
   await fastify.register(maintenanceRoutes, { prefix: "/maintenance" });
   await fastify.register(faultRoutes, { prefix: "/faults" });

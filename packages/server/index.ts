@@ -29,7 +29,9 @@ await fastify.register(fastifyJwt, {
   sign: { expiresIn: "15m" },
 });
 
-await fastify.register(cors, { origin: true });
+await fastify.register(cors, {
+  origin: process.env.CORS_ORIGIN?.split(",") || true,
+});
 await fastify.register(multipart, {
   limits: {
     fileSize: 100 * 1024 * 1024, // 100MB
