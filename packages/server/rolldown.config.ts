@@ -32,5 +32,6 @@ export default defineConfig({
     "bcryptjs",
     "zod",
     "unzipper",
+    "nodemailer",
   ],
 });
