@@ -1,5 +1,5 @@
-const API_BASE_URL = process.env.VITE_API_BASE_URL || "http://localhost:3000";
-const API_PREFIX = process.env.VITE_API_PREFIX || "/api";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+const API_PREFIX = import.meta.env.VITE_API_PREFIX || "/api";
 
 const ACCESS_TOKEN_KEY = "accessToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
@@ -92,7 +92,7 @@ async function doRequest(url: string, init: RequestInit, token: string | null): 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { params, ...init } = options;
 
-  let url = `${API_BASE_URL}${path}`;
+  let url = `${API_BASE_URL}${API_PREFIX}${path}`;
   if (params) {
     const qs = new URLSearchParams(params).toString();
     url += `?${qs}`;
@@ -107,7 +107,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 export async function fetchRaw(path: string, options: RequestOptions = {}): Promise<Response> {
   const { params, ...init } = options;
 
-  let url = `${API_BASE_URL}${path}`;
+  let url = `${API_BASE_URL}${API_PREFIX}${path}`;
   if (params) {
     const qs = new URLSearchParams(params).toString();
     url += `?${qs}`;

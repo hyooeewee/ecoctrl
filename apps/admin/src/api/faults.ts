@@ -9,6 +9,6 @@ export interface FaultStats {
 }
 
 export const faultsApi = {
-  list: () => get<Fault[]>("/api/faults"),
-  stats: () => get<FaultStats>("/api/faults/stats"),
+  list: () => get<Fault[]>("/faults"),
+  stats: () => get<FaultStats>("/faults/stats"),
 };

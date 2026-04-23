@@ -2,10 +2,10 @@ import { get, post, put, del } from "./request";
 import type { User } from "@ecoctrl/shared";
 
 export const usersApi = {
-  list: () => get<User[]>("/api/users"),
+  list: () => get<User[]>("/users"),
   create: (data: { username: string; email: string; password: string; role: string }) =>
-    post<User>("/api/users", data),
+    post<User>("/users", data),
   update: (id: string, data: Partial<User> & { password?: string }) =>
-    put<User>(`/api/users/${id}`, data),
-  delete: (id: string) => del<void>(`/api/users/${id}`),
+    put<User>(`/users/${id}`, data),
+  delete: (id: string) => del<void>(`/users/${id}`),
 };

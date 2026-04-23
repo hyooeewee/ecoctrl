@@ -10,7 +10,7 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, "");
-  const backendUrl = env.API_BASE_URL;
+  const backendUrl = env.VITE_API_BASE_URL;
 
   const proxy =
     backendUrl && /^(https?:\/\/)?(localhost|127\.0\.0\.1)/.test(backendUrl)

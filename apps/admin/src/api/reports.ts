@@ -3,10 +3,10 @@ import { ReportPlan, ReportTemplate } from "../types";
 
 export const reportsApi = {
   plans: {
-    list: () => get<ReportPlan[]>("/api/reports/plans"),
-    create: (data: Omit<ReportPlan, "id">) => post<ReportPlan>("/api/reports/plans", data),
+    list: () => get<ReportPlan[]>("/reports/plans"),
+    create: (data: Omit<ReportPlan, "id">) => post<ReportPlan>("/reports/plans", data),
     update: (id: string, data: Partial<ReportPlan>) =>
-      put<ReportPlan>(`/api/reports/plans/${id}`, data),
+      put<ReportPlan>(`/reports/plans/${id}`, data),
   },
-  templates: () => get<ReportTemplate[]>("/api/reports/templates"),
+  templates: () => get<ReportTemplate[]>("/reports/templates"),
 };

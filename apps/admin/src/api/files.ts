@@ -8,11 +8,11 @@ export interface FileMeta {
 }
 
 export const filesApi = {
-  list: () => get<FileMeta[]>("/api/files"),
+  list: () => get<FileMeta[]>("/files"),
   upload: (file: File) => {
     const formData = new FormData();
     formData.append("file", file);
-    return request<FileMeta>("/api/files", { method: "POST", body: formData });
+    return request<FileMeta>("/files", { method: "POST", body: formData });
   },
-  delete: (id: string) => del<void>(`/api/files/${id}`),
+  delete: (id: string) => del<void>(`/files/${id}`),
 };
