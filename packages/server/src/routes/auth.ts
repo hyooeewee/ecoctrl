@@ -2,7 +2,14 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { z } from "zod";
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
-import { getUserByUsername, getUserById, updateUser } from "@/repositories/users";
+import {
+  findUserByIdentifier,
+  getUserByUsername,
+  getUserByEmail,
+  getUserById,
+  updateUser,
+  addUser,
+} from "@/repositories/users";
 import {
   createRefreshToken,
   findValidRefreshToken,
@@ -18,6 +25,12 @@ const loginBodySchema = z.object({
   password: z.string(),
 });
 
+const registerBodySchema = z.object({
+  username: z.string().min(2),
+  email: z.string().email(),
+  password: z.string().min(6),
+});
+
 const tokenResponseSchema = z.object({
   accessToken: z.string(),
   refreshToken: z.string(),
@@ -31,6 +44,66 @@ const tokenResponseSchema = z.object({
 });
 
 export default async function authRoutes(fastify: FastifyInstance) {
+  fastify.post(
+    "/register",
+    {
+      schema: {
+        summary: "Register a new user",
+        body: registerBodySchema,
+        response: {
+          201: tokenResponseSchema,
+          409: z.object({ error: z.string() }),
+        },
+      },
+    },
+    async (request, reply) => {
+      const { username, email, password } = request.body as {
+        username: string;
+        email: string;
+        password: string;
+      };
+
+      const existingByUsername = await getUserByUsername(username);
+      if (existingByUsername) {
+        return reply.status(409).send({ error: "Username already taken" });
+      }
+
+      const existingByEmail = await getUserByEmail(email);
+      if (existingByEmail) {
+        return reply.status(409).send({ error: "Email already taken" });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const newUser = {
+        id: crypto.randomUUID(),
+        username,
+        email,
+        role: "viewer" as const,
+        status: "offline" as const,
+        lastLogin: null,
+        avatarUrl: null,
+      };
+
+      await addUser({ ...newUser, password: hashedPassword });
+
+      const accessToken = fastify.jwt.sign({
+        userId: newUser.id,
+        username: newUser.username,
+      });
+      const refreshToken = crypto.randomBytes(32).toString("base64");
+      const tokenHash = hashRefreshToken(refreshToken);
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+      await createRefreshToken(newUser.id, tokenHash, expiresAt);
+
+      return reply.status(201).send({
+        accessToken,
+        refreshToken,
+        user: { id: newUser.id, username, email, role: newUser.role, avatarUrl: null },
+      });
+    },
+  );
+
   fastify.post(
     "/login",
     {
@@ -48,7 +121,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
         username: string;
         password: string;
       };
-      const user = await getUserByUsername(username);
+      const user = await findUserByIdentifier(username);
       if (!user || !user.password) {
         return reply.status(401).send({ error: "Invalid credentials" });
       }
