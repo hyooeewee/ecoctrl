@@ -4,7 +4,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { UserSchema, UserCreateBodySchema, UserUpdateBodySchema, USER_ROLE_LIST } from "@ecoctrl/shared";
 import type { User, UserCreateBody, UserUpdateBody } from "@ecoctrl/shared";
-import { getUsers, addUser, removeUser, updateUser } from "@/repositories/users";
+import { getUsers, addUser, removeUser, updateUser, getUserByIdWithPassword } from "@/repositories/users";
 
 const successSchema = z.object({ success: z.boolean() });
 const errorResponseSchema = z.object({ error: z.string() });
@@ -60,16 +60,30 @@ export default async function accountRoutes(fastify: FastifyInstance) {
         body: UserUpdateBodySchema,
         response: {
           200: successSchema,
+          403: errorResponseSchema,
           404: errorResponseSchema,
         },
       },
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const body = request.body as UserUpdateBody;
-      if (body.password) {
+      const body = request.body as UserUpdateBody & { oldPassword?: string };
+
+      if (body.password && body.oldPassword) {
+        const user = await getUserByIdWithPassword(id);
+        if (!user) {
+          return reply.status(404).send({ error: "User not found" });
+        }
+        const valid = await bcrypt.compare(body.oldPassword, user.password!);
+        if (!valid) {
+          return reply.status(403).send({ error: "原密码错误" });
+        }
+        body.password = await bcrypt.hash(body.password, 10);
+        delete (body as Record<string, unknown>).oldPassword;
+      } else if (body.password) {
         body.password = await bcrypt.hash(body.password, 10);
       }
+
       const ok = await updateUser(id, body);
       if (!ok) {
         return reply.status(404).send({ error: "User not found" });
