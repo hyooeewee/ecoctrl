@@ -3,17 +3,31 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./index.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
     "./tsconfig.base.json": "./config/tsconfig.base.json",
     "./tsconfig.app.json": "./config/tsconfig.app.json",
     "./tsconfig.node.json": "./config/tsconfig.node.json",
-    "./types": "./types/index.ts",
-    "./types/*": "./types/*.ts"
+    "./types": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/types/index.js"
+    },
+    "./types/*": {
+      "types": "./dist/types/*.d.ts",
+      "import": "./dist/types/*.js"
+    }
+  },
+  "files": ["dist", "config"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "typescript": "catalog:",
     "vite-plus": "catalog:"
   }
 }
