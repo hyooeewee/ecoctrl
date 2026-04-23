@@ -37,7 +37,22 @@ export interface ListData {
   items: Record<string, unknown>[];
 }
 
-export type WidgetData = StatData | ChartData | ListData;
+export interface ForecastItem {
+  day: string;
+  high: number;
+  low: number;
+  condition: string;
+}
+
+export interface WeatherData {
+  location: string;
+  currentTemp: number;
+  unit: string;
+  condition: "sunny" | "cloudy" | "rainy" | "snowy" | "stormy";
+  forecast: ForecastItem[];
+}
+
+export type WidgetData = StatData | ChartData | ListData | WeatherData;
 
 // ─── Widget Config (from backend) ─────────────────────────────────────────────
 

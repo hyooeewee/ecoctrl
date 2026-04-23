@@ -541,6 +541,18 @@ async function seedDashboardWidgets() {
       },
       sortOrder: 10,
     },
+    // Weather
+    {
+      titleKey: "weather.title",
+      icon: "Cloud",
+      layoutX: 4,
+      layoutY: 3,
+      layoutW: 3,
+      layoutH: 3,
+      dataType: "weather" as const,
+      dataJson: {},
+      sortOrder: 11,
+    },
   ];
 
   await db.insert(schema.dashboardWidgets).values(widgets);

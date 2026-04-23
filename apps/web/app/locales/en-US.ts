@@ -164,6 +164,11 @@ export const enUS = {
     title: "AI Optimization",
   },
 
+  // ── Weather Widget ─────────────────────────────────────────────────────────
+  weather: {
+    title: "Weather",
+  },
+
   // ── Label Info Panel ───────────────────────────────────────────────────────
   labelInfo: {
     office1: {

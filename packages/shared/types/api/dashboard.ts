@@ -78,8 +78,31 @@ export const ListDataSchema = z.object({
 });
 export type ListData = z.infer<typeof ListDataSchema>;
 
+// 4. Weather data
+export const ForecastItemSchema = z.object({
+  day: z.string(),
+  high: z.number(),
+  low: z.number(),
+  condition: z.string(),
+});
+export type ForecastItem = z.infer<typeof ForecastItemSchema>;
+
+export const WeatherDataSchema = z.object({
+  location: z.string(),
+  currentTemp: z.number(),
+  unit: z.enum(["C", "F"]),
+  condition: z.string(),
+  forecast: z.array(ForecastItemSchema),
+});
+export type WeatherData = z.infer<typeof WeatherDataSchema>;
+
 // ─── Widget Config ─────────────────────────────────────────────────────────────
-export const WidgetDataSchema = z.union([StatDataSchema, ChartDataSchema, ListDataSchema]);
+export const WidgetDataSchema = z.union([
+  StatDataSchema,
+  ChartDataSchema,
+  ListDataSchema,
+  WeatherDataSchema,
+]);
 export type WidgetData = z.infer<typeof WidgetDataSchema>;
 
 export const WidgetConfigSchema = z.object({
