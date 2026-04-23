@@ -1,55 +1,101 @@
-# Server Package
+# Server Backend API
 
-## Usage
+EcoCtrl backend API service built with Fastify 5 + TypeScript + Drizzle ORM.
 
-### Prepare
+## Prerequisites
 
-step 1: clone repo
+- Node.js 22+
+- pnpm 10+
+- PostgreSQL database
+- Environment variable file `.env.local` (see `.env.example`)
 
-```bash
-git clone https://github.com/hyooeewee/ecoctrl.git
-```
+## Environment Variables
 
-step 2: change directory
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `PORT` | Server listen port | `3000` |
+| `HOST` | Server bind address | `0.0.0.0` |
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:5432/db` |
+| `JWT_SECRET` | Secret key for JWT signing | `change-in-production` |
+| `BASE_URL` | External API base URL | `http://example.com` |
+| `APP_ID` | External API app ID | `appid001` |
 
-```bash
-cd packages/server
-```
-
-step 3: env setup(modify as needed)
+Create a local environment file:
 
 ```bash
 cp .env.example .env.local
 ```
 
-### Docker(Recommended)
+## Deployment
 
-step 1: build docker image
+### Option 1: Docker (Recommended)
+
+Build image (must run from monorepo root):
 
 ```bash
-docker build -t ecoctrl-server .
+docker build -f packages/server/Dockerfile -t ecoctrl-server .
 ```
 
-step 2: run docker
+Run container:
 
 ```bash
 docker run -d \
     --name ecoctrl-server \
     -p 3000:3000 \
     --env-file .env.local \
+    -v ecoctrl-uploads:/app/uploads \
     ecoctrl-server
 ```
 
-### PM2
-
-step 1: install dependencies
+Or use Docker Compose (one command for all services + database):
 
 ```bash
-pnpm i -g pm2 && pnpm i
+cd docker && docker compose up --build
 ```
 
-step 2: start server
+### Option 2: PM2 (Production)
 
 ```bash
-pnpm start
+# Install dependencies (from monorepo root)
+pnpm install
+
+# Build workspace dependencies and the server
+pnpm --filter @ecoctrl/shared build
+pnpm --filter @ecoctrl/server build
+
+# Start with PM2
+pnpm --filter @ecoctrl/server start
 ```
+
+### Option 3: Local Development
+
+```bash
+# Install dependencies (from monorepo root)
+pnpm install
+
+# Start dev server with hot reload (tsx watch)
+pnpm --filter @ecoctrl/server dev
+```
+
+## Database Operations
+
+| Command | Description |
+|---------|-------------|
+| `pnpm db:generate` | Generate migration files |
+| `pnpm db:migrate` | Run migrations |
+| `pnpm db:push` | Push schema to database |
+| `pnpm db:studio` | Open Drizzle Studio |
+| `pnpm db:seed` | Run seed script |
+| `pnpm db:reset` | Run reset script |
+| `pnpm db:refresh` | Drop + push + seed + studio (full reset) |
+
+## Common Commands
+
+| Command | Description |
+|---------|-------------|
+| `pnpm dev` | Start dev server with hot reload (tsx watch) |
+| `pnpm build` | Production build (Rolldown) |
+| `pnpm preview` | Build and run in staging mode |
+| `pnpm start` | Build and start with PM2 |
+| `pnpm check` | Type check (`tsc --noEmit`) |
+| `pnpm clean` | Remove dist/ directory |

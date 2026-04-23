@@ -1,0 +1,56 @@
+# Development Compose — hot-reload mode for ecoctrl monorepo
+#
+# This file reuses the production Dockerfiles but overrides the start command
+# to run dev servers and mounts the host source code for hot-reload.
+#
+# Prerequisites for your Dockerfiles:
+#   - The final stage must retain devDependencies (or be a multi-stage build
+#     where the dev target installs all deps). Otherwise `pnpm dev` will fail.
+#
+# Usage:
+#   cd docker && docker compose -f compose.yml -f compose.dev.yml up --build
+#   # or from repo root:
+#   docker compose -f docker/compose.yml -f docker/compose.dev.yml up --build
+#
+# Access:
+#   - Web:      http://localhost:8080
+#   - Admin:    http://localhost:5173   (default Vite dev port)
+#   - API:      http://localhost:3000
+#   - DB:       localhost:5432
+
+services:
+  server:
+    command: pnpm --filter @ecoctrl/server dev
+    volumes:
+      # Mount host source
+      - ..:/app
+      # Preserve container's installed node_modules (do not overwrite with host)
+      - /app/node_modules
+      - /app/packages/server/node_modules
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://ecoctrl:ecoctrl_secret@postgres:5432/ecoctrl
+      JWT_SECRET: ${JWT_SECRET:-dev-secret}
+
+  web:
+    command: pnpm --filter @ecoctrl/web dev
+    volumes:
+      - ..:/app
+      - /app/node_modules
+      - /app/apps/web/node_modules
+    environment:
+      VITE_API_BASE_URL: http://localhost:3000
+    ports:
+      - "8080:8080"
+
+  admin:
+    command: pnpm --filter @ecoctrl/admin dev
+    volumes:
+      - ..:/app
+      - /app/node_modules
+      - /app/apps/admin/node_modules
+    environment:
+      VITE_API_BASE_URL: http://localhost:3000
+    ports:
+      # Default Vite dev port. Change if your vp/vite config uses another port.
+      - "5173:5173"
