@@ -29,8 +29,8 @@ export async function addUser(user: User & { password?: string | null }): Promis
   });
 }
 
-export async function getUserByUsername(
-  username: string,
+export async function findUserByIdentifier(
+  identifier: string,
 ): Promise<
   | {
       id: string;
@@ -46,8 +46,64 @@ export async function getUserByUsername(
   const rows = await db
     .select()
     .from(users)
-    .where(or(eq(users.username, username), eq(users.email, username)))
+    .where(or(eq(users.username, identifier), eq(users.email, identifier)))
     .limit(1);
+  if (rows.length === 0) return null;
+  const r = rows[0];
+  return {
+    id: r.id,
+    username: r.username,
+    email: r.email,
+    role: r.role,
+    avatarUrl: r.avatarUrl,
+    password: r.password,
+    status: r.status,
+  };
+}
+
+export async function getUserByUsername(
+  username: string,
+): Promise<
+  | {
+      id: string;
+      username: string;
+      email: string;
+      role: string;
+      avatarUrl: string | null;
+      password: string | null;
+      status: string;
+    }
+  | null
+> {
+  const rows = await db.select().from(users).where(eq(users.username, username)).limit(1);
+  if (rows.length === 0) return null;
+  const r = rows[0];
+  return {
+    id: r.id,
+    username: r.username,
+    email: r.email,
+    role: r.role,
+    avatarUrl: r.avatarUrl,
+    password: r.password,
+    status: r.status,
+  };
+}
+
+export async function getUserByEmail(
+  email: string,
+): Promise<
+  | {
+      id: string;
+      username: string;
+      email: string;
+      role: string;
+      avatarUrl: string | null;
+      password: string | null;
+      status: string;
+    }
+  | null
+> {
+  const rows = await db.select().from(users).where(eq(users.email, email)).limit(1);
   if (rows.length === 0) return null;
   const r = rows[0];
   return {
