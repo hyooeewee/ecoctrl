@@ -8,11 +8,27 @@ import { UPLOAD_DIR as BASE_UPLOAD_DIR } from "@/lib/paths";
 import { getFiles, getFileById, addFile, deleteFile } from "@/repositories/files";
 
 const FILES_DIR = path.join(BASE_UPLOAD_DIR, "files");
+const AVATAR_DIR = path.join(BASE_UPLOAD_DIR, "avatar");
 
-function ensureFilesDir() {
+const IMAGE_EXTS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif"]);
+
+function ensureDirs() {
   if (!fs.existsSync(FILES_DIR)) {
     fs.mkdirSync(FILES_DIR, { recursive: true });
   }
+  if (!fs.existsSync(AVATAR_DIR)) {
+    fs.mkdirSync(AVATAR_DIR, { recursive: true });
+  }
+}
+
+function isImage(ext: string): boolean {
+  return IMAGE_EXTS.has(ext.toLowerCase());
+}
+
+function resolveFilePath(filename: string): string {
+  const ext = path.extname(filename).toLowerCase();
+  const baseDir = isImage(ext) ? AVATAR_DIR : FILES_DIR;
+  return path.join(baseDir, filename);
 }
 
 const fileItemSchema = z.object({
@@ -55,7 +71,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      ensureFilesDir();
+      ensureDirs();
 
       const parts = request.parts();
       let fileInfo: { filename: string; tempPath: string } | undefined;
@@ -78,7 +94,9 @@ export default async function fileRoutes(fastify: FastifyInstance) {
       const fileId = crypto.randomUUID();
       const ext = path.extname(fileInfo.filename);
       const safeName = `${fileId}${ext}`;
-      const dest = path.join(FILES_DIR, safeName);
+      const isImg = isImage(ext);
+      const destDir = isImg ? AVATAR_DIR : FILES_DIR;
+      const dest = path.join(destDir, safeName);
       fs.renameSync(fileInfo.tempPath, dest);
 
       const stats = fs.statSync(dest);
@@ -86,16 +104,22 @@ export default async function fileRoutes(fastify: FastifyInstance) {
         ".pdf": "application/pdf",
         ".glb": "model/gltf-binary",
         ".gltf": "model/gltf+json",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".webp": "image/webp",
+        ".gif": "image/gif",
       };
       const mimeType = mimeTypeMap[ext.toLowerCase()] || "application/octet-stream";
       const finalName = name || fileInfo.filename.replace(/\.[^/.]+$/, "");
+      const fileUrl = isImg ? `/uploads/avatar/${safeName}` : `/uploads/files/${safeName}`;
 
       const id = await addFile({
         name: finalName,
         filename: safeName,
         mimeType,
         size: stats.size,
-        fileUrl: `/uploads/files/${safeName}`,
+        fileUrl,
       });
 
       const created = await getFileById(id);
@@ -126,7 +150,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
         return reply.status(404).send({ error: "File not found" });
       }
 
-      const filePath = path.join(FILES_DIR, file.filename);
+      const filePath = resolveFilePath(file.filename);
       if (!fs.existsSync(filePath)) {
         return reply.status(404).send({ error: "File not found" });
       }
@@ -152,7 +176,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
       if (!file) {
         return reply.status(404).send({ error: "File not found" });
       }
-      const filePath = path.join(FILES_DIR, file.filename);
+      const filePath = resolveFilePath(file.filename);
       if (!fs.existsSync(filePath)) {
         return reply.status(404).send({ error: "File not found" });
       }
@@ -161,6 +185,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
       return reply.type(contentType).send(stream);
     },
   );
+
   fastify.delete(
     "/:id",
     {
@@ -180,7 +205,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
         return reply.status(404).send({ error: "File not found" });
       }
 
-      const filePath = path.join(FILES_DIR, file.filename);
+      const filePath = resolveFilePath(file.filename);
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }

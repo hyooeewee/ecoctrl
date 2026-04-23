@@ -79,6 +79,12 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
       }
     };
     fetchUser();
+
+    const onAvatarUpdated = () => {
+      fetchUser();
+    };
+    window.addEventListener("avatar:updated", onAvatarUpdated);
+    return () => window.removeEventListener("avatar:updated", onAvatarUpdated);
   }, []);
 
   return (
