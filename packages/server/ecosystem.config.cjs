@@ -1,8 +1,8 @@
 module.exports = {
   apps: [
     {
-      name: "ecoctrl-server",
-      script: "dist/index.js",
+      name: "@ecoctrl/server",
+      script: "index.js",
       instances: 1,
       autorestart: true,
       watch: false,
