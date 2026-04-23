@@ -360,6 +360,7 @@ export default function Profile() {
                   value={oldPassword}
                   onChange={(e) => setOldPassword(e.target.value)}
                   placeholder="请输入当前密码"
+                  autoComplete="current-password"
                   className="bg-muted/30 border-border pr-10 pl-10"
                 />
                 <button
@@ -383,6 +384,7 @@ export default function Profile() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="请输入新密码"
+                    autoComplete="new-password"
                     className="bg-muted/30 border-border pr-10 pl-10"
                   />
                   <button
@@ -405,6 +407,7 @@ export default function Profile() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="请再次输入新密码"
+                    autoComplete="new-password"
                     className="bg-muted/30 border-border pr-10 pl-10"
                   />
                   <button
