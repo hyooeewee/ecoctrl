@@ -12,6 +12,8 @@ export function StatCard({ widget, data }: { widget: WidgetConfig; data: StatDat
   const t = useLocale();
   const title = getNestedLocaleValue(t, widget.titleKey) ?? widget.titleKey;
   const footer = data.footerKey ? getNestedLocaleValue(t, data.footerKey) : undefined;
+  const unit = getNestedLocaleValue(t, data.unit) ?? data.unit;
+  const delta = data.delta ? (getNestedLocaleValue(t, data.delta) ?? data.delta) : undefined;
 
   const chartData = data.sparkline?.map((v) => ({ v })) ?? [];
   const hasSparkline = chartData.length > 0;
@@ -20,8 +22,8 @@ export function StatCard({ widget, data }: { widget: WidgetConfig; data: StatDat
     title,
     icon: <DynamicIcon name={widget.icon} size={12} />,
     value: data.value,
-    unit: data.unit,
-    delta: data.delta,
+    unit,
+    delta,
     deltaVariant: data.deltaVariant,
     chartType: (hasSparkline ? "area" : "progress") as "area" | "progress",
     chartData,
