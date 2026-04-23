@@ -1,0 +1,46 @@
+# Git
+.git
+.gitignore
+
+# Node
+node_modules
+*/node_modules
+.pnpm-store
+
+# Build outputs
+dist
+*/dist
+build
+*/build
+apps/web/build
+packages/server/dist
+
+# Environment files
+.env
+.env.local
+.env.*
+
+# IDE
+.vscode
+.idea
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs
+npm-debug.log*
+pnpm-debug.log*
+
+# Docker (compose files themselves don't need to be in build context)
+docker/
+
+# Test coverage
+coverage
+
+# Temporary files
+tmp
+temp
+*.tmp
