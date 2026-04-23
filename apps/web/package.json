@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "react-router dev --port 8080",
     "build": "react-router build",
-    "preview": "PORT=8081 react-router-serve ./build/server/index.js",
-    "start": "react-router-serve ./build/server/index.js",
+    "preview": "pnpm build && pnpm dlx dotenv-cli -e .env.local -- pnpm dlx serve build/client -p 8081 -s",
+    "start": "pnpm build && pnpm dlx dotenv-cli -e .env.local -- pnpm dlx serve build/client -p 8081 -s",
     "typecheck": "react-router typegen && tsc",
     "fmt": "vp fmt",
     "lint": "vp lint",
