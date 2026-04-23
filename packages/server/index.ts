@@ -15,8 +15,10 @@ import { ensureDatabase } from "@/lib/ensureDatabase";
 import { UPLOAD_DIR } from "@/lib/paths";
 import databasePlugin from "@/plugins/database";
 import apiRoutes from "@/routes/api";
+import { syncSmtpFromEnv } from "@/repositories/platformConfig";
 
 await ensureDatabase();
+await syncSmtpFromEnv();
 
 const fastify = Fastify({ logger: true }).withTypeProvider<ZodTypeProvider>();
 
