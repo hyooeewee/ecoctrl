@@ -17,16 +17,18 @@ import Login from "@/pages/Login";
 import Maintenance from "@/pages/Maintenance";
 import Models from "@/pages/Models";
 import Monitoring from "@/pages/Monitoring";
+import Preferences from "@/pages/Preferences";
 import Profile from "@/pages/Profile";
 import Reports from "@/pages/Reports";
 import ThreeDConfig from "@/pages/ThreeDConfig";
-import { initTheme } from "@/lib/darkMode";
+import { initTheme, loadThemeFromServer } from "@/lib/darkMode";
 import { authApi } from "./api/auth";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("overview");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authReady, setAuthReady] = useState(false);
+  const [userDetail, setUserDetail] = useState<{ id: string } | null>(null);
 
   useEffect(() => {
     initTheme();
@@ -37,7 +39,11 @@ export default function App() {
     if (token) {
       authApi
         .me()
-        .then(() => setIsLoggedIn(true))
+        .then((user) => {
+          setIsLoggedIn(true);
+          setUserDetail(user);
+          loadThemeFromServer(user.id);
+        })
         .catch(() => {
           localStorage.removeItem("accessToken");
           localStorage.removeItem("refreshToken");
@@ -53,7 +59,15 @@ export default function App() {
   }
 
   if (!isLoggedIn) {
-    return <Login onLogin={() => setIsLoggedIn(true)} />;
+    return (
+      <Login
+        onLogin={(user) => {
+          setIsLoggedIn(true);
+          setUserDetail(user);
+          loadThemeFromServer(user.id);
+        }}
+      />
+    );
   }
 
   const renderContent = () => {
@@ -80,6 +94,8 @@ export default function App() {
         return <Energy />;
       case "profile":
         return <Profile />;
+      case "preferences":
+        return <Preferences userId={userDetail?.id ?? ""} />;
       default:
         return <Overview />;
     }
