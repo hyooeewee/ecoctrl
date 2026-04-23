@@ -471,7 +471,7 @@ export function BentoItem({ id, children, className }: BentoItemProps) {
     >
       {/* Backdrop blur wrapper */}
       {!isBeingDragged && !isHidden && (
-        <div className="pointer-events-none absolute inset-0 rounded-xl backdrop-blur-sm" />
+        <div className="pointer-events-none absolute inset-0 z-0 rounded-xl backdrop-blur-sm" />
       )}
       {/* Drag handle */}
       {dragEnabled && !isBeingDragged && !isHidden && (
@@ -536,7 +536,7 @@ export function BentoItem({ id, children, className }: BentoItemProps) {
           </span>
         </div>
       ) : (
-        <div className={cn(dragEnabled && "pointer-events-none")}>{children}</div>
+        <div className={cn("relative z-10", dragEnabled && "pointer-events-none")}>{children}</div>
       )}
     </div>
   );
