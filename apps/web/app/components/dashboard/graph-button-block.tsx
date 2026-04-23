@@ -362,13 +362,13 @@ export function GraphButtonBlock({
       {/* Top accent glow derived from chart color */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-8 opacity-30"
+        className="pointer-events-none absolute inset-x-0 top-0 z-0 h-8 opacity-30"
         style={{
           background: `linear-gradient(to bottom, ${chartColor}40, transparent)`,
         }}
       />
 
-      <div className="relative flex h-full flex-col gap-1.5">
+      <div className="relative z-10 flex h-full flex-col gap-1.5">
         {/* ── Row 1: icon · title · delta ── */}
         <div className="flex items-start justify-between gap-1">
           <div className="flex min-w-0 items-center gap-1.5">
@@ -442,14 +442,14 @@ export function GraphButtonBlockDetail({
       {/* Top accent glow */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-24 opacity-40"
+        className="pointer-events-none absolute inset-x-0 top-0 z-0 h-24 opacity-40"
         style={{
           background: `linear-gradient(to bottom, ${chartColor}60, transparent)`,
         }}
       />
 
       {/* Header */}
-      <div className="relative flex items-start justify-between gap-4">
+      <div className="relative z-10 flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
           {icon && (
             <span
@@ -484,7 +484,7 @@ export function GraphButtonBlockDetail({
       </div>
 
       {/* Chart */}
-      <div className="relative">
+      <div className="relative z-10">
         {chartType === "area" && <LargeArea data={chartData} color={chartColor} />}
         {chartType === "bar" && <LargeBar data={chartData} color={chartColor} />}
         {chartType === "line" && <LargeLine data={chartData} color={chartColor} />}
@@ -494,7 +494,7 @@ export function GraphButtonBlockDetail({
       </div>
 
       {/* Footer */}
-      {footer && <div className="text-muted-foreground relative text-sm">{footer}</div>}
+      {footer && <div className="text-muted-foreground relative z-10 text-sm">{footer}</div>}
     </div>
   );
 }
