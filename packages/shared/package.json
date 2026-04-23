@@ -2,10 +2,12 @@
   "name": "@ecoctrl/shared",
   "private": true,
   "type": "module",
+  "main": "./dist/index.js",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./tsconfig.base.json": "./config/tsconfig.base.json",
     "./tsconfig.app.json": "./config/tsconfig.app.json",
