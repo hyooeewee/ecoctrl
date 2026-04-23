@@ -158,12 +158,14 @@ export default function Profile() {
     setUploadingAvatar(true);
     try {
       const result = await filesApi.upload(file);
-      const avatarUrl = result.url;
+      const avatarUrl = result.fileUrl;
       setEditAvatarUrl(avatarUrl);
 
       await usersApi.update(userDetail.id, { avatarUrl });
       setUserDetail((prev) => (prev ? { ...prev, avatarUrl } : prev));
       setCurrentUser((prev) => (prev ? { ...prev, avatarUrl } : prev));
+      // Notify Header to refresh avatar
+      window.dispatchEvent(new CustomEvent("avatar:updated", { detail: avatarUrl }));
     } catch (err) {
       console.error(err);
       alert("头像上传失败，请重试");
