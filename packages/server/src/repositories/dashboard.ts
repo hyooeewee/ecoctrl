@@ -1,6 +1,6 @@
 import { db } from "@/config/database";
 import { dashboardStats } from "@/schemas/dashboard";
-import { energyReadings, energyBreakdowns } from "@/schemas/energy";
+import { energyReadings } from "@/schemas/energy";
 import { alerts } from "@/schemas/alerts";
 import { dashboardWidgets } from "@/schemas/dashboardWidgets";
 import { eq, asc } from "drizzle-orm";
