@@ -111,3 +111,15 @@ export interface ReportTemplate {
 export interface BackupSchedule {
   nextBackup: string;
 }
+
+export interface UserPreferences {
+  theme?: "light" | "dark" | "system";
+  language?: "zh-CN" | "en-US";
+  density?: "compact" | "comfortable" | "spacious";
+  fontSize?: "small" | "medium" | "large";
+  desktopNotification?: boolean;
+  alertSound?: boolean;
+  emailNotification?: boolean;
+  sidebarCollapsed?: boolean;
+  showBreadcrumb?: boolean;
+}
