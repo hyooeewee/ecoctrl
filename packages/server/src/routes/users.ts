@@ -7,8 +7,9 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { UserSchema, UserCreateBodySchema, UserUpdateBodySchema, USER_ROLE_LIST } from "@ecoctrl/shared";
 import type { User, UserCreateBody, UserUpdateBody } from "@ecoctrl/shared";
-import { getUsers, addUser, removeUser, updateUser, getUserByIdWithPassword, getUserById } from "@/repositories/users";
+import { getUsers, addUser, removeUser, updateUser, getUserByIdWithPassword, getUserById, getUserPreferences, updateUserPreferences } from "@/repositories/users";
 import { UPLOAD_DIR } from "@/lib/paths";
+import type { UserPreferences } from "@ecoctrl/shared";
 
 const AVATAR_DIR = path.join(UPLOAD_DIR, "avatar");
 const ALLOWED_EXTS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif"]);
@@ -250,6 +251,96 @@ export default async function accountRoutes(fastify: FastifyInstance) {
       const contentType = MIME_MAP[ext] || "image/jpeg";
       const stream = fs.createReadStream(filePath);
       return reply.type(contentType).send(stream);
+    },
+  );
+
+  // ─── Preferences ────────────────────────────────────────────────────────────
+
+  fastify.get(
+    "/:id/preferences",
+    {
+      schema: {
+        summary: "Get user preferences",
+        params: z.object({ id: z.string().describe("User ID") }),
+        response: { 200: z.record(z.string(), z.unknown()) },
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const prefs = await getUserPreferences(id);
+      return reply.send(prefs);
+    },
+  );
+
+  fastify.put(
+    "/:id/preferences",
+    {
+      schema: {
+        summary: "Update user preferences",
+        params: z.object({ id: z.string().describe("User ID") }),
+        body: z.record(z.string(), z.unknown()),
+        response: {
+          200: successSchema,
+          404: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const body = request.body as UserPreferences;
+      const ok = await updateUserPreferences(id, body);
+      if (!ok) {
+        return reply.status(404).send({ error: "User not found" });
+      }
+      return reply.send({ success: true });
+    },
+  );
+
+  fastify.patch(
+    "/:id/preferences",
+    {
+      schema: {
+        summary: "Patch user preferences (merge)",
+        params: z.object({ id: z.string().describe("User ID") }),
+        body: z.record(z.string(), z.unknown()),
+        response: {
+          200: successSchema,
+          404: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const body = request.body as UserPreferences;
+      const current = await getUserPreferences(id);
+      const merged = { ...current, ...body };
+      const ok = await updateUserPreferences(id, merged);
+      if (!ok) {
+        return reply.status(404).send({ error: "User not found" });
+      }
+      return reply.send({ success: true });
+    },
+  );
+
+  fastify.delete(
+    "/:id/preferences",
+    {
+      schema: {
+        summary: "Clear user preferences",
+        params: z.object({ id: z.string().describe("User ID") }),
+        response: {
+          200: successSchema,
+          404: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const ok = await updateUserPreferences(id, {});
+      if (!ok) {
+        return reply.status(404).send({ error: "User not found" });
+      }
+      return reply.send({ success: true });
     },
   );
 }

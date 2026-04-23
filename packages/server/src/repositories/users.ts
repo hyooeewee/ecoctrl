@@ -1,7 +1,7 @@
 import { eq, or } from "drizzle-orm";
 import { db } from "@/config/database";
 import { users } from "@/schemas/users";
-import type { User, UserRole, UserStatus } from "@ecoctrl/shared";
+import type { User, UserRole, UserStatus, UserPreferences } from "@ecoctrl/shared";
 
 export async function getUsers(): Promise<User[]> {
   const rows = await db.select().from(users);
@@ -184,8 +184,26 @@ export async function getOnlineUser(): Promise<{ id: string; username: string } 
 
 export async function updateUser(
   id: string,
-  data: Partial<{ username: string; password: string; email: string; role: string; status: string; avatarUrl: string | null }>,
+  data: Partial<{ username: string; password: string; email: string; role: string; status: string; avatarUrl: string | null; preferences: UserPreferences }>,
 ): Promise<boolean> {
   const result = await db.update(users).set(data).where(eq(users.id, id)).returning();
+  return result.length > 0;
+}
+
+export async function getUserPreferences(id: string): Promise<UserPreferences> {
+  const rows = await db.select({ preferences: users.preferences }).from(users).where(eq(users.id, id)).limit(1);
+  if (rows.length === 0) return {};
+  return (rows[0].preferences ?? {}) as UserPreferences;
+}
+
+export async function updateUserPreferences(
+  id: string,
+  data: UserPreferences,
+): Promise<boolean> {
+  const result = await db
+    .update(users)
+    .set({ preferences: data })
+    .where(eq(users.id, id))
+    .returning();
   return result.length > 0;
 }

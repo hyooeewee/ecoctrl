@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { USER_ROLE_LIST } from "@ecoctrl/shared";
 
 export const users = pgTable("users", {
@@ -10,5 +10,6 @@ export const users = pgTable("users", {
   status: varchar("status", { length: 20 }).notNull().default("offline"),
   lastLogin: varchar("last_login", { length: 50 }),
   avatarUrl: varchar("avatar_url", { length: 500 }),
+  preferences: jsonb("preferences").notNull().default("{}"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
