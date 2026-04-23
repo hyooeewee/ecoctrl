@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vp dev",
-    "build": "vp build",
+    "build": "vp build && cp .env.example dist/",
     "preview": "vp preview",
+    "start": "pnpm build && pnpm dlx dotenv-cli -e .env.local -- pnpm dlx serve dist -p 4173",
     "fmt": "vp fmt",
     "lint": "vp lint",
     "check": "vp check",
