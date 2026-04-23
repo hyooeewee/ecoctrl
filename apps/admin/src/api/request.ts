@@ -1,4 +1,5 @@
-const BASE_URL = "";
+const API_BASE_URL = process.env.VITE_API_BASE_URL || "http://localhost:3000";
+const API_PREFIX = process.env.VITE_API_PREFIX || "/api";
 
 const ACCESS_TOKEN_KEY = "accessToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
@@ -11,7 +12,7 @@ async function doRefresh(): Promise<string | null> {
   if (!refreshToken) return null;
 
   try {
-    const res = await fetch(`${BASE_URL}/api/auth/refresh`, {
+    const res = await fetch(`${API_BASE_URL}${API_PREFIX}/auth/refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({ refreshToken }),
@@ -91,7 +92,7 @@ async function doRequest(url: string, init: RequestInit, token: string | null): 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { params, ...init } = options;
 
-  let url = `${BASE_URL}${path}`;
+  let url = `${API_BASE_URL}${path}`;
   if (params) {
     const qs = new URLSearchParams(params).toString();
     url += `?${qs}`;
@@ -106,7 +107,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 export async function fetchRaw(path: string, options: RequestOptions = {}): Promise<Response> {
   const { params, ...init } = options;
 
-  let url = `${BASE_URL}${path}`;
+  let url = `${API_BASE_URL}${path}`;
   if (params) {
     const qs = new URLSearchParams(params).toString();
     url += `?${qs}`;
