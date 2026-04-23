@@ -11,7 +11,7 @@
     "build:web": "pnpm --filter @ecoctrl/web build",
     "build:admin": "pnpm --filter @ecoctrl/admin build",
     "build:server": "pnpm --filter @ecoctrl/server build",
-    "build": "pnpm build:ui && pnpm --filter=@ecoctrl/web --filter=@ecoctrl/admin --filter=@ecoctrl/server build",
+    "build": "pnpm --filter=@ecoctrl/shared build && pnpm build:ui && pnpm --filter=@ecoctrl/web --filter=@ecoctrl/admin --filter=@ecoctrl/server build",
     "preview": "pnpm --filter=@ecoctrl/web --filter=@ecoctrl/admin --filter=@ecoctrl/server preview",
     "check": "pnpm -r check",
     "check:fix": "pnpm --filter @ecoctrl/web check:fix && pnpm --filter @ecoctrl/admin check:fix",
@@ -19,7 +19,7 @@
     "version": "changeset version",
     "release": "changeset tag"
   },
-  "packageManager": "pnpm@10.33.0",
+  "packageManager": "pnpm@10.33.1",
   "devDependencies": {
     "@changesets/cli": "^2.31.0"
   }
