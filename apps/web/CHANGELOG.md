@@ -1,5 +1,11 @@
 # @ecoctrl/web
 
+## 0.0.3
+
+### Patch Changes
+
+- e7f3711: Implementing weather API integration and Docker configuration
+
 ## 0.0.2
 
 ### Patch Changes
