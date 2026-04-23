@@ -54,6 +54,21 @@ export async function addFile(data: Omit<FileItem, "id" | "createdAt">): Promise
   return result[0].id;
 }
 
+export async function getFileByUrl(fileUrl: string): Promise<FileItem | null> {
+  const rows = await db.select().from(files).where(eq(files.fileUrl, fileUrl)).limit(1);
+  if (rows.length === 0) return null;
+  const r = rows[0];
+  return {
+    id: r.id,
+    name: r.name,
+    filename: r.filename,
+    mimeType: r.mimeType ?? null,
+    size: r.size,
+    fileUrl: r.fileUrl ?? null,
+    createdAt: r.createdAt ? r.createdAt.toISOString() : null,
+  };
+}
+
 export async function deleteFile(id: string): Promise<boolean> {
   const result = await db.delete(files).where(eq(files.id, id)).returning();
   return result.length > 0;

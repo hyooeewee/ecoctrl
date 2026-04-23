@@ -28,7 +28,6 @@ import { Badge } from "@ecoctrl/ui";
 
 import { authApi } from "@/api/auth";
 import { usersApi } from "@/api/users";
-import { filesApi } from "@/api/files";
 import type { User, UserRole } from "@ecoctrl/shared";
 
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -157,15 +156,20 @@ export default function Profile() {
 
     setUploadingAvatar(true);
     try {
-      const result = await filesApi.upload(file);
-      const avatarUrl = result.fileUrl;
-      setEditAvatarUrl(avatarUrl);
-
-      await usersApi.update(userDetail.id, { avatarUrl });
-      setUserDetail((prev) => (prev ? { ...prev, avatarUrl } : prev));
-      setCurrentUser((prev) => (prev ? { ...prev, avatarUrl } : prev));
-      // Notify Header to refresh avatar
-      window.dispatchEvent(new CustomEvent("avatar:updated", { detail: avatarUrl }));
+      await usersApi.uploadAvatar(userDetail.id, file);
+      // Re-fetch user details from server to get the real avatarUrl
+      const allUsers = await usersApi.list();
+      const detail = allUsers.find((u) => u.username === userDetail.username) ?? null;
+      if (detail) {
+        detail.status = "online";
+        setUserDetail(detail);
+        setEditAvatarUrl(detail.avatarUrl ?? "");
+        setCurrentUser({
+          username: detail.username,
+          avatarUrl: detail.avatarUrl ?? null,
+        });
+        window.dispatchEvent(new CustomEvent("avatar:updated", { detail: detail.avatarUrl }));
+      }
     } catch (err) {
       console.error(err);
       alert("头像上传失败，请重试");
