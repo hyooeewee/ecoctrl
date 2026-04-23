@@ -14,7 +14,7 @@ import { validatorCompiler, serializerCompiler, ZodTypeProvider } from "fastify-
 import { ensureDatabase } from "@/lib/ensureDatabase";
 import { UPLOAD_DIR } from "@/lib/paths";
 import databasePlugin from "@/plugins/database";
-import apiRoutes from "@/routes/api";
+import apiRoutes from "@/routes";
 import { syncSmtpFromEnv } from "@/repositories/platformConfig";
 
 await ensureDatabase();
