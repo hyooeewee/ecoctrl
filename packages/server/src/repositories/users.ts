@@ -141,6 +141,34 @@ export async function getUserById(
   };
 }
 
+export async function getUserByIdWithPassword(
+  id: string,
+): Promise<
+  | {
+      id: string;
+      username: string;
+      email: string;
+      role: string;
+      avatarUrl: string | null;
+      password: string | null;
+      status: string;
+    }
+  | null
+> {
+  const rows = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  if (rows.length === 0) return null;
+  const r = rows[0];
+  return {
+    id: r.id,
+    username: r.username,
+    email: r.email,
+    role: r.role,
+    avatarUrl: r.avatarUrl,
+    password: r.password,
+    status: r.status,
+  };
+}
+
 export async function removeUser(id: string): Promise<boolean> {
   const result = await db.delete(users).where(eq(users.id, id)).returning();
   return result.length > 0;

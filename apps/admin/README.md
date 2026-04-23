@@ -10,10 +10,10 @@ EcoCtrl energy management platform admin dashboard. React 19 SPA built with Vite
 
 ## Environment Variables
 
-| Variable | Description | Example |
-|----------|-------------|---------|
+| Variable            | Description          | Example                 |
+| ------------------- | -------------------- | ----------------------- |
 | `VITE_API_BASE_URL` | Backend API base URL | `http://localhost:3000` |
-| `VITE_API_PREFIX` | API request prefix | `/api` |
+| `VITE_API_PREFIX`   | API request prefix   | `/api`                  |
 
 > **⚠️ Important:** Vite inlines `VITE_*` prefixed environment variables into the build output at build time. After modifying `.env.local`, you must rebuild for changes to take effect.
 
@@ -76,11 +76,11 @@ pnpm --filter @ecoctrl/admin dev
 
 ## Common Commands
 
-| Command | Description |
-|---------|-------------|
-| `pnpm dev` | Start dev server with hot reload (port 3000) |
-| `pnpm build` | Production build |
-| `pnpm preview` | Preview production build (port 4173) |
-| `pnpm start` | Build and serve (port 4173) |
-| `pnpm check` | Type check + lint + format |
-| `pnpm check:fix` | Auto-fix issues |
+| Command          | Description                                  |
+| ---------------- | -------------------------------------------- |
+| `pnpm dev`       | Start dev server with hot reload (port 3000) |
+| `pnpm build`     | Production build                             |
+| `pnpm preview`   | Preview production build (port 4173)         |
+| `pnpm start`     | Build and serve (port 4173)                  |
+| `pnpm check`     | Type check + lint + format                   |
+| `pnpm check:fix` | Auto-fix issues                              |
