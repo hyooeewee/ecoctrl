@@ -1,5 +1,11 @@
 # @ecoctrl/admin
 
+## 0.0.2
+
+### Patch Changes
+
+- 881165d: test release workflow
+
 ## 0.0.1
 
 ### Patch Changes
