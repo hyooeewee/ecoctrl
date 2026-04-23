@@ -24,8 +24,8 @@ export interface EnergyChartPoint {
 }
 
 export const overviewApi = {
-  stats: () => get<OverviewStats>("/api/overview/stats"),
-  energyChart: () => get<EnergyChartPoint[]>("/api/overview/energy-chart"),
-  alerts: (limit = 5) => get<Alert[]>("/api/alerts", { params: { limit: String(limit) } }),
-  backupSchedule: () => get<BackupSchedule>("/api/system/backup-schedule"),
+  stats: () => get<OverviewStats>("/overview/stats"),
+  energyChart: () => get<EnergyChartPoint[]>("/overview/energy-chart"),
+  alerts: (limit = 5) => get<Alert[]>("/alerts", { params: { limit: String(limit) } }),
+  backupSchedule: () => get<BackupSchedule>("/system/backup-schedule"),
 };

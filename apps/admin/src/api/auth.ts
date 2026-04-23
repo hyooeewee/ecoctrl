@@ -15,11 +15,11 @@ export interface TokenResponse {
 
 export const authApi = {
   login: (username: string, password: string, remember?: boolean) =>
-    post<TokenResponse>("/api/auth/login", { username, password, remember }),
+    post<TokenResponse>("/auth/login", { username, password, remember }),
 
-  me: () => get<AuthUser>("/api/auth/me"),
+  me: () => get<AuthUser>("/auth/me"),
 
-  refresh: (refreshToken: string) => post<TokenResponse>("/api/auth/refresh", { refreshToken }),
+  refresh: (refreshToken: string) => post<TokenResponse>("/auth/refresh", { refreshToken }),
 
-  logout: (refreshToken: string) => post<void>("/api/auth/logout", { refreshToken }),
+  logout: (refreshToken: string) => post<void>("/auth/logout", { refreshToken }),
 };
