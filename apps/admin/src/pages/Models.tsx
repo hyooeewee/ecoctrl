@@ -32,6 +32,8 @@ const FORMAT_MAP: Record<string, string> = {
   fbx: "FBX",
 };
 
+const CARD_PREVIEW_FORMATS = new Set(["GLB", "GLTF", "GLTF (zip)"]);
+
 function formatFileSize(bytes: number): string {
   if (bytes === 0) return "0 B";
   const k = 1024;
@@ -73,6 +75,17 @@ export default function Models() {
   useEffect(() => {
     fetchModels();
   }, [fetchModels]);
+
+  // Lazy-load model-viewer when there are previewable models without thumbnails
+  useEffect(() => {
+    if (
+      models.some(
+        (m) => !m.thumbnailUrl && CARD_PREVIEW_FORMATS.has(m.format.toUpperCase()) && m.fileUrl,
+      )
+    ) {
+      import("@google/model-viewer").catch(() => {});
+    }
+  }, [models]);
 
   const handleFile = (file: File) => {
     const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
@@ -202,7 +215,7 @@ export default function Models() {
                   {models.map((model) => (
                     <Card
                       key={model.id}
-                      className="group relative cursor-pointer transition-colors hover:border-blue-200"
+                      className="group relative cursor-pointer transition-colors hover:border-blue-200 pt-0"
                     >
                       <div
                         className="border-border/50 relative flex aspect-video items-center justify-center overflow-hidden border-b bg-muted"
@@ -213,6 +226,19 @@ export default function Models() {
                             src={model.thumbnailUrl}
                             alt={model.name}
                             className="h-full w-full object-cover"
+                          />
+                        ) : model.fileUrl &&
+                          CARD_PREVIEW_FORMATS.has(model.format.toUpperCase()) ? (
+                          <model-viewer
+                            src={model.fileUrl}
+                            alt={model.name}
+                            auto-rotate
+                            interaction-prompt="none"
+                            shadow-intensity="1"
+                            exposure="1"
+                            loading="eager"
+                            className="pointer-events-none h-full w-full"
+                            style={{ backgroundColor: "transparent" }}
                           />
                         ) : (
                           <ImageIcon className="h-12 w-12 text-muted-foreground/40 transition-transform group-hover:scale-110" />
