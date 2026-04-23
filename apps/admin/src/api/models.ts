@@ -2,7 +2,7 @@ import { request, fetchRaw, get, del } from "./request";
 import type { Model3D } from "../types";
 
 export const modelsApi = {
-  list: () => get<Model3D[]>("/api/models"),
+  list: () => get<Model3D[]>("/models"),
 
   upload: (file: File, data: { name: string; version: string }) => {
     const formData = new FormData();
@@ -11,13 +11,13 @@ export const modelsApi = {
     formData.append("name", data.name);
     formData.append("version", data.version);
     formData.append("file", file);
-    return request<Model3D>("/api/models", { method: "POST", body: formData });
+    return request<Model3D>("/models", { method: "POST", body: formData });
   },
 
-  delete: (id: string) => del<void>(`/api/models/${id}`),
+  delete: (id: string) => del<void>(`/models/${id}`),
 
   download: async (id: string): Promise<Blob> => {
-    const res = await fetchRaw(`/api/models/${id}/file`, { method: "GET" });
+    const res = await fetchRaw(`/models/${id}/file`, { method: "GET" });
     return res.blob();
   },
 };
