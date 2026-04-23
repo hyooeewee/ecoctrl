@@ -1,0 +1,21 @@
+:80 {
+    root * /usr/share/caddy
+    file_server
+
+    # SPA fallback: all routes -> index.html
+    try_files {path} /index.html
+
+    # Compression
+    encode gzip zstd
+
+    # Cache static assets with hash in filename
+    @static {
+        path *.js *.css *.png *.jpg *.jpeg *.gif *.ico *.svg *.woff *.woff2 *.ttf *.eot *.otf *.webp
+    }
+    header @static Cache-Control "public, max-age=31536000, immutable"
+
+    # Security headers
+    header X-Frame-Options "SAMEORIGIN"
+    header X-Content-Type-Options "nosniff"
+    header Referrer-Policy "strict-origin-when-cross-origin"
+}
