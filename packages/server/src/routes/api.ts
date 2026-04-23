@@ -19,7 +19,7 @@ import authRoutes from "@/routes/auth";
 
 export default async function apiRoutes(fastify: FastifyInstance) {
   fastify.addHook("onRequest", async (request: FastifyRequest, reply: FastifyReply) => {
-    const publicPaths = ["/api/auth/login", "/api/auth/refresh", "/api/dashboard"];
+    const publicPaths = ["/api/auth/login", "/api/auth/register", "/api/auth/refresh", "/api/dashboard"];
     if (publicPaths.some((p) => request.url.startsWith(p))) return;
     try {
       await request.jwtVerify();

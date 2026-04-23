@@ -1,4 +1,4 @@
-import { Eye, EyeOff, LogIn } from "lucide-react";
+import { Eye, EyeOff, LogIn, UserPlus } from "lucide-react";
 import React, { useState } from "react";
 
 import { Button, Input, Label, Switch } from "@ecoctrl/ui";
@@ -11,19 +11,36 @@ interface LoginProps {
 }
 
 export default function Login({ onLogin }: LoginProps) {
+  const [mode, setMode] = useState<"login" | "register">("login");
+
+  // Login fields
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [loginUsername, setLoginUsername] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+
+  // Register fields
+  const [regUsername, setRegUsername] = useState("");
+  const [regEmail, setRegEmail] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [regConfirm, setRegConfirm] = useState("");
+  const [showRegPassword, setShowRegPassword] = useState(false);
+  const [showRegConfirm, setShowRegConfirm] = useState(false);
+
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const switchMode = (m: "login" | "register") => {
+    setMode(m);
+    setError("");
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsSubmitting(true);
     try {
-      const res = await authApi.login(username, password, remember);
+      const res = await authApi.login(loginUsername, loginPassword, remember);
       localStorage.setItem("accessToken", res.accessToken);
       localStorage.setItem("refreshToken", res.refreshToken);
       onLogin();
@@ -34,6 +51,35 @@ export default function Login({ onLogin }: LoginProps) {
     }
   };
 
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (regPassword !== regConfirm) {
+      setError("两次输入的密码不一致");
+      return;
+    }
+    if (regPassword.length < 6) {
+      setError("密码长度至少 6 位");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await authApi.register(regUsername, regEmail, regPassword);
+      localStorage.setItem("accessToken", res.accessToken);
+      localStorage.setItem("refreshToken", res.refreshToken);
+      onLogin();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "注册失败，请重试");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const inputClass =
+    "h-11 border-white/20 bg-white/10 text-white placeholder:text-white/40 focus-visible:border-white/40 focus-visible:ring-white/20";
+
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden">
       {/* Background image */}
@@ -42,17 +88,17 @@ export default function Login({ onLogin }: LoginProps) {
         style={{ backgroundImage: "url('/bg-login.jpg')" }}
       />
 
-      {/* Gradient overlay — left side darker for form readability */}
+      {/* Gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/20 to-transparent" />
 
       {/* Content */}
       <div className="relative z-10 flex w-full max-w-[1440px] px-6 py-12">
-        {/* Left side: login card */}
+        {/* Left side: auth card */}
         <div className="w-full max-w-md">
           {/* Glass card */}
           <div className="rounded-3xl border border-white/20 bg-white/10 p-8 shadow-2xl backdrop-blur-2xl">
             {/* Brand */}
-            <div className="mb-8 flex items-center gap-3">
+            <div className="mb-6 flex items-center gap-3">
               <BrandLogo size={36} className="shrink-0 text-white" />
               <div>
                 <h1 className="text-xl font-bold tracking-tight text-white">EcoCtrl</h1>
@@ -60,87 +106,220 @@ export default function Login({ onLogin }: LoginProps) {
               </div>
             </div>
 
+            {/* Mode toggle */}
+            <div className="mb-6 flex rounded-full border border-white/20 bg-white/10 p-1">
+              <button
+                type="button"
+                onClick={() => switchMode("login")}
+                className={`flex-1 rounded-full py-1.5 text-sm font-medium transition-all ${
+                  mode === "login" ? "bg-white/90 text-slate-900" : "text-white/70 hover:text-white"
+                }`}
+              >
+                登录
+              </button>
+              <button
+                type="button"
+                onClick={() => switchMode("register")}
+                className={`flex-1 rounded-full py-1.5 text-sm font-medium transition-all ${
+                  mode === "register"
+                    ? "bg-white/90 text-slate-900"
+                    : "text-white/70 hover:text-white"
+                }`}
+              >
+                注册
+              </button>
+            </div>
+
             {/* Title */}
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-white">欢迎回来</h2>
-              <p className="mt-1 text-sm text-white/60">请登录您的账户以继续</p>
+              <h2 className="text-2xl font-bold text-white">
+                {mode === "login" ? "欢迎回来" : "创建账户"}
+              </h2>
+              <p className="mt-1 text-sm text-white/60">
+                {mode === "login" ? "请登录您的账户以继续" : "填写以下信息完成注册"}
+              </p>
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-2">
-                <Label
-                  htmlFor="username"
-                  className="text-xs font-semibold tracking-wider text-white/80"
-                >
-                  用户名
-                </Label>
-                <Input
-                  id="username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="请输入用户名"
-                  className="h-11 border-white/20 bg-white/10 text-white placeholder:text-white/40 focus-visible:border-white/40 focus-visible:ring-white/20"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label
-                  htmlFor="password"
-                  className="text-xs font-semibold tracking-wider text-white/80"
-                >
-                  密码
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="请输入密码"
-                    className="h-11 border-white/20 bg-white/10 pr-10 text-white placeholder:text-white/40 focus-visible:border-white/40 focus-visible:ring-white/20"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute top-1/2 right-3 -translate-y-1/2 text-white/50 transition-colors hover:text-white"
+            {mode === "login" ? (
+              <form onSubmit={handleLogin} className="space-y-5">
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="username"
+                    className="text-xs font-semibold tracking-wider text-white/80"
                   >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Switch id="remember" checked={remember} onCheckedChange={setRemember} />
-                  <Label htmlFor="remember" className="cursor-pointer text-xs text-white/70">
-                    记住我
+                    用户名
                   </Label>
+                  <Input
+                    id="username"
+                    type="text"
+                    value={loginUsername}
+                    onChange={(e) => setLoginUsername(e.target.value)}
+                    placeholder="请输入用户名"
+                    className={inputClass}
+                  />
                 </div>
-                <a
-                  href="#"
-                  className="text-xs text-white/70 underline underline-offset-2 transition-colors hover:text-white"
+
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="password"
+                    className="text-xs font-semibold tracking-wider text-white/80"
+                  >
+                    密码
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      placeholder="请输入密码"
+                      className={`${inputClass} pr-10`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute top-1/2 right-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white/70 transition-colors hover:bg-white/30 hover:text-white"
+                    >
+                      {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Switch id="remember" checked={remember} onCheckedChange={setRemember} />
+                    <Label htmlFor="remember" className="cursor-pointer text-xs text-white/70">
+                      记住我
+                    </Label>
+                  </div>
+                  <a
+                    href="#"
+                    className="text-xs text-white/70 underline underline-offset-2 transition-colors hover:text-white"
+                  >
+                    忘记密码？
+                  </a>
+                </div>
+
+                {error && (
+                  <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                    {error}
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="h-11 w-full gap-2 bg-white/90 text-sm font-semibold text-slate-900 hover:bg-white disabled:opacity-50"
                 >
-                  忘记密码？
-                </a>
-              </div>
-
-              {error && (
-                <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
-                  {error}
+                  <LogIn size={16} />
+                  {isSubmitting ? "登录中..." : "登录"}
+                </Button>
+              </form>
+            ) : (
+              <form onSubmit={handleRegister} className="space-y-4">
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="reg-username"
+                    className="text-xs font-semibold tracking-wider text-white/80"
+                  >
+                    用户名
+                  </Label>
+                  <Input
+                    id="reg-username"
+                    type="text"
+                    value={regUsername}
+                    onChange={(e) => setRegUsername(e.target.value)}
+                    placeholder="请输入用户名"
+                    className={inputClass}
+                  />
                 </div>
-              )}
 
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="h-11 w-full gap-2 bg-white/90 text-sm font-semibold text-slate-900 hover:bg-white disabled:opacity-50"
-              >
-                <LogIn size={16} />
-                {isSubmitting ? "登录中..." : "登录"}
-              </Button>
-            </form>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="reg-email"
+                    className="text-xs font-semibold tracking-wider text-white/80"
+                  >
+                    邮箱
+                  </Label>
+                  <Input
+                    id="reg-email"
+                    type="email"
+                    value={regEmail}
+                    onChange={(e) => setRegEmail(e.target.value)}
+                    placeholder="请输入邮箱"
+                    className={inputClass}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="reg-password"
+                    className="text-xs font-semibold tracking-wider text-white/80"
+                  >
+                    密码
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="reg-password"
+                      type={showRegPassword ? "text" : "password"}
+                      value={regPassword}
+                      onChange={(e) => setRegPassword(e.target.value)}
+                      placeholder="至少 6 位字符"
+                      className={`${inputClass} pr-10`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowRegPassword(!showRegPassword)}
+                      className="absolute top-1/2 right-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white/70 transition-colors hover:bg-white/30 hover:text-white"
+                    >
+                      {showRegPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="reg-confirm"
+                    className="text-xs font-semibold tracking-wider text-white/80"
+                  >
+                    确认密码
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="reg-confirm"
+                      type={showRegConfirm ? "text" : "password"}
+                      value={regConfirm}
+                      onChange={(e) => setRegConfirm(e.target.value)}
+                      placeholder="再次输入密码"
+                      className={`${inputClass} pr-10`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowRegConfirm(!showRegConfirm)}
+                      className="absolute top-1/2 right-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white/70 transition-colors hover:bg-white/30 hover:text-white"
+                    >
+                      {showRegConfirm ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                    {error}
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="h-11 w-full gap-2 bg-white/90 text-sm font-semibold text-slate-900 hover:bg-white disabled:opacity-50"
+                >
+                  <UserPlus size={16} />
+                  {isSubmitting ? "注册中..." : "注册"}
+                </Button>
+              </form>
+            )}
 
             {/* Footer */}
             <div className="mt-6 text-center text-xs text-white/40">EcoCtrl 能管平台 v1.0</div>
