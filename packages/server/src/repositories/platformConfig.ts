@@ -7,6 +7,11 @@ export interface PlatformConfig {
   refreshInterval: number;
   realtimeAlertEnabled: boolean;
   darkModeFollowSystem: boolean;
+  smtpHost: string;
+  smtpPort: number;
+  smtpUser: string;
+  smtpPass: string;
+  smtpSecure: boolean;
 }
 
 export async function getPlatformConfig(): Promise<PlatformConfig | null> {
@@ -18,6 +23,11 @@ export async function getPlatformConfig(): Promise<PlatformConfig | null> {
     refreshInterval: r.refreshInterval,
     realtimeAlertEnabled: r.realtimeAlertEnabled,
     darkModeFollowSystem: r.darkModeFollowSystem,
+    smtpHost: r.smtpHost,
+    smtpPort: r.smtpPort,
+    smtpUser: r.smtpUser,
+    smtpPass: r.smtpPass,
+    smtpSecure: r.smtpSecure,
   };
 }
 

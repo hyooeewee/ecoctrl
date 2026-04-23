@@ -16,9 +16,17 @@ import {
   deleteRefreshToken,
   deleteRefreshTokenById,
 } from "@/repositories/refreshTokens";
+import { sendMail } from "@/lib/mailer";
 
 const hashRefreshToken = (token: string) =>
   crypto.createHash("sha256").update(token).digest("hex");
+
+// In-memory verification code store: email -> { code, expiresAt }
+const codeStore = new Map<string, { code: string; expiresAt: number }>();
+
+function generateCode(): string {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
 
 const loginBodySchema = z.object({
   username: z.string(),
@@ -208,6 +216,84 @@ export default async function authRoutes(fastify: FastifyInstance) {
       const { refreshToken } = request.body as { refreshToken: string };
       const tokenHash = hashRefreshToken(refreshToken);
       await deleteRefreshToken(tokenHash);
+      return reply.send({ ok: true });
+    },
+  );
+
+  fastify.post(
+    "/forgot-password/send-code",
+    {
+      schema: {
+        summary: "Send verification code to email",
+        body: z.object({ email: z.string().email() }),
+        response: {
+          200: z.object({ ok: z.literal(true) }),
+          404: z.object({ error: z.string() }),
+        },
+      },
+    },
+    async (request, reply) => {
+      const { email } = request.body as { email: string };
+      const user = await getUserByEmail(email);
+      if (!user) {
+        return reply.status(404).send({ error: "User not found" });
+      }
+
+      const code = generateCode();
+      codeStore.set(email, { code, expiresAt: Date.now() + 5 * 60 * 1000 });
+
+      await sendMail({
+        to: email,
+        subject: "EcoCtrl 密码重置验证码",
+        text: `您的验证码是：${code}，5分钟内有效。`,
+        html: `\u003cp\u003e您的验证码是：\u003cstrong\u003e${code}\u003c/strong\u003e，5分钟内有效。\u003c/p\u003e`,
+      });
+
+      return reply.send({ ok: true });
+    },
+  );
+
+  fastify.post(
+    "/forgot-password/reset",
+    {
+      schema: {
+        summary: "Reset password with verification code",
+        body: z.object({
+          email: z.string().email(),
+          code: z.string().length(6),
+          newPassword: z.string().min(6),
+        }),
+        response: {
+          200: z.object({ ok: z.literal(true) }),
+          400: z.object({ error: z.string() }),
+          404: z.object({ error: z.string() }),
+        },
+      },
+    },
+    async (request, reply) => {
+      const { email, code, newPassword } = request.body as {
+        email: string;
+        code: string;
+        newPassword: string;
+      };
+
+      const record = codeStore.get(email);
+      if (!record || Date.now() > record.expiresAt) {
+        return reply.status(400).send({ error: "验证码已过期" });
+      }
+      if (record.code !== code) {
+        return reply.status(400).send({ error: "验证码错误" });
+      }
+
+      const user = await getUserByEmail(email);
+      if (!user) {
+        return reply.status(404).send({ error: "User not found" });
+      }
+
+      const hashed = await bcrypt.hash(newPassword, 10);
+      await updateUser(user.id, { password: hashed });
+      codeStore.delete(email);
+
       return reply.send({ ok: true });
     },
   );
