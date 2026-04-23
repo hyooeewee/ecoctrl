@@ -2,6 +2,7 @@ import type { WidgetConfig } from "./types";
 import { StatCard } from "./_stat-card";
 import { ChartWidget } from "./chart-widget";
 import { ListWidget } from "./list-widget";
+import { WeatherWidget } from "./weather-widget";
 
 interface WidgetRendererProps {
   widget: WidgetConfig;
@@ -9,6 +10,10 @@ interface WidgetRendererProps {
 
 export function WidgetRenderer({ widget }: WidgetRendererProps) {
   const d = widget.data;
+
+  if ("location" in d && "currentTemp" in d) {
+    return <WeatherWidget widget={widget} data={d} />;
+  }
 
   if ("value" in d && typeof d.value === "string") {
     return <StatCard widget={widget} data={d} />;
