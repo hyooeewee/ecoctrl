@@ -5,17 +5,33 @@ import { oauthApi, type OAuthProvider } from "@/api/oauth";
 import { wechatIcon, wecomIcon, feishuIcon, dingtalkIcon } from "@/assets/icons";
 
 interface OAuthButtonsProps {
-  onSuccess: (tokens: { accessToken: string; refreshToken: string }) => void;
+  onSuccess?: (tokens: { accessToken: string; refreshToken: string }) => void;
   onBindRequired?: (payload: {
     provider: string;
     providerUserId: string;
     tempToken: string;
   }) => void;
   onError?: (message: string) => void;
+  onLinked?: () => void;
+  excludeProviders?: string[];
+  label?: string;
+  theme?: "dark" | "light";
 }
 
-const OAUTH_BTN_CLASS =
-  "flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20";
+const THEME_STYLES = {
+  dark: {
+    btn: "border-white/20 bg-white/10 text-white backdrop-blur-sm hover:bg-white/20",
+    divider: "bg-white/20",
+    label: "text-white/50",
+    spinner: "text-white/40",
+  },
+  light: {
+    btn: "border-border bg-muted/30 text-foreground hover:bg-muted/50",
+    divider: "bg-border",
+    label: "text-muted-foreground",
+    spinner: "text-muted-foreground",
+  },
+};
 
 const PROVIDER_ICON_MAP: Record<string, string> = {
   wechat: wechatIcon,
@@ -24,16 +40,28 @@ const PROVIDER_ICON_MAP: Record<string, string> = {
   dingtalk: dingtalkIcon,
 };
 
-export default function OAuthButtons({ onSuccess, onBindRequired, onError }: OAuthButtonsProps) {
+export default function OAuthButtons({
+  onSuccess,
+  onBindRequired,
+  onError,
+  onLinked,
+  excludeProviders,
+  label = "其他登录方式",
+  theme = "dark",
+}: OAuthButtonsProps) {
   const [providers, setProviders] = useState<OAuthProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const popupRef = useRef<Window | null>(null);
+  const styles = THEME_STYLES[theme];
 
   useEffect(() => {
     const fetchProviders = async () => {
       try {
         const data = await oauthApi.getProviders();
-        setProviders(data);
+        const filtered = excludeProviders
+          ? data.filter((p) => !excludeProviders.includes(p.id))
+          : data;
+        setProviders(filtered);
       } catch {
         // Backend not ready — silently hide OAuth section
       } finally {
@@ -41,7 +69,7 @@ export default function OAuthButtons({ onSuccess, onBindRequired, onError }: OAu
       }
     };
     fetchProviders();
-  }, []);
+  }, [excludeProviders]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -52,9 +80,11 @@ export default function OAuthButtons({ onSuccess, onBindRequired, onError }: OAu
         event.data || {};
 
       if (type === "OAUTH_SUCCESS") {
-        if (accessToken && refreshToken) {
-          popupRef.current?.close();
-          onSuccess({ accessToken, refreshToken });
+        popupRef.current?.close();
+        if (onLinked) {
+          onLinked();
+        } else if (accessToken && refreshToken) {
+          onSuccess?.({ accessToken, refreshToken });
         }
       } else if (type === "OAUTH_BIND_REQUIRED") {
         popupRef.current?.close();
@@ -69,7 +99,7 @@ export default function OAuthButtons({ onSuccess, onBindRequired, onError }: OAu
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [onSuccess, onBindRequired, onError]);
+  }, [onSuccess, onBindRequired, onError, onLinked]);
 
   const handleOAuthLogin = (providerId: string) => {
     const redirectUri = `${window.location.origin}/oauth/callback`;
@@ -93,7 +123,7 @@ export default function OAuthButtons({ onSuccess, onBindRequired, onError }: OAu
   if (loading) {
     return (
       <div className="flex items-center justify-center py-2">
-        <Loader2 size={16} className="animate-spin text-white/40" />
+        <Loader2 size={16} className={`animate-spin ${styles.spinner}`} />
       </div>
     );
   }
@@ -103,9 +133,9 @@ export default function OAuthButtons({ onSuccess, onBindRequired, onError }: OAu
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-3">
-        <div className="h-px flex-1 bg-white/20" />
-        <span className="text-xs text-white/50">其他登录方式</span>
-        <div className="h-px flex-1 bg-white/20" />
+        <div className={`h-px flex-1 ${styles.divider}`} />
+        <span className={`text-xs ${styles.label}`}>{label}</span>
+        <div className={`h-px flex-1 ${styles.divider}`} />
       </div>
 
       <div className="flex items-center justify-center gap-3">
@@ -118,7 +148,7 @@ export default function OAuthButtons({ onSuccess, onBindRequired, onError }: OAu
               type="button"
               onClick={() => handleOAuthLogin(provider.id)}
               title={provider.name}
-              className={OAUTH_BTN_CLASS}
+              className={`flex h-10 w-10 items-center justify-center rounded-full border transition-colors ${styles.btn}`}
             >
               {iconSrc ? (
                 <img src={iconSrc} alt={provider.name} className="h-5 w-5" loading="lazy" />
