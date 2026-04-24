@@ -13,7 +13,7 @@ import type {
 } from "@ecoctrl/shared";
 import { fetchWeather } from "@/lib/weather";
 
-export async function getDashboardStats(): Promise<DashboardStats> {
+export async function findDashboardStats(): Promise<DashboardStats> {
   const rows = await db.select().from(dashboardStats);
   const stats: Record<string, { value: string; unit: string; trend: string; trendType: "up" | "down" }> = {};
   for (const r of rows) {
@@ -28,12 +28,12 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   return stats as unknown as DashboardStats;
 }
 
-export async function getEnergyChart(): Promise<EnergyChartItem[]> {
+export async function findEnergyChart(): Promise<EnergyChartItem[]> {
   const rows = await db.select().from(energyReadings);
   return rows.map((r) => ({ name: r.hour, value: r.kWh }));
 }
 
-export async function getAlerts(limit?: number): Promise<Alert[]> {
+export async function findManyAlerts(limit?: number): Promise<Alert[]> {
   const rows = await db.select().from(alerts);
   const result = rows.map((r) => ({
     id: r.id,
@@ -49,7 +49,7 @@ export async function getAlerts(limit?: number): Promise<Alert[]> {
   return result;
 }
 
-export async function getDashboardData(): Promise<DashboardData> {
+export async function findDashboardData(): Promise<DashboardData> {
   const rows = await db
     .select()
     .from(dashboardWidgets)

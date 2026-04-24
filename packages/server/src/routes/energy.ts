@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { EnergyAreaSchema } from "@ecoctrl/shared";
 import type { EnergyArea } from "@ecoctrl/shared";
-import { getEnergyAreas, saveEnergyAreas } from "@/repositories/energyAreas";
+import { findManyEnergyAreas, updateEnergyAreas } from "@/repositories/energyAreas";
 
 const areaBodySchema = z.array(
   z.object({
@@ -28,7 +28,7 @@ export default async function energyRoutes(fastify: FastifyInstance) {
       },
     },
     async (_request, reply) => {
-      const areas = await getEnergyAreas();
+      const areas = await findManyEnergyAreas();
       return reply.send(areas);
     },
   );
@@ -45,8 +45,8 @@ export default async function energyRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const body = request.body as Omit<EnergyArea, "id">[];
-      await saveEnergyAreas(body);
-      const areas = await getEnergyAreas();
+      await updateEnergyAreas(body);
+      const areas = await findManyEnergyAreas();
       return reply.send(areas);
     },
   );

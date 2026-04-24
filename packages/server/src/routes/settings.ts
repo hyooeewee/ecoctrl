@@ -3,8 +3,8 @@ import { z } from "zod";
 import { eq, asc } from "drizzle-orm";
 import { db } from "@/config/database";
 import { dashboardWidgets } from "@/schemas/dashboardWidgets";
-import { getUserSettings, upsertUserSettings } from "@/repositories/userSettings";
-import { getOnlineUser } from "@/repositories/users";
+import { findUserSettings, upsertUserSettings } from "@/repositories/userSettings";
+import { findOnlineUser } from "@/repositories/users";
 
 const BentoLayoutItemSchema = z.object({
   id: z.string(),
@@ -50,7 +50,7 @@ export default async function settingsRoutes(fastify: FastifyInstance) {
       },
     },
     async (_request, reply) => {
-      const user = await getOnlineUser();
+      const user = await findOnlineUser();
       if (!user) {
         return reply.send({});
       }
@@ -69,7 +69,7 @@ export default async function settingsRoutes(fastify: FastifyInstance) {
         h: w.layoutH,
       }));
 
-      const settings = await getUserSettings(user.id);
+      const settings = await findUserSettings(user.id);
 
       const existingLayout = (settings.bentoLayout as Array<{
         id: string;
@@ -111,7 +111,7 @@ export default async function settingsRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const user = await getOnlineUser();
+      const user = await findOnlineUser();
       if (!user) {
         return reply.status(401).send({ ok: false, error: "No authenticated user" });
       }

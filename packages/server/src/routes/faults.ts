@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { FaultSchema, FaultStatsSchema } from "@ecoctrl/shared";
 import type { Fault, FaultStats } from "@ecoctrl/shared";
-import { getFaults, getFaultStats } from "@/repositories/faults";
+import { findManyFaults, findFaultStats } from "@/repositories/faults";
 
 export default async function faultRoutes(fastify: FastifyInstance) {
   fastify.get(
@@ -15,7 +15,7 @@ export default async function faultRoutes(fastify: FastifyInstance) {
       },
     },
     async (_request, reply) => {
-      const faults: Fault[] = await getFaults();
+      const faults: Fault[] = await findManyFaults();
       return reply.send(faults);
     },
   );
@@ -30,7 +30,7 @@ export default async function faultRoutes(fastify: FastifyInstance) {
       },
     },
     async (_request, reply) => {
-      const stats: FaultStats = await getFaultStats();
+      const stats: FaultStats = await findFaultStats();
       return reply.send(stats);
     },
   );

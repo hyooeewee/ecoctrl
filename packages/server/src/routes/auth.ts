@@ -4,11 +4,11 @@ import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import {
   findUserByIdentifier,
-  getUserByUsername,
-  getUserByEmail,
-  getUserById,
+  findUserByUsername,
+  findUserByEmail,
+  findUserById,
   updateUser,
-  addUser,
+  createUser,
 } from "@/repositories/users";
 import {
   createRefreshToken,
@@ -69,7 +69,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const { email } = request.body as { email: string };
-      const existing = await getUserByEmail(email);
+      const existing = await findUserByEmail(email);
       if (existing) {
         return reply.status(409).send({ error: "Email already registered" });
       }
@@ -154,12 +154,12 @@ export default async function authRoutes(fastify: FastifyInstance) {
         code: string;
       };
 
-      const existingByUsername = await getUserByUsername(username);
+      const existingByUsername = await findUserByUsername(username);
       if (existingByUsername) {
         return reply.status(409).send({ error: "Username already taken" });
       }
 
-      const existingByEmail = await getUserByEmail(email);
+      const existingByEmail = await findUserByEmail(email);
       if (existingByEmail) {
         return reply.status(409).send({ error: "Email already taken" });
       }
@@ -174,17 +174,17 @@ export default async function authRoutes(fastify: FastifyInstance) {
       codeStore.delete(email);
 
       const hashedPassword = await bcrypt.hash(password, 10);
-      const newUser = {
+
+      const newUser = await createUser({
         id: crypto.randomUUID(),
         username,
         email,
-        role: "viewer" as const,
-        status: "offline" as const,
+        role: "viewer",
+        status: "offline",
         lastLogin: null,
         avatarUrl: null,
-      };
-
-      await addUser({ ...newUser, password: hashedPassword });
+        password: hashedPassword,
+      });
 
       const accessToken = fastify.jwt.sign({
         userId: newUser.id,
@@ -200,7 +200,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       return reply.status(201).send({
         accessToken,
         refreshToken,
-        user: { id: newUser.id, username, email, role: newUser.role, avatarUrl: null },
+        user: { id: newUser.id, username: newUser.username, email: newUser.email, role: newUser.role, avatarUrl: newUser.avatarUrl },
       });
     },
   );
@@ -280,7 +280,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       if (!stored) {
         return reply.status(401).send({ error: "Invalid refresh token" });
       }
-      const user = await getUserById(stored.userId);
+      const user = await findUserById(stored.userId);
       if (!user) {
         return reply.status(401).send({ error: "User not found" });
       }
@@ -335,7 +335,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const { email } = request.body as { email: string };
-      const user = await getUserByEmail(email);
+      const user = await findUserByEmail(email);
       if (!user) {
         return reply.status(404).send({ error: "User not found" });
       }
@@ -452,7 +452,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
         return reply.status(400).send({ error: "验证码错误" });
       }
 
-      const user = await getUserByEmail(email);
+      const user = await findUserByEmail(email);
       if (!user) {
         return reply.status(404).send({ error: "User not found" });
       }
@@ -492,7 +492,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const payload = request.user as { userId: string };
-      const user = await getUserById(payload.userId);
+      const user = await findUserById(payload.userId);
       if (!user) {
         return reply.status(401).send({ error: "User not found" });
       }

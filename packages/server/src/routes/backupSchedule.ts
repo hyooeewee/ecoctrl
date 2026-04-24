@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { BackupScheduleSchema } from "@ecoctrl/shared";
-import { getBackupSchedule, setBackupSchedule } from "@/repositories/backupSchedule";
+import { findBackupSchedule, updateBackupSchedule } from "@/repositories/backupSchedule";
 
 export default async function systemRoutes(fastify: FastifyInstance) {
   fastify.get(
@@ -14,7 +14,7 @@ export default async function systemRoutes(fastify: FastifyInstance) {
       },
     },
     async (_request, reply) => {
-      const schedule = await getBackupSchedule();
+      const schedule = await findBackupSchedule();
       return reply.send(schedule ?? { nextBackup: "" });
     },
   );
@@ -31,8 +31,8 @@ export default async function systemRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const body = request.body as { nextBackup: string };
-      await setBackupSchedule(body.nextBackup);
-      return reply.send(body);
+      const schedule = await updateBackupSchedule(body.nextBackup);
+      return reply.send(schedule);
     },
   );
 }

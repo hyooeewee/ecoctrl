@@ -5,7 +5,7 @@ import {
   EnergyChartItemSchema,
 } from "@ecoctrl/shared";
 import type { DashboardStats, EnergyChartItem } from "@ecoctrl/shared";
-import { getDashboardStats, getEnergyChart } from "@/repositories/dashboard";
+import { findDashboardStats, findEnergyChart } from "@/repositories/dashboard";
 
 export default async function overviewRoutes(fastify: FastifyInstance) {
   fastify.get(
@@ -18,7 +18,7 @@ export default async function overviewRoutes(fastify: FastifyInstance) {
       },
     },
     async (_request, reply) => {
-      const stats: DashboardStats = await getDashboardStats();
+      const stats: DashboardStats = await findDashboardStats();
       return reply.send(stats);
     },
   );
@@ -33,7 +33,7 @@ export default async function overviewRoutes(fastify: FastifyInstance) {
       },
     },
     async (_request, reply) => {
-      const chart: EnergyChartItem[] = await getEnergyChart();
+      const chart: EnergyChartItem[] = await findEnergyChart();
       return reply.send(chart);
     },
   );

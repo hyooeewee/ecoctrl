@@ -3,7 +3,7 @@ import { db } from "@/config/database";
 import { users } from "@/schemas/users";
 import type { User, UserRole, UserStatus, UserPreferences } from "@ecoctrl/shared";
 
-export async function getUsers(): Promise<User[]> {
+export async function findManyUsers(): Promise<User[]> {
   const rows = await db.select().from(users);
   return rows.map((r) => ({
     id: r.id,
@@ -16,8 +16,8 @@ export async function getUsers(): Promise<User[]> {
   }));
 }
 
-export async function addUser(user: User & { password?: string | null }): Promise<void> {
-  await db.insert(users).values({
+export async function createUser(user: User & { password?: string | null }): Promise<User> {
+  const result = await db.insert(users).values({
     id: user.id,
     username: user.username,
     email: user.email,
@@ -26,7 +26,17 @@ export async function addUser(user: User & { password?: string | null }): Promis
     lastLogin: user.lastLogin,
     avatarUrl: user.avatarUrl,
     password: user.password ?? null,
-  });
+  }).returning();
+  const r = result[0];
+  return {
+    id: r.id,
+    username: r.username,
+    email: r.email,
+    role: r.role as UserRole,
+    status: r.status as UserStatus,
+    lastLogin: r.lastLogin,
+    avatarUrl: r.avatarUrl,
+  };
 }
 
 export async function findUserByIdentifier(
@@ -61,7 +71,7 @@ export async function findUserByIdentifier(
   };
 }
 
-export async function getUserByUsername(
+export async function findUserByUsername(
   username: string,
 ): Promise<
   | {
@@ -89,7 +99,7 @@ export async function getUserByUsername(
   };
 }
 
-export async function getUserByEmail(
+export async function findUserByEmail(
   email: string,
 ): Promise<
   | {
@@ -117,18 +127,9 @@ export async function getUserByEmail(
   };
 }
 
-export async function getUserById(
+export async function findUserById(
   id: string,
-): Promise<
-  | {
-      id: string;
-      username: string;
-      email: string;
-      role: string;
-      avatarUrl: string | null;
-    }
-  | null
-> {
+): Promise<User | null> {
   const rows = await db.select().from(users).where(eq(users.id, id)).limit(1);
   if (rows.length === 0) return null;
   const r = rows[0];
@@ -136,12 +137,20 @@ export async function getUserById(
     id: r.id,
     username: r.username,
     email: r.email,
-    role: r.role,
+    role: r.role as UserRole,
+    status: r.status as UserStatus,
+    lastLogin: r.lastLogin,
     avatarUrl: r.avatarUrl,
   };
 }
 
-export async function getUserByIdWithPassword(
+export async function findUserByIdOrThrow(id: string): Promise<User> {
+  const user = await findUserById(id);
+  if (!user) throw new Error(`User not found: ${id}`);
+  return user;
+}
+
+export async function findUserByIdWithPassword(
   id: string,
 ): Promise<
   | {
@@ -169,12 +178,22 @@ export async function getUserByIdWithPassword(
   };
 }
 
-export async function removeUser(id: string): Promise<boolean> {
+export async function deleteUser(id: string): Promise<User | null> {
   const result = await db.delete(users).where(eq(users.id, id)).returning();
-  return result.length > 0;
+  if (result.length === 0) return null;
+  const r = result[0];
+  return {
+    id: r.id,
+    username: r.username,
+    email: r.email,
+    role: r.role as UserRole,
+    status: r.status as UserStatus,
+    lastLogin: r.lastLogin,
+    avatarUrl: r.avatarUrl,
+  };
 }
 
-export async function getOnlineUser(): Promise<{ id: string; username: string } | null> {
+export async function findOnlineUser(): Promise<{ id: string; username: string } | null> {
   const rows = await db.select().from(users).where(eq(users.status, "online")).limit(1);
   if (rows.length === 0) {
     return null;
@@ -185,12 +204,22 @@ export async function getOnlineUser(): Promise<{ id: string; username: string } 
 export async function updateUser(
   id: string,
   data: Partial<{ username: string; password: string; email: string; role: string; status: string; avatarUrl: string | null; preferences: UserPreferences }>,
-): Promise<boolean> {
+): Promise<User | null> {
   const result = await db.update(users).set(data).where(eq(users.id, id)).returning();
-  return result.length > 0;
+  if (result.length === 0) return null;
+  const r = result[0];
+  return {
+    id: r.id,
+    username: r.username,
+    email: r.email,
+    role: r.role as UserRole,
+    status: r.status as UserStatus,
+    lastLogin: r.lastLogin,
+    avatarUrl: r.avatarUrl,
+  };
 }
 
-export async function getUserPreferences(id: string): Promise<UserPreferences> {
+export async function findUserPreferences(id: string): Promise<UserPreferences> {
   const rows = await db.select({ preferences: users.preferences }).from(users).where(eq(users.id, id)).limit(1);
   if (rows.length === 0) return {};
   return (rows[0].preferences ?? {}) as UserPreferences;
@@ -199,11 +228,12 @@ export async function getUserPreferences(id: string): Promise<UserPreferences> {
 export async function updateUserPreferences(
   id: string,
   data: UserPreferences,
-): Promise<boolean> {
+): Promise<UserPreferences> {
   const result = await db
     .update(users)
     .set({ preferences: data })
     .where(eq(users.id, id))
     .returning();
-  return result.length > 0;
+  if (result.length === 0) return {};
+  return (result[0].preferences ?? {}) as UserPreferences;
 }
