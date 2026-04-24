@@ -20,8 +20,8 @@ import { sendMail } from "@/lib/mailer";
 
 const hashRefreshToken = (token: string) => crypto.createHash("sha256").update(token).digest("hex");
 
-// In-memory verification code store: email -> { code, expiresAt }
-const codeStore = new Map<string, { code: string; expiresAt: number }>();
+// In-memory verification code store: email -> { code, expiresAt, purpose }
+const codeStore = new Map<string, { code: string; expiresAt: number; purpose: "register" | "reset" }>();
 
 function generateCode(): string {
   return String(Math.floor(100000 + Math.random() * 900000));
@@ -36,6 +36,7 @@ const registerBodySchema = z.object({
   username: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(6),
+  code: z.string().length(6),
 });
 
 const tokenResponseSchema = z.object({
@@ -52,6 +53,82 @@ const tokenResponseSchema = z.object({
 
 export default async function authRoutes(fastify: FastifyInstance) {
   fastify.post(
+    "/register/send-code",
+    {
+      schema: {
+        summary: "Send verification code for registration",
+        body: z.object({ email: z.string().email() }),
+        response: {
+          200: z.object({ ok: z.literal(true) }),
+          409: z.object({ error: z.string() }),
+        },
+      },
+    },
+    async (request, reply) => {
+      const { email } = request.body as { email: string };
+      const existing = await getUserByEmail(email);
+      if (existing) {
+        return reply.status(409).send({ error: "Email already registered" });
+      }
+
+      const code = generateCode();
+      codeStore.set(email, {
+        code,
+        expiresAt: Date.now() + 5 * 60 * 1000,
+        purpose: "register",
+      });
+
+      await sendMail({
+        to: email,
+        subject: "EcoCtrl 注册验证码",
+        text: `您的验证码是：${code}，5分钟内有效。`,
+        html: `<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fb;padding:40px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <tr>
+    <td align="center">
+      <table width="420" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.08);padding:32px;">
+        <tr>
+          <td align="center" style="font-size:20px;font-weight:600;color:#333;padding-bottom:16px;">
+            注册验证码
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="font-size:14px;color:#666;padding-bottom:24px;">
+            您正在注册 EcoCtrl 账号，请使用以下验证码：
+          </td>
+        </tr>
+        <tr>
+          <td align="center">
+            <div style="display:inline-block;font-size:32px;letter-spacing:6px;font-weight:700;color:#4f46e5;background:linear-gradient(135deg,#eef2ff,#f5f7ff);padding:16px 32px;border-radius:10px;border:1px solid #e0e7ff;">
+              ${code}
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="font-size:13px;color:#999;padding-top:24px;">
+            验证码 5 分钟内有效，请勿泄露给他人
+          </td>
+        </tr>
+        <tr>
+          <td style="padding-top:24px;">
+            <hr style="border:none;border-top:1px solid #eee;">
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="font-size:12px;color:#bbb;padding-top:12px;">
+            如果这不是您的操作，请忽略此邮件
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>`,
+      });
+
+      return reply.send({ ok: true });
+    },
+  );
+
+  fastify.post(
     "/register",
     {
       schema: {
@@ -59,15 +136,17 @@ export default async function authRoutes(fastify: FastifyInstance) {
         body: registerBodySchema,
         response: {
           201: tokenResponseSchema,
+          400: z.object({ error: z.string() }),
           409: z.object({ error: z.string() }),
         },
       },
     },
     async (request, reply) => {
-      const { username, email, password } = request.body as {
+      const { username, email, password, code } = request.body as {
         username: string;
         email: string;
         password: string;
+        code: string;
       };
 
       const existingByUsername = await getUserByUsername(username);
@@ -79,6 +158,15 @@ export default async function authRoutes(fastify: FastifyInstance) {
       if (existingByEmail) {
         return reply.status(409).send({ error: "Email already taken" });
       }
+
+      const record = codeStore.get(email);
+      if (!record || record.purpose !== "register" || Date.now() > record.expiresAt) {
+        return reply.status(400).send({ error: "验证码已过期，请重新获取" });
+      }
+      if (record.code !== code) {
+        return reply.status(400).send({ error: "验证码错误" });
+      }
+      codeStore.delete(email);
 
       const hashedPassword = await bcrypt.hash(password, 10);
       const newUser = {
@@ -239,7 +327,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       }
 
       const code = generateCode();
-      codeStore.set(email, { code, expiresAt: Date.now() + 5 * 60 * 1000 });
+      codeStore.set(email, { code, expiresAt: Date.now() + 5 * 60 * 1000, purpose: "reset" });
 
       await sendMail({
         to: email,
@@ -341,7 +429,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       };
 
       const record = codeStore.get(email);
-      if (!record || Date.now() > record.expiresAt) {
+      if (!record || record.purpose !== "reset" || Date.now() > record.expiresAt) {
         return reply.status(400).send({ error: "验证码已过期" });
       }
       if (record.code !== code) {
