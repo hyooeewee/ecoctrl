@@ -6,7 +6,7 @@ import { Card, CardContent } from "@ecoctrl/ui";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ecoctrl/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui";
 
-import { Fault, FaultStats } from "../types";
+import type { Fault, FaultStats } from "@ecoctrl/shared";
 import { faultsApi } from "../api/faults";
 
 export default function Faults() {

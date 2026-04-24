@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import ExportDialog from "../components/ExportDialog";
 import ReportPlanSheet from "../components/ReportPlanSheet";
 import TemplateDialog from "../components/TemplateDialog";
-import { ReportPlan, ReportTemplate } from "../types";
+import type { ReportPlan, ReportTemplate } from "@ecoctrl/shared";
 import { reportsApi } from "../api/reports";
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {

@@ -20,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@ecoctrl/ui";
 import { cn } from "@/lib/utils";
 
-import type { SystemConfig } from "../types";
+import type { SystemConfig } from "@ecoctrl/shared";
 import { systemConfigApi } from "../api/systemConfig";
 
 interface SectionDef {

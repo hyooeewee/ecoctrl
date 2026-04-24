@@ -26,7 +26,7 @@ import { Label } from "@ecoctrl/ui";
 import { Switch } from "@ecoctrl/ui";
 
 import { preferencesApi } from "@/api/preferences";
-import type { UserPreferences } from "@/types";
+import type { UserPreferences } from "@ecoctrl/shared";
 
 const DEFAULT_PREFERENCES: UserPreferences = {
   theme: "system",

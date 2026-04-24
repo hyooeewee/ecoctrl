@@ -1,12 +1,5 @@
 import { get } from "./request";
-import { Fault } from "../types";
-
-export interface FaultStats {
-  totalCount: number;
-  trend: string;
-  mttr: number;
-  avgResponseTime: string;
-}
+import type { Fault, FaultStats } from "@ecoctrl/shared";
 
 export const faultsApi = {
   list: () => get<Fault[]>("/faults"),

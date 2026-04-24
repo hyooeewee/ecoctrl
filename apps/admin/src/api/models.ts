@@ -1,5 +1,5 @@
 import { request, fetchRaw, get, del } from "./request";
-import type { Model3D } from "../types";
+import type { Model3D } from "@ecoctrl/shared";
 
 export const modelsApi = {
   list: () => get<Model3D[]>("/models"),
