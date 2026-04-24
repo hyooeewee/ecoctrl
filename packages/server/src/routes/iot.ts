@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
-import { iotRequest, ensureToken, authorize } from "@/lib/iotClient";
+import { iotRequest } from "@/services/iot/client";
+import { ensureToken, authorize } from "@/services/iot/auth";
 
 function pickProp(headers: Record<string, unknown>): Record<string, string> {
   const result: Record<string, string> = {};
