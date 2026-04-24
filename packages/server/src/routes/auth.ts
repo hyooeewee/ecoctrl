@@ -22,16 +22,23 @@ import { sendMail } from "@/lib/mailer";
 const hashRefreshToken = (token: string) => crypto.createHash("sha256").update(token).digest("hex");
 
 // In-memory verification code store: email -> { code, expiresAt, purpose }
-const codeStore = new Map<string, { code: string; expiresAt: number; purpose: "register" | "reset" }>();
+const codeStore = new Map<
+  string,
+  { code: string; expiresAt: number; purpose: "register" | "reset" }
+>();
 
 function generateCode(): string {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-const loginBodySchema = z.object({
-  username: z.string(),
-  password: z.string(),
-});
+const loginBodySchema = z
+  .object({
+    username: z.string(),
+    password: z.string(),
+  })
+  .meta({
+    example: { username: "ecoctrl@example.com", password: "P@ssword4ecoctrl" },
+  });
 
 const registerBodySchema = z.object({
   username: z.string().min(2),
@@ -200,7 +207,13 @@ export default async function authRoutes(fastify: FastifyInstance) {
       return reply.status(201).send({
         accessToken,
         refreshToken,
-        user: { id: newUser.id, username: newUser.username, email: newUser.email, role: newUser.role, avatarUrl: newUser.avatarUrl },
+        user: {
+          id: newUser.id,
+          username: newUser.username,
+          email: newUser.email,
+          role: newUser.role,
+          avatarUrl: newUser.avatarUrl,
+        },
       });
     },
   );
