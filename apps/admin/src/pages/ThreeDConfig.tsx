@@ -5,7 +5,7 @@ import { Button } from "@ecoctrl/ui";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoctrl/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui";
 
-import { ThreeDConfig } from "../types";
+import type { ThreeDConfig } from "@ecoctrl/shared";
 import { threeDConfigApi } from "../api/3dConfig";
 
 export default function ThreeDConfig() {

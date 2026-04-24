@@ -1,5 +1,5 @@
 import { get, post, put, del } from "./request";
-import type { UserPreferences } from "../types";
+import type { UserPreferences } from "@ecoctrl/shared";
 
 export const preferencesApi = {
   get: (userId: string) => get<UserPreferences>(`/users/${userId}/preferences`),

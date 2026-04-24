@@ -1,5 +1,5 @@
 import { get, put } from "./request";
-import { ThreeDConfig } from "../types";
+import type { ThreeDConfig } from "@ecoctrl/shared";
 
 export const threeDConfigApi = {
   get: () => get<ThreeDConfig>("/three-d-config"),

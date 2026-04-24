@@ -19,7 +19,7 @@ import { Label } from "@ecoctrl/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@ecoctrl/ui";
 
-import type { Model3D } from "../types";
+import type { Model3D } from "@ecoctrl/shared";
 import { modelsApi } from "../api/models";
 import ModelViewer from "../components/ModelViewer";
 
