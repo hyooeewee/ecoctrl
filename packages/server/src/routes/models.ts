@@ -8,7 +8,7 @@ import { mkdir, readdir, rm } from "node:fs/promises";
 import unzipper from "unzipper";
 import { Model3DSchema } from "@ecoctrl/shared";
 import { UPLOAD_DIR as BASE_UPLOAD_DIR } from "@/lib/paths";
-import { getModels, getModelById, addModel, deleteModel } from "@/repositories/models";
+import { findManyModels, findModelById, createModel, deleteModel } from "@/repositories/models";
 
 // Temporary directory for immediate stream consumption during multipart parsing
 const TMP_DIR = path.join(BASE_UPLOAD_DIR, ".tmp");
@@ -44,7 +44,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
       },
     },
     async (_request, reply) => {
-      const items = await getModels();
+      const items = await findManyModels();
       return reply.send(items);
     },
   );
@@ -138,7 +138,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         format = FORMAT_MAP[ext.slice(1)] || ext.slice(1).toUpperCase();
       }
 
-      const id = await addModel({
+      const created = await createModel({
         name: finalName,
         version: finalVersion,
         format,
@@ -147,9 +147,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         thumbnailUrl: null,
         docUrl: null,
       });
-
-      const created = await getModelById(id);
-      return reply.status(201).send(created!);
+      return reply.status(201).send(created);
     },
   );
 
@@ -168,7 +166,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const model = await getModelById(id);
+      const model = await findModelById(id);
       if (!model) {
         return reply.status(404).send({ error: "Model not found" });
       }
@@ -219,7 +217,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const model = await getModelById(id);
+      const model = await findModelById(id);
       if (!model || !model.fileUrl) {
         return reply.status(404).send({ error: "Model or file not found" });
       }

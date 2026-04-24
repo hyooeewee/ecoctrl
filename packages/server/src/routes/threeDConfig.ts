@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { ThreeDConfigSchema } from "@ecoctrl/shared";
-import { getThreeDConfig, setThreeDConfig } from "@/repositories/threeDConfig";
+import { findThreeDConfig, updateThreeDConfig } from "@/repositories/threeDConfig";
 
 const configBodySchema = z.object({
   cameraPreset: z.string().optional(),
@@ -21,7 +21,7 @@ export default async function threeDConfigRoutes(fastify: FastifyInstance) {
       },
     },
     async (_request, reply) => {
-      const config = await getThreeDConfig();
+      const config = await findThreeDConfig();
       return reply.send(config ?? { cameraPreset: "Default_View_01", ambientLightIntensity: 0.85, hotspots: [], labels: [] });
     },
   );
@@ -43,15 +43,15 @@ export default async function threeDConfigRoutes(fastify: FastifyInstance) {
         hotspots?: unknown[];
         labels?: unknown[];
       };
-      const existing = await getThreeDConfig();
+      const existing = await findThreeDConfig();
       const updated = {
         cameraPreset: body.cameraPreset ?? existing?.cameraPreset ?? "Default_View_01",
         ambientLightIntensity: body.ambientLightIntensity ?? existing?.ambientLightIntensity ?? 0.85,
         hotspots: body.hotspots ?? existing?.hotspots ?? [],
         labels: body.labels ?? existing?.labels ?? [],
       };
-      await setThreeDConfig(updated);
-      return reply.send(updated);
+      const result = await updateThreeDConfig(updated);
+      return reply.send(result);
     },
   );
 }

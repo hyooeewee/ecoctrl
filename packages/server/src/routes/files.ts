@@ -5,7 +5,7 @@ import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import { createReadStream } from "node:fs";
 import { UPLOAD_DIR as BASE_UPLOAD_DIR } from "@/lib/paths";
-import { getFiles, getFileById, addFile, deleteFile } from "@/repositories/files";
+import { findManyFiles, findFileById, createFile, deleteFile } from "@/repositories/files";
 
 const FILES_DIR = path.join(BASE_UPLOAD_DIR, "files");
 
@@ -38,7 +38,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
       },
     },
     async (_request, reply) => {
-      const items = await getFiles();
+      const items = await findManyFiles();
       return reply.send(items);
     },
   );
@@ -97,16 +97,14 @@ export default async function fileRoutes(fastify: FastifyInstance) {
       const mimeType = mimeTypeMap[ext.toLowerCase()] || "application/octet-stream";
       const finalName = name || fileInfo.filename.replace(/\.[^/.]+$/, "");
 
-      const id = await addFile({
+      const created = await createFile({
         name: finalName,
         filename: safeName,
         mimeType,
         size: stats.size,
         fileUrl: `/uploads/files/${safeName}`,
       });
-
-      const created = await getFileById(id);
-      return reply.status(201).send(created!);
+      return reply.status(201).send(created);
     },
   );
 
@@ -129,7 +127,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const file = await getFileById(id);
+      const file = await findFileById(id);
       if (!file) {
         return reply.status(404).send({ error: "File not found" });
       }
@@ -157,7 +155,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const file = await getFileById(id);
+      const file = await findFileById(id);
       if (!file) {
         return reply.status(404).send({ error: "File not found" });
       }
@@ -186,7 +184,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const file = await getFileById(id);
+      const file = await findFileById(id);
       if (!file) {
         return reply.status(404).send({ error: "File not found" });
       }

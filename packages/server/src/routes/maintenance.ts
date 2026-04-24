@@ -6,7 +6,7 @@ import {
   MaintenanceReminderDetailSchema,
 } from "@ecoctrl/shared";
 import type { MaintenanceReminder, MaintenanceReminderDetail } from "@ecoctrl/shared";
-import { getReminders, updateReminder, deleteReminder } from "@/repositories/maintenance";
+import { findManyReminders, updateReminder, deleteReminder } from "@/repositories/maintenance";
 
 const errorResponseSchema = z.object({ error: z.string() });
 
@@ -45,7 +45,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
       },
     },
     async (_request, reply) => {
-      const reminders = await getReminders();
+      const reminders = await findManyReminders();
       const list: MaintenanceReminder[] = reminders.map((r) => ({
         id: r.id,
         task: r.task,
@@ -71,7 +71,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const reminders = await getReminders();
+      const reminders = await findManyReminders();
       const reminder = reminders.find((r) => r.id === id);
       if (!reminder) {
         return reply.status(404).send({ error: "Reminder not found" });
@@ -92,7 +92,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const body = request.body as Partial<MaintenanceReminderDetail>;
-      const reminders = await getReminders();
+      const reminders = await findManyReminders();
 
       const newReminder: MaintenanceReminderDetail = {
         id: crypto.randomUUID(),
@@ -130,7 +130,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       const { id } = request.params as { id: string };
       const body = request.body as Omit<MaintenanceReminderDetail, "id">;
-      const reminders = await getReminders();
+      const reminders = await findManyReminders();
 
       const index = reminders.findIndex((r) => r.id === id);
       if (index === -1) {
@@ -139,8 +139,11 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
 
       const replaced: MaintenanceReminderDetail = { ...reminders[index], ...body };
       reminders[index] = replaced;
-      await updateReminder(replaced);
-      return reply.send(replaced);
+      const updated = await updateReminder(replaced);
+      if (!updated) {
+        return reply.status(404).send({ error: "Reminder not found" });
+      }
+      return reply.send(updated);
     },
   );
 
@@ -159,15 +162,15 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const reminders = await getReminders();
+      const reminders = await findManyReminders();
 
       const index = reminders.findIndex((r) => r.id === id);
       if (index === -1) {
         return reply.status(404).send({ error: "Reminder not found" });
       }
 
-      const ok = await deleteReminder(id);
-      if (!ok) {
+      const deleted = await deleteReminder(id);
+      if (!deleted) {
         return reply.status(404).send({ error: "Reminder not found" });
       }
       return reply.send({ success: true });

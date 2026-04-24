@@ -7,7 +7,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { UserSchema, UserCreateBodySchema, UserUpdateBodySchema, USER_ROLE_LIST } from "@ecoctrl/shared";
 import type { User, UserCreateBody, UserUpdateBody } from "@ecoctrl/shared";
-import { getUsers, addUser, removeUser, updateUser, getUserByIdWithPassword, getUserById, getUserPreferences, updateUserPreferences } from "@/repositories/users";
+import { findManyUsers, createUser, deleteUser, updateUser, findUserByIdWithPassword, findUserById, findUserPreferences, updateUserPreferences } from "@/repositories/users";
 import { UPLOAD_DIR } from "@/lib/paths";
 import type { UserPreferences } from "@ecoctrl/shared";
 
@@ -53,7 +53,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
       },
     },
     async (_request, reply) => {
-      const users: User[] = await getUsers();
+      const users: User[] = await findManyUsers();
       return reply.send(users);
     },
   );
@@ -80,7 +80,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
         lastLogin: null,
         avatarUrl: null,
       };
-      await addUser({ ...newUser, password: hashedPassword });
+      await createUser({ ...newUser, password: hashedPassword });
       return reply.status(201).send(newUser);
     },
   );
@@ -105,7 +105,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
       const body = request.body as UserUpdateBody & { oldPassword?: string };
 
       if (body.password && body.oldPassword) {
-        const user = await getUserByIdWithPassword(id);
+        const user = await findUserByIdWithPassword(id);
         if (!user) {
           return reply.status(404).send({ error: "User not found" });
         }
@@ -121,14 +121,14 @@ export default async function accountRoutes(fastify: FastifyInstance) {
 
       // Delete old avatar file if avatarUrl is being updated to a different value
       if (body.avatarUrl !== undefined) {
-        const oldUser = await getUserById(id);
+        const oldUser = await findUserById(id);
         if (oldUser?.avatarUrl && oldUser.avatarUrl !== body.avatarUrl) {
           deleteOldAvatar(oldUser.avatarUrl);
         }
       }
 
-      const ok = await updateUser(id, body);
-      if (!ok) {
+      const updated = await updateUser(id, body);
+      if (!updated) {
         return reply.status(404).send({ error: "User not found" });
       }
       return reply.send({ success: true });
@@ -150,13 +150,12 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const user = await getUserById(id);
-      if (user?.avatarUrl) {
-        deleteOldAvatar(user.avatarUrl);
-      }
-      const ok = await removeUser(id);
-      if (!ok) {
+      const deleted = await deleteUser(id);
+      if (!deleted) {
         return reply.status(404).send({ error: "User not found" });
+      }
+      if (deleted.avatarUrl) {
+        deleteOldAvatar(deleted.avatarUrl);
       }
       return reply.send({ success: true });
     },
@@ -183,7 +182,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
       ensureAvatarDir();
       const { id } = request.params as { id: string };
 
-      const user = await getUserById(id);
+      const user = await findUserById(id);
       if (!user) {
         return reply.status(404).send({ error: "User not found" });
       }
@@ -247,7 +246,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const user = await getUserById(id);
+      const user = await findUserById(id);
       if (!user?.avatarUrl) {
         return reply.status(404).send({ error: "Avatar not found" });
       }
@@ -285,7 +284,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const prefs = await getUserPreferences(id);
+      const prefs = await findUserPreferences(id);
       return reply.send(prefs);
     },
   );
@@ -307,10 +306,11 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       const { id } = request.params as { id: string };
       const body = request.body as UserPreferences;
-      const ok = await updateUserPreferences(id, body);
-      if (!ok) {
+      const user = await findUserById(id);
+      if (!user) {
         return reply.status(404).send({ error: "User not found" });
       }
+      await updateUserPreferences(id, body);
       return reply.send({ success: true });
     },
   );
@@ -332,12 +332,13 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       const { id } = request.params as { id: string };
       const body = request.body as UserPreferences;
-      const current = await getUserPreferences(id);
-      const merged = { ...current, ...body };
-      const ok = await updateUserPreferences(id, merged);
-      if (!ok) {
+      const user = await findUserById(id);
+      if (!user) {
         return reply.status(404).send({ error: "User not found" });
       }
+      const current = await findUserPreferences(id);
+      const merged = { ...current, ...body };
+      await updateUserPreferences(id, merged);
       return reply.send({ success: true });
     },
   );
@@ -357,10 +358,11 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const ok = await updateUserPreferences(id, {});
-      if (!ok) {
+      const user = await findUserById(id);
+      if (!user) {
         return reply.status(404).send({ error: "User not found" });
       }
+      await updateUserPreferences(id, {});
       return reply.send({ success: true });
     },
   );

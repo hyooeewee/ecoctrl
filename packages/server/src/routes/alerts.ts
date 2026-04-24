@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { Alert } from "@/types/index";
-import { getAlerts } from "@/repositories/dashboard";
+import { findManyAlerts } from "@/repositories/dashboard";
 
 const alertSchema = z.object({
   id: z.string(),
@@ -25,7 +25,7 @@ export default async function alertRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const { limit } = request.query as { limit?: number };
-      const alerts: Alert[] = await getAlerts(limit);
+      const alerts: Alert[] = await findManyAlerts(limit);
       return reply.send(alerts);
     },
   );

@@ -55,10 +55,10 @@ export async function unlinkOAuthAccount(userId: string, provider: string) {
       ),
     )
     .returning();
-  return result.length > 0;
+  return result[0] ?? null;
 }
 
-export async function getUserOAuthAccounts(userId: string) {
+export async function findUserOAuthAccounts(userId: string) {
   return db
     .select({
       provider: oauthAccounts.provider,

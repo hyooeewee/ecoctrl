@@ -5,13 +5,13 @@ import {
   findOAuthAccount,
   createOAuthAccount,
   unlinkOAuthAccount,
-  getUserOAuthAccounts,
+  findUserOAuthAccounts,
 } from "@/repositories/oauthAccounts";
 import {
   findUserByIdentifier,
-  getUserByEmail,
-  getUserById,
-  addUser,
+  findUserByEmail,
+  findUserById,
+  createUser,
   updateUser,
 } from "@/repositories/users";
 import {
@@ -360,7 +360,7 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
           oauthInfo.providerUserId,
         );
         if (existingAccount) {
-          const user = await getUserById(existingAccount.userId);
+          const user = await findUserById(existingAccount.userId);
           if (!user) {
             return reply.status(404).send({ error: "User not found" });
           }
@@ -378,7 +378,7 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
 
         // 2. Not bound yet — try auto-bind by email
         if (oauthInfo.email) {
-          const userByEmail = await getUserByEmail(oauthInfo.email);
+          const userByEmail = await findUserByEmail(oauthInfo.email);
           if (userByEmail) {
             await createOAuthAccount({
               userId: userByEmail.id,
@@ -566,7 +566,7 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
       if (existingByUsername) {
         return reply.status(409).send({ error: "Username already taken" });
       }
-      const existingByEmail = await getUserByEmail(email);
+      const existingByEmail = await findUserByEmail(email);
       if (existingByEmail) {
         return reply.status(409).send({ error: "Email already taken" });
       }
@@ -581,7 +581,7 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
         avatarUrl: temp.avatarUrl,
       };
 
-      await addUser({ ...newUser, password: null });
+      await createUser({ ...newUser, password: null });
       tempBindStore.delete(tempToken);
 
       await createOAuthAccount({
@@ -630,8 +630,8 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       const { provider } = request.params as { provider: string };
       const payload = request.user as { userId: string };
-      const ok = await unlinkOAuthAccount(payload.userId, provider);
-      if (!ok) {
+      const unlinked = await unlinkOAuthAccount(payload.userId, provider);
+      if (!unlinked) {
         return reply.status(404).send({ error: "Provider not linked" });
       }
       return reply.send({ ok: true });
@@ -666,7 +666,7 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const payload = request.user as { userId: string };
-      const accounts = await getUserOAuthAccounts(payload.userId);
+      const accounts = await findUserOAuthAccounts(payload.userId);
       return reply.send(accounts);
     },
   );
