@@ -10,7 +10,12 @@ import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import fastifyJwt from "@fastify/jwt";
 import fastifyStatic from "@fastify/static";
-import { validatorCompiler, serializerCompiler, ZodTypeProvider } from "fastify-type-provider-zod";
+import {
+  validatorCompiler,
+  serializerCompiler,
+  ZodTypeProvider,
+  jsonSchemaTransform,
+} from "fastify-type-provider-zod";
 
 import { ensureDatabase } from "@/lib/ensureDatabase";
 import { UPLOAD_DIR } from "@/lib/paths";
@@ -56,6 +61,7 @@ await fastify.register(fastifyStatic, {
   decorateReply: false,
 });
 await fastify.register(swagger, {
+  transform: jsonSchemaTransform,
   openapi: {
     info: {
       title: "EcoCtrl API",
@@ -64,7 +70,7 @@ await fastify.register(swagger, {
     },
     servers: [
       {
-        url: process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`,
+        url: "/",
         description: "EcoCtrl API Server",
       },
     ],
@@ -74,7 +80,10 @@ await fastify.register(swagger, {
           type: "http",
           scheme: "bearer",
           bearerFormat: "JWT",
-          description: "Enter your JWT access token",
+          description:
+            "1. Call POST /auth/login (or OAuth) to get an accessToken.\n" +
+            "2. Token is automatically set — no manual input needed.\n" +
+            "3. All locked endpoints automatically carry the `Authorization: Bearer <token>` header.",
         },
       },
     },
@@ -82,8 +91,58 @@ await fastify.register(swagger, {
   },
 });
 
+const AUTO_AUTH_JS = `(function() {
+  const originalFetch = window.fetch;
+  window.fetch = function(...args) {
+    return originalFetch.apply(this, args).then(response => {
+      const url = typeof args[0] === 'string' ? args[0] : args[0].url;
+      if (url && url.includes('/auth/login')) {
+        response.clone().json().then(data => {
+          const token = data.accessToken;
+          if (token) authorize(token);
+        }).catch(() => {});
+      }
+      return response;
+    });
+  };
+
+  function authorize(token) {
+    const interval = setInterval(() => {
+      const ui = window._swaggerUI;
+      if (ui && ui.authActions) {
+        clearInterval(interval);
+        ui.authActions.authorize({
+          bearerAuth: {
+            name: 'bearerAuth',
+            schema: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+            value: token
+          }
+        });
+        console.log('[Swagger] Token auto-authorized');
+      }
+    }, 300);
+  }
+
+  const originalBundle = window.SwaggerUIBundle;
+  window.SwaggerUIBundle = function(config) {
+    const ui = originalBundle(config);
+    window._swaggerUI = ui;
+    return ui;
+  };
+  Object.setPrototypeOf(window.SwaggerUIBundle, originalBundle);
+  Object.keys(originalBundle).forEach(function(k) { window.SwaggerUIBundle[k] = originalBundle[k]; });
+})();`;
+
 await fastify.register(swaggerUi, {
   routePrefix: "/documentation",
+  uiConfig: {
+    docExpansion: "list",
+    deepLinking: true,
+    persistAuthorization: true,
+  },
+  theme: {
+    js: [{ filename: "auto-auth.js", content: AUTO_AUTH_JS }],
+  },
 });
 
 await fastify.register(apiRoutes, { prefix: "/api" });

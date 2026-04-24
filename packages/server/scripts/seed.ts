@@ -423,8 +423,8 @@ async function seedDashboardWidgets() {
       icon: "TrendingUp",
       layoutX: 4,
       layoutY: 6,
-      layoutW: 6,
-      layoutH: 3,
+      layoutW: 3,
+      layoutH: 2,
       dataType: "chart" as const,
       dataJson: {
         chartType: "area",
