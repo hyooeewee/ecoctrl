@@ -11,7 +11,7 @@ import type {
   DashboardData,
   WidgetConfig,
 } from "@ecoctrl/shared";
-import { fetchWeather } from "@/lib/weather";
+import { fetchWeather } from "@/services/weather";
 
 export async function findDashboardStats(): Promise<DashboardStats> {
   const rows = await db.select().from(dashboardStats);
