@@ -25,6 +25,7 @@ export default function Login({ onLogin }: LoginProps) {
   // Register fields
   const [regUsername, setRegUsername] = useState("");
   const [regEmail, setRegEmail] = useState("");
+  const [regCode, setRegCode] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [regConfirm, setRegConfirm] = useState("");
   const [showRegPassword, setShowRegPassword] = useState(false);
@@ -79,6 +80,24 @@ export default function Login({ onLogin }: LoginProps) {
     }
   };
 
+  const handleSendRegisterCode = async () => {
+    if (!regEmail.trim()) {
+      setError("请输入邮箱地址");
+      return;
+    }
+    setError("");
+    setIsSubmitting(true);
+    try {
+      await authApi.sendRegisterCode(regEmail.trim());
+      setCountdown(60);
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "发送验证码失败，请重试");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -91,10 +110,14 @@ export default function Login({ onLogin }: LoginProps) {
       setError("密码长度至少 6 位");
       return;
     }
+    if (!regCode.trim()) {
+      setError("请输入邮箱验证码");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
-      const res = await authApi.register(regUsername, regEmail, regPassword);
+      const res = await authApi.register(regUsername, regEmail, regPassword, regCode);
       localStorage.setItem("accessToken", res.accessToken);
       localStorage.setItem("refreshToken", res.refreshToken);
       const user = await authApi.me();
@@ -376,14 +399,52 @@ export default function Login({ onLogin }: LoginProps) {
                   >
                     邮箱
                   </Label>
-                  <Input
-                    id="reg-email"
-                    type="email"
-                    value={regEmail}
-                    onChange={(e) => setRegEmail(e.target.value)}
-                    placeholder="请输入邮箱"
-                    className={inputClass}
-                  />
+                  <div className="relative">
+                    <Mail
+                      size={16}
+                      className="absolute top-1/2 left-3 -translate-y-1/2 text-white/40"
+                    />
+                    <Input
+                      id="reg-email"
+                      type="email"
+                      value={regEmail}
+                      onChange={(e) => setRegEmail(e.target.value)}
+                      placeholder="请输入邮箱"
+                      className={`${inputClass} pl-10 pr-[108px]`}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSendRegisterCode}
+                      disabled={countdown > 0 || isSubmitting}
+                      className="absolute top-1/2 right-2 -translate-y-1/2 rounded-full bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-900 transition-opacity hover:bg-white disabled:opacity-50"
+                    >
+                      {countdown > 0 ? `${countdown}s` : "获取验证码"}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="reg-code"
+                    className="text-xs font-semibold tracking-wider text-white/80"
+                  >
+                    验证码
+                  </Label>
+                  <div className="relative">
+                    <KeyRound
+                      size={16}
+                      className="absolute top-1/2 left-3 -translate-y-1/2 text-white/40"
+                    />
+                    <Input
+                      id="reg-code"
+                      type="text"
+                      value={regCode}
+                      onChange={(e) => setRegCode(e.target.value)}
+                      placeholder="请输入6位验证码"
+                      maxLength={6}
+                      className={`${inputClass} pl-10`}
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
