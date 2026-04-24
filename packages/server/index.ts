@@ -92,21 +92,10 @@ await fastify.register(swagger, {
 });
 
 const AUTO_AUTH_JS = `(function() {
-  const originalFetch = window.fetch;
-  window.fetch = function(...args) {
-    return originalFetch.apply(this, args).then(response => {
-      const url = typeof args[0] === 'string' ? args[0] : args[0].url;
-      if (url && url.includes('/auth/login')) {
-        response.clone().json().then(data => {
-          const token = data.accessToken;
-          if (token) authorize(token);
-        }).catch(() => {});
-      }
-      return response;
-    });
-  };
+  const LS_KEY_ACCESS = 'swagger_auto_access_token';
+  const LS_KEY_REFRESH = 'swagger_auto_refresh_token';
 
-  function authorize(token) {
+  function setAuth(token) {
     const interval = setInterval(() => {
       const ui = window._swaggerUI;
       if (ui && ui.authActions) {
@@ -118,15 +107,70 @@ const AUTO_AUTH_JS = `(function() {
             value: token
           }
         });
-        console.log('[Swagger] Token auto-authorized');
       }
     }, 300);
   }
+
+  const originalFetch = window.fetch;
+  window.fetch = function(...args) {
+    const req = args[0];
+    const url = typeof req === 'string' ? req : req.url;
+
+    // Auto-fill refreshToken body before sending
+    if (url && url.includes('/auth/refresh')) {
+      const storedRefresh = localStorage.getItem(LS_KEY_REFRESH);
+      if (storedRefresh) {
+        try {
+          const opts = args[1] || {};
+          let bodyObj = JSON.parse(opts.body || '{}');
+          if (!bodyObj.refreshToken || bodyObj.refreshToken === 'auto-filled after login') {
+            bodyObj.refreshToken = storedRefresh;
+            args[1] = { ...opts, body: JSON.stringify(bodyObj) };
+          }
+        } catch(e) {}
+      }
+    }
+
+    return originalFetch.apply(this, args).then(response => {
+      // Handle login response
+      if (url && url.includes('/auth/login')) {
+        response.clone().json().then(data => {
+          const accessToken = data.accessToken;
+          const refreshToken = data.refreshToken;
+          if (accessToken) {
+            localStorage.setItem(LS_KEY_ACCESS, accessToken);
+            setAuth(accessToken);
+          }
+          if (refreshToken) {
+            localStorage.setItem(LS_KEY_REFRESH, refreshToken);
+          }
+        }).catch(() => {});
+      }
+      // Handle refresh response
+      if (url && url.includes('/auth/refresh')) {
+        response.clone().json().then(data => {
+          const accessToken = data.accessToken;
+          const refreshToken = data.refreshToken;
+          if (accessToken) {
+            localStorage.setItem(LS_KEY_ACCESS, accessToken);
+            setAuth(accessToken);
+          }
+          if (refreshToken) {
+            localStorage.setItem(LS_KEY_REFRESH, refreshToken);
+          }
+        }).catch(() => {});
+      }
+      return response;
+    });
+  };
 
   const originalBundle = window.SwaggerUIBundle;
   window.SwaggerUIBundle = function(config) {
     const ui = originalBundle(config);
     window._swaggerUI = ui;
+    // Restore previous token on page load
+    const savedToken = localStorage.getItem(LS_KEY_ACCESS);
+    if (savedToken) setAuth(savedToken);
     return ui;
   };
   Object.setPrototypeOf(window.SwaggerUIBundle, originalBundle);
