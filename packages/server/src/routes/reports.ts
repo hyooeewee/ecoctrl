@@ -4,10 +4,10 @@ import { z } from "zod";
 import { ReportPlanSchema, ReportTemplateSchema } from "@ecoctrl/shared";
 import type { ReportPlan } from "@ecoctrl/shared";
 import {
-  getReportPlans,
-  addReportPlan,
+  findManyReportPlans,
+  createReportPlan,
   updateReportPlan,
-  getReportTemplates,
+  findManyReportTemplates,
 } from "@/repositories/reports";
 
 const errorResponseSchema = z.object({ error: z.string() });
@@ -37,7 +37,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
       },
     },
     async (_request, reply) => {
-      const plans: ReportPlan[] = await getReportPlans();
+      const plans: ReportPlan[] = await findManyReportPlans();
       return reply.send(plans);
     },
   );
@@ -54,10 +54,9 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const body = request.body as Omit<ReportPlan, "id">;
-      const id = crypto.randomUUID();
-      const plan: ReportPlan = { id, ...body };
-      await addReportPlan(plan);
-      return reply.status(201).send(plan);
+      const plan: ReportPlan = { id: crypto.randomUUID(), ...body };
+      const created = await createReportPlan(plan);
+      return reply.status(201).send(created);
     },
   );
 
@@ -96,7 +95,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
       },
     },
     async (_request, reply) => {
-      const templates = await getReportTemplates();
+      const templates = await findManyReportTemplates();
       return reply.send(templates);
     },
   );

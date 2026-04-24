@@ -12,7 +12,7 @@ export interface FileItem {
   createdAt: string | null;
 }
 
-export async function getFiles(): Promise<FileItem[]> {
+export async function findManyFiles(): Promise<FileItem[]> {
   const rows = await db.select().from(files);
   return rows.map((r) => ({
     id: r.id,
@@ -25,7 +25,7 @@ export async function getFiles(): Promise<FileItem[]> {
   }));
 }
 
-export async function getFileById(id: string): Promise<FileItem | null> {
+export async function findFileById(id: string): Promise<FileItem | null> {
   const rows = await db.select().from(files).where(eq(files.id, id)).limit(1);
   if (rows.length === 0) return null;
   const r = rows[0];
@@ -40,7 +40,7 @@ export async function getFileById(id: string): Promise<FileItem | null> {
   };
 }
 
-export async function addFile(data: Omit<FileItem, "id" | "createdAt">): Promise<string> {
+export async function createFile(data: Omit<FileItem, "id" | "createdAt">): Promise<FileItem> {
   const result = await db
     .insert(files)
     .values({
@@ -50,11 +50,20 @@ export async function addFile(data: Omit<FileItem, "id" | "createdAt">): Promise
       size: data.size,
       fileUrl: data.fileUrl,
     })
-    .returning({ id: files.id });
-  return result[0].id;
+    .returning();
+  const r = result[0];
+  return {
+    id: r.id,
+    name: r.name,
+    filename: r.filename,
+    mimeType: r.mimeType ?? null,
+    size: r.size,
+    fileUrl: r.fileUrl ?? null,
+    createdAt: r.createdAt ? r.createdAt.toISOString() : null,
+  };
 }
 
-export async function getFileByUrl(fileUrl: string): Promise<FileItem | null> {
+export async function findFileByUrl(fileUrl: string): Promise<FileItem | null> {
   const rows = await db.select().from(files).where(eq(files.fileUrl, fileUrl)).limit(1);
   if (rows.length === 0) return null;
   const r = rows[0];
@@ -69,7 +78,17 @@ export async function getFileByUrl(fileUrl: string): Promise<FileItem | null> {
   };
 }
 
-export async function deleteFile(id: string): Promise<boolean> {
+export async function deleteFile(id: string): Promise<FileItem | null> {
   const result = await db.delete(files).where(eq(files.id, id)).returning();
-  return result.length > 0;
+  if (result.length === 0) return null;
+  const r = result[0];
+  return {
+    id: r.id,
+    name: r.name,
+    filename: r.filename,
+    mimeType: r.mimeType ?? null,
+    size: r.size,
+    fileUrl: r.fileUrl ?? null,
+    createdAt: r.createdAt ? r.createdAt.toISOString() : null,
+  };
 }

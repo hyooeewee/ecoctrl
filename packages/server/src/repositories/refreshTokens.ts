@@ -6,13 +6,14 @@ export async function createRefreshToken(
   userId: string,
   tokenHash: string,
   expiresAt: Date,
-): Promise<void> {
-  await db.insert(refreshTokens).values({
+) {
+  const result = await db.insert(refreshTokens).values({
     userId,
     tokenHash,
     expiresAt,
     createdAt: new Date(),
-  });
+  }).returning();
+  return result[0];
 }
 
 export async function findValidRefreshToken(tokenHash: string) {
@@ -29,12 +30,14 @@ export async function findValidRefreshToken(tokenHash: string) {
   return rows[0] ?? null;
 }
 
-export async function deleteRefreshToken(tokenHash: string): Promise<void> {
-  await db.delete(refreshTokens).where(eq(refreshTokens.tokenHash, tokenHash));
+export async function deleteRefreshToken(tokenHash: string) {
+  const result = await db.delete(refreshTokens).where(eq(refreshTokens.tokenHash, tokenHash)).returning();
+  return result[0] ?? null;
 }
 
-export async function deleteRefreshTokenById(id: string): Promise<void> {
-  await db.delete(refreshTokens).where(eq(refreshTokens.id, id));
+export async function deleteRefreshTokenById(id: string) {
+  const result = await db.delete(refreshTokens).where(eq(refreshTokens.id, id)).returning();
+  return result[0] ?? null;
 }
 
 export async function deleteRefreshTokensByUserId(userId: string): Promise<void> {

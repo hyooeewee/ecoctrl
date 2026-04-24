@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { getPlatformConfig, setPlatformConfig } from "@/repositories/platformConfig";
+import { findPlatformConfig, updatePlatformConfig } from "@/repositories/platformConfig";
 
 const configSchema = z.object({
   platformName: z.string(),
@@ -37,7 +37,7 @@ export default async function configRoutes(fastify: FastifyInstance) {
       },
     },
     async (_request, reply) => {
-      const config = await getPlatformConfig();
+      const config = await findPlatformConfig();
       const raw = config ?? {
         platformName: "EcoCtrl 能管平台",
         refreshInterval: 30,
@@ -78,7 +78,7 @@ export default async function configRoutes(fastify: FastifyInstance) {
         smtpPass?: string;
         smtpSecure?: boolean;
       };
-      const existing = await getPlatformConfig();
+      const existing = await findPlatformConfig();
 
       const updated = {
         platformName: body.platformName ?? existing?.platformName ?? "EcoCtrl 能管平台",
@@ -94,7 +94,7 @@ export default async function configRoutes(fastify: FastifyInstance) {
             ? body.smtpPass
             : existing?.smtpPass ?? "",
       };
-      await setPlatformConfig(updated);
+      await updatePlatformConfig(updated);
       return reply.send({
         ...updated,
         smtpPass: updated.smtpPass ? "****" : "",

@@ -3,12 +3,13 @@ import type { ReportPlan, ReportTemplate } from "@ecoctrl/shared";
 import { db } from "@/config/database";
 import { reportPlans, reportTemplates } from "@/schemas/reports";
 
-export async function getReportPlans(): Promise<ReportPlan[]> {
+export async function findManyReportPlans(): Promise<ReportPlan[]> {
   return db.select().from(reportPlans);
 }
 
-export async function addReportPlan(plan: ReportPlan): Promise<void> {
-  await db.insert(reportPlans).values(plan);
+export async function createReportPlan(plan: ReportPlan): Promise<ReportPlan> {
+  const result = await db.insert(reportPlans).values(plan).returning();
+  return result[0] as ReportPlan;
 }
 
 export async function updateReportPlan(id: string, patch: Partial<ReportPlan>): Promise<ReportPlan | null> {
@@ -21,7 +22,7 @@ export async function updateReportPlan(id: string, patch: Partial<ReportPlan>): 
   return result[0] as ReportPlan;
 }
 
-export async function getReportTemplates(): Promise<ReportTemplate[]> {
+export async function findManyReportTemplates(): Promise<ReportTemplate[]> {
   const rows = await db.select().from(reportTemplates);
   return rows.map((r) => ({
     id: r.id,

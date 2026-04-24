@@ -2,7 +2,7 @@ import type { EnergyArea } from "@ecoctrl/shared";
 import { db } from "@/config/database";
 import { energyAreas } from "@/schemas/energyAreas";
 
-export async function getEnergyAreas(): Promise<EnergyArea[]> {
+export async function findManyEnergyAreas(): Promise<EnergyArea[]> {
   const rows = await db.select().from(energyAreas);
   return rows.map((r) => ({
     id: r.id,
@@ -15,7 +15,7 @@ export async function getEnergyAreas(): Promise<EnergyArea[]> {
   }));
 }
 
-export async function saveEnergyAreas(data: Omit<EnergyArea, "id">[]): Promise<void> {
+export async function updateEnergyAreas(data: Omit<EnergyArea, "id">[]): Promise<void> {
   await db.delete(energyAreas);
   if (data.length) {
     await db.insert(energyAreas).values(data);

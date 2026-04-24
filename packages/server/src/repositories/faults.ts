@@ -3,7 +3,7 @@ import { faults } from "@/schemas/faults";
 import { faultStats } from "@/schemas/faultStats";
 import type { Fault, FaultStats } from "@/types/index";
 
-export async function getFaults(): Promise<Fault[]> {
+export async function findManyFaults(): Promise<Fault[]> {
   const rows = await db.select().from(faults);
   return rows.map((r) => ({
     id: r.id,
@@ -14,7 +14,7 @@ export async function getFaults(): Promise<Fault[]> {
   }));
 }
 
-export async function getFaultStats(): Promise<FaultStats> {
+export async function findFaultStats(): Promise<FaultStats> {
   const rows = await db.select().from(faultStats);
   if (rows.length === 0) {
     return { totalCount: 0, trend: "0%", mttr: 0, avgResponseTime: "0min" };

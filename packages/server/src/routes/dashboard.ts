@@ -5,7 +5,7 @@ import {
   AlertSchema,
 } from "@ecoctrl/shared";
 import type { DashboardData, Alert } from "@ecoctrl/shared";
-import { getAlerts, getDashboardData } from "@/repositories/dashboard";
+import { findManyAlerts, findDashboardData } from "@/repositories/dashboard";
 
 export default async function dashboardRoutes(fastify: FastifyInstance) {
   fastify.get(
@@ -18,7 +18,7 @@ export default async function dashboardRoutes(fastify: FastifyInstance) {
       },
     },
     async (_request, reply) => {
-      const data: DashboardData = await getDashboardData();
+      const data: DashboardData = await findDashboardData();
       return reply.send(data);
     },
   );
@@ -35,7 +35,7 @@ export default async function dashboardRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const { limit } = request.query as { limit?: number };
-      const alerts: Alert[] = await getAlerts(limit);
+      const alerts: Alert[] = await findManyAlerts(limit);
       return reply.send(alerts);
     },
   );

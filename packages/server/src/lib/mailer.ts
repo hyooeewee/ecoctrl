@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
-import { getPlatformConfig } from "@/repositories/platformConfig";
+import { findPlatformConfig } from "@/repositories/platformConfig";
 
 let transporter: Transporter | null = null;
 let cachedConfigHash = "";
@@ -32,7 +32,7 @@ async function resolveSmtpConfig(): Promise<SmtpConfig | null> {
     };
   }
 
-  const dbConfig = await getPlatformConfig();
+  const dbConfig = await findPlatformConfig();
   if (
     dbConfig &&
     dbConfig.smtpHost &&
