@@ -17,6 +17,9 @@ import {
   Lock,
   Eye,
   EyeOff,
+  Link2,
+  Unlink,
+  AlertCircle,
 } from "lucide-react";
 
 import { Button } from "@ecoctrl/ui";
@@ -27,6 +30,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@ecoctrl/ui";
 import { Badge } from "@ecoctrl/ui";
 
 import { authApi } from "@/api/auth";
+import { oauthApi, type LinkedOAuthAccount } from "@/api/oauth";
 import { usersApi } from "@/api/users";
 import type { User, UserRole } from "@ecoctrl/shared";
 
@@ -81,6 +85,21 @@ export default function Profile() {
   const [showConfirmPwd, setShowConfirmPwd] = useState(false);
   const [savingPwd, setSavingPwd] = useState(false);
 
+  const [linkedAccounts, setLinkedAccounts] = useState<LinkedOAuthAccount[]>([]);
+  const [oauthLoading, setOauthLoading] = useState(true);
+  const [unlinkingProvider, setUnlinkingProvider] = useState<string | null>(null);
+
+  const fetchLinkedAccounts = async () => {
+    try {
+      const data = await oauthApi.getLinkedAccounts();
+      setLinkedAccounts(data);
+    } catch (err) {
+      console.error("Failed to load linked OAuth accounts:", err);
+    } finally {
+      setOauthLoading(false);
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -104,7 +123,22 @@ export default function Profile() {
       }
     };
     fetchData();
+    fetchLinkedAccounts();
   }, []);
+
+  const handleUnlink = async (provider: string) => {
+    if (!confirm(`确定要解除 ${provider} 账号绑定吗？`)) return;
+    setUnlinkingProvider(provider);
+    try {
+      await oauthApi.unlink(provider);
+      await fetchLinkedAccounts();
+    } catch (err) {
+      console.error(err);
+      alert("解绑失败，请重试");
+    } finally {
+      setUnlinkingProvider(null);
+    }
+  };
 
   const handleSave = async () => {
     if (!userDetail) return;
@@ -509,6 +543,98 @@ export default function Profile() {
               </div>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* OAuth Accounts */}
+      <Card className="border-border bg-card overflow-hidden border shadow-sm">
+        <CardHeader className="border-border/50 border-b px-6">
+          <div className="flex items-center gap-2">
+            <Link2 size={16} className="text-primary" />
+            <CardTitle className="text-foreground text-base font-bold">第三方账号</CardTitle>
+          </div>
+          <CardDescription className="text-xs">管理已绑定的第三方登录账号。</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 px-6 pt-6">
+          {oauthLoading ? (
+            <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+              <Loader2 size={16} className="mr-2 animate-spin" />
+              加载中...
+            </div>
+          ) : linkedAccounts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+              <AlertCircle className="h-10 w-10 text-muted-foreground/40" />
+              <p className="text-sm font-medium text-muted-foreground">暂无绑定的第三方账号</p>
+              <p className="text-xs text-muted-foreground/60">登录页面可绑定微信、飞书等账号</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {linkedAccounts.map((account) => (
+                <div
+                  key={account.provider}
+                  className="flex items-center justify-between rounded-lg border bg-muted/30 px-4 py-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`flex h-8 w-8 items-center justify-center rounded-full text-white ${
+                        account.provider === "wechat"
+                          ? "bg-green-600"
+                          : account.provider === "feishu"
+                            ? "bg-blue-600"
+                            : account.provider === "dingtalk"
+                              ? "bg-blue-500"
+                              : account.provider === "wecom"
+                                ? "bg-emerald-600"
+                                : "bg-muted-foreground"
+                      }`}
+                    >
+                      <span className="text-xs font-bold">
+                        {account.provider === "wechat"
+                          ? "微"
+                          : account.provider === "feishu"
+                            ? "飞"
+                            : account.provider === "dingtalk"
+                              ? "钉"
+                              : account.provider === "wecom"
+                                ? "企"
+                                : account.provider.slice(0, 1).toUpperCase()}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">
+                        {account.provider === "wechat"
+                          ? "微信"
+                          : account.provider === "feishu"
+                            ? "飞书"
+                            : account.provider === "dingtalk"
+                              ? "钉钉"
+                              : account.provider === "wecom"
+                                ? "企业微信"
+                                : account.provider}
+                      </p>
+                      {account.providerEmail && (
+                        <p className="text-xs text-muted-foreground">{account.providerEmail}</p>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                    disabled={unlinkingProvider === account.provider}
+                    onClick={() => handleUnlink(account.provider)}
+                  >
+                    {unlinkingProvider === account.provider ? (
+                      <Loader2 size={14} className="mr-1 animate-spin" />
+                    ) : (
+                      <Unlink size={14} className="mr-1" />
+                    )}
+                    解绑
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
