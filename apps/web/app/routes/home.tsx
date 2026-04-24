@@ -100,7 +100,7 @@ export default function Home() {
 
   const rightmostTopWidget = bentoLayout
     .filter((item) => !item.hidden && item.y <= 4)
-    .sort((a, b) => b.x - a.x)[0];
+    .sort((a, b) => b.x + b.w - (a.x + a.w))[0];
 
   const colsFromRight = rightmostTopWidget ? 16 - rightmostTopWidget.x + 1 : 0;
   const controlsRight =
@@ -309,7 +309,7 @@ export default function Home() {
           <div
             className={cn(
               "absolute top-[72px] z-30 flex flex-col overflow-hidden rounded-lg border border-white/10 bg-black/40 backdrop-blur-md transition-all duration-300 pointer-events-auto",
-              (isImmersive || bentoDragEnabled) && "opacity-0 pointer-events-none",
+              (activeLabel !== null || bentoDragEnabled) && "opacity-0 pointer-events-none",
             )}
             style={{ right: controlsRight }}
           >
