@@ -1,15 +1,10 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/config/database";
 import { iotTokens } from "@/schemas/iotTokens";
+import type { TokenData } from "@/services/iot/types";
 
 const BASE_URL = process.env.BASE_URL?.replace(/\/+$/, "") || "";
 const APP_ID = process.env.APP_ID || "";
-
-interface TokenData {
-  accessToken: string;
-  refreshToken: string;
-  expiresAt: number;
-}
 
 let tokenCache: TokenData | null = null;
 
@@ -48,7 +43,9 @@ async function getToken(): Promise<TokenData | null> {
 
 function parseJwtExp(token: string): number {
   try {
-    const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString()) as Record<string, unknown>;
+    const payload = JSON.parse(
+      Buffer.from(token.split(".")[1], "base64url").toString(),
+    ) as Record<string, unknown>;
     const exp = Number(payload.exp);
     if (exp && exp > 1_000_000_000) return exp * 1000; // JWT exp is in seconds
   } catch {
@@ -67,7 +64,10 @@ function extractTokenData(data: Record<string, unknown>): TokenData {
   };
 }
 
-async function fetchToken(grantType: "authorization" | "refresh", refreshTokenValue?: string): Promise<TokenData> {
+async function fetchToken(
+  grantType: "authorization" | "refresh",
+  refreshTokenValue?: string,
+): Promise<TokenData> {
   const url = new URL("/_webtalk/_cur/api/access_token", BASE_URL);
   url.searchParams.set("grant_type", grantType);
   url.searchParams.set("appId", APP_ID);
@@ -84,7 +84,9 @@ async function fetchToken(grantType: "authorization" | "refresh", refreshTokenVa
   const body = (await res.json()) as Record<string, unknown>;
 
   if (body.code !== undefined && body.code !== 200) {
-    throw new Error(`Token ${grantType} failed: code=${body.code}, msg=${JSON.stringify(body)}`);
+    throw new Error(
+      `Token ${grantType} failed: code=${body.code}, msg=${JSON.stringify(body)}`,
+    );
   }
 
   const tokenData = extractTokenData(body);
@@ -112,7 +114,7 @@ export async function refreshToken(): Promise<string> {
     await saveToken(tokenData);
     tokenCache = tokenData;
     return tokenData.accessToken;
-  } catch (err) {
+  } catch {
     return authorize();
   }
 }
@@ -123,45 +125,4 @@ export async function ensureToken(): Promise<string> {
     return refreshToken();
   }
   return token.accessToken;
-}
-
-interface IotResponse {
-  code: number;
-  [key: string]: unknown;
-}
-
-export async function iotRequest(
-  path: string,
-  options: RequestInit = {},
-  extraHeaders?: Record<string, string>,
-): Promise<IotResponse> {
-  const token = await ensureToken();
-  const url = `${BASE_URL}${path}`;
-
-  const headers = new Headers(options.headers);
-  headers.set("appId", APP_ID);
-  headers.set("Token", token);
-  if (!headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
-  }
-  if (extraHeaders) {
-    for (const [k, v] of Object.entries(extraHeaders)) {
-      if (v) headers.set(k, v);
-    }
-  }
-
-  const res = await fetch(url, { ...options, headers });
-  const body = (await res.json()) as IotResponse;
-
-  if (body.code === 301 || body.code === 302) {
-    tokenCache = null;
-    await authorize();
-    return iotRequest(path, options, extraHeaders);
-  }
-
-  if (body.code !== 200) {
-    throw new Error(`IoT request failed: code=${body.code}, path=${path}`);
-  }
-
-  return body;
 }
