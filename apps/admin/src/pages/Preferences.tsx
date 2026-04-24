@@ -1,4 +1,9 @@
-import { useEffect, useState } from "react";
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { useEffect, useRef, useState } from "react";
 import {
   Monitor,
   Moon,
@@ -13,11 +18,11 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   List,
-  Save,
   RotateCcw,
   Globe,
   Loader2,
-  AlertCircle,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 
 import { Button } from "@ecoctrl/ui";
@@ -49,9 +54,11 @@ interface PreferencesProps {
 export default function Preferences({ userId, initialPrefs, onSaved }: PreferencesProps) {
   const [prefs, setPrefs] = useState<UserPreferences>({ ...DEFAULT_PREFERENCES, ...initialPrefs });
   const [loading, setLoading] = useState(!initialPrefs);
-  const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
-  const [success, setSuccess] = useState("");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (initialPrefs) {
@@ -74,28 +81,40 @@ export default function Preferences({ userId, initialPrefs, onSaved }: Preferenc
     fetchPrefs();
   }, [userId, initialPrefs]);
 
-  const updateField = <K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) => {
-    setPrefs((prev) => ({ ...prev, [key]: value }));
-    setSuccess("");
-  };
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+    };
+  }, []);
 
-  const handleSave = async () => {
-    setSaving(true);
-    setSuccess("");
+  const doSave = async (nextPrefs: UserPreferences) => {
+    setSaveStatus("saving");
     try {
-      await preferencesApi.update(userId, prefs);
-      setSuccess("设置已保存");
-      onSaved?.(prefs);
-      // Apply theme immediately
-      if (prefs.theme) {
-        import("@/lib/darkMode").then((m) => m.applyDarkMode(prefs.theme!));
+      await preferencesApi.update(userId, nextPrefs);
+      setSaveStatus("saved");
+      onSaved?.(nextPrefs);
+      if (nextPrefs.theme) {
+        import("@/lib/darkMode").then((m) => m.applyDarkMode(nextPrefs.theme!));
       }
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+      savedTimerRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
     } catch (err) {
       console.error(err);
-      alert("保存失败，请重试");
-    } finally {
-      setSaving(false);
+      setSaveStatus("error");
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+      savedTimerRef.current = setTimeout(() => setSaveStatus("idle"), 3000);
     }
+  };
+
+  const updateField = <K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) => {
+    const next = { ...prefs, [key]: value } as UserPreferences;
+    setPrefs(next);
+    setSaveStatus("idle");
+
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => doSave(next), 500);
   };
 
   const handleReset = async () => {
@@ -106,7 +125,9 @@ export default function Preferences({ userId, initialPrefs, onSaved }: Preferenc
       setPrefs(DEFAULT_PREFERENCES);
       onSaved?.(DEFAULT_PREFERENCES);
       import("@/lib/darkMode").then((m) => m.applyDarkMode(DEFAULT_PREFERENCES.theme!));
-      setSuccess("已恢复默认设置");
+      setSaveStatus("saved");
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+      savedTimerRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
     } catch (err) {
       console.error(err);
       alert("恢复默认设置失败");
@@ -141,6 +162,24 @@ export default function Preferences({ userId, initialPrefs, onSaved }: Preferenc
     { value: "medium", label: "中" },
     { value: "large", label: "大" },
   ];
+
+  const statusEl =
+    saveStatus === "saving" ? (
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Loader2 size={14} className="animate-spin" />
+        保存中...
+      </div>
+    ) : saveStatus === "saved" ? (
+      <div className="flex items-center gap-1.5 text-xs text-green-600">
+        <CheckCircle2 size={14} />
+        已自动保存
+      </div>
+    ) : saveStatus === "error" ? (
+      <div className="flex items-center gap-1.5 text-xs text-red-500">
+        <XCircle size={14} />
+        保存失败
+      </div>
+    ) : null;
 
   return (
     <div className="space-y-6">
@@ -342,12 +381,7 @@ export default function Preferences({ userId, initialPrefs, onSaved }: Preferenc
 
       {/* Actions */}
       <div className="flex items-center justify-between">
-        {success && (
-          <div className="flex items-center gap-2 text-sm text-green-600">
-            <AlertCircle size={16} />
-            {success}
-          </div>
-        )}
+        {statusEl}
         <div className="ml-auto flex gap-3">
           <Button
             variant="outline"
@@ -358,10 +392,6 @@ export default function Preferences({ userId, initialPrefs, onSaved }: Preferenc
           >
             {resetting ? <Loader2 size={16} className="animate-spin" /> : <RotateCcw size={16} />}
             {resetting ? "恢复中..." : "恢复默认"}
-          </Button>
-          <Button size="sm" onClick={handleSave} disabled={saving} className="gap-2">
-            {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-            {saving ? "保存中..." : "保存设置"}
           </Button>
         </div>
       </div>
