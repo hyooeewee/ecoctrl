@@ -222,6 +222,14 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
   const [loaded, setLoaded] = useState(false);
   const isInteractingRef = useRef(false);
 
+  // Saved camera state after GLB load so resetCamera can truly restore initial state.
+  const postLoadCameraStateRef = useRef<{
+    alpha: number;
+    beta: number;
+    radius: number;
+    target: Vector3;
+  } | null>(null);
+
   // ─── Horizontal clip-plane state for lobby cross-section ────────────────────
   // clipTargetRef: the Y-height we want the clip plane at.
   //   A large value (999) means "no clipping" (plane above everything).
@@ -390,6 +398,14 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
           const target = new Vector3(0, (size.y * scale) / 2, 0);
           camera.setTarget(target);
 
+          // Snapshot the true initial camera state so resetCamera can restore it precisely.
+          postLoadCameraStateRef.current = {
+            alpha: camera.alpha,
+            beta: camera.beta,
+            radius: camera.radius,
+            target: target.clone(),
+          };
+
           const allNodes = [...scene.meshes, ...scene.transformNodes];
           const findNode = (keywords: string[]) =>
             allNodes.find((n) =>
@@ -514,14 +530,33 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
       },
       resetCamera: () => {
         const camera = cameraRef.current;
+        const canvas = canvasRef.current;
         if (!camera) return;
         const scene = camera.getScene();
         scene.stopAnimation(camera);
         camera.animations = [];
-        camera.alpha = initialAlpha;
-        camera.beta = initialBeta;
-        camera.radius = defaultCameraRadius;
-        camera.target = initialTarget.clone();
+
+        const saved = postLoadCameraStateRef.current;
+        if (saved) {
+          camera.alpha = saved.alpha;
+          camera.beta = saved.beta;
+          camera.radius = saved.radius;
+          camera.target = saved.target.clone();
+        } else {
+          camera.alpha = initialAlpha;
+          camera.beta = initialBeta;
+          camera.radius = defaultCameraRadius;
+          camera.target = initialTarget.clone();
+        }
+
+        // Reset viewport (remove sidebar offset)
+        camera.viewport = new Viewport(0, 0, 1, 1);
+
+        // Reset clip plane
+        clipTargetRef.current = 999;
+        clipYRef.current = 999;
+        scene.clipPlane = null;
+
         const root = rootMeshRef.current;
         if (root) {
           root.rotation.setAll(0);
