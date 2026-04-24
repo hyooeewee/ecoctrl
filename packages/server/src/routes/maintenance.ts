@@ -39,6 +39,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
     "/reminders",
     {
       schema: {
+        tags: ["Maintenance"],
         summary: "Get maintenance reminders list",
         response: { 200: z.array(MaintenanceReminderSchema) },
       },
@@ -59,6 +60,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
     "/reminders/:id",
     {
       schema: {
+        tags: ["Maintenance"],
         summary: "Get maintenance reminder detail",
         params: z.object({ id: z.string().describe("Reminder ID") }),
         response: {
@@ -82,6 +84,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
     "/reminders",
     {
       schema: {
+        tags: ["Maintenance"],
         summary: "Create a maintenance reminder",
         body: createBodySchema,
         response: { 201: MaintenanceReminderDetailSchema },
@@ -114,6 +117,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
     "/reminders/:id",
     {
       schema: {
+        tags: ["Maintenance"],
         summary: "Replace a maintenance reminder",
         params: z.object({ id: z.string().describe("Reminder ID") }),
         body: replaceBodySchema,
@@ -144,6 +148,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
     "/reminders/:id",
     {
       schema: {
+        tags: ["Maintenance"],
         summary: "Delete a maintenance reminder",
         params: z.object({ id: z.string().describe("Reminder ID") }),
         response: {

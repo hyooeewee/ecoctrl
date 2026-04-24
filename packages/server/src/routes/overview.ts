@@ -12,6 +12,7 @@ export default async function overviewRoutes(fastify: FastifyInstance) {
     "/stats",
     {
       schema: {
+        tags: ["Overview"],
         summary: "Get dashboard statistics",
         response: { 200: DashboardStatsSchema },
       },
@@ -26,6 +27,7 @@ export default async function overviewRoutes(fastify: FastifyInstance) {
     "/energy-chart",
     {
       schema: {
+        tags: ["Overview"],
         summary: "Get weekly energy chart data",
         response: { 200: z.array(EnergyChartItemSchema) },
       },

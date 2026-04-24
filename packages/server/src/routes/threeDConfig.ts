@@ -15,6 +15,7 @@ export default async function threeDConfigRoutes(fastify: FastifyInstance) {
     "/",
     {
       schema: {
+        tags: ["3D"],
         summary: "Get 3D config",
         response: { 200: ThreeDConfigSchema },
       },
@@ -29,6 +30,7 @@ export default async function threeDConfigRoutes(fastify: FastifyInstance) {
     "/",
     {
       schema: {
+        tags: ["3D"],
         summary: "Update 3D config",
         body: configBodySchema,
         response: { 200: ThreeDConfigSchema },

@@ -32,6 +32,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
     "/",
     {
       schema: {
+        tags: ["Files"],
         summary: "List uploaded files",
         response: { 200: z.array(fileItemSchema) },
       },
@@ -46,6 +47,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
     "/",
     {
       schema: {
+        tags: ["Files"],
         summary: "Upload a file",
         consumes: ["multipart/form-data"],
         response: {
@@ -119,6 +121,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
         }
       },
       schema: {
+        tags: ["Files"],
         summary: "Download raw file",
         params: z.object({ id: z.string().describe("File ID") }),
         response: { 404: errorResponseSchema },
@@ -146,6 +149,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
     "/:id/preview",
     {
       schema: {
+        tags: ["Files"],
         summary: "Preview a file",
         params: z.object({ id: z.string().describe("File ID") }),
         response: { 404: errorResponseSchema },
@@ -171,6 +175,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
     "/:id",
     {
       schema: {
+        tags: ["Files"],
         summary: "Delete a file",
         params: z.object({ id: z.string().describe("File ID") }),
         response: {

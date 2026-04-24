@@ -221,6 +221,7 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
     "/providers",
     {
       schema: {
+        tags: ["OAuth"],
         summary: "Get available OAuth providers",
         security: [],
         response: {
@@ -251,6 +252,7 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
     "/:provider/authorize",
     {
       schema: {
+        tags: ["OAuth"],
         summary: "Start OAuth authorization",
         security: [],
         params: z.object({ provider: z.enum(["wechat", "feishu"]) }),
@@ -286,6 +288,7 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
     "/:provider/callback",
     {
       schema: {
+        tags: ["OAuth"],
         summary: "OAuth callback handler",
         security: [],
         params: z.object({ provider: z.enum(["wechat", "feishu"]) }),
@@ -443,6 +446,7 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
     "/bind",
     {
       schema: {
+        tags: ["OAuth"],
         summary: "Bind OAuth account to existing user",
         security: [],
         body: z.object({
@@ -517,6 +521,7 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
     "/register-and-bind",
     {
       schema: {
+        tags: ["OAuth"],
         summary: "Register new user and bind OAuth account",
         security: [],
         body: z.object({
@@ -610,6 +615,7 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
         }
       },
       schema: {
+        tags: ["OAuth"],
         summary: "Unlink OAuth provider",
         params: z.object({ provider: z.string() }),
         response: {
@@ -641,6 +647,7 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
         }
       },
       schema: {
+        tags: ["OAuth"],
         summary: "Get linked OAuth accounts",
         response: {
           200: z.array(

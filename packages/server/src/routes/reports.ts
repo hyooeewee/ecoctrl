@@ -31,6 +31,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     "/plans",
     {
       schema: {
+        tags: ["Reports"],
         summary: "Get report plans",
         response: { 200: z.array(ReportPlanSchema) },
       },
@@ -45,6 +46,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     "/plans",
     {
       schema: {
+        tags: ["Reports"],
         summary: "Create a report plan",
         body: planBodySchema,
         response: { 201: ReportPlanSchema },
@@ -63,6 +65,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     "/plans/:id",
     {
       schema: {
+        tags: ["Reports"],
         summary: "Update a report plan",
         params: z.object({ id: z.string().describe("Plan ID") }),
         body: planUpdateBodySchema,
@@ -87,6 +90,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     "/templates",
     {
       schema: {
+        tags: ["Reports"],
         summary: "Get report templates",
         response: { 200: z.array(ReportTemplateSchema) },
       },

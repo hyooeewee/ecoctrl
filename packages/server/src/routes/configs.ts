@@ -31,6 +31,7 @@ export default async function configRoutes(fastify: FastifyInstance) {
     "/",
     {
       schema: {
+        tags: ["Configs"],
         summary: "Get platform config",
         response: { 200: configSchema },
       },
@@ -59,6 +60,7 @@ export default async function configRoutes(fastify: FastifyInstance) {
     "/",
     {
       schema: {
+        tags: ["Configs"],
         summary: "Update platform config",
         body: configBodySchema,
         response: { 200: configSchema },

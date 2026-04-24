@@ -12,6 +12,7 @@ export default async function dashboardRoutes(fastify: FastifyInstance) {
     "/",
     {
       schema: {
+        tags: ["Dashboard"],
         summary: "Get full dashboard data",
         response: { 200: DashboardDataSchema },
       },
@@ -26,6 +27,7 @@ export default async function dashboardRoutes(fastify: FastifyInstance) {
     "/alerts",
     {
       schema: {
+        tags: ["Dashboard"],
         summary: "Get recent alerts",
         querystring: z.object({ limit: z.coerce.number().optional() }),
         response: { 200: z.array(AlertSchema) },
