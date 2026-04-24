@@ -7,6 +7,7 @@ import Fastify from "fastify";
 import multipart from "@fastify/multipart";
 import cors from "@fastify/cors";
 import swagger from "@fastify/swagger";
+import swaggerUi from "@fastify/swagger-ui";
 import fastifyJwt from "@fastify/jwt";
 import fastifyStatic from "@fastify/static";
 import { validatorCompiler, serializerCompiler, ZodTypeProvider } from "fastify-type-provider-zod";
@@ -61,46 +62,31 @@ await fastify.register(swagger, {
       description: "API documentation for EcoCtrl server",
       version: "1.0.0",
     },
+    servers: [
+      {
+        url: process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`,
+        description: "EcoCtrl API Server",
+      },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+          description: "Enter your JWT access token",
+        },
+      },
+    },
+    security: [{ bearerAuth: [] }],
   },
 });
 
-await fastify.register(apiRoutes, { prefix: "/api" });
-
-fastify.get("/documentation/json", async () => fastify.swagger());
-
-fastify.get("/documentation", async (_request, reply) => {
-  const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>EcoCtrl API Documentation</title>
-  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
-  <style>
-    html { box-sizing: border-box; overflow: -moz-scrollbars-vertical; overflow-y: scroll; }
-    *, *:before, *:after { box-sizing: inherit; }
-    body { margin: 0; background: #fafafa; }
-  </style>
-</head>
-<body>
-  <div id="swagger-ui"></div>
-  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js" crossorigin></script>
-  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-standalone-preset.js" crossorigin></script>
-  <script>
-    window.onload = function () {
-      window.ui = SwaggerUIBundle({
-        url: '/documentation/json',
-        dom_id: '#swagger-ui',
-        deepLinking: true,
-        presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
-        plugins: [SwaggerUIBundle.plugins.DownloadUrl],
-        layout: "StandaloneLayout",
-      });
-    };
-  </script>
-</body>
-</html>`;
-  return reply.type("text/html").send(html);
+await fastify.register(swaggerUi, {
+  routePrefix: "/documentation",
 });
+
+await fastify.register(apiRoutes, { prefix: "/api" });
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || "0.0.0.0";

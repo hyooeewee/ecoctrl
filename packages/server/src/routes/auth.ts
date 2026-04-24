@@ -57,6 +57,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Send verification code for registration",
+        security: [],
         body: z.object({ email: z.string().email() }),
         response: {
           200: z.object({ ok: z.literal(true) }),
@@ -133,6 +134,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Register a new user",
+        security: [],
         body: registerBodySchema,
         response: {
           201: tokenResponseSchema,
@@ -204,6 +206,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Login with username and password",
+        security: [],
         body: loginBodySchema,
         response: {
           200: tokenResponseSchema,
@@ -255,6 +258,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Refresh access token",
+        security: [],
         body: z.object({ refreshToken: z.string() }),
         response: {
           200: z.object({ accessToken: z.string(), refreshToken: z.string() }),
@@ -312,6 +316,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Send verification code to email",
+        security: [],
         body: z.object({ email: z.string().email() }),
         response: {
           200: z.object({ ok: z.literal(true) }),
@@ -409,6 +414,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Reset password with verification code",
+        security: [],
         body: z.object({
           email: z.string().email(),
           code: z.string().length(6),
