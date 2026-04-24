@@ -59,6 +59,12 @@ const tokenResponseSchema = z.object({
   }),
 });
 
+const refreshBodySchema = z.object({
+  refreshToken: z.string(),
+}).meta({
+  example: { refreshToken: "auto-filled after login" },
+});
+
 export default async function authRoutes(fastify: FastifyInstance) {
   fastify.post(
     "/register/send-code",
@@ -279,7 +285,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
         tags: ["Auth"],
         summary: "Refresh access token",
         security: [],
-        body: z.object({ refreshToken: z.string() }),
+        body: refreshBodySchema,
         response: {
           200: z.object({ accessToken: z.string(), refreshToken: z.string() }),
           401: z.object({ error: z.string() }),
