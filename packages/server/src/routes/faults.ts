@@ -9,6 +9,7 @@ export default async function faultRoutes(fastify: FastifyInstance) {
     "/",
     {
       schema: {
+        tags: ["Faults"],
         summary: "Get fault list",
         response: { 200: z.array(FaultSchema) },
       },
@@ -23,6 +24,7 @@ export default async function faultRoutes(fastify: FastifyInstance) {
     "/stats",
     {
       schema: {
+        tags: ["Faults"],
         summary: "Get fault statistics",
         response: { 200: FaultStatsSchema },
       },

@@ -44,6 +44,7 @@ export default async function settingsRoutes(fastify: FastifyInstance) {
     "/",
     {
       schema: {
+        tags: ["Settings"],
         summary: "Get current user dashboard settings",
         response: { 200: z.record(z.string(), z.unknown()) },
       },
@@ -99,6 +100,7 @@ export default async function settingsRoutes(fastify: FastifyInstance) {
     "/",
     {
       schema: {
+        tags: ["Settings"],
         summary: "Update current user dashboard settings",
         body: DashboardSettingsSchema,
         response: {

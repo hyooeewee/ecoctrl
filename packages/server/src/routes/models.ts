@@ -38,6 +38,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
     "/",
     {
       schema: {
+        tags: ["Models"],
         summary: "Get 3D models",
         response: { 200: z.array(Model3DSchema) },
       },
@@ -52,6 +53,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
     "/",
     {
       schema: {
+        tags: ["Models"],
         summary: "Upload a 3D model",
         response: {
           201: Model3DSchema,
@@ -148,6 +150,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
     "/:id",
     {
       schema: {
+        tags: ["Models"],
         summary: "Delete a 3D model",
         params: z.object({ id: z.string().describe("Model ID") }),
         response: {
@@ -197,6 +200,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         }
       },
       schema: {
+        tags: ["Models"],
         summary: "Get 3D model file",
         params: z.object({ id: z.string().describe("Model ID") }),
         response: {

@@ -8,6 +8,7 @@ export default async function systemRoutes(fastify: FastifyInstance) {
     "/backup-schedule",
     {
       schema: {
+        tags: ["System"],
         summary: "Get backup schedule",
         response: { 200: BackupScheduleSchema },
       },
@@ -22,6 +23,7 @@ export default async function systemRoutes(fastify: FastifyInstance) {
     "/backup-schedule",
     {
       schema: {
+        tags: ["System"],
         summary: "Update backup schedule",
         body: z.object({ nextBackup: z.string() }),
         response: { 200: BackupScheduleSchema },

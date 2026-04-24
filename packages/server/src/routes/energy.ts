@@ -22,6 +22,7 @@ export default async function energyRoutes(fastify: FastifyInstance) {
     "/areas",
     {
       schema: {
+        tags: ["Energy"],
         summary: "Get energy areas",
         response: { 200: z.array(EnergyAreaSchema) },
       },
@@ -36,6 +37,7 @@ export default async function energyRoutes(fastify: FastifyInstance) {
     "/areas",
     {
       schema: {
+        tags: ["Energy"],
         summary: "Update energy areas",
         body: areaBodySchema,
         response: { 200: z.array(EnergyAreaSchema) },

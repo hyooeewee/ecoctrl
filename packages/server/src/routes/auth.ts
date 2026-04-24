@@ -56,6 +56,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     "/register/send-code",
     {
       schema: {
+        tags: ["Auth"],
         summary: "Send verification code for registration",
         security: [],
         body: z.object({ email: z.string().email() }),
@@ -133,6 +134,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     "/register",
     {
       schema: {
+        tags: ["Auth"],
         summary: "Register a new user",
         security: [],
         body: registerBodySchema,
@@ -205,6 +207,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     "/login",
     {
       schema: {
+        tags: ["Auth"],
         summary: "Login with username and password",
         security: [],
         body: loginBodySchema,
@@ -257,6 +260,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     "/refresh",
     {
       schema: {
+        tags: ["Auth"],
         summary: "Refresh access token",
         security: [],
         body: z.object({ refreshToken: z.string() }),
@@ -298,6 +302,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     "/logout",
     {
       schema: {
+        tags: ["Auth"],
         summary: "Logout and invalidate refresh token",
         body: z.object({ refreshToken: z.string() }),
         response: { 200: z.object({ ok: z.literal(true) }) },
@@ -315,6 +320,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     "/forgot-password/send-code",
     {
       schema: {
+        tags: ["Auth"],
         summary: "Send verification code to email",
         security: [],
         body: z.object({ email: z.string().email() }),
@@ -413,6 +419,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     "/forgot-password/reset",
     {
       schema: {
+        tags: ["Auth"],
         summary: "Reset password with verification code",
         security: [],
         body: z.object({
@@ -466,6 +473,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
         }
       },
       schema: {
+        tags: ["Auth"],
         summary: "Get current user",
         response: {
           200: z.object({
