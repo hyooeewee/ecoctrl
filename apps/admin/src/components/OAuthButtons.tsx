@@ -13,6 +13,7 @@ interface OAuthButtonsProps {
   }) => void;
   onError?: (message: string) => void;
   onLinked?: () => void;
+  onProvidersLoaded?: (providers: OAuthProvider[]) => void;
   excludeProviders?: string[];
   label?: string;
   theme?: "dark" | "light";
@@ -45,6 +46,7 @@ export default function OAuthButtons({
   onBindRequired,
   onError,
   onLinked,
+  onProvidersLoaded,
   excludeProviders,
   label = "其他登录方式",
   theme = "dark",
@@ -62,14 +64,16 @@ export default function OAuthButtons({
           ? data.filter((p) => !excludeProviders.includes(p.id))
           : data;
         setProviders(filtered);
+        onProvidersLoaded?.(filtered);
       } catch {
         // Backend not ready — silently hide OAuth section
+        onProvidersLoaded?.([]);
       } finally {
         setLoading(false);
       }
     };
     fetchProviders();
-  }, [excludeProviders]);
+  }, [excludeProviders, onProvidersLoaded]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
