@@ -222,6 +222,7 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Get available OAuth providers",
+        security: [],
         response: {
           200: z.array(
             z.object({
@@ -251,6 +252,7 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Start OAuth authorization",
+        security: [],
         params: z.object({ provider: z.enum(["wechat", "feishu"]) }),
         querystring: z.object({ redirectUri: z.string() }),
       },
@@ -285,6 +287,7 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "OAuth callback handler",
+        security: [],
         params: z.object({ provider: z.enum(["wechat", "feishu"]) }),
         querystring: z.object({
           code: z.string(),
@@ -441,6 +444,7 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Bind OAuth account to existing user",
+        security: [],
         body: z.object({
           tempToken: z.string(),
           username: z.string(),
@@ -514,6 +518,7 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Register new user and bind OAuth account",
+        security: [],
         body: z.object({
           tempToken: z.string(),
           username: z.string().min(2),
