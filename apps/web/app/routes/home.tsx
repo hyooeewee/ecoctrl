@@ -349,7 +349,11 @@ export default function Home() {
             <div className="h-px bg-white/10" />
             <button
               type="button"
-              onClick={() => buildingRef.current?.resetCamera()}
+              onClick={() => {
+                setActiveLabel(null);
+                setFullscreen(false);
+                buildingRef.current?.resetCamera();
+              }}
               className="text-cyber-cyan flex size-8 items-center justify-center transition-colors hover:bg-white/10"
               title={t.controls.reset}
             >
