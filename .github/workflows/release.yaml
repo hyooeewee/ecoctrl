@@ -108,9 +108,19 @@ jobs:
             fi
           done
 
-          zip -r "release-assets/admin-v${VERSION}.zip" apps/admin/dist
-          zip -r "release-assets/web-v${VERSION}.zip"   apps/web/build/client
-          zip -r "release-assets/server-v${VERSION}.zip" packages/server/dist
+          # Copy to temp dir and rename to flat structure
+          mkdir -p .tmp/admin .tmp/web .tmp/server
+          cp -r apps/admin/dist/. .tmp/admin/
+          cp -r apps/web/build/client/. .tmp/web/
+          cp -r packages/server/dist/. .tmp/server/
+
+          # Package from temp dir so archive root is admin/, web/, server/
+          cd .tmp
+          zip -r "../release-assets/admin-v${VERSION}.zip" admin
+          zip -r "../release-assets/web-v${VERSION}.zip" web
+          zip -r "../release-assets/server-v${VERSION}.zip" server
+          cd ..
+          rm -rf .tmp
 
       - name: Create unified git tag
         run: |
