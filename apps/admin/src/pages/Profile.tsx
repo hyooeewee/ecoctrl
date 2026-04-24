@@ -112,6 +112,7 @@ export default function Profile() {
   const [linkedAccounts, setLinkedAccounts] = useState<LinkedOAuthAccount[]>([]);
   const [oauthLoading, setOauthLoading] = useState(true);
   const [unlinkingProvider, setUnlinkingProvider] = useState<string | null>(null);
+  const [availableProviders, setAvailableProviders] = useState<string[]>([]);
 
   // Email binding states (for OAuth users)
   const [bindEmailInput, setBindEmailInput] = useState("");
@@ -764,7 +765,9 @@ export default function Profile() {
             <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
               <AlertCircle className="h-10 w-10 text-muted-foreground/40" />
               <p className="text-sm font-medium text-muted-foreground">暂无绑定的第三方账号</p>
-              <p className="text-xs text-muted-foreground/60">点击下方图标绑定新账号</p>
+              {availableProviders.length > 0 && (
+                <p className="text-xs text-muted-foreground/60">点击下方图标绑定新账号</p>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -833,16 +836,19 @@ export default function Profile() {
           )}
 
           {/* Bind new accounts */}
-          <div className="border-border/50 border-t pt-4">
-            <p className="text-muted-foreground mb-3 text-xs font-medium">
-              {linkedAccounts.length === 0 ? "选择平台绑定" : "绑定更多平台"}
-            </p>
-            <OAuthButtons
-              theme="light"
-              excludeProviders={linkedAccounts.map((a) => a.provider)}
-              onLinked={fetchLinkedAccounts}
-            />
-          </div>
+          {availableProviders.length > 0 && (
+            <div className="border-border/50 border-t pt-4">
+              <p className="text-muted-foreground mb-3 text-xs font-medium">
+                {linkedAccounts.length === 0 ? "选择平台绑定" : "绑定更多平台"}
+              </p>
+              <OAuthButtons
+                theme="light"
+                excludeProviders={linkedAccounts.map((a) => a.provider)}
+                onLinked={fetchLinkedAccounts}
+                onProvidersLoaded={(providers) => setAvailableProviders(providers.map((p) => p.id))}
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
