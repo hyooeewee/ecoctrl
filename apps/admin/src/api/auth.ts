@@ -20,8 +20,10 @@ export const authApi = {
   login: (username: string, password: string, remember?: boolean) =>
     post<TokenResponse>("/auth/login", { username, password, remember }),
 
-  register: (username: string, email: string, password: string) =>
-    post<TokenResponse>("/auth/register", { username, email, password }),
+  register: (username: string, email: string, password: string, code: string) =>
+    post<TokenResponse>("/auth/register", { username, email, password, code }),
+
+  sendRegisterCode: (email: string) => post<{ ok: boolean }>("/auth/register/send-code", { email }),
 
   sendVerifyCode: (email: string) =>
     post<{ ok: boolean }>("/auth/forgot-password/send-code", { email }),
