@@ -22,6 +22,8 @@ import type { Theme } from "@/lib/darkMode";
 interface HeaderProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  showBreadcrumb?: boolean;
+  theme?: "light" | "dark" | "system";
 }
 
 const tabTitleMap: Record<string, string> = {
@@ -53,16 +55,22 @@ const ThemeLabel: Record<Theme, string> = {
   system: "跟随系统",
 };
 
-export default function Header({ activeTab, setActiveTab }: HeaderProps) {
+export default function Header({
+  activeTab,
+  setActiveTab,
+  showBreadcrumb,
+  theme: themeProp,
+}: HeaderProps) {
   const currentTitle = tabTitleMap[activeTab] || "管理总览";
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [theme, setTheme] = useState<Theme>("system");
+  const [theme, setTheme] = useState<Theme>(themeProp ?? "system");
 
   useEffect(() => {
     const stored = getStoredTheme() ?? "system";
-    setTheme(stored);
-    applyDarkMode(stored);
-  }, []);
+    const effective = themeProp ?? stored;
+    setTheme(effective);
+    applyDarkMode(effective);
+  }, [themeProp]);
 
   const toggleTheme = () => {
     const next = THEME_CYCLE[(THEME_CYCLE.indexOf(theme) + 1) % THEME_CYCLE.length];
@@ -90,10 +98,16 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
 
   return (
     <header className="border-border bg-card sticky top-0 z-30 flex h-16 items-center justify-between border-b px-8">
-      <div className="text-muted-foreground flex flex-1 items-center gap-4 text-sm">
-        <span>首页 /</span>
-        <span className="text-foreground font-semibold">{currentTitle}</span>
-      </div>
+      {showBreadcrumb !== false ? (
+        <div className="text-muted-foreground flex flex-1 items-center gap-4 text-sm">
+          <span>首页 /</span>
+          <span className="text-foreground font-semibold">{currentTitle}</span>
+        </div>
+      ) : (
+        <div className="text-foreground flex flex-1 items-center text-sm font-semibold">
+          {currentTitle}
+        </div>
+      )}
 
       <div className="flex items-center gap-6">
         <div className="relative hidden w-64 md:block">

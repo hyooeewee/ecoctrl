@@ -21,18 +21,32 @@ import Preferences from "@/pages/Preferences";
 import Profile from "@/pages/Profile";
 import Reports from "@/pages/Reports";
 import ThreeDConfig from "@/pages/ThreeDConfig";
-import { initTheme, loadThemeFromServer } from "@/lib/darkMode";
+import { initTheme, loadThemeFromServer, applyDarkMode } from "@/lib/darkMode";
 import { authApi } from "./api/auth";
+import { preferencesApi } from "./api/preferences";
+import type { UserPreferences } from "./types";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("overview");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [userDetail, setUserDetail] = useState<{ id: string } | null>(null);
+  const [userPrefs, setUserPrefs] = useState<UserPreferences | null>(null);
 
   useEffect(() => {
     initTheme();
   }, []);
+
+  const loadUserPrefs = async (userId: string) => {
+    try {
+      const data = await preferencesApi.get(userId);
+      setUserPrefs(data);
+      if (data.theme) applyDarkMode(data.theme);
+    } catch {
+      // fallback to local defaults
+    }
+    loadThemeFromServer(userId);
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
@@ -42,7 +56,7 @@ export default function App() {
         .then((user) => {
           setIsLoggedIn(true);
           setUserDetail(user);
-          loadThemeFromServer(user.id);
+          loadUserPrefs(user.id);
         })
         .catch(() => {
           localStorage.removeItem("accessToken");
@@ -64,7 +78,7 @@ export default function App() {
         onLogin={(user) => {
           setIsLoggedIn(true);
           setUserDetail(user);
-          loadThemeFromServer(user.id);
+          loadUserPrefs(user.id);
         }}
       />
     );
@@ -95,7 +109,13 @@ export default function App() {
       case "profile":
         return <Profile />;
       case "preferences":
-        return <Preferences userId={userDetail?.id ?? ""} />;
+        return (
+          <Preferences
+            userId={userDetail?.id ?? ""}
+            initialPrefs={userPrefs ?? undefined}
+            onSaved={(prefs) => setUserPrefs(prefs)}
+          />
+        );
       default:
         return <Overview />;
     }
@@ -103,10 +123,19 @@ export default function App() {
 
   return (
     <div className="bg-background text-foreground selection:bg-primary/10 selection:text-primary flex h-screen overflow-hidden font-sans">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        defaultCollapsed={userPrefs?.sidebarCollapsed}
+      />
 
       <div className="flex h-full min-w-0 flex-1 flex-col">
-        <Header activeTab={activeTab} setActiveTab={setActiveTab} />
+        <Header
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          showBreadcrumb={userPrefs?.showBreadcrumb}
+          theme={userPrefs?.theme}
+        />
 
         <main className="bg-background flex-1 overflow-hidden flex flex-col">
           {activeTab === "config" ? (

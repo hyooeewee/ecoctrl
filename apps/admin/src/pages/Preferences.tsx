@@ -42,20 +42,28 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 
 interface PreferencesProps {
   userId: string;
+  initialPrefs?: UserPreferences;
+  onSaved?: (prefs: UserPreferences) => void;
 }
 
-export default function Preferences({ userId }: PreferencesProps) {
-  const [prefs, setPrefs] = useState<UserPreferences>(DEFAULT_PREFERENCES);
-  const [loading, setLoading] = useState(true);
+export default function Preferences({ userId, initialPrefs, onSaved }: PreferencesProps) {
+  const [prefs, setPrefs] = useState<UserPreferences>({ ...DEFAULT_PREFERENCES, ...initialPrefs });
+  const [loading, setLoading] = useState(!initialPrefs);
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
+    if (initialPrefs) {
+      setPrefs({ ...DEFAULT_PREFERENCES, ...initialPrefs });
+      setLoading(false);
+      return;
+    }
     const fetchPrefs = async () => {
       try {
         const data = await preferencesApi.get(userId);
         setPrefs({ ...DEFAULT_PREFERENCES, ...data });
+        onSaved?.({ ...DEFAULT_PREFERENCES, ...data });
       } catch {
         // No server config yet, use defaults
         setPrefs(DEFAULT_PREFERENCES);
@@ -64,7 +72,7 @@ export default function Preferences({ userId }: PreferencesProps) {
       }
     };
     fetchPrefs();
-  }, [userId]);
+  }, [userId, initialPrefs]);
 
   const updateField = <K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) => {
     setPrefs((prev) => ({ ...prev, [key]: value }));
@@ -77,6 +85,7 @@ export default function Preferences({ userId }: PreferencesProps) {
     try {
       await preferencesApi.update(userId, prefs);
       setSuccess("设置已保存");
+      onSaved?.(prefs);
       // Apply theme immediately
       if (prefs.theme) {
         import("@/lib/darkMode").then((m) => m.applyDarkMode(prefs.theme!));
@@ -95,6 +104,7 @@ export default function Preferences({ userId }: PreferencesProps) {
     try {
       await preferencesApi.delete(userId);
       setPrefs(DEFAULT_PREFERENCES);
+      onSaved?.(DEFAULT_PREFERENCES);
       import("@/lib/darkMode").then((m) => m.applyDarkMode(DEFAULT_PREFERENCES.theme!));
       setSuccess("已恢复默认设置");
     } catch (err) {

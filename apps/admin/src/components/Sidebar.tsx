@@ -24,6 +24,7 @@ import { BrandLogo } from "./BrandLogo";
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  defaultCollapsed?: boolean;
 }
 
 const navItems = [
@@ -39,8 +40,14 @@ const navItems = [
   { id: "config", label: "系统配置", icon: Settings },
 ];
 
-export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
-  const [collapsed, setCollapsed] = React.useState(false);
+export default function Sidebar({ activeTab, setActiveTab, defaultCollapsed }: SidebarProps) {
+  const [collapsed, setCollapsed] = React.useState(defaultCollapsed ?? false);
+
+  React.useEffect(() => {
+    if (typeof defaultCollapsed === "boolean") {
+      setCollapsed(defaultCollapsed);
+    }
+  }, [defaultCollapsed]);
 
   return (
     <motion.aside
