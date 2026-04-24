@@ -26,7 +26,6 @@ import {
 } from "lucide-react";
 
 import { Button } from "@ecoctrl/ui";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoctrl/ui";
 import { Input } from "@ecoctrl/ui";
 import { Label } from "@ecoctrl/ui";
 import { Avatar, AvatarFallback, AvatarImage } from "@ecoctrl/ui";
@@ -37,6 +36,8 @@ import { oauthApi, type LinkedOAuthAccount } from "@/api/oauth";
 import { usersApi } from "@/api/users";
 import AppButton from "@/components/AppButton";
 import OAuthButtons from "@/components/OAuthButtons";
+import SettingsPage from "@/components/SettingsPage";
+import type { SettingsSection } from "@/components/SettingsPage";
 import { wechatIcon, wecomIcon, feishuIcon, dingtalkIcon } from "@/assets/icons";
 import type { User, UserRole } from "@ecoctrl/shared";
 
@@ -338,14 +339,6 @@ export default function Profile() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
-        加载中...
-      </div>
-    );
-  }
-
   const statusInfo = getStatus(userDetail?.status ?? "offline");
   const avatarSrc =
     editAvatarUrl ||
@@ -354,505 +347,484 @@ export default function Profile() {
 
   const isOAuthUser = currentUser?.authType === "oauth";
 
-  return (
-    <div className="space-y-6">
-      {/* Avatar header */}
-      <div className="flex items-center gap-6">
-        <div className="relative">
-          <button
-            onClick={handleAvatarClick}
-            disabled={uploadingAvatar}
-            className="relative cursor-pointer rounded-full disabled:cursor-not-allowed"
-            title="点击更换头像"
-          >
-            <Avatar className="ring-muted h-20 w-20 ring-2 ring-offset-2 transition-opacity hover:opacity-80">
-              <AvatarImage src={avatarSrc} />
-              <AvatarFallback className="text-lg">
-                {(currentUser?.username ?? "Admin").slice(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            {uploadingAvatar && (
-              <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40">
-                <Loader2 size={24} className="animate-spin text-white" />
-              </div>
-            )}
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleFileChange}
-          />
-          <button
-            type="button"
-            onClick={handleAvatarClick}
-            disabled={uploadingAvatar}
-            className="bg-primary text-primary-foreground border-background absolute -right-0 -bottom-0 flex h-6 w-6 items-center justify-center rounded-full border-2 disabled:opacity-50"
-            title="更换头像"
-          >
-            <Camera size={12} />
-          </button>
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            {userDetail?.username ?? currentUser?.username ?? "Admin"}
-          </h2>
-          <p className="text-muted-foreground mt-1 text-sm">{userDetail?.email ?? "—"}</p>
-          <div className="mt-2 flex items-center gap-2">
-            <Badge variant="outline" className="font-normal">
-              {userDetail ? ROLE_LABELS[userDetail.role] : "—"}
+  const header = (
+    <div className="flex items-center gap-6">
+      <div className="relative">
+        <button
+          onClick={handleAvatarClick}
+          disabled={uploadingAvatar}
+          className="relative cursor-pointer rounded-full disabled:cursor-not-allowed"
+          title="点击更换头像"
+        >
+          <Avatar className="ring-muted h-20 w-20 ring-2 ring-offset-2 transition-opacity hover:opacity-80">
+            <AvatarImage src={avatarSrc} />
+            <AvatarFallback className="text-lg">
+              {(currentUser?.username ?? "Admin").slice(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          {uploadingAvatar && (
+            <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40">
+              <Loader2 size={24} className="animate-spin text-white" />
+            </div>
+          )}
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+        <button
+          type="button"
+          onClick={handleAvatarClick}
+          disabled={uploadingAvatar}
+          className="bg-primary text-primary-foreground border-background absolute -right-0 -bottom-0 flex h-6 w-6 items-center justify-center rounded-full border-2 disabled:opacity-50"
+          title="更换头像"
+        >
+          <Camera size={12} />
+        </button>
+      </div>
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">
+          {userDetail?.username ?? currentUser?.username ?? "Admin"}
+        </h2>
+        <p className="text-muted-foreground mt-1 text-sm">{userDetail?.email ?? "—"}</p>
+        <div className="mt-2 flex items-center gap-2">
+          <Badge variant="outline" className="font-normal">
+            {userDetail ? ROLE_LABELS[userDetail.role] : "—"}
+          </Badge>
+          <Badge variant="secondary" className="font-normal">
+            <span className={`mr-1.5 inline-block h-1.5 w-1.5 rounded-full ${statusInfo.color}`} />
+            {statusInfo.label}
+          </Badge>
+          {isOAuthUser && currentUser?.provider && (
+            <Badge
+              variant="outline"
+              className="font-normal"
+              style={{
+                borderColor: PROVIDER_META[currentUser.provider]?.color ?? "currentColor",
+                color: PROVIDER_META[currentUser.provider]?.color ?? "currentColor",
+              }}
+            >
+              {PROVIDER_META[currentUser.provider]?.name ?? currentUser.provider} 登录
             </Badge>
-            <Badge variant="secondary" className="font-normal">
-              <span
-                className={`mr-1.5 inline-block h-1.5 w-1.5 rounded-full ${statusInfo.color}`}
-              />
-              {statusInfo.label}
-            </Badge>
-            {isOAuthUser && currentUser?.provider && (
-              <Badge
-                variant="outline"
-                className="font-normal"
-                style={{
-                  borderColor: PROVIDER_META[currentUser.provider]?.color ?? "currentColor",
-                  color: PROVIDER_META[currentUser.provider]?.color ?? "currentColor",
-                }}
-              >
-                {PROVIDER_META[currentUser.provider]?.name ?? currentUser.provider} 登录
-              </Badge>
-            )}
-          </div>
+          )}
         </div>
       </div>
+    </div>
+  );
 
-      {/* Basic info */}
-      <Card className="border-border bg-card overflow-hidden border shadow-sm">
-        <CardHeader className="border-border/50 border-b px-6">
-          <div className="flex items-center gap-2">
-            <UserIcon size={16} className="text-primary" />
-            <CardTitle className="text-foreground text-base font-bold">基本信息</CardTitle>
+  const basicSection: SettingsSection = {
+    id: "basic",
+    label: "基本信息",
+    icon: UserIcon,
+    description: "编辑您的个人资料，更改将立即生效。",
+    content: (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
+              用户名
+            </Label>
+            <div className="relative">
+              <UserIcon className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
+              <Input
+                value={editUsername}
+                onChange={(e) => setEditUsername(e.target.value)}
+                placeholder="请输入用户名"
+                className="bg-muted/30 border-border pl-10"
+              />
+            </div>
           </div>
-          <CardDescription className="text-xs">编辑您的个人资料，更改将立即生效。</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6 px-6 pt-6">
+          <div className="space-y-2">
+            <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
+              邮箱
+            </Label>
+            <div className="relative">
+              <Mail className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
+              <Input
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                placeholder="请输入邮箱"
+                className="bg-muted/30 border-border pl-10"
+              />
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end">
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            size="sm"
+            variant="outline"
+            className="gap-2"
+          >
+            {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+            {saving ? "保存中..." : "保存更改"}
+          </Button>
+        </div>
+      </div>
+    ),
+  };
+
+  const securitySection: SettingsSection = {
+    id: "security",
+    label: "安全设置",
+    icon: Lock,
+    description: "修改您的登录密码。",
+    content: (
+      <div className="space-y-6">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
+              原密码
+            </Label>
+            <div className="relative">
+              <Lock className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
+              <Input
+                type={showOldPwd ? "text" : "password"}
+                value={oldPassword}
+                onChange={(e) => setOldPassword(e.target.value)}
+                placeholder="请输入当前密码"
+                autoComplete="current-password"
+                className="bg-muted/30 border-border pr-10 pl-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowOldPwd((v) => !v)}
+                className="text-muted-foreground hover:text-foreground absolute top-2.5 right-3"
+              >
+                {showOldPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div className="space-y-2">
               <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
-                用户名
+                新密码
               </Label>
               <div className="relative">
-                <UserIcon className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
+                <Lock className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
                 <Input
-                  value={editUsername}
-                  onChange={(e) => setEditUsername(e.target.value)}
-                  placeholder="请输入用户名"
-                  className="bg-muted/30 border-border pl-10"
+                  type={showNewPwd ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="请输入新密码"
+                  autoComplete="new-password"
+                  className="bg-muted/30 border-border pr-10 pl-10"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPwd((v) => !v)}
+                  className="text-muted-foreground hover:text-foreground absolute top-2.5 right-3"
+                >
+                  {showNewPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
             </div>
             <div className="space-y-2">
               <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
-                邮箱
+                确认新密码
               </Label>
               <div className="relative">
-                <Mail className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
+                <Lock className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
                 <Input
-                  type="email"
-                  value={editEmail}
-                  onChange={(e) => setEditEmail(e.target.value)}
-                  placeholder="请输入邮箱"
-                  className="bg-muted/30 border-border pl-10"
+                  type={showConfirmPwd ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="请再次输入新密码"
+                  autoComplete="new-password"
+                  className="bg-muted/30 border-border pr-10 pl-10"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPwd((v) => !v)}
+                  className="text-muted-foreground hover:text-foreground absolute top-2.5 right-3"
+                >
+                  {showConfirmPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
             </div>
           </div>
-          <div className="flex justify-end">
-            <Button
-              onClick={handleSave}
-              disabled={saving}
-              size="sm"
-              variant="outline"
-              className="gap-2"
-            >
-              {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-              {saving ? "保存中..." : "保存更改"}
-            </Button>
+        </div>
+        <div className="flex justify-end">
+          <Button
+            onClick={handleSavePassword}
+            disabled={savingPwd}
+            size="sm"
+            variant="outline"
+            className="gap-2"
+          >
+            {savingPwd ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+            {savingPwd ? "保存中..." : "修改密码"}
+          </Button>
+        </div>
+      </div>
+    ),
+  };
+
+  const accountSection: SettingsSection = {
+    id: "account",
+    label: "账户信息",
+    icon: Shield,
+    description: "账户权限与安全相关信息，仅供查看。",
+    content: (
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
+            用户 ID
+          </Label>
+          <div className="relative">
+            <Fingerprint className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
+            <Input
+              value={userDetail?.id ?? ""}
+              disabled
+              className="bg-muted/30 border-border pl-10"
+            />
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Password — only show for password users or email-bound oauth users */}
-      {!isOAuthUser && (
-        <Card className="border-border bg-card overflow-hidden border shadow-sm">
-          <CardHeader className="border-border/50 border-b px-6">
-            <div className="flex items-center gap-2">
-              <Lock size={16} className="text-primary" />
-              <CardTitle className="text-foreground text-base font-bold">安全设置</CardTitle>
-            </div>
-            <CardDescription className="text-xs">修改您的登录密码。</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6 px-6 pt-6">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
-                  原密码
-                </Label>
-                <div className="relative">
-                  <Lock className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-                  <Input
-                    type={showOldPwd ? "text" : "password"}
-                    value={oldPassword}
-                    onChange={(e) => setOldPassword(e.target.value)}
-                    placeholder="请输入当前密码"
-                    autoComplete="current-password"
-                    className="bg-muted/30 border-border pr-10 pl-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowOldPwd((v) => !v)}
-                    className="text-muted-foreground hover:text-foreground absolute top-2.5 right-3"
-                  >
-                    {showOldPwd ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
-                    新密码
-                  </Label>
-                  <div className="relative">
-                    <Lock className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-                    <Input
-                      type={showNewPwd ? "text" : "password"}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="请输入新密码"
-                      autoComplete="new-password"
-                      className="bg-muted/30 border-border pr-10 pl-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewPwd((v) => !v)}
-                      className="text-muted-foreground hover:text-foreground absolute top-2.5 right-3"
-                    >
-                      {showNewPwd ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
-                    确认新密码
-                  </Label>
-                  <div className="relative">
-                    <Lock className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-                    <Input
-                      type={showConfirmPwd ? "text" : "password"}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="请再次输入新密码"
-                      autoComplete="new-password"
-                      className="bg-muted/30 border-border pr-10 pl-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPwd((v) => !v)}
-                      className="text-muted-foreground hover:text-foreground absolute top-2.5 right-3"
-                    >
-                      {showConfirmPwd ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="flex justify-end">
-              <Button
-                onClick={handleSavePassword}
-                disabled={savingPwd}
-                size="sm"
-                variant="outline"
-                className="gap-2"
-              >
-                {savingPwd ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                {savingPwd ? "保存中..." : "修改密码"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Account info */}
-      <Card className="border-border bg-card overflow-hidden border shadow-sm">
-        <CardHeader className="border-border/50 border-b px-6">
-          <div className="flex items-center gap-2">
-            <Shield size={16} className="text-primary" />
-            <CardTitle className="text-foreground text-base font-bold">账户信息</CardTitle>
-          </div>
-          <CardDescription className="text-xs">账户权限与安全相关信息，仅供查看。</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6 px-6 pt-6">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
-                用户 ID
-              </Label>
-              <div className="relative">
-                <Fingerprint className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-                <Input
-                  value={userDetail?.id ?? ""}
-                  disabled
-                  className="bg-muted/30 border-border pl-10"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-              <div className="space-y-2">
-                <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
-                  角色
-                </Label>
-                <div className="relative">
-                  <Shield className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-                  <Input
-                    value={userDetail ? ROLE_LABELS[userDetail.role] : ""}
-                    disabled
-                    className="bg-muted/30 border-border pl-10"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
-                  状态
-                </Label>
-                <div className="relative">
-                  <Activity className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-                  <Input
-                    value={statusInfo.label}
-                    disabled
-                    className="bg-muted/30 border-border pl-10"
-                  />
-                  <span
-                    className={`absolute top-1/2 right-3 h-2 w-2 -translate-y-1/2 rounded-full ${statusInfo.color}`}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
-                  最后登录时间
-                </Label>
-                <div className="relative">
-                  <Clock className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-                  <Input
-                    value={formatDateTime(userDetail?.lastLogin ?? null)}
-                    disabled
-                    className="bg-muted/30 border-border pl-10"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* OAuth users: bind email */}
-      {isOAuthUser && (
-        <Card className="border-border bg-card overflow-hidden border shadow-sm">
-          <CardHeader className="border-border/50 border-b px-6">
-            <div className="flex items-center gap-2">
-              <ShieldCheck size={16} className="text-primary" />
-              <CardTitle className="text-foreground text-base font-bold">绑定邮箱</CardTitle>
-            </div>
-            <CardDescription className="text-xs">
-              绑定邮箱并设置密码后，可使用邮箱密码登录本账户。
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5 px-6 pt-6">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
-                  邮箱地址
-                </Label>
-                <div className="relative">
-                  <Mail className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-                  <Input
-                    type="email"
-                    value={bindEmailInput}
-                    onChange={(e) => setBindEmailInput(e.target.value)}
-                    placeholder="请输入邮箱"
-                    className="bg-muted/30 border-border pr-[108px] pl-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSendBindEmailCode}
-                    disabled={bindEmailCountdown > 0 || bindEmailSending}
-                    className="absolute top-1/2 right-2 -translate-y-1/2 rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
-                  >
-                    {bindEmailCountdown > 0 ? `${bindEmailCountdown}s` : "获取验证码"}
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
-                  验证码
-                </Label>
-                <div className="relative">
-                  <KeyRound className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-                  <Input
-                    value={bindEmailCode}
-                    onChange={(e) => setBindEmailCode(e.target.value)}
-                    placeholder="请输入6位验证码"
-                    maxLength={6}
-                    className="bg-muted/30 border-border pl-10"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
-                  设置登录密码
-                </Label>
-                <div className="relative">
-                  <Lock className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-                  <Input
-                    type="password"
-                    value={bindEmailPassword}
-                    onChange={(e) => setBindEmailPassword(e.target.value)}
-                    placeholder="至少 6 位字符"
-                    className="bg-muted/30 border-border pl-10"
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="flex justify-end">
-              <AppButton
-                level="action"
-                onClick={handleBindEmail}
-                disabled={bindEmailSubmitting}
-                size="sm"
-                className="gap-2"
-              >
-                {bindEmailSubmitting ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <CheckCircle2 size={16} />
-                )}
-                {bindEmailSubmitting ? "绑定中..." : "确认绑定"}
-              </AppButton>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Social accounts */}
-      <Card className="border-border bg-card overflow-hidden border shadow-sm">
-        <CardHeader className="border-border/50 border-b px-6">
-          <div className="flex items-center gap-2">
-            <Link2 size={16} className="text-primary" />
-            <CardTitle className="text-foreground text-base font-bold">
-              {isOAuthUser ? "社交账号" : "账号关联"}
-            </CardTitle>
-          </div>
-          <CardDescription className="text-xs">
-            {isOAuthUser
-              ? "管理已绑定的第三方登录账号。"
-              : "关联社交账号后，可使用对应平台一键登录。"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6 px-6 pt-6">
-          {/* Linked accounts */}
-          {oauthLoading ? (
-            <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-              <Loader2 size={16} className="mr-2 animate-spin" />
-              加载中...
-            </div>
-          ) : linkedAccounts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
-              <AlertCircle className="h-10 w-10 text-muted-foreground/40" />
-              <p className="text-sm font-medium text-muted-foreground">暂无绑定的第三方账号</p>
-              {availableProviders.length > 0 && (
-                <p className="text-xs text-muted-foreground/60">点击下方图标绑定新账号</p>
-              )}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {linkedAccounts.map((account) => {
-                const meta = PROVIDER_META[account.provider];
-                const isCurrentLogin = isOAuthUser && currentUser?.provider === account.provider;
-
-                return (
-                  <div
-                    key={account.provider}
-                    className="flex items-center gap-3 rounded-xl border bg-muted/20 p-3 transition-colors hover:bg-muted/30"
-                  >
-                    <div
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-                      style={{
-                        backgroundColor: meta?.color ? `${meta.color}15` : undefined,
-                      }}
-                    >
-                      {meta?.icon ? (
-                        <img src={meta.icon} alt={meta.name} className="h-5 w-5" />
-                      ) : (
-                        <span className="text-xs font-bold">
-                          {account.provider.slice(0, 1).toUpperCase()}
-                        </span>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">
-                          {meta?.name ?? account.provider}
-                        </span>
-                        {isCurrentLogin && (
-                          <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
-                            当前登录
-                          </Badge>
-                        )}
-                      </div>
-                      {account.providerEmail && (
-                        <p className="truncate text-xs text-muted-foreground">
-                          {account.providerEmail}
-                        </p>
-                      )}
-                      <p className="text-[11px] text-muted-foreground/60">
-                        绑定于 {formatDateTime(account.createdAt)}
-                      </p>
-                    </div>
-                    {!isCurrentLogin && (
-                      <AppButton
-                        level="danger"
-                        size="sm"
-                        className="h-8"
-                        disabled={unlinkingProvider === account.provider}
-                        onClick={() => handleUnlink(account.provider)}
-                      >
-                        {unlinkingProvider === account.provider ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                          <Unlink size={14} />
-                        )}
-                      </AppButton>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Bind new accounts */}
-          {availableProviders.length > 0 && (
-            <div className="border-border/50 border-t pt-4">
-              <p className="text-muted-foreground mb-3 text-xs font-medium">
-                {linkedAccounts.length === 0 ? "选择平台绑定" : "绑定更多平台"}
-              </p>
-              <OAuthButtons
-                theme="light"
-                excludeProviders={linkedAccounts.map((a) => a.provider)}
-                onLinked={fetchLinkedAccounts}
-                onProvidersLoaded={(providers) => setAvailableProviders(providers.map((p) => p.id))}
+        </div>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <div className="space-y-2">
+            <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
+              角色
+            </Label>
+            <div className="relative">
+              <Shield className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
+              <Input
+                value={userDetail ? ROLE_LABELS[userDetail.role] : ""}
+                disabled
+                className="bg-muted/30 border-border pl-10"
               />
             </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
+          </div>
+          <div className="space-y-2">
+            <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
+              状态
+            </Label>
+            <div className="relative">
+              <Activity className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
+              <Input
+                value={statusInfo.label}
+                disabled
+                className="bg-muted/30 border-border pl-10"
+              />
+              <span
+                className={`absolute top-1/2 right-3 h-2 w-2 -translate-y-1/2 rounded-full ${statusInfo.color}`}
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
+              最后登录时间
+            </Label>
+            <div className="relative">
+              <Clock className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
+              <Input
+                value={formatDateTime(userDetail?.lastLogin ?? null)}
+                disabled
+                className="bg-muted/30 border-border pl-10"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    ),
+  };
+
+  const bindEmailSection: SettingsSection = {
+    id: "bind-email",
+    label: "绑定邮箱",
+    icon: ShieldCheck,
+    description: "绑定邮箱并设置密码后，可使用邮箱密码登录本账户。",
+    content: (
+      <div className="space-y-5">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
+              邮箱地址
+            </Label>
+            <div className="relative">
+              <Mail className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
+              <Input
+                type="email"
+                value={bindEmailInput}
+                onChange={(e) => setBindEmailInput(e.target.value)}
+                placeholder="请输入邮箱"
+                className="bg-muted/30 border-border pr-[108px] pl-10"
+              />
+              <button
+                type="button"
+                onClick={handleSendBindEmailCode}
+                disabled={bindEmailCountdown > 0 || bindEmailSending}
+                className="absolute top-1/2 right-2 -translate-y-1/2 rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {bindEmailCountdown > 0 ? `${bindEmailCountdown}s` : "获取验证码"}
+              </button>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
+              验证码
+            </Label>
+            <div className="relative">
+              <KeyRound className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
+              <Input
+                value={bindEmailCode}
+                onChange={(e) => setBindEmailCode(e.target.value)}
+                placeholder="请输入6位验证码"
+                maxLength={6}
+                className="bg-muted/30 border-border pl-10"
+              />
+            </div>
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
+              设置登录密码
+            </Label>
+            <div className="relative">
+              <Lock className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
+              <Input
+                type="password"
+                value={bindEmailPassword}
+                onChange={(e) => setBindEmailPassword(e.target.value)}
+                placeholder="至少 6 位字符"
+                className="bg-muted/30 border-border pl-10"
+              />
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end">
+          <AppButton
+            level="action"
+            onClick={handleBindEmail}
+            disabled={bindEmailSubmitting}
+            size="sm"
+            className="gap-2"
+          >
+            {bindEmailSubmitting ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <CheckCircle2 size={16} />
+            )}
+            {bindEmailSubmitting ? "绑定中..." : "确认绑定"}
+          </AppButton>
+        </div>
+      </div>
+    ),
+  };
+
+  const socialSection: SettingsSection = {
+    id: "social",
+    label: isOAuthUser ? "社交账号" : "账号关联",
+    icon: Link2,
+    description: isOAuthUser
+      ? "管理已绑定的第三方登录账号。"
+      : "关联社交账号后，可使用对应平台一键登录。",
+    content: (
+      <div className="space-y-6">
+        {oauthLoading ? (
+          <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+            <Loader2 size={16} className="mr-2 animate-spin" />
+            加载中...
+          </div>
+        ) : linkedAccounts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+            <AlertCircle className="h-10 w-10 text-muted-foreground/40" />
+            <p className="text-sm font-medium text-muted-foreground">暂无绑定的第三方账号</p>
+            {availableProviders.length > 0 && (
+              <p className="text-xs text-muted-foreground/60">点击下方图标绑定新账号</p>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {linkedAccounts.map((account) => {
+              const meta = PROVIDER_META[account.provider];
+              const isCurrentLogin = isOAuthUser && currentUser?.provider === account.provider;
+
+              return (
+                <div
+                  key={account.provider}
+                  className="flex items-center gap-3 rounded-xl border bg-muted/20 p-3 transition-colors hover:bg-muted/30"
+                >
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                    style={{
+                      backgroundColor: meta?.color ? `${meta.color}15` : undefined,
+                    }}
+                  >
+                    {meta?.icon ? (
+                      <img src={meta.icon} alt={meta.name} className="h-5 w-5" />
+                    ) : (
+                      <span className="text-xs font-bold">
+                        {account.provider.slice(0, 1).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{meta?.name ?? account.provider}</span>
+                      {isCurrentLogin && (
+                        <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
+                          当前登录
+                        </Badge>
+                      )}
+                    </div>
+                    {account.providerEmail && (
+                      <p className="truncate text-xs text-muted-foreground">
+                        {account.providerEmail}
+                      </p>
+                    )}
+                    <p className="text-[11px] text-muted-foreground/60">
+                      绑定于 {formatDateTime(account.createdAt)}
+                    </p>
+                  </div>
+                  {!isCurrentLogin && (
+                    <AppButton
+                      level="danger"
+                      size="sm"
+                      className="h-8"
+                      disabled={unlinkingProvider === account.provider}
+                      onClick={() => handleUnlink(account.provider)}
+                    >
+                      {unlinkingProvider === account.provider ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <Unlink size={14} />
+                      )}
+                    </AppButton>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {availableProviders.length > 0 && (
+          <div className="border-border/50 border-t pt-4">
+            <p className="text-muted-foreground mb-3 text-xs font-medium">
+              {linkedAccounts.length === 0 ? "选择平台绑定" : "绑定更多平台"}
+            </p>
+            <OAuthButtons
+              theme="light"
+              excludeProviders={linkedAccounts.map((a) => a.provider)}
+              onLinked={fetchLinkedAccounts}
+              onProvidersLoaded={(providers) => setAvailableProviders(providers.map((p) => p.id))}
+            />
+          </div>
+        )}
+      </div>
+    ),
+  };
+
+  const sections: SettingsSection[] = [
+    basicSection,
+    ...(!isOAuthUser ? [securitySection] : []),
+    accountSection,
+    ...(isOAuthUser ? [bindEmailSection] : []),
+    socialSection,
+  ];
+
+  return <SettingsPage sections={sections} loading={loading} header={header} />;
 }
