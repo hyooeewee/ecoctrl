@@ -17,6 +17,7 @@ import {
 import {
   createRefreshToken,
   deleteRefreshToken,
+  deleteRefreshTokensByUserId,
 } from "@/repositories/refreshTokens";
 import bcrypt from "bcryptjs";
 
@@ -198,6 +199,7 @@ async function issueTokens(
   const refreshToken = crypto.randomBytes(32).toString("base64");
   const tokenHash = hashRefreshToken(refreshToken);
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  await deleteRefreshTokensByUserId(userId);
   await createRefreshToken(userId, tokenHash, expiresAt);
   await updateUser(userId, { status: "online" });
   return { accessToken, refreshToken };
