@@ -5,6 +5,8 @@ import { Button, Input, Label, Switch } from "@ecoctrl/ui";
 
 import { authApi } from "../api/auth";
 import type { AuthUser } from "../api/auth";
+import OAuthButtons from "../components/OAuthButtons";
+import OAuthBindDialog from "../components/OAuthBindDialog";
 import { BrandLogo } from "../components/BrandLogo";
 
 interface LoginProps {
@@ -39,6 +41,14 @@ export default function Login({ onLogin }: LoginProps) {
 
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // OAuth bind dialog state
+  const [bindDialogOpen, setBindDialogOpen] = useState(false);
+  const [bindPayload, setBindPayload] = useState<{
+    provider: string;
+    providerUserId: string;
+    tempToken: string;
+  } | null>(null);
 
   const switchMode = (m: "login" | "register" | "forgot-password") => {
     setMode(m);
@@ -145,6 +155,32 @@ export default function Login({ onLogin }: LoginProps) {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleOAuthSuccess = async (tokens: { accessToken: string; refreshToken: string }) => {
+    localStorage.setItem("accessToken", tokens.accessToken);
+    localStorage.setItem("refreshToken", tokens.refreshToken);
+    try {
+      const user = await authApi.me();
+      onLogin(user);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "登录失败，请重试");
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+    }
+  };
+
+  const handleOAuthError = (message: string) => {
+    setError(message);
+  };
+
+  const handleOAuthBindRequired = (payload: {
+    provider: string;
+    providerUserId: string;
+    tempToken: string;
+  }) => {
+    setBindPayload(payload);
+    setBindDialogOpen(true);
   };
 
   const inputClass =
@@ -545,10 +581,29 @@ export default function Login({ onLogin }: LoginProps) {
               </form>
             )}
 
+            {mode === "login" && (
+              <div className="mt-6 pt-2">
+                <OAuthButtons
+                  onSuccess={handleOAuthSuccess}
+                  onError={handleOAuthError}
+                  onBindRequired={handleOAuthBindRequired}
+                />
+              </div>
+            )}
+
             {/* Footer */}
             <div className="mt-6 text-center text-xs text-white/40">EcoCtrl 能管平台 v1.0</div>
           </div>
         </div>
+
+        {/* OAuth Bind Dialog */}
+        <OAuthBindDialog
+          open={bindDialogOpen}
+          onOpenChange={setBindDialogOpen}
+          bindPayload={bindPayload}
+          onSuccess={handleOAuthSuccess}
+          onError={handleOAuthError}
+        />
 
         {/* Right side: empty space letting the building show through */}
         <div className="hidden flex-1 lg:block" />
