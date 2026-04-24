@@ -16,6 +16,7 @@ import modelRoutes from "@/routes/models";
 import iotRoutes from "@/routes/iot";
 import backupScheduleRoutes from "@/routes/backupSchedule";
 import authRoutes from "@/routes/auth";
+import oauthRoutes from "@/routes/oauth";
 
 export default async function apiRoutes(fastify: FastifyInstance) {
   fastify.addHook("onRequest", async (request: FastifyRequest, reply: FastifyReply) => {
@@ -25,6 +26,13 @@ export default async function apiRoutes(fastify: FastifyInstance) {
       "/api/auth/refresh",
       "/api/auth/forgot-password/send-code",
       "/api/auth/forgot-password/reset",
+      "/api/auth/oauth/providers",
+      "/api/auth/oauth/wechat/authorize",
+      "/api/auth/oauth/wechat/callback",
+      "/api/auth/oauth/feishu/authorize",
+      "/api/auth/oauth/feishu/callback",
+      "/api/auth/oauth/bind",
+      "/api/auth/oauth/register-and-bind",
       "/api/dashboard",
     ];
     if (publicPaths.some((p) => request.url.startsWith(p))) return;
@@ -51,4 +59,5 @@ export default async function apiRoutes(fastify: FastifyInstance) {
   await fastify.register(modelRoutes, { prefix: "/models" });
   await fastify.register(backupScheduleRoutes, { prefix: "/system" });
   await fastify.register(authRoutes, { prefix: "/auth" });
+  await fastify.register(oauthRoutes, { prefix: "/auth/oauth" });
 }
