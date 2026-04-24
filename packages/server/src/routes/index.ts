@@ -23,6 +23,7 @@ export default async function apiRoutes(fastify: FastifyInstance) {
     const publicPaths = [
       "/api/auth/login",
       "/api/auth/register",
+      "/api/auth/register/send-code",
       "/api/auth/refresh",
       "/api/auth/forgot-password/send-code",
       "/api/auth/forgot-password/reset",
