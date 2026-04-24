@@ -47,6 +47,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     "/",
     {
       schema: {
+        tags: ["Users"],
         summary: "Get user list",
         response: { 200: z.array(UserSchema) },
       },
@@ -61,6 +62,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     "/",
     {
       schema: {
+        tags: ["Users"],
         summary: "Create a user",
         body: UserCreateBodySchema,
         response: { 201: UserSchema },
@@ -87,6 +89,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     "/:id",
     {
       schema: {
+        tags: ["Users"],
         summary: "Update a user",
         params: z.object({ id: z.string().describe("User ID") }),
         body: UserUpdateBodySchema,
@@ -136,6 +139,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     "/:id",
     {
       schema: {
+        tags: ["Users"],
         summary: "Delete a user",
         params: z.object({ id: z.string().describe("User ID") }),
         response: {
@@ -160,6 +164,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     "/:id/avatar",
     {
       schema: {
+        tags: ["Users"],
         summary: "Upload user avatar",
         consumes: ["multipart/form-data"],
         params: z.object({ id: z.string().describe("User ID") }),
@@ -223,6 +228,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     "/:id/avatar",
     {
       schema: {
+        tags: ["Users"],
         summary: "Get user avatar",
         params: z.object({ id: z.string().describe("User ID") }),
         response: { 404: errorResponseSchema },
@@ -260,6 +266,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     "/:id/preferences",
     {
       schema: {
+        tags: ["Users"],
         summary: "Get user preferences",
         params: z.object({ id: z.string().describe("User ID") }),
         response: { 200: z.record(z.string(), z.unknown()) },
@@ -276,6 +283,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     "/:id/preferences",
     {
       schema: {
+        tags: ["Users"],
         summary: "Update user preferences",
         params: z.object({ id: z.string().describe("User ID") }),
         body: z.record(z.string(), z.unknown()),
@@ -300,6 +308,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     "/:id/preferences",
     {
       schema: {
+        tags: ["Users"],
         summary: "Patch user preferences (merge)",
         params: z.object({ id: z.string().describe("User ID") }),
         body: z.record(z.string(), z.unknown()),
@@ -326,6 +335,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     "/:id/preferences",
     {
       schema: {
+        tags: ["Users"],
         summary: "Clear user preferences",
         params: z.object({ id: z.string().describe("User ID") }),
         response: {

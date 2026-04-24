@@ -17,6 +17,7 @@ export default async function alertRoutes(fastify: FastifyInstance) {
     "/",
     {
       schema: {
+        tags: ["Alerts"],
         summary: "Get recent alerts",
         querystring: z.object({ limit: z.coerce.number().optional() }),
         response: { 200: z.array(alertSchema) },
