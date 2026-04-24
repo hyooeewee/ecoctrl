@@ -10,7 +10,7 @@ import {
   Tooltip,
 } from "recharts";
 
-import { Button } from "@ecoctrl/ui";
+import AppButton from "@/components/AppButton";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoctrl/ui";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ecoctrl/ui";
 
@@ -345,9 +345,9 @@ export default function OverviewContent() {
         </div>
         <ExportDialog
           trigger={
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/20 h-9 px-6 shadow-sm">
+            <AppButton level="action" className="h-9 px-6">
               导出今日报表
-            </Button>
+            </AppButton>
           }
           title="导出今日能耗报表"
           description="请确认报表导出信息，系统将根据选定参数生成文件。"

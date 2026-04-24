@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 
 import { Button } from "@ecoctrl/ui";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoctrl/ui";
+import AppButton from "@/components/AppButton";
 import { Switch } from "@ecoctrl/ui";
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ecoctrl/ui";
 import { cn } from "@/lib/utils";
@@ -113,19 +114,19 @@ export default function Reports() {
           />
           <ReportPlanSheet
             trigger={
-              <Button variant="outline" className="gap-2">
+              <AppButton level="action" className="gap-2">
                 <PlusCircle size={16} />
                 新建定时任务
-              </Button>
+              </AppButton>
             }
             onSave={handleAddPlan}
           />
           <ExportDialog
             trigger={
-              <Button className="gap-2">
+              <AppButton level="action" className="gap-2">
                 <FileDown size={16} />
                 导出当前数据
-              </Button>
+              </AppButton>
             }
             title="导出报表数据"
             description="请确认导出信息，系统将生成包含当前所有定时计划的文件。"
