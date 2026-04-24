@@ -5,6 +5,9 @@ export interface AuthUser {
   username: string;
   avatarUrl: string | null;
   role: string;
+  authType?: "password" | "oauth";
+  provider?: string;
+  email?: string;
 }
 
 export interface TokenResponse {
@@ -25,6 +28,12 @@ export const authApi = {
 
   resetPassword: (email: string, code: string, newPassword: string) =>
     post<{ ok: boolean }>("/auth/forgot-password/reset", { email, code, newPassword }),
+
+  sendBindEmailCode: (email: string) =>
+    post<{ ok: boolean }>("/auth/bind-email/send-code", { email }),
+
+  bindEmail: (email: string, code: string, password: string) =>
+    post<{ ok: boolean }>("/auth/bind-email", { email, code, password }),
 
   me: () => get<AuthUser>("/auth/me"),
 
