@@ -83,7 +83,7 @@ export default async function settingsRoutes(fastify: FastifyInstance) {
       const mergedLayout = defaultLayout.map((item) => {
         const existing = existingMap.get(item.id);
         if (existing) {
-          return { ...item, hidden: existing.hidden };
+          return { ...item, ...existing };
         }
         return item;
       });
