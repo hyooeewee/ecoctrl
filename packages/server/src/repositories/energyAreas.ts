@@ -1,15 +1,6 @@
+import type { EnergyArea } from "@ecoctrl/shared";
 import { db } from "@/config/database";
 import { energyAreas } from "@/schemas/energyAreas";
-
-export interface EnergyArea {
-  id: number;
-  title: string;
-  current: number;
-  target: number;
-  color: string;
-  powerFactor: number;
-  loadRate: string;
-}
 
 export async function getEnergyAreas(): Promise<EnergyArea[]> {
   const rows = await db.select().from(energyAreas);
