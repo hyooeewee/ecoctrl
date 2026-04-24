@@ -150,6 +150,10 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
+      const user = await getUserById(id);
+      if (user?.avatarUrl) {
+        deleteOldAvatar(user.avatarUrl);
+      }
       const ok = await removeUser(id);
       if (!ok) {
         return reply.status(404).send({ error: "User not found" });
@@ -188,12 +192,19 @@ export default async function accountRoutes(fastify: FastifyInstance) {
       let tempPath: string | undefined;
       let originalName: string | undefined;
 
-      for await (const part of parts) {
-        if (part.type === "file") {
-          tempPath = path.join(AVATAR_DIR, `tmp-${crypto.randomUUID()}`);
-          await pipeline(part.file, fs.createWriteStream(tempPath));
-          originalName = part.filename;
+      try {
+        for await (const part of parts) {
+          if (part.type === "file") {
+            tempPath = path.join(AVATAR_DIR, `tmp-${crypto.randomUUID()}`);
+            await pipeline(part.file, fs.createWriteStream(tempPath));
+            originalName = part.filename;
+          }
         }
+      } catch (_err) {
+        if (tempPath && fs.existsSync(tempPath)) {
+          fs.unlinkSync(tempPath);
+        }
+        throw _err;
       }
 
       if (!tempPath || !originalName) {
