@@ -10,6 +10,20 @@ export const USER_ROLE_LIST = ["super_admin", "admin", "operator", "analyst", "v
 export const UserRoleSchema = z.enum(USER_ROLE_LIST);
 export type UserRole = z.infer<typeof UserRoleSchema>;
 
+// User preferences — frontend-defined keys, all optional
+export const UserPreferencesSchema = z.object({
+  theme: z.enum(["light", "dark", "system"]).optional(),
+  language: z.enum(["zh-CN", "en-US"]).optional(),
+  density: z.enum(["compact", "comfortable", "spacious"]).optional(),
+  fontSize: z.enum(["small", "medium", "large"]).optional(),
+  desktopNotification: z.boolean().optional(),
+  alertSound: z.boolean().optional(),
+  emailNotification: z.boolean().optional(),
+  sidebarCollapsed: z.boolean().optional(),
+  showBreadcrumb: z.boolean().optional(),
+});
+export type UserPreferences = z.infer<typeof UserPreferencesSchema>;
+
 // Modifiable user fields
 export const UserBaseSchema = z.object({
   username: z.string(),
@@ -17,6 +31,7 @@ export const UserBaseSchema = z.object({
   role: UserRoleSchema,
   avatarUrl: z.string().nullable(),
   status: UserStatusSchema,
+  preferences: UserPreferencesSchema.optional(),
 });
 export type UserBase = z.infer<typeof UserBaseSchema>;
 
