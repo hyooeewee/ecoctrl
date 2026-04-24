@@ -16,7 +16,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 import { cn } from "@/lib/utils";
 import ExportDialog from "../components/ExportDialog";
-import { Alert, BackupSchedule } from "../types";
+import type { Alert } from "@ecoctrl/shared";
+import { BackupSchedule } from "../types";
 import { overviewApi } from "../api/overview";
 
 interface OverviewStats {

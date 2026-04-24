@@ -1,5 +1,6 @@
 import { get } from "./request";
-import { Alert, BackupSchedule } from "../types";
+import type { Alert } from "@ecoctrl/shared";
+import { BackupSchedule } from "../types";
 
 export interface OverviewStats {
   totalEnergy: { value: string; unit: string; trend: string; trendType: "up" | "down" | "neutral" };

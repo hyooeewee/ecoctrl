@@ -13,15 +13,6 @@ export interface MetricCardProps {
   icon: any;
 }
 
-export interface Alert {
-  id: string;
-  device: string;
-  level: "high" | "medium" | "low";
-  message: string;
-  time: string;
-  status: "pending" | "resolved";
-}
-
 export interface MaintenanceReminder {
   id: string;
   task: string;
