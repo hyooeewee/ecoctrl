@@ -1,28 +1,14 @@
 import type { FastifyInstance } from "fastify";
 import crypto from "node:crypto";
 import { z } from "zod";
-import type { ReportPlan } from "@/types/index";
+import { ReportPlanSchema, ReportTemplateSchema } from "@ecoctrl/shared";
+import type { ReportPlan } from "@ecoctrl/shared";
 import {
   getReportPlans,
   addReportPlan,
   updateReportPlan,
   getReportTemplates,
 } from "@/repositories/reports";
-
-const planSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  receiver: z.string(),
-  frequency: z.string(),
-  status: z.boolean(),
-});
-
-const templateSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  count: z.string(),
-  icon: z.string(),
-});
 
 const errorResponseSchema = z.object({ error: z.string() });
 
@@ -46,7 +32,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Get report plans",
-        response: { 200: z.array(planSchema) },
+        response: { 200: z.array(ReportPlanSchema) },
       },
     },
     async (_request, reply) => {
@@ -61,7 +47,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
       schema: {
         summary: "Create a report plan",
         body: planBodySchema,
-        response: { 201: planSchema },
+        response: { 201: ReportPlanSchema },
       },
     },
     async (request, reply) => {
@@ -81,7 +67,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
         params: z.object({ id: z.string().describe("Plan ID") }),
         body: planUpdateBodySchema,
         response: {
-          200: planSchema,
+          200: ReportPlanSchema,
           404: errorResponseSchema,
         },
       },
@@ -102,7 +88,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Get report templates",
-        response: { 200: z.array(templateSchema) },
+        response: { 200: z.array(ReportTemplateSchema) },
       },
     },
     async (_request, reply) => {

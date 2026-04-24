@@ -6,6 +6,7 @@ import { pipeline } from "node:stream/promises";
 import { createReadStream } from "node:fs";
 import { mkdir, readdir, rm } from "node:fs/promises";
 import unzipper from "unzipper";
+import { Model3DSchema } from "@ecoctrl/shared";
 import { UPLOAD_DIR as BASE_UPLOAD_DIR } from "@/lib/paths";
 import { getModels, getModelById, addModel, deleteModel } from "@/repositories/models";
 
@@ -32,24 +33,13 @@ const FORMAT_MAP: Record<string, string> = {
   zip: "ZIP",
 };
 
-const modelSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  version: z.string(),
-  format: z.string(),
-  size: z.string(),
-  fileUrl: z.string().nullable(),
-  thumbnailUrl: z.string().nullable(),
-  docUrl: z.string().nullable(),
-});
-
 export default async function modelRoutes(fastify: FastifyInstance) {
   fastify.get(
     "/",
     {
       schema: {
         summary: "Get 3D models",
-        response: { 200: z.array(modelSchema) },
+        response: { 200: z.array(Model3DSchema) },
       },
     },
     async (_request, reply) => {
@@ -64,7 +54,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
       schema: {
         summary: "Upload a 3D model",
         response: {
-          201: modelSchema,
+          201: Model3DSchema,
           400: z.object({ error: z.string() }),
         },
       },

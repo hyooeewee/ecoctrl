@@ -1,28 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import crypto from "node:crypto";
 import { z } from "zod";
-import type { MaintenanceReminder, MaintenanceReminderDetail } from "@/types/index";
+import {
+  MaintenanceReminderSchema,
+  MaintenanceReminderDetailSchema,
+} from "@ecoctrl/shared";
+import type { MaintenanceReminder, MaintenanceReminderDetail } from "@ecoctrl/shared";
 import { getReminders, updateReminder, deleteReminder } from "@/repositories/maintenance";
-
-const reminderItemSchema = z.object({
-  id: z.string(),
-  task: z.string(),
-  dueDate: z.string(),
-  priority: z.string(),
-});
-
-const reminderDetailSchema = z.object({
-  id: z.string(),
-  task: z.string(),
-  description: z.string(),
-  dueDate: z.string(),
-  priority: z.enum(["high", "medium", "low"]),
-  status: z.enum(["pending", "in_progress", "completed", "overdue"]),
-  assignee: z.string(),
-  location: z.string(),
-  estimatedHours: z.number(),
-  lastCompleted: z.string().nullable(),
-});
 
 const errorResponseSchema = z.object({ error: z.string() });
 
@@ -56,7 +40,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
     {
       schema: {
         summary: "Get maintenance reminders list",
-        response: { 200: z.array(reminderItemSchema) },
+        response: { 200: z.array(MaintenanceReminderSchema) },
       },
     },
     async (_request, reply) => {
@@ -78,7 +62,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
         summary: "Get maintenance reminder detail",
         params: z.object({ id: z.string().describe("Reminder ID") }),
         response: {
-          200: reminderDetailSchema,
+          200: MaintenanceReminderDetailSchema,
           404: errorResponseSchema,
         },
       },
@@ -100,7 +84,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
       schema: {
         summary: "Create a maintenance reminder",
         body: createBodySchema,
-        response: { 201: reminderDetailSchema },
+        response: { 201: MaintenanceReminderDetailSchema },
       },
     },
     async (request, reply) => {
@@ -117,7 +101,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
         assignee: body.assignee ?? "",
         location: body.location ?? "",
         estimatedHours: body.estimatedHours ?? 0,
-        lastCompleted: body.lastCompleted,
+        lastCompleted: body.lastCompleted ?? null,
       };
 
       reminders.push(newReminder);
@@ -134,7 +118,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
         params: z.object({ id: z.string().describe("Reminder ID") }),
         body: replaceBodySchema,
         response: {
-          200: reminderDetailSchema,
+          200: MaintenanceReminderDetailSchema,
           404: errorResponseSchema,
         },
       },

@@ -1,19 +1,9 @@
 import { eq } from "drizzle-orm";
+import type { Model3D } from "@ecoctrl/shared";
 import { db } from "@/config/database";
 import { models } from "@/schemas/models";
 
-export interface ModelItem {
-  id: string;
-  name: string;
-  version: string;
-  format: string;
-  size: string;
-  fileUrl: string | null;
-  thumbnailUrl: string | null;
-  docUrl: string | null;
-}
-
-export async function getModels(): Promise<ModelItem[]> {
+export async function getModels(): Promise<Model3D[]> {
   const rows = await db.select().from(models);
   return rows.map((r) => ({
     id: r.id,
@@ -27,7 +17,7 @@ export async function getModels(): Promise<ModelItem[]> {
   }));
 }
 
-export async function getModelById(id: string): Promise<ModelItem | null> {
+export async function getModelById(id: string): Promise<Model3D | null> {
   const rows = await db.select().from(models).where(eq(models.id, id)).limit(1);
   if (rows.length === 0) return null;
   const r = rows[0];
@@ -43,7 +33,7 @@ export async function getModelById(id: string): Promise<ModelItem | null> {
   };
 }
 
-export async function addModel(data: Omit<ModelItem, "id">): Promise<string> {
+export async function addModel(data: Omit<Model3D, "id">): Promise<string> {
   const result = await db
     .insert(models)
     .values({
