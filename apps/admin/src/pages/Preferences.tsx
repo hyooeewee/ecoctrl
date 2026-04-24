@@ -12,7 +12,7 @@ import {
   Layout,
   PanelLeftClose,
   PanelLeftOpen,
-  Breadcrumb,
+  List,
   Save,
   RotateCcw,
   Globe,
@@ -316,7 +316,7 @@ export default function Preferences({ userId }: PreferencesProps) {
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Breadcrumb size={18} />
+              <List size={18} />
               <div>
                 <Label className="text-sm font-semibold">面包屑导航</Label>
                 <p className="text-muted-foreground text-xs">在页面顶部显示导航路径。</p>
