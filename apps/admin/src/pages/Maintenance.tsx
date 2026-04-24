@@ -12,6 +12,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@ecoctrl/ui";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoctrl/ui";
+import AppButton from "@/components/AppButton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@ecoctrl/ui";
 import { Input } from "@ecoctrl/ui";
 import { ScrollArea } from "@ecoctrl/ui";
@@ -302,10 +303,10 @@ export default function Maintenance() {
               <BookOpen size={18} className="text-blue-600" />
               维保说明书
             </CardTitle>
-            <Button variant="outline" size="sm" onClick={handleUploadClick} disabled={uploading}>
+            <AppButton level="action" size="sm" onClick={handleUploadClick} disabled={uploading}>
               <Upload size={15} />
               {uploading ? "上传中..." : "上传文件"}
-            </Button>
+            </AppButton>
             <input
               ref={fileInputRef}
               type="file"
@@ -339,14 +340,14 @@ export default function Maintenance() {
                       />
                       <span className="block truncate">{manual.name}</span>
                     </button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
+                    <AppButton
+                      level="danger"
+                      size="icon-sm"
                       className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100"
                       onClick={() => handleDelete(manual.id)}
                     >
-                      <Trash2 size={14} className="text-red-500" />
-                    </Button>
+                      <Trash2 size={14} />
+                    </AppButton>
                   </div>
                 ))}
                 {!loading && manuals.length === 0 && (
@@ -716,7 +717,8 @@ export default function Maintenance() {
                 >
                   取消
                 </Button>
-                <Button
+                <AppButton
+                  level="action"
                   size="sm"
                   onClick={handleSave}
                   disabled={
@@ -728,7 +730,7 @@ export default function Maintenance() {
                   }
                 >
                   {saving ? "保存中..." : "保存"}
-                </Button>
+                </AppButton>
               </div>
             </div>
           )}

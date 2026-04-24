@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 
 import { Badge } from "@ecoctrl/ui";
 import { Button } from "@ecoctrl/ui";
+import AppButton from "@/components/AppButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@ecoctrl/ui";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@ecoctrl/ui";
 import { Input } from "@ecoctrl/ui";
@@ -137,10 +138,10 @@ export default function Accounts() {
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="gap-2" onClick={() => setShowAdd(true)}>
+          <AppButton level="action" className="gap-2" onClick={() => setShowAdd(true)}>
             <Plus size={18} />
             新增用户
-          </Button>
+          </AppButton>
           <ExportDialog
             trigger={
               <Button variant="outline" className="gap-2">
@@ -223,14 +224,14 @@ export default function Accounts() {
                           }
                           onSave={handleEdit}
                         />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-red-500 hover:text-red-600"
+                        <AppButton
+                          level="danger"
+                          size="icon-sm"
+                          className="h-8 w-8"
                           onClick={() => handleDelete(user.id, user.username)}
                         >
                           <Trash2 size={14} />
-                        </Button>
+                        </AppButton>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -313,7 +314,8 @@ export default function Accounts() {
               >
                 取消
               </Button>
-              <Button
+              <AppButton
+                level="action"
                 size="sm"
                 onClick={handleAdd}
                 disabled={
@@ -325,7 +327,7 @@ export default function Accounts() {
                 }
               >
                 {adding ? "添加中..." : "添加"}
-              </Button>
+              </AppButton>
             </div>
           </div>
         </DialogContent>

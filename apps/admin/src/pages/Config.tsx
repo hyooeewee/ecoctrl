@@ -18,6 +18,7 @@ import { Input } from "@ecoctrl/ui";
 import { Label } from "@ecoctrl/ui";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ecoctrl/ui";
 import { Switch } from "@ecoctrl/ui";
+import AppButton from "@/components/AppButton";
 import { cn } from "@/lib/utils";
 
 import type { SystemConfig } from "@ecoctrl/shared";
@@ -493,15 +494,16 @@ export default function SystemConfig() {
       {/* 底部固定保存栏 */}
       <div className="border-border bg-card shrink-0 z-20 flex items-center justify-end gap-3 border-t px-6 py-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
         <div className="mx-auto max-w-[1440px] w-full flex justify-end">
-          <Button
+          <AppButton
+            level="action"
             onClick={handleSave}
             disabled={saving}
             size="sm"
-            className="bg-primary hover:bg-primary/90 shadow-primary/20 gap-2 font-semibold text-primary-foreground shadow-sm"
+            className="gap-2 font-semibold"
           >
             <Save size={16} />
             {saving ? "保存中..." : "保存所有配置"}
-          </Button>
+          </AppButton>
         </div>
       </div>
     </div>

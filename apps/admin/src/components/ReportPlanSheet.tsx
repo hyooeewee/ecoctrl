@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 
-import { Button } from "@ecoctrl/ui";
 import { Input } from "@ecoctrl/ui";
 import { Label } from "@ecoctrl/ui";
+import AppButton from "@/components/AppButton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ecoctrl/ui";
 import {
   Sheet,
@@ -94,29 +94,29 @@ export default function ReportPlanSheet({ trigger, onSave }: ReportPlanSheetProp
           <div className="grid space-y-2">
             <Label>初始状态</Label>
             <div className="flex items-center gap-3">
-              <Button
+              <AppButton
                 type="button"
-                variant={status ? "default" : "outline"}
+                level={status ? "action" : "secondary"}
                 className="flex-1"
                 onClick={() => setStatus(true)}
               >
                 启用
-              </Button>
-              <Button
+              </AppButton>
+              <AppButton
                 type="button"
-                variant={!status ? "default" : "outline"}
+                level={!status ? "action" : "secondary"}
                 className="flex-1"
                 onClick={() => setStatus(false)}
               >
                 停用
-              </Button>
+              </AppButton>
             </div>
           </div>
         </div>
         <SheetFooter>
-          <Button type="button" className="w-full" onClick={handleSubmit}>
+          <AppButton level="action" type="button" className="w-full" onClick={handleSubmit}>
             确认创建
-          </Button>
+          </AppButton>
         </SheetFooter>
       </SheetContent>
     </Sheet>
