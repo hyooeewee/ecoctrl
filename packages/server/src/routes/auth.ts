@@ -15,6 +15,7 @@ import {
   findValidRefreshToken,
   deleteRefreshToken,
   deleteRefreshTokenById,
+  deleteRefreshTokensByUserId,
 } from "@/repositories/refreshTokens";
 import { sendMail } from "@/lib/mailer";
 
@@ -193,6 +194,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       const tokenHash = hashRefreshToken(refreshToken);
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
+      await deleteRefreshTokensByUserId(newUser.id);
       await createRefreshToken(newUser.id, tokenHash, expiresAt);
 
       return reply.status(201).send({
@@ -239,6 +241,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       const tokenHash = hashRefreshToken(refreshToken);
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
+      await deleteRefreshTokensByUserId(user.id);
       await createRefreshToken(user.id, tokenHash, expiresAt);
       await updateUser(user.id, { status: "online" });
 

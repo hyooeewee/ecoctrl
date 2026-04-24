@@ -36,3 +36,7 @@ export async function deleteRefreshToken(tokenHash: string): Promise<void> {
 export async function deleteRefreshTokenById(id: string): Promise<void> {
   await db.delete(refreshTokens).where(eq(refreshTokens.id, id));
 }
+
+export async function deleteRefreshTokensByUserId(userId: string): Promise<void> {
+  await db.delete(refreshTokens).where(eq(refreshTokens.userId, userId));
+}
