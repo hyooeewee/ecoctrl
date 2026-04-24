@@ -35,6 +35,7 @@ import { Badge } from "@ecoctrl/ui";
 import { authApi } from "@/api/auth";
 import { oauthApi, type LinkedOAuthAccount } from "@/api/oauth";
 import { usersApi } from "@/api/users";
+import AppButton from "@/components/AppButton";
 import OAuthButtons from "@/components/OAuthButtons";
 import { wechatIcon, wecomIcon, feishuIcon, dingtalkIcon } from "@/assets/icons";
 import type { User, UserRole } from "@ecoctrl/shared";
@@ -721,7 +722,8 @@ export default function Profile() {
               </div>
             </div>
             <div className="flex justify-end">
-              <Button
+              <AppButton
+                level="action"
                 onClick={handleBindEmail}
                 disabled={bindEmailSubmitting}
                 size="sm"
@@ -733,7 +735,7 @@ export default function Profile() {
                   <CheckCircle2 size={16} />
                 )}
                 {bindEmailSubmitting ? "绑定中..." : "确认绑定"}
-              </Button>
+              </AppButton>
             </div>
           </CardContent>
         </Card>
@@ -815,10 +817,10 @@ export default function Profile() {
                       </p>
                     </div>
                     {!isCurrentLogin && (
-                      <Button
-                        variant="ghost"
+                      <AppButton
+                        level="danger"
                         size="sm"
-                        className="h-8 text-red-500 hover:bg-red-50 hover:text-red-600"
+                        className="h-8"
                         disabled={unlinkingProvider === account.provider}
                         onClick={() => handleUnlink(account.provider)}
                       >
@@ -827,7 +829,7 @@ export default function Profile() {
                         ) : (
                           <Unlink size={14} />
                         )}
-                      </Button>
+                      </AppButton>
                     )}
                   </div>
                 );

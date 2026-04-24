@@ -1,7 +1,7 @@
 import { RotateCcw, Maximize2, AlertTriangle, Download } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 
-import { Button } from "@ecoctrl/ui";
+import AppButton from "@/components/AppButton";
 
 interface ModelViewerProps {
   src: string | null;
@@ -115,24 +115,24 @@ export default function ModelViewer({ src, alt, format }: ModelViewerProps) {
     >
       {/* Toolbar */}
       <div className="absolute top-3 right-3 z-10 flex gap-2">
-        <Button
-          variant="secondary"
-          size="icon"
-          className="h-8 w-8 bg-background/80 backdrop-blur-sm"
+        <AppButton
+          level="ghost"
+          size="icon-sm"
+          className="h-8 w-8 border bg-background/80 backdrop-blur-sm"
           onClick={handleReset}
           title="重置视角"
         >
           <RotateCcw size={14} />
-        </Button>
-        <Button
-          variant="secondary"
-          size="icon"
-          className="h-8 w-8 bg-background/80 backdrop-blur-sm"
+        </AppButton>
+        <AppButton
+          level="ghost"
+          size="icon-sm"
+          className="h-8 w-8 border bg-background/80 backdrop-blur-sm"
           onClick={toggleFullscreen}
           title="全屏"
         >
           <Maximize2 size={14} />
-        </Button>
+        </AppButton>
       </div>
 
       {/* Model viewer */}

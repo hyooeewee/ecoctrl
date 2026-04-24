@@ -19,6 +19,7 @@ import { Label } from "@ecoctrl/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@ecoctrl/ui";
 
+import AppButton from "@/components/AppButton";
 import type { Model3D } from "@ecoctrl/shared";
 import { modelsApi } from "../api/models";
 import ModelViewer from "../components/ModelViewer";
@@ -179,10 +180,10 @@ export default function Models() {
                   <CardTitle>模型资源</CardTitle>
                   <CardDescription>管理已导入的所有 3D 资产模型。</CardDescription>
                 </div>
-                <Button onClick={() => setUploadOpen(true)} className="gap-2">
+                <AppButton level="action" className="gap-2" onClick={() => setUploadOpen(true)}>
                   <Upload size={16} />
                   上传模型
-                </Button>
+                </AppButton>
               </div>
             </CardHeader>
             <CardContent className="px-6 pb-6">
@@ -201,14 +202,14 @@ export default function Models() {
                   <p className="mt-1 text-sm text-muted-foreground">
                     点击右上角"上传模型"按钮导入 3D 资产。
                   </p>
-                  <Button
-                    onClick={() => setUploadOpen(true)}
+                  <AppButton
+                    level="action"
                     className="mt-4 gap-2"
-                    variant="outline"
+                    onClick={() => setUploadOpen(true)}
                   >
                     <Upload size={16} />
                     上传模型
-                  </Button>
+                  </AppButton>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -246,8 +247,8 @@ export default function Models() {
                         <div className="absolute inset-0 bg-black/5 transition-colors group-hover:bg-transparent" />
 
                         {/* Delete button */}
-                        <Button
-                          variant="destructive"
+                        <AppButton
+                          level="danger"
                           size="icon-sm"
                           className="absolute top-2 left-2 z-10 h-8 w-8 rounded-full opacity-0 shadow-sm transition-opacity group-hover:opacity-100"
                           onClick={(e) => {
@@ -256,20 +257,20 @@ export default function Models() {
                           }}
                         >
                           <Trash2 size={14} />
-                        </Button>
+                        </AppButton>
 
                         {/* Preview button */}
-                        <Button
-                          variant="secondary"
+                        <AppButton
+                          level="ghost"
                           size="icon-sm"
-                          className="border-border absolute top-2 right-2 z-10 h-8 w-8 rounded-full border bg-background/80 opacity-0 shadow-sm backdrop-blur-sm transition-opacity group-hover:opacity-100 hover:bg-background hover:text-blue-600"
+                          className="absolute top-2 right-2 z-10 h-8 w-8 rounded-full border bg-background/80 opacity-0 shadow-sm backdrop-blur-sm transition-opacity group-hover:opacity-100 hover:bg-background hover:text-blue-600"
                           onClick={(e) => {
                             e.stopPropagation();
                             setPreviewModel(model);
                           }}
                         >
                           <ExternalLink size={14} />
-                        </Button>
+                        </AppButton>
                       </div>
                       <CardContent className="px-4 py-3">
                         <p className="truncate text-sm font-semibold" title={model.name}>
@@ -403,7 +404,8 @@ export default function Models() {
               <Button variant="outline" onClick={() => setUploadOpen(false)}>
                 取消
               </Button>
-              <Button
+              <AppButton
+                level="action"
                 onClick={handleUpload}
                 disabled={!uploadFile || !uploadName.trim() || isUploading}
                 className="gap-2"
@@ -419,7 +421,7 @@ export default function Models() {
                     确认上传
                   </>
                 )}
-              </Button>
+              </AppButton>
             </div>
           </div>
         </DialogContent>
