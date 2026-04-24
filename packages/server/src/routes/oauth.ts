@@ -262,9 +262,10 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      cleanExpiredEntries();
       const { provider } = request.params as { provider: string };
       const { redirectUri } = request.query as { redirectUri: string };
+
+      cleanExpiredEntries();
 
       const state = generateState();
       stateStore.set(state, {

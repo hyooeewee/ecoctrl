@@ -72,16 +72,23 @@ export default async function modelRoutes(fastify: FastifyInstance) {
       let name = "";
       let version = "";
 
-      for await (const part of parts) {
-        if (part.type === "file") {
-          // Immediately consume stream to avoid order-dependent issues
-          const tempPath = path.join(TMP_DIR, `upload-${crypto.randomUUID()}`);
-          await pipeline(part.file, fs.createWriteStream(tempPath));
-          fileInfo = { filename: part.filename, tempPath };
-        } else {
-          if (part.fieldname === "name") name = part.value as string;
-          if (part.fieldname === "version") version = part.value as string;
+      try {
+        for await (const part of parts) {
+          if (part.type === "file") {
+            // Immediately consume stream to avoid order-dependent issues
+            const tempPath = path.join(TMP_DIR, `upload-${crypto.randomUUID()}`);
+            await pipeline(part.file, fs.createWriteStream(tempPath));
+            fileInfo = { filename: part.filename, tempPath };
+          } else {
+            if (part.fieldname === "name") name = part.value as string;
+            if (part.fieldname === "version") version = part.value as string;
+          }
         }
+      } catch (_err) {
+        if (fileInfo?.tempPath && fs.existsSync(fileInfo.tempPath)) {
+          fs.unlinkSync(fileInfo.tempPath);
+        }
+        throw _err;
       }
 
       if (!fileInfo) {
