@@ -1,5 +1,5 @@
 import { get, post, put } from "./request";
-import { ReportPlan, ReportTemplate } from "../types";
+import type { ReportPlan, ReportTemplate } from "@ecoctrl/shared";
 
 export const reportsApi = {
   plans: {

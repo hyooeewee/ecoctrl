@@ -1,5 +1,5 @@
 import { get, put } from "./request";
-import { SystemConfig } from "../types";
+import type { SystemConfig } from "@ecoctrl/shared";
 
 export const systemConfigApi = {
   get: () => get<SystemConfig>("/configs"),

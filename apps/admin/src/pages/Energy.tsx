@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoc
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@ecoctrl/ui";
 
 import { Progress } from "../components/Progress";
-import { EnergyArea } from "../types";
+import type { EnergyArea } from "@ecoctrl/shared";
 import { energyApi } from "../api/energy";
 
 export default function Energy() {

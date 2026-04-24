@@ -17,7 +17,7 @@ import { Input } from "@ecoctrl/ui";
 import { ScrollArea } from "@ecoctrl/ui";
 
 import { cn } from "@/lib/utils";
-import { MaintenanceReminder } from "../types";
+import type { MaintenanceReminder, MaintenanceReminderDetail } from "@ecoctrl/shared";
 import { filesApi } from "../api/files";
 import { maintenanceApi } from "../api/maintenance";
 
@@ -178,11 +178,11 @@ export default function Maintenance() {
   const [loading, setLoading] = useState(true);
   const [reminders, setReminders] = useState<MaintenanceReminder[]>([]);
   const [showAllPlans, setShowAllPlans] = useState(false);
-  const [selectedReminder, setSelectedReminder] = useState<MaintenanceReminder | null>(null);
+  const [selectedReminder, setSelectedReminder] = useState<MaintenanceReminderDetail | null>(null);
   const todayStr = formatDateKey(new Date());
   const [selectedDateStr, setSelectedDateStr] = useState<string>(todayStr);
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState<Partial<MaintenanceReminder>>({});
+  const [editForm, setEditForm] = useState<Partial<MaintenanceReminderDetail>>({});
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
