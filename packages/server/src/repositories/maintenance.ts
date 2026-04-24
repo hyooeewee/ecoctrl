@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
+import type { MaintenanceReminderDetail, MaintenanceReminder } from "@ecoctrl/shared";
 import { db } from "@/config/database";
 import { maintenanceReminders } from "@/schemas/maintenance";
-import type { MaintenanceReminderDetail, MaintenanceReminder } from "@/types/index";
 
 export async function getReminders(): Promise<MaintenanceReminderDetail[]> {
   const rows = await db.select().from(maintenanceReminders);
@@ -15,7 +15,7 @@ export async function getReminders(): Promise<MaintenanceReminderDetail[]> {
     assignee: r.assignee ?? "",
     location: r.location ?? "",
     estimatedHours: r.estimatedHours ?? 0,
-    lastCompleted: r.lastCompleted ?? undefined,
+    lastCompleted: r.lastCompleted ?? null,
   }));
 }
 
