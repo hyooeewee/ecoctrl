@@ -1,11 +1,22 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import {
-  DashboardDataSchema,
   AlertSchema,
+  WidgetConfigSchema,
+  WidgetLayoutSchema,
 } from "@ecoctrl/shared";
-import type { DashboardData, Alert } from "@ecoctrl/shared";
+import type { Alert } from "@ecoctrl/shared";
 import { findManyAlerts, findDashboardData } from "@/repositories/dashboard";
+import { findOnlineUser } from "@/repositories/users";
+
+const WidgetConfigWithLayoutSchema = WidgetConfigSchema.extend({
+  hidden: z.boolean(),
+  layout: WidgetLayoutSchema,
+});
+
+const DashboardDataWithLayoutSchema = z.object({
+  widgets: z.array(WidgetConfigWithLayoutSchema),
+});
 
 export default async function dashboardRoutes(fastify: FastifyInstance) {
   fastify.get(
@@ -14,11 +25,12 @@ export default async function dashboardRoutes(fastify: FastifyInstance) {
       schema: {
         tags: ["Dashboard"],
         summary: "Get full dashboard data",
-        response: { 200: DashboardDataSchema },
+        response: { 200: DashboardDataWithLayoutSchema },
       },
     },
     async (_request, reply) => {
-      const data: DashboardData = await findDashboardData();
+      const user = await findOnlineUser();
+      const data = await findDashboardData(user?.id);
       return reply.send(data);
     },
   );
