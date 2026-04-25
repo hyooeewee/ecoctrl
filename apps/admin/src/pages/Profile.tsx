@@ -39,6 +39,7 @@ import OAuthButtons from "@/components/OAuthButtons";
 import SettingsPage from "@/components/SettingsPage";
 import type { SettingsSection } from "@/components/SettingsPage";
 import { wechatIcon, wecomIcon, feishuIcon, dingtalkIcon } from "@/assets/icons";
+import { useAvatar } from "@/hooks/useAvatar";
 import type { User, UserRole } from "@ecoctrl/shared";
 
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -340,10 +341,10 @@ export default function Profile() {
   };
 
   const statusInfo = getStatus(userDetail?.status ?? "offline");
-  const avatarSrc =
-    editAvatarUrl ||
-    userDetail?.avatarUrl ||
-    `https://avatar.vercel.sh/${currentUser?.username ?? "admin"}?size=80`;
+  const avatarSrc = useAvatar(
+    userDetail?.id,
+    editAvatarUrl || userDetail?.avatarUrl || null,
+  );
 
   const isOAuthUser = currentUser?.authType === "oauth";
 
