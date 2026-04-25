@@ -8,6 +8,7 @@ export const dashboardWidgets = pgTable("dashboard_widgets", {
   layoutY: integer("layout_y").notNull(),
   layoutW: integer("layout_w").notNull(),
   layoutH: integer("layout_h").notNull(),
+  hidden: boolean("hidden").notNull().default(false),
   dataType: varchar("data_type", { length: 20 }).notNull(),
   dataJson: jsonb("data_json").notNull().default("{}"),
   sortOrder: integer("sort_order").notNull().default(0),

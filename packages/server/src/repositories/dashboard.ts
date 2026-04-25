@@ -8,10 +8,11 @@ import type {
   DashboardStats,
   EnergyChartItem,
   Alert,
-  DashboardData,
   WidgetConfig,
+  WidgetLayout,
 } from "@ecoctrl/shared";
 import { fetchWeather } from "@/services/weather";
+import { findUserSettings } from "@/repositories/userSettings";
 
 export async function findDashboardStats(): Promise<DashboardStats> {
   const rows = await db.select().from(dashboardStats);
@@ -49,14 +50,43 @@ export async function findManyAlerts(limit?: number): Promise<Alert[]> {
   return result;
 }
 
-export async function findDashboardData(): Promise<DashboardData> {
+export async function findDashboardData(
+  userId?: string,
+): Promise<{ widgets: (WidgetConfig & { hidden: boolean; layout: WidgetLayout })[] }> {
   const rows = await db
     .select()
     .from(dashboardWidgets)
     .where(eq(dashboardWidgets.enabled, true))
     .orderBy(asc(dashboardWidgets.sortOrder));
 
-  const widgets: WidgetConfig[] = [];
+  const userOverrides = new Map<
+    string,
+    { hidden?: boolean; x?: number; y?: number; w?: number; h?: number }
+  >();
+
+  if (userId) {
+    const settings = await findUserSettings(userId);
+    const bentoLayout = (settings.bentoLayout as Array<{
+      id: string;
+      x?: number;
+      y?: number;
+      w?: number;
+      h?: number;
+      hidden?: boolean;
+    }> | undefined) ?? [];
+
+    for (const item of bentoLayout) {
+      userOverrides.set(item.id, {
+        hidden: item.hidden,
+        x: item.x,
+        y: item.y,
+        w: item.w,
+        h: item.h,
+      });
+    }
+  }
+
+  const widgets: (WidgetConfig & { hidden: boolean; layout: WidgetLayout })[] = [];
 
   for (const r of rows) {
     let data = r.dataJson as WidgetConfig["data"];
@@ -65,11 +95,20 @@ export async function findDashboardData(): Promise<DashboardData> {
       data = await fetchWeather();
     }
 
+    const override = userOverrides.get(r.id);
+
     widgets.push({
       id: r.id,
       titleKey: r.titleKey,
       icon: r.icon,
       data,
+      hidden: override?.hidden ?? r.hidden,
+      layout: {
+        x: override?.x ?? r.layoutX,
+        y: override?.y ?? r.layoutY,
+        w: override?.w ?? r.layoutW,
+        h: override?.h ?? r.layoutH,
+      },
     });
   }
 
