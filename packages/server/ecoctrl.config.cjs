@@ -3,7 +3,6 @@ module.exports = {
     {
       name: "ecoctrl-server",
       script: "index.mjs",
-      cwd: __dirname,
       interpreter: "node",
       exec_mode: "fork",
       instances: 1,
