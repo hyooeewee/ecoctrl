@@ -68,12 +68,8 @@ ecoctrl/
 ### Server
 
 ```bash
-cd server
-cp .env.example .env.local
-# Edit .env.local: fill in DATABASE_URL, JWT_SECRET, etc.
-
-pnpm install --prod
-node index.js
+cd server && cp .env.example .env.local
+pm2 start ecosystem.config.js
 ```
 
 ### Admin & Web
@@ -82,10 +78,10 @@ Both are static builds. Serve them with any static file server:
 
 ```bash
 # Example with serve (npx serve)
-cd admin && npx serve -s -l 4173
-cd web  && npx serve -s -l 8081
-
-# Or with nginx, Caddy, etc.
+cd admin && cp .env.example .env.local
+npx serve -s -l 4173
+cd web  && cp .env.example .env.local
+npx serve -s -l 8081
 ```
 
 ## Local Development
