@@ -6,7 +6,10 @@ export interface PlatformConfig {
   platformName: string;
   refreshInterval: number;
   realtimeAlertEnabled: boolean;
-  darkModeFollowSystem: boolean;
+  timezone: string;
+  autoBackup: boolean;
+  backupRetentionDays: number;
+  sessionTimeout: number;
   smtpHost: string;
   smtpPort: number;
   smtpUser: string;
@@ -14,15 +17,51 @@ export interface PlatformConfig {
   smtpSecure: boolean;
 }
 
-export async function findPlatformConfig(): Promise<PlatformConfig | null> {
+const DEFAULT_CONFIG: PlatformConfig = {
+  platformName: "EcoCtrl 能管平台",
+  refreshInterval: 30,
+  realtimeAlertEnabled: true,
+  timezone: "Asia/Shanghai",
+  autoBackup: true,
+  backupRetentionDays: 30,
+  sessionTimeout: 30,
+  smtpHost: "",
+  smtpPort: 587,
+  smtpUser: "",
+  smtpPass: "",
+  smtpSecure: false,
+};
+
+export async function findPlatformConfig(): Promise<PlatformConfig> {
   const rows = await db.select().from(platformConfigs).limit(1);
-  if (rows.length === 0) return null;
+  if (rows.length === 0) {
+    // Auto-insert default config on first read
+    const result = await db.insert(platformConfigs).values(DEFAULT_CONFIG).returning();
+    const r = result[0];
+    return {
+      platformName: r.platformName,
+      refreshInterval: r.refreshInterval,
+      realtimeAlertEnabled: r.realtimeAlertEnabled,
+      timezone: r.timezone,
+      autoBackup: r.autoBackup,
+      backupRetentionDays: r.backupRetentionDays,
+      sessionTimeout: r.sessionTimeout,
+      smtpHost: r.smtpHost,
+      smtpPort: r.smtpPort,
+      smtpUser: r.smtpUser,
+      smtpPass: r.smtpPass,
+      smtpSecure: r.smtpSecure,
+    };
+  }
   const r = rows[0];
   return {
     platformName: r.platformName,
     refreshInterval: r.refreshInterval,
     realtimeAlertEnabled: r.realtimeAlertEnabled,
-    darkModeFollowSystem: r.darkModeFollowSystem,
+    timezone: r.timezone,
+    autoBackup: r.autoBackup,
+    backupRetentionDays: r.backupRetentionDays,
+    sessionTimeout: r.sessionTimeout,
     smtpHost: r.smtpHost,
     smtpPort: r.smtpPort,
     smtpUser: r.smtpUser,
@@ -40,7 +79,10 @@ export async function updatePlatformConfig(config: PlatformConfig): Promise<Plat
       platformName: r.platformName,
       refreshInterval: r.refreshInterval,
       realtimeAlertEnabled: r.realtimeAlertEnabled,
-      darkModeFollowSystem: r.darkModeFollowSystem,
+      timezone: r.timezone,
+      autoBackup: r.autoBackup,
+      backupRetentionDays: r.backupRetentionDays,
+      sessionTimeout: r.sessionTimeout,
       smtpHost: r.smtpHost,
       smtpPort: r.smtpPort,
       smtpUser: r.smtpUser,
@@ -54,7 +96,10 @@ export async function updatePlatformConfig(config: PlatformConfig): Promise<Plat
       platformName: r.platformName,
       refreshInterval: r.refreshInterval,
       realtimeAlertEnabled: r.realtimeAlertEnabled,
-      darkModeFollowSystem: r.darkModeFollowSystem,
+      timezone: r.timezone,
+      autoBackup: r.autoBackup,
+      backupRetentionDays: r.backupRetentionDays,
+      sessionTimeout: r.sessionTimeout,
       smtpHost: r.smtpHost,
       smtpPort: r.smtpPort,
       smtpUser: r.smtpUser,
@@ -72,23 +117,6 @@ export async function syncSmtpFromEnv(): Promise<void> {
   if (!envHost || !envUser || !envPass) return;
 
   const existing = await findPlatformConfig();
-
-  if (!existing) {
-    // No config row yet — create one with defaults + SMTP from env
-    await updatePlatformConfig({
-      platformName: "EcoCtrl 能管平台",
-      refreshInterval: 30,
-      realtimeAlertEnabled: true,
-      darkModeFollowSystem: false,
-      smtpHost: envHost,
-      smtpPort: Number(process.env.SMTP_PORT) || 587,
-      smtpUser: envUser,
-      smtpPass: envPass,
-      smtpSecure: process.env.SMTP_SECURE === "true",
-    });
-    console.log("[SMTP] Synced SMTP config from env to database (new row)");
-    return;
-  }
 
   // Only overwrite if DB SMTP fields are empty (protect user-managed DB values)
   if (!existing.smtpHost && !existing.smtpUser && !existing.smtpPass) {
