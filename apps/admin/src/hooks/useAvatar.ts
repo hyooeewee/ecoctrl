@@ -48,7 +48,12 @@ export function useAvatar(
     // Cache-buster to avoid stale images after upload
     const cacheBust = Date.now();
 
-    fetch(`/api/users/${userId}/avatar?_=${cacheBust}`, {
+    const baseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined) || "";
+    const endpoint = baseUrl
+      ? `${baseUrl}/api/users/${userId}/avatar`
+      : `/api/users/${userId}/avatar`;
+
+    fetch(`${endpoint}?_=${cacheBust}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },

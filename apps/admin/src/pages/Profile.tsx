@@ -341,10 +341,7 @@ export default function Profile() {
   };
 
   const statusInfo = getStatus(userDetail?.status ?? "offline");
-  const avatarSrc = useAvatar(
-    userDetail?.id,
-    editAvatarUrl || userDetail?.avatarUrl || null,
-  );
+  const avatarSrc = useAvatar(userDetail?.id, editAvatarUrl || userDetail?.avatarUrl || null);
 
   const isOAuthUser = currentUser?.authType === "oauth";
 
