@@ -108,19 +108,22 @@ jobs:
             fi
           done
 
-          # Copy to temp dir and rename to flat structure
-          mkdir -p .tmp/admin .tmp/web .tmp/server
-          cp -r apps/admin/dist/. .tmp/admin/
-          cp -r apps/web/build/client/. .tmp/web/
-          cp -r packages/server/dist/. .tmp/server/
+          # Stage all artifacts under ecoctrl/ for single-dir packaging
+          mkdir -p ecoctrl/admin ecoctrl/web ecoctrl/server
+          cp -r apps/admin/dist/. ecoctrl/admin/
+          cp -r apps/web/build/client/. ecoctrl/web/
+          cp -r packages/server/dist/. ecoctrl/server/
 
-          # Package from temp dir so archive root is admin/, web/, server/
-          cd .tmp
+          # Build individual packages from inside ecoctrl/ so root becomes admin/, web/, server/
+          cd ecoctrl
           zip -r "../release-assets/admin-v${VERSION}.zip" admin
           zip -r "../release-assets/web-v${VERSION}.zip" web
           zip -r "../release-assets/server-v${VERSION}.zip" server
           cd ..
-          rm -rf .tmp
+
+          # Build unified package so root becomes ecoctrl/
+          zip -r "release-assets/ecoctrl[all]-v${VERSION}.zip" ecoctrl
+          rm -rf ecoctrl
 
       - name: Create unified git tag
         run: |
