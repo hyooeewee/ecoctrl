@@ -113,6 +113,7 @@ jobs:
           cp -r apps/admin/dist/. ecoctrl/admin/
           cp -r apps/web/build/client/. ecoctrl/web/
           cp -r packages/server/dist/. ecoctrl/server/
+          cp scripts/start.sh ecoctrl/start.sh
 
           # Build individual packages from inside ecoctrl/ so root becomes admin/, web/, server/
           cd ecoctrl
