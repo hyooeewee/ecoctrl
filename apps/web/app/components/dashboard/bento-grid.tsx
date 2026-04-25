@@ -1,11 +1,4 @@
-import {
-  IconEye,
-  IconEyeOff,
-  IconGripVertical,
-  IconSettings,
-  IconLink,
-  IconLinkOff,
-} from "@tabler/icons-react";
+import { Eye, EyeOff, GripVertical, Settings, Link } from "lucide-react";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
 import { cn } from "~/lib/utils";
@@ -382,7 +375,7 @@ function SizePanel({
           )}
           title={locked ? "Unlock aspect ratio" : "Lock aspect ratio"}
         >
-          {locked ? <IconLink size={10} /> : <IconLinkOff size={10} />}
+          {locked ? <Link size={10} /> : <Link size={10} />}
         </button>
 
         {stepBtn("−", () => handleH(localH - 1))}
@@ -479,7 +472,7 @@ export function BentoItem({ id, children, className }: BentoItemProps) {
           className="absolute top-1 left-1 z-20 flex cursor-grab items-center gap-1 rounded-md bg-black/60 px-2 py-1 active:cursor-grabbing"
           onPointerDown={handlePointerDown}
         >
-          <IconGripVertical size={14} className="text-muted-foreground" />
+          <GripVertical size={14} className="text-muted-foreground" />
         </div>
       )}
 
@@ -498,7 +491,7 @@ export function BentoItem({ id, children, className }: BentoItemProps) {
               showSizePanel && "opacity-100",
             )}
           >
-            <IconSettings size={12} className="text-muted-foreground" />
+            <Settings size={12} className="text-muted-foreground" />
           </button>
 
           {/* Visibility toggle */}
@@ -511,9 +504,9 @@ export function BentoItem({ id, children, className }: BentoItemProps) {
             className="rounded-md bg-black/50 p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-white/10"
           >
             {isHidden ? (
-              <IconEye size={12} className="text-muted-foreground" />
+              <Eye size={12} className="text-muted-foreground" />
             ) : (
-              <IconEyeOff size={12} className="text-muted-foreground" />
+              <EyeOff size={12} className="text-muted-foreground" />
             )}
           </button>
         </div>

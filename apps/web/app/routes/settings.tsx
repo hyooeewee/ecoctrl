@@ -1,4 +1,4 @@
-import { IconArrowBackUp, IconArrowLeft, IconLoader2 } from "@tabler/icons-react";
+import { Undo2, ArrowLeft, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -186,7 +186,7 @@ export default function SettingsPage() {
         className="text-foreground/80 hover:text-foreground absolute top-4 left-4 z-30 flex size-9 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-colors hover:bg-white/10"
         aria-label="Back"
       >
-        <IconArrowLeft size={18} />
+        <ArrowLeft size={18} />
       </button>
 
       <div className="flex h-full">
@@ -216,7 +216,7 @@ export default function SettingsPage() {
                 if (!saveDisabled) syncSettings();
               }}
             >
-              {isSyncing && <IconLoader2 size={14} className="mr-1.5 animate-spin" />}
+              {isSyncing && <Loader2 size={14} className="mr-1.5 animate-spin" />}
               {saveLabel}
             </Button>
             <Button variant="outline" size="sm" className="w-full" onClick={handleReset}>
@@ -381,7 +381,7 @@ export default function SettingsPage() {
                         onClick={handleResetBento}
                         className="text-foreground/70 hover:text-foreground inline-flex items-center gap-1.5 text-xs transition-colors"
                       >
-                        <IconArrowBackUp size={14} />
+                        <Undo2 size={14} />
                         {t.settings.bentoResetLayout}
                       </button>
                     )}
