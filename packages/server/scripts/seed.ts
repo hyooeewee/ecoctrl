@@ -295,7 +295,15 @@ async function seedPlatformConfig() {
     platformName: "EcoCtrl 能管平台",
     refreshInterval: 30,
     realtimeAlertEnabled: true,
-    darkModeFollowSystem: false,
+    timezone: "Asia/Shanghai",
+    autoBackup: true,
+    backupRetentionDays: 30,
+    sessionTimeout: 30,
+    smtpHost: "",
+    smtpPort: 587,
+    smtpUser: "",
+    smtpPass: "",
+    smtpSecure: false,
   });
   console.log("Seeded platform config");
 }
