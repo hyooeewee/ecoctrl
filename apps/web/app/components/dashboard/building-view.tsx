@@ -205,10 +205,12 @@ interface BuildingViewProps {
   sidebarWidth?: number;
   onLabelClick?: (key: string) => void;
   onCanvasClick?: () => void;
+  onLoad?: () => void;
+  onProgress?: (progress: number) => void;
 }
 
 export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(function BuildingView(
-  { className, activeLabel, sidebarWidth = 320, onLabelClick, onCanvasClick },
+  { className, activeLabel, sidebarWidth = 320, onLabelClick, onCanvasClick, onLoad, onProgress },
   ref,
 ) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -219,7 +221,7 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
   const labelAnchorsRef = useRef<{ key: string; worldPos: Vector3 }[]>([]);
   const labelElsRef = useRef<Record<string, HTMLDivElement | null>>({});
   const glowRef = useRef<Nullable<GlowLayer>>(null);
-  const [loaded, setLoaded] = useState(false);
+  const [, setLoadProgress] = useState(0);
   const isInteractingRef = useRef(false);
 
   // Saved camera state after GLB load so resetCamera can truly restore initial state.
@@ -375,8 +377,12 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
     pivot.rotation.y = (defaultRotationY * Math.PI) / 180;
     rootMeshRef.current = pivot;
 
-    SceneLoader.ImportMeshAsync("", "/", "building.glb", scene, (_event) => {
-      /* progress callback empty to avoid stale closures */
+    SceneLoader.ImportMeshAsync("", "/", "building.glb", scene, (event) => {
+      if (event.lengthComputable && event.total > 0) {
+        const value = Math.min(99, (event.loaded / event.total) * 100);
+        setLoadProgress(value);
+        onProgress?.(value);
+      }
     })
       .then((result) => {
         const firstMesh = result.meshes[0];
@@ -439,7 +445,8 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
           }
         }
         scene.stopAllAnimations();
-        setLoaded(true);
+        setLoadProgress(100);
+        onLoad?.();
       })
       .catch((_err) => {
         /* silently ignore load errors */
@@ -610,14 +617,6 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
         className="h-full w-full touch-none"
         aria-label={t.building.ariaLabel}
       />
-
-      {!loaded && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="border-cyber-cyan/30 text-cyber-cyan rounded border bg-black/60 px-4 py-2 text-xs backdrop-blur-sm">
-            {t.common.loading}
-          </div>
-        </div>
-      )}
 
       {/* ── Floating area labels ── */}
       {LABELS.map((cfg) => (

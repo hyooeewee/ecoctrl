@@ -41,9 +41,7 @@ export function WeatherWidget({ data }: WeatherWidgetProps) {
         <div>
           <p className="text-[10px] text-muted-foreground">{data.location}</p>
           <div className="flex items-baseline gap-1">
-            <span className="text-3xl font-bold tracking-tight">
-              {data.currentTemp}
-            </span>
+            <span className="text-3xl font-bold tracking-tight">{data.currentTemp}</span>
             <span className="text-sm text-muted-foreground">°{data.unit}</span>
           </div>
         </div>
