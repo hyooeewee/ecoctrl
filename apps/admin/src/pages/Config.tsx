@@ -1,4 +1,19 @@
-import { Save, Mail, Server, Shield, Sliders, Bell, Clock, Database, Globe } from "lucide-react";
+import {
+  Archive,
+  CalendarDays,
+  Clock,
+  Database,
+  Globe,
+  Hash,
+  Lock,
+  Mail,
+  Save,
+  Server,
+  Shield,
+  Sliders,
+  Timer,
+  Type,
+} from "lucide-react";
 import React, { useEffect, useState } from "react";
 
 import {
@@ -52,10 +67,7 @@ export default function SystemConfig() {
   const currentConfig = config ?? {
     platformName: "",
     refreshInterval: 30,
-    realtimeAlertEnabled: false,
-    theme: "system" as const,
     timezone: "Asia/Shanghai",
-    alertSound: true,
     smtpHost: "",
     smtpPort: 587,
     smtpUser: "",
@@ -77,47 +89,70 @@ export default function SystemConfig() {
       icon: Sliders,
       description: "平台基础信息与运行参数配置。",
       content: (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
-              平台名称
-            </Label>
-            <Input
-              value={currentConfig.platformName}
-              onChange={(e) => updateField("platformName", e.target.value)}
-              className="bg-muted/30 border-border focus:ring-primary/20"
-            />
+        <div className="space-y-6">
+          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-3">
+              <Type size={18} />
+              <div>
+                <Label className="text-sm font-semibold">平台名称</Label>
+                <p className="text-muted-foreground text-xs">设置系统显示名称。</p>
+              </div>
+            </div>
+            <div className="w-full sm:w-48">
+              <Input
+                value={currentConfig.platformName}
+                onChange={(e) => updateField("platformName", e.target.value)}
+                className="bg-muted/30 border-border"
+              />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
-              数据刷新间隔 (秒)
-            </Label>
-            <Select
-              value={String(currentConfig.refreshInterval)}
-              onValueChange={(v) => updateField("refreshInterval", Number(v))}
-            >
-              <SelectTrigger className="bg-muted/30 border-border">
-                <SelectValue placeholder="请选择" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10 秒</SelectItem>
-                <SelectItem value="30">30 秒</SelectItem>
-                <SelectItem value="60">1 分钟</SelectItem>
-                <SelectItem value="300">5 分钟</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-3">
+              <Timer size={18} />
+              <div>
+                <Label className="text-sm font-semibold">数据刷新间隔</Label>
+                <p className="text-muted-foreground text-xs">控制页面数据自动刷新频率。</p>
+              </div>
+            </div>
+            <div className="w-full sm:w-48">
+              <Select
+                value={String(currentConfig.refreshInterval)}
+                onValueChange={(v) => updateField("refreshInterval", Number(v))}
+                items={{ "10": "10 秒", "30": "30 秒", "60": "1 分钟", "300": "5 分钟" }}
+              >
+                <SelectTrigger className="bg-muted/30 border-border h-10 w-full">
+                  <SelectValue placeholder="请选择" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10 秒</SelectItem>
+                  <SelectItem value="30">30 秒</SelectItem>
+                  <SelectItem value="60">1 分钟</SelectItem>
+                  <SelectItem value="300">5 分钟</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
-              系统时区
-            </Label>
-            <div className="relative">
-              <Globe className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
+          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-3">
+              <Globe size={18} />
+              <div>
+                <Label className="text-sm font-semibold">系统时区</Label>
+                <p className="text-muted-foreground text-xs">选择平台使用的默认时区。</p>
+              </div>
+            </div>
+            <div className="w-full sm:w-48">
               <Select
                 value={currentConfig.timezone}
                 onValueChange={(v) => updateField("timezone", v)}
+                items={{
+                  "Asia/Shanghai": "北京时间",
+                  "Asia/Hong_Kong": "香港时间",
+                  "Asia/Tokyo": "东京时间",
+                  "Asia/Singapore": "新加坡时间",
+                  UTC: "UTC",
+                }}
               >
-                <SelectTrigger className="bg-muted/30 border-border pl-10">
+                <SelectTrigger className="bg-muted/30 border-border h-10 w-full">
                   <SelectValue placeholder="选择时区" />
                 </SelectTrigger>
                 <SelectContent>
@@ -134,83 +169,38 @@ export default function SystemConfig() {
       ),
     },
     {
-      id: "display",
-      label: "通知与显示",
-      icon: Bell,
-      description: "主题外观与系统通知行为配置。",
-      content: (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
-                主题模式
-              </Label>
-              <Select
-                value={currentConfig.theme}
-                onValueChange={(v) => updateField("theme", v as SystemConfig["theme"])}
-              >
-                <SelectTrigger className="bg-muted/30 border-border">
-                  <SelectValue placeholder="选择主题" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="light">浅色</SelectItem>
-                  <SelectItem value="dark">深色</SelectItem>
-                  <SelectItem value="system">跟随系统</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label className="text-sm font-semibold">启用实时告警推送</Label>
-              <p className="text-muted-foreground text-xs">
-                当设备发生严重故障时，系统会自动发送桌面通知。
-              </p>
-            </div>
-            <Switch
-              checked={currentConfig.realtimeAlertEnabled}
-              onCheckedChange={(checked) => updateField("realtimeAlertEnabled", checked)}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label className="text-sm font-semibold">告警提示音</Label>
-              <p className="text-muted-foreground text-xs">新告警产生时播放提示音效。</p>
-            </div>
-            <Switch
-              checked={currentConfig.alertSound}
-              onCheckedChange={(checked) => updateField("alertSound", checked)}
-            />
-          </div>
-        </div>
-      ),
-    },
-    {
       id: "email",
       label: "邮件服务",
       icon: Mail,
       description: "配置 SMTP 服务器以支持告警邮件和报表定时发送。",
       content: (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
-                SMTP 服务器地址
-              </Label>
-              <div className="relative">
-                <Server className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-                <Input
-                  placeholder="smtp.example.com"
-                  value={currentConfig.smtpHost}
-                  onChange={(e) => updateField("smtpHost", e.target.value)}
-                  className="bg-muted/30 border-border pl-10"
-                />
+          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-3">
+              <Server size={18} />
+              <div>
+                <Label className="text-sm font-semibold">SMTP 服务器地址</Label>
+                <p className="text-muted-foreground text-xs">邮件服务器主机名或 IP。</p>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
-                SMTP 端口
-              </Label>
+            <div className="w-full sm:w-48">
+              <Input
+                placeholder="smtp.example.com"
+                value={currentConfig.smtpHost}
+                onChange={(e) => updateField("smtpHost", e.target.value)}
+                className="bg-muted/30 border-border"
+              />
+            </div>
+          </div>
+          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-3">
+              <Hash size={18} />
+              <div>
+                <Label className="text-sm font-semibold">SMTP 端口</Label>
+                <p className="text-muted-foreground text-xs">常用端口 25、587 或 465。</p>
+              </div>
+            </div>
+            <div className="w-full sm:w-48">
               <Input
                 type="number"
                 placeholder="587"
@@ -219,10 +209,16 @@ export default function SystemConfig() {
                 className="bg-muted/30 border-border"
               />
             </div>
-            <div className="space-y-2">
-              <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
-                发件人邮箱
-              </Label>
+          </div>
+          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-3">
+              <Mail size={18} />
+              <div>
+                <Label className="text-sm font-semibold">发件人邮箱</Label>
+                <p className="text-muted-foreground text-xs">系统发送邮件使用的地址。</p>
+              </div>
+            </div>
+            <div className="w-full sm:w-48">
               <Input
                 type="email"
                 placeholder="noreply@example.com"
@@ -231,10 +227,16 @@ export default function SystemConfig() {
                 className="bg-muted/30 border-border"
               />
             </div>
-            <div className="space-y-2">
-              <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
-                密码 / 授权码
-              </Label>
+          </div>
+          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-3">
+              <Lock size={18} />
+              <div>
+                <Label className="text-sm font-semibold">密码 / 授权码</Label>
+                <p className="text-muted-foreground text-xs">SMTP 认证密码或应用授权码。</p>
+              </div>
+            </div>
+            <div className="w-full sm:w-48">
               <Input
                 type="password"
                 placeholder="••••••••"
@@ -245,9 +247,9 @@ export default function SystemConfig() {
             </div>
           </div>
           <div className="border-border/50 flex items-center justify-between border-t pt-6">
-            <div className="flex items-center gap-2">
-              <Shield size={14} className="text-muted-foreground" />
-              <div className="space-y-0.5">
+            <div className="flex items-center gap-3">
+              <Shield size={18} />
+              <div>
                 <Label className="text-sm font-semibold">使用 SSL / TLS 加密</Label>
                 <p className="text-muted-foreground text-xs">建议开启以保证邮件传输安全。</p>
               </div>
@@ -257,7 +259,7 @@ export default function SystemConfig() {
               onCheckedChange={(checked) => updateField("smtpSecure", checked)}
             />
           </div>
-          <div className="flex justify-end pt-4">
+          <div className="flex justify-end">
             <Button variant="outline" size="sm" onClick={() => alert("测试连接功能待实现")}>
               测试邮件连接
             </Button>
@@ -273,49 +275,62 @@ export default function SystemConfig() {
       content: (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label className="text-sm font-semibold">自动备份</Label>
-              <p className="text-muted-foreground text-xs">
-                系统每日凌晨自动备份数据库和配置文件。
-              </p>
+            <div className="flex items-center gap-3">
+              <Archive size={18} />
+              <div>
+                <Label className="text-sm font-semibold">自动备份</Label>
+                <p className="text-muted-foreground text-xs">
+                  系统每日凌晨自动备份数据库和配置文件。
+                </p>
+              </div>
             </div>
             <Switch
               checked={currentConfig.autoBackup}
               onCheckedChange={(checked) => updateField("autoBackup", checked)}
             />
           </div>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
-                备份保留天数
-              </Label>
-              <div className="relative">
-                <Database className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-                <Input
-                  type="number"
-                  min={1}
-                  max={365}
-                  value={currentConfig.backupRetentionDays}
-                  onChange={(e) => updateField("backupRetentionDays", Number(e.target.value))}
-                  className="bg-muted/30 border-border pl-10"
-                />
+          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-3">
+              <CalendarDays size={18} />
+              <div>
+                <Label className="text-sm font-semibold">备份保留天数</Label>
+                <p className="text-muted-foreground text-xs">超过天数的旧备份将被自动清理。</p>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
-                会话超时 (分钟)
-              </Label>
-              <div className="relative">
-                <Clock className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-                <Input
-                  type="number"
-                  min={5}
-                  max={240}
-                  value={currentConfig.sessionTimeout}
-                  onChange={(e) => updateField("sessionTimeout", Number(e.target.value))}
-                  className="bg-muted/30 border-border pl-10"
-                />
+            <div className="relative w-full sm:w-48">
+              <Input
+                type="number"
+                min={1}
+                max={365}
+                value={currentConfig.backupRetentionDays}
+                onChange={(e) => updateField("backupRetentionDays", Number(e.target.value))}
+                className="bg-muted/30 border-border pr-12"
+              />
+              <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs text-muted-foreground">
+                天
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-3">
+              <Clock size={18} />
+              <div>
+                <Label className="text-sm font-semibold">会话超时</Label>
+                <p className="text-muted-foreground text-xs">无操作后自动登出的时间。</p>
               </div>
+            </div>
+            <div className="relative w-full sm:w-48">
+              <Input
+                type="number"
+                min={5}
+                max={240}
+                value={currentConfig.sessionTimeout}
+                onChange={(e) => updateField("sessionTimeout", Number(e.target.value))}
+                className="bg-muted/30 border-border pr-14"
+              />
+              <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs text-muted-foreground">
+                分钟
+              </span>
             </div>
           </div>
         </div>
