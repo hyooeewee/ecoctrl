@@ -83,6 +83,7 @@ export default function Home() {
   const bentoDragEnabled = useSettingsStore((state) => state.bentoDragEnabled);
   const bentoLayout = useSettingsStore((state) => state.bentoLayout);
   const editAutoExitDelay = useSettingsStore((state) => state.editAutoExitDelay);
+  const showLoadingAnimation = useSettingsStore((state) => state.showLoadingAnimation);
   const setBentoDragEnabled = useSettingsStore((state) => state.setBentoDragEnabled);
   const setBentoLayout = useSettingsStore((state) => state.setBentoLayout);
   const resetBentoLayout = useSettingsStore((state) => state.resetBentoLayout);
@@ -238,7 +239,7 @@ export default function Home() {
     <div className="dark">
       <div className="text-foreground relative h-screen overflow-hidden font-mono">
         {/* Blueprint loading overlay — covers everything until model is ready */}
-        {!modelLoaded && <BlueprintLoader progress={modelLoadProgress} />}
+        {showLoadingAnimation && !modelLoaded && <BlueprintLoader progress={modelLoadProgress} />}
 
         {/* Full-page 3D building background */}
         <BuildingView

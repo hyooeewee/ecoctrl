@@ -32,6 +32,7 @@ export interface DashboardSettingsPayload {
   dataRefreshInterval?: number;
   navHideDelay?: number;
   editAutoExitDelay?: number;
+  showLoadingAnimation?: boolean;
   bentoLayout?: Array<{
     id: string;
     x: number;

@@ -59,6 +59,8 @@ export const zhCN = {
     language: "界面语言",
     reducedMotion: "减少动态效果",
     reducedMotionDesc: "关闭不必要的动画以提升可访问性",
+    showLoadingAnimation: "显示加载动画",
+    showLoadingAnimationDesc: "3D 模型加载时展示蓝图撕纸动画",
     bentoTitle: "仪表盘布局",
     bentoSubtitle: "自定义首页 Bento 网格排列与可见性",
     bentoEditLayout: "编辑布局",
