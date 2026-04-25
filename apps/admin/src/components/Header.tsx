@@ -16,6 +16,7 @@ import { Input } from "@ecoctrl/ui";
 
 import { authApi } from "../api/auth";
 import type { AuthUser } from "../api/auth";
+import { useAvatar } from "@/hooks/useAvatar";
 import { applyDarkMode, getStoredTheme } from "@/lib/darkMode";
 import type { Theme } from "@/lib/darkMode";
 
@@ -63,7 +64,9 @@ export default function Header({
 }: HeaderProps) {
   const currentTitle = tabTitleMap[activeTab] || "管理总览";
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [avatarVersion, setAvatarVersion] = useState(0);
   const [theme, setTheme] = useState<Theme>(themeProp ?? "system");
+  const avatarSrc = useAvatar(user?.id, user?.avatarUrl, avatarVersion);
 
   useEffect(() => {
     const stored = getStoredTheme() ?? "system";
@@ -90,6 +93,7 @@ export default function Header({
     fetchUser();
 
     const onAvatarUpdated = () => {
+      setAvatarVersion((v) => v + 1);
       fetchUser();
     };
     window.addEventListener("avatar:updated", onAvatarUpdated);
@@ -149,7 +153,10 @@ export default function Header({
                   {user?.username ?? "Admin"}
                 </span>
                 <Avatar className="ring-muted h-8 w-8 ring-2 ring-offset-2">
-                  <AvatarImage src={user?.avatarUrl ?? `https://avatar.vercel.sh/admin?size=32`} />
+                  <AvatarImage
+                    key={avatarVersion}
+                    src={avatarSrc ?? `https://avatar.vercel.sh/${user?.username ?? "admin"}?size=32`}
+                  />
                   <AvatarFallback>
                     {(user?.username ?? "Admin").slice(0, 2).toUpperCase()}
                   </AvatarFallback>
