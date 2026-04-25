@@ -60,28 +60,46 @@ The extracted structure will be:
 
 ```
 ecoctrl/
-├── admin/        # Static files, serve with any web server
-├── web/          # Static files, serve with any web server
+├── start.sh      # One-click startup script
+├── admin/        # Static files
+├── web/          # Static files
 └── server/       # Node.js application
 ```
 
-### Server
+### Start
 
 ```bash
-cd server && cp .env.example .env.local
-pm2 start ecosystem.config.js
+cd ecoctrl
+
+# 1. Configure environment
+cp server/.env.example server/.env.local
+# Edit server/.env.local: fill in DATABASE_URL, JWT_SECRET, etc.
+
+# 2. Start all services
+./start.sh
 ```
 
-### Admin & Web
+| Service | URL |
+|---------|-----|
+| Web | http://localhost:8081 |
+| Admin | http://localhost:4173 |
+| API | http://localhost:3000 |
 
-Both are static builds. Serve them with any static file server:
+To stop:
 
 ```bash
-# Example with serve (npx serve)
-cd admin && cp .env.example .env.local
-npx serve -s -l 4173
-cd web  && cp .env.example .env.local
-npx serve -s -l 8081
+./start.sh   # interactive prompt: [s] stop
+```
+
+Or manually:
+
+```bash
+# Stop server
+cd server && pnpm exec pm2 delete ecoctrl-server
+
+# Stop admin & web (find PIDs from logs/)
+kill $(cat logs/admin.pid)
+kill $(cat logs/web.pid)
 ```
 
 ## Local Development
