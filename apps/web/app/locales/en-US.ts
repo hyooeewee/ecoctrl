@@ -55,6 +55,8 @@ export const enUS = {
     language: "Language",
     reducedMotion: "Reduce Motion",
     reducedMotionDesc: "Disable unnecessary animations for accessibility",
+    showLoadingAnimation: "Show Loading Animation",
+    showLoadingAnimationDesc: "Display the blueprint peel-off animation while the 3D model loads",
     bentoTitle: "Dashboard Layout",
     bentoSubtitle: "Customize homepage Bento grid arrangement and visibility",
     bentoEditLayout: "Edit Layout",

@@ -5,13 +5,14 @@ interface BlueprintLoaderProps {
 }
 
 /**
- * Blueprint peel-off loading animation — tears downward from the top edge.
+ * Blueprint peel-off loading animation — peels from top-left to bottom-right.
  *
- * Simulates pulling a blueprint off the screen from the top:
- *  0–20%   : fully flat, barely moving
- *  20–60%  : top edge curls inward and downward (rotateX + translateY)
- *  60–85%  : accelerates downward tear, paper twists and drops
- *  85–100% : falls away completely while fading out
+ * Simulates grabbing the top-left corner of a blueprint and flipping it
+ * diagonally down-right as the model loads:
+ *  0–20%   : fully flat against the wall
+ *  20–60%  : top-left corner lifts, paper starts curling down-right
+ *  60–85%  : accelerates the diagonal flip, paper twists and drifts
+ *  85–100% : flies away to bottom-right while fading out
  */
 export function BlueprintLoader({ progress }: BlueprintLoaderProps) {
   const p = Math.max(0, Math.min(progress, 100));
@@ -31,43 +32,47 @@ export function BlueprintLoader({ progress }: BlueprintLoaderProps) {
     return Math.max(0, Math.min(raw, 1));
   }, [p]);
 
-  // Curl from the top: rotateX negative rolls the top edge backward (into screen)
-  const rotateX = -curl * 18 - tear * 35; // total -53deg at full tear
-  const rotateY = curl * 3 + tear * 8; // slight sideways tilt
-  const rotateZ = curl * 1.5 - tear * 6; // twists as it tears
-  const translateY = curl * 6 + tear * 35; // drops downward (vh units applied later)
-  const translateZ = curl * 60 + tear * 40; // lifts toward viewer
-  const scaleX = 1 - tear * 0.04; // slight compression during tear
-  const skewX = tear * 3; // paper twists as it rips
+  // Flip from top-left to bottom-right
+  // rotateX positive = top edge flips down toward viewer
+  // rotateY negative = left edge flips right toward viewer
+  const rotateX = curl * 22 + tear * 48; // 0 -> 70deg
+  const rotateY = -(curl * 12 + tear * 38); // 0 -> -50deg
+  const rotateZ = tear * 10; // slight twist while flying
+  const translateX = curl * 6 + tear * 45; // vw
+  const translateY = curl * 5 + tear * 40; // vh
+  const translateZ = curl * 50 + tear * 80; // lift off wall
   const opacity = 1 - fade;
 
-  // Shadow intensifies as the paper curls away from the wall
-  const shadowBlur = curl * 30 + tear * 60;
-  const shadowY = curl * 12 + tear * 30;
-  const shadowAlpha = 0.2 + curl * 0.3 + tear * 0.3;
+  // Shadow shifts to bottom-right as paper peels away
+  const shadowBlur = curl * 25 + tear * 55;
+  const shadowX = curl * 10 + tear * 35;
+  const shadowY = curl * 14 + tear * 40;
+  const shadowAlpha = 0.2 + curl * 0.25 + tear * 0.35;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-hidden bg-[#002a6c]">
+    <div className="fixed inset-0 z-50 flex items-start justify-start overflow-hidden bg-[#002a6c]">
       {/* Dark wall revealed behind the blueprint */}
       <div className="absolute inset-0 bg-[#001e4f]" />
 
-      {/* Blueprint sheet container — centered at top */}
+      {/* Blueprint sheet container — anchored at top-left */}
       <div
-        className="relative mt-[5vh]"
-        style={{ perspective: "1200px", perspectiveOrigin: "50% 30%" }}
+        className="relative ml-[5vw] mt-[5vh]"
+        style={{ perspective: "1200px", perspectiveOrigin: "10% 10%" }}
       >
-        {/* Back-face shadow (simulates the dark underside of the curled paper) */}
+        {/* Back-face shadow (dark underside of the curling paper) */}
         <div
-          className="pointer-events-none absolute inset-0 rounded-sm bg-black/40"
+          className="pointer-events-none absolute inset-0 rounded-sm bg-black/50"
           style={{
-            transformOrigin: "50% 0%",
+            transformOrigin: "0% 0%",
             transform: `
-              rotateX(${rotateX * 0.6}deg)
-              translateY(${translateY * 0.5}px)
-              translateZ(-12px)
+              rotateX(${rotateX * 0.5}deg)
+              rotateY(${rotateY * 0.5}deg)
+              translateX(${translateX * 0.4}vw)
+              translateY(${translateY * 0.4}vh)
+              translateZ(-16px)
             `,
-            opacity: curl * 0.5 + tear * 0.8,
-            filter: `blur(${shadowBlur * 0.6}px)`,
+            opacity: curl * 0.4 + tear * 0.7,
+            filter: `blur(${shadowBlur * 0.7}px)`,
           }}
         />
 
@@ -75,20 +80,19 @@ export function BlueprintLoader({ progress }: BlueprintLoaderProps) {
         <div
           className="relative"
           style={{
-            transformOrigin: "50% 0%",
+            transformOrigin: "0% 0%",
             transform: `
               rotateX(${rotateX}deg)
               rotateY(${rotateY}deg)
               rotateZ(${rotateZ}deg)
+              translateX(${translateX}vw)
               translateY(${translateY}vh)
               translateZ(${translateZ}px)
-              scaleX(${scaleX})
-              skewX(${skewX}deg)
             `,
             opacity,
             filter:
               p > 20
-                ? `drop-shadow(0px ${shadowY}px ${shadowBlur}px rgba(0,0,0,${shadowAlpha}))`
+                ? `drop-shadow(${shadowX}px ${shadowY}px ${shadowBlur}px rgba(0,0,0,${shadowAlpha}))`
                 : "none",
           }}
         >
@@ -99,31 +103,31 @@ export function BlueprintLoader({ progress }: BlueprintLoaderProps) {
             draggable={false}
           />
 
-          {/* Crease / fold highlight along the top curling edge */}
+          {/* Diagonal crease highlight from top-left to bottom-right */}
           <div
             className="pointer-events-none absolute inset-0 rounded-sm"
             style={{
               background:
-                "linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(0,0,0,0.08) 8%, transparent 22%)",
-              opacity: curl * 0.7 + tear * 0.3,
+                "linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(0,0,0,0.06) 15%, transparent 30%, transparent 70%, rgba(0,0,0,0.10) 85%, rgba(0,0,0,0.18) 100%)",
+              opacity: curl * 0.8 + tear * 0.5,
             }}
           />
 
-          {/* Subtle tear-line distortion near the bottom as it rips */}
+          {/* Subtle tear-line distortion near the peeling corner */}
           <div
-            className="pointer-events-none absolute bottom-0 left-0 right-0 h-8"
+            className="pointer-events-none absolute top-0 left-0 h-full w-8"
             style={{
-              background: "linear-gradient(to top, rgba(0,0,0,0.25) 0%, transparent 100%)",
-              opacity: tear * 0.6,
-              transform: `translateY(${tear * 4}px)`,
+              background: "linear-gradient(to right, rgba(0,0,0,0.20) 0%, transparent 100%)",
+              opacity: tear * 0.5,
+              transform: `translateX(${tear * 3}px)`,
             }}
           />
         </div>
       </div>
 
-      {/* Progress indicator — sticks near bottom, fades last */}
+      {/* Progress indicator — sticks near bottom-right, fades last */}
       <div
-        className="absolute bottom-10 left-1/2 flex -translate-x-1/2 flex-col items-center gap-3"
+        className="absolute bottom-10 right-10 flex flex-col items-end gap-3"
         style={{ opacity: 1 - fade * 0.5 }}
       >
         <span className="font-mono text-sm tracking-[0.2em] text-white/50">{Math.round(p)}%</span>

@@ -46,6 +46,7 @@ export default function SettingsPage() {
     defaultRotationY,
     language,
     reducedMotion,
+    showLoadingAnimation,
     bentoLayout,
     editAutoExitDelay,
     syncStatus,
@@ -61,6 +62,7 @@ export default function SettingsPage() {
     setDefaultRotationY,
     setLanguage,
     setReducedMotion,
+    setShowLoadingAnimation,
     setBentoDragEnabled,
     setEditAutoExitDelay,
     resetBentoLayout,
@@ -257,6 +259,19 @@ export default function SettingsPage() {
                     <p className="text-muted-foreground text-xs">{t.settings.reducedMotionDesc}</p>
                   </div>
                   <Switch checked={reducedMotion} onCheckedChange={setReducedMotion} />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm font-medium">{t.settings.showLoadingAnimation}</Label>
+                    <p className="text-muted-foreground text-xs">
+                      {t.settings.showLoadingAnimationDesc}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={showLoadingAnimation}
+                    onCheckedChange={setShowLoadingAnimation}
+                  />
                 </div>
               </div>
             </section>
