@@ -24,9 +24,17 @@ import {
   XCircle,
 } from "lucide-react";
 
-import { Button } from "@ecoctrl/ui";
-import { Label } from "@ecoctrl/ui";
-import { Switch } from "@ecoctrl/ui";
+import {
+  Badge,
+  Button,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Switch,
+} from "@ecoctrl/ui";
 
 import { preferencesApi } from "@/api/preferences";
 import SettingsPage from "@/components/SettingsPage";
@@ -168,16 +176,21 @@ export default function Preferences({ userId, initialPrefs, onSaved }: Preferenc
                 <p className="text-muted-foreground text-xs">选择浅色、深色或跟随系统。</p>
               </div>
             </div>
-            <div className="relative w-full sm:w-48">
-              <select
+            <div className="w-full sm:w-48">
+              <Select
                 value={prefs.theme}
-                onChange={(e) => updateField("theme", e.target.value as UserPreferences["theme"])}
-                className="bg-muted/30 border-border h-10 w-full rounded-md border px-3 text-sm"
+                onValueChange={(v) => updateField("theme", v as UserPreferences["theme"])}
+                items={{ light: "浅色", dark: "深色", system: "跟随系统" }}
               >
-                <option value="light">浅色</option>
-                <option value="dark">深色</option>
-                <option value="system">跟随系统</option>
-              </select>
+                <SelectTrigger className="bg-muted/30 border-border h-10 w-full">
+                  <SelectValue placeholder="选择主题" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="light">浅色</SelectItem>
+                  <SelectItem value="dark">深色</SelectItem>
+                  <SelectItem value="system">跟随系统</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -189,17 +202,25 @@ export default function Preferences({ userId, initialPrefs, onSaved }: Preferenc
                 <p className="text-muted-foreground text-xs">选择界面显示语言。</p>
               </div>
             </div>
-            <div className="relative w-full sm:w-48">
-              <select
+            <div className="w-full sm:w-48">
+              <Select
                 value={prefs.language}
-                onChange={(e) =>
-                  updateField("language", e.target.value as UserPreferences["language"])
-                }
-                className="bg-muted/30 border-border h-10 w-full rounded-md border px-3 text-sm"
+                onValueChange={(v) => updateField("language", v as UserPreferences["language"])}
+                items={{ "zh-CN": "中文（简体）", "en-US": "English" }}
               >
-                <option value="zh-CN">中文（简体）</option>
-                <option value="en-US">English</option>
-              </select>
+                <SelectTrigger className="bg-muted/30 border-border h-10 w-full">
+                  <SelectValue placeholder="选择语言" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="zh-CN">中文（简体）</SelectItem>
+                  <SelectItem value="en-US" disabled>
+                    <span>English</span>
+                    <Badge variant="secondary" className="ml-2 h-5 text-[10px]">
+                      开发中
+                    </Badge>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -211,18 +232,21 @@ export default function Preferences({ userId, initialPrefs, onSaved }: Preferenc
                 <p className="text-muted-foreground text-xs">控制元素间距和紧凑程度。</p>
               </div>
             </div>
-            <div className="relative w-full sm:w-48">
-              <select
+            <div className="w-full sm:w-48">
+              <Select
                 value={prefs.density}
-                onChange={(e) =>
-                  updateField("density", e.target.value as UserPreferences["density"])
-                }
-                className="bg-muted/30 border-border h-10 w-full rounded-md border px-3 text-sm"
+                onValueChange={(v) => updateField("density", v as UserPreferences["density"])}
+                items={{ compact: "紧凑", comfortable: "舒适", spacious: "宽松" }}
               >
-                <option value="compact">紧凑</option>
-                <option value="comfortable">舒适</option>
-                <option value="spacious">宽松</option>
-              </select>
+                <SelectTrigger className="bg-muted/30 border-border h-10 w-full">
+                  <SelectValue placeholder="选择密度" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="compact">紧凑</SelectItem>
+                  <SelectItem value="comfortable">舒适</SelectItem>
+                  <SelectItem value="spacious">宽松</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -234,18 +258,21 @@ export default function Preferences({ userId, initialPrefs, onSaved }: Preferenc
                 <p className="text-muted-foreground text-xs">调整全局字体缩放比例。</p>
               </div>
             </div>
-            <div className="relative w-full sm:w-48">
-              <select
+            <div className="w-full sm:w-48">
+              <Select
                 value={prefs.fontSize}
-                onChange={(e) =>
-                  updateField("fontSize", e.target.value as UserPreferences["fontSize"])
-                }
-                className="bg-muted/30 border-border h-10 w-full rounded-md border px-3 text-sm"
+                onValueChange={(v) => updateField("fontSize", v as UserPreferences["fontSize"])}
+                items={{ small: "小", medium: "中", large: "大" }}
               >
-                <option value="small">小</option>
-                <option value="medium">中</option>
-                <option value="large">大</option>
-              </select>
+                <SelectTrigger className="bg-muted/30 border-border h-10 w-full">
+                  <SelectValue placeholder="选择字体大小" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="small">小</SelectItem>
+                  <SelectItem value="medium">中</SelectItem>
+                  <SelectItem value="large">大</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
