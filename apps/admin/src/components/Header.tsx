@@ -155,7 +155,9 @@ export default function Header({
                 <Avatar className="ring-muted h-8 w-8 ring-2 ring-offset-2">
                   <AvatarImage
                     key={avatarVersion}
-                    src={avatarSrc ?? `https://avatar.vercel.sh/${user?.username ?? "admin"}?size=32`}
+                    src={
+                      avatarSrc ?? `https://avatar.vercel.sh/${user?.username ?? "admin"}?size=32`
+                    }
                   />
                   <AvatarFallback>
                     {(user?.username ?? "Admin").slice(0, 2).toUpperCase()}
