@@ -10,12 +10,26 @@ import {
 } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
-import { Button } from "@ecoctrl/ui";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoctrl/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  ScrollArea,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@ecoctrl/ui";
 import AppButton from "@/components/AppButton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@ecoctrl/ui";
-import { Input } from "@ecoctrl/ui";
-import { ScrollArea } from "@ecoctrl/ui";
 
 import { cn } from "@/lib/utils";
 import type { MaintenanceReminder, MaintenanceReminderDetail } from "@ecoctrl/shared";
@@ -655,32 +669,42 @@ export default function Maintenance() {
                 </div>
                 <div>
                   <p className="mb-1 text-xs text-muted-foreground">优先级</p>
-                  <select
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors"
+                  <Select
                     value={editForm.priority || ""}
-                    onChange={(e) =>
+                    onValueChange={(v) =>
                       setEditForm((f) => ({
                         ...f,
-                        priority: e.target.value as MaintenanceReminder["priority"],
+                        priority: v as MaintenanceReminder["priority"],
                       }))
                     }
+                    items={{ high: "高", medium: "中", low: "低" }}
                   >
-                    <option value="high">高</option>
-                    <option value="medium">中</option>
-                    <option value="low">低</option>
-                  </select>
+                    <SelectTrigger className="h-9 w-full">
+                      <SelectValue placeholder="选择优先级" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="high">高</SelectItem>
+                      <SelectItem value="medium">中</SelectItem>
+                      <SelectItem value="low">低</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <p className="mb-1 text-xs text-muted-foreground">状态</p>
-                  <select
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors"
+                  <Select
                     value={editForm.status || ""}
-                    onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))}
+                    onValueChange={(v) => setEditForm((f) => ({ ...f, status: v }))}
+                    items={{ pending: "待处理", in_progress: "进行中", completed: "已完成" }}
                   >
-                    <option value="pending">待处理</option>
-                    <option value="in_progress">进行中</option>
-                    <option value="completed">已完成</option>
-                  </select>
+                    <SelectTrigger className="h-9 w-full">
+                      <SelectValue placeholder="选择状态" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">待处理</SelectItem>
+                      <SelectItem value="in_progress">进行中</SelectItem>
+                      <SelectItem value="completed">已完成</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <p className="mb-1 text-xs text-muted-foreground">负责人</p>

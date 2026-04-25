@@ -1,22 +1,17 @@
-import {
-  Save,
-  Mail,
-  Server,
-  Shield,
-  Sliders,
-  Bell,
-  Monitor,
-  Clock,
-  Database,
-  Globe,
-} from "lucide-react";
+import { Save, Mail, Server, Shield, Sliders, Bell, Clock, Database, Globe } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
-import { Button } from "@ecoctrl/ui";
-import { Input } from "@ecoctrl/ui";
-import { Label } from "@ecoctrl/ui";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ecoctrl/ui";
-import { Switch } from "@ecoctrl/ui";
+import {
+  Button,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Switch,
+} from "@ecoctrl/ui";
 import SettingsPage from "@/components/SettingsPage";
 
 import type { SystemConfig } from "@ecoctrl/shared";
