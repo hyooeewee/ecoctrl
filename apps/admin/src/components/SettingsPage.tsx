@@ -143,7 +143,7 @@ export default function SettingsPage({ sections, loading, header, actions }: Set
 
       {/* Right nav */}
       {sections.length > 1 && (
-        <nav className="group/nav hidden lg:flex fixed right-4 top-1/2 -translate-y-1/2 z-50 flex-col items-end gap-2">
+        <nav className="group/nav hidden lg:flex fixed right-4 top-1/2 -translate-y-1/2 z-50 flex-col items-end gap-2 pl-12 py-4">
           {sections.map((s) => {
             const Icon = s.icon;
             const isActive = activeSection === s.id;
