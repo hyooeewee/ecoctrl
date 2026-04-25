@@ -10,10 +10,10 @@ React Router 7 dashboard application with 3D building visualization via BabylonJ
 
 ## Environment Variables
 
-| Variable | Description | Example |
-|----------|-------------|---------|
+| Variable            | Description                                                     | Example                 |
+| ------------------- | --------------------------------------------------------------- | ----------------------- |
 | `VITE_API_BASE_URL` | Backend API origin (must be accessible from the user's browser) | `http://localhost:3000` |
-| `VITE_API_PREFIX` | API route prefix | `/api` |
+| `VITE_API_PREFIX`   | API route prefix                                                | `/api`                  |
 
 > **⚠️ Important:** `VITE_API_BASE_URL` must be a **publicly accessible address** from the user's browser. If the web app is deployed at `http://example.com:8081`, setting this to `http://localhost:3000` will cause users' browsers to try connecting to their own local machine instead of the server. Use the server's public IP or domain name for production deployments.
 
@@ -76,11 +76,11 @@ pnpm --filter @ecoctrl/web dev
 
 ## Common Commands
 
-| Command | Description |
-|---------|-------------|
-| `pnpm dev` | Start dev server with hot reload (port 8080) |
-| `pnpm build` | Production build |
-| `pnpm preview` | Preview production build (port 8081) |
-| `pnpm start` | Build and serve (port 8081) |
-| `pnpm check` | Type check + lint + format |
-| `pnpm check:fix` | Auto-fix issues |
+| Command          | Description                                  |
+| ---------------- | -------------------------------------------- |
+| `pnpm dev`       | Start dev server with hot reload (port 8080) |
+| `pnpm build`     | Production build                             |
+| `pnpm preview`   | Preview production build (port 8081)         |
+| `pnpm start`     | Build and serve (port 8081)                  |
+| `pnpm check`     | Type check + lint + format                   |
+| `pnpm check:fix` | Auto-fix issues                              |
