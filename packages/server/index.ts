@@ -55,11 +55,6 @@ await fastify.register(fastifyStatic, {
   prefix: "/uploads/files/",
   decorateReply: false,
 });
-await fastify.register(fastifyStatic, {
-  root: path.join(UPLOAD_DIR, "avatar"),
-  prefix: "/uploads/avatar/",
-  decorateReply: false,
-});
 await fastify.register(swagger, {
   transform: jsonSchemaTransform,
   openapi: {
