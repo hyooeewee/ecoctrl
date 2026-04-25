@@ -1,4 +1,4 @@
-import { IconArrowLeft } from "@tabler/icons-react";
+import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router";
 
 import { locale, useLocale } from "~/locales";
@@ -21,7 +21,7 @@ export default function AnalysisPage() {
         className="text-foreground/80 hover:text-foreground absolute top-4 left-4 z-20 flex size-9 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-colors hover:bg-white/10"
         aria-label="Back"
       >
-        <IconArrowLeft size={18} />
+        <ArrowLeft size={18} />
       </button>
 
       <main className="flex h-full flex-col items-center justify-center pt-16">

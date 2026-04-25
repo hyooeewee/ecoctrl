@@ -1,10 +1,4 @@
-import {
-  IconBuildingSkyscraper,
-  IconChartBar,
-  IconLayoutDashboard,
-  IconSettings,
-  IconTopologyFull,
-} from "@tabler/icons-react";
+import { Building2, BarChart3, LayoutDashboard, Settings, Network } from "lucide-react";
 import { NavLink, useLocation } from "react-router";
 
 import { cn } from "~/lib/utils";
@@ -19,31 +13,31 @@ export function DashboardNav({ className }: { className?: string }) {
       id: "overview",
       to: "/",
       label: t.nav.overview,
-      Icon: IconLayoutDashboard,
+      Icon: LayoutDashboard,
     },
     {
       id: "floors",
       to: "/floors",
       label: t.nav.floors,
-      Icon: IconBuildingSkyscraper,
+      Icon: Building2,
     },
     {
       id: "systems",
       to: "/systems",
       label: t.nav.systems,
-      Icon: IconTopologyFull,
+      Icon: Network,
     },
     {
       id: "analysis",
       to: "/analysis",
       label: t.nav.analysis,
-      Icon: IconChartBar,
+      Icon: BarChart3,
     },
     {
       id: "settings",
       to: "/settings",
       label: t.nav.settings,
-      Icon: IconSettings,
+      Icon: Settings,
     },
   ];
 
