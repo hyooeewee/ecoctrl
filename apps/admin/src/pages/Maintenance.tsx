@@ -22,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
+  Label,
   ScrollArea,
   Select,
   SelectContent,
@@ -615,8 +616,8 @@ export default function Maintenance() {
             <div className="space-y-3 py-2">
               <div>
                 <div className="mb-1 flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground">任务名称</p>
-                  <p
+                  <Label className="text-sm font-semibold">任务名称</Label>
+                  <span
                     className={cn(
                       "text-xs",
                       (editForm.task?.length || 0) < 2 || (editForm.task?.length || 0) > 100
@@ -625,7 +626,7 @@ export default function Maintenance() {
                     )}
                   >
                     {editForm.task?.length || 0} / 100
-                  </p>
+                  </span>
                 </div>
                 <Input
                   maxLength={100}
@@ -638,8 +639,8 @@ export default function Maintenance() {
               </div>
               <div>
                 <div className="mb-1 flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground">任务描述</p>
-                  <p
+                  <Label className="text-sm font-semibold">任务描述</Label>
+                  <span
                     className={cn(
                       "text-xs",
                       (editForm.description?.length || 0) > 2000
@@ -648,7 +649,7 @@ export default function Maintenance() {
                     )}
                   >
                     {editForm.description?.length || 0} / 2000
-                  </p>
+                  </span>
                 </div>
                 <textarea
                   maxLength={2000}
@@ -659,16 +660,16 @@ export default function Maintenance() {
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="mb-1 text-xs text-muted-foreground">截止日期</p>
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-semibold">截止日期</Label>
                   <Input
                     type="date"
                     value={editForm.dueDate || ""}
                     onChange={(e) => setEditForm((f) => ({ ...f, dueDate: e.target.value }))}
                   />
                 </div>
-                <div>
-                  <p className="mb-1 text-xs text-muted-foreground">优先级</p>
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-semibold">优先级</Label>
                   <Select
                     value={editForm.priority || ""}
                     onValueChange={(v) =>
@@ -689,8 +690,8 @@ export default function Maintenance() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <p className="mb-1 text-xs text-muted-foreground">状态</p>
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-semibold">状态</Label>
                   <Select
                     value={editForm.status || ""}
                     onValueChange={(v) => setEditForm((f) => ({ ...f, status: v }))}
@@ -706,22 +707,22 @@ export default function Maintenance() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <p className="mb-1 text-xs text-muted-foreground">负责人</p>
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-semibold">负责人</Label>
                   <Input
                     value={editForm.assignee || ""}
                     onChange={(e) => setEditForm((f) => ({ ...f, assignee: e.target.value }))}
                   />
                 </div>
-                <div>
-                  <p className="mb-1 text-xs text-muted-foreground">地点</p>
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-semibold">地点</Label>
                   <Input
                     value={editForm.location || ""}
                     onChange={(e) => setEditForm((f) => ({ ...f, location: e.target.value }))}
                   />
                 </div>
-                <div>
-                  <p className="mb-1 text-xs text-muted-foreground">预估工时</p>
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-semibold">预估工时</Label>
                   <Input
                     type="number"
                     step="0.5"
