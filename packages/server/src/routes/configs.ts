@@ -6,7 +6,10 @@ const configSchema = z.object({
   platformName: z.string(),
   refreshInterval: z.number(),
   realtimeAlertEnabled: z.boolean(),
-  darkModeFollowSystem: z.boolean(),
+  timezone: z.string(),
+  autoBackup: z.boolean(),
+  backupRetentionDays: z.number(),
+  sessionTimeout: z.number(),
   smtpHost: z.string(),
   smtpPort: z.number(),
   smtpUser: z.string(),
@@ -18,7 +21,10 @@ const configBodySchema = z.object({
   platformName: z.string().optional(),
   refreshInterval: z.number().optional(),
   realtimeAlertEnabled: z.boolean().optional(),
-  darkModeFollowSystem: z.boolean().optional(),
+  timezone: z.string().optional(),
+  autoBackup: z.boolean().optional(),
+  backupRetentionDays: z.number().optional(),
+  sessionTimeout: z.number().optional(),
   smtpHost: z.string().optional(),
   smtpPort: z.number().optional(),
   smtpUser: z.string().optional(),
@@ -38,20 +44,9 @@ export default async function configRoutes(fastify: FastifyInstance) {
     },
     async (_request, reply) => {
       const config = await findPlatformConfig();
-      const raw = config ?? {
-        platformName: "EcoCtrl 能管平台",
-        refreshInterval: 30,
-        realtimeAlertEnabled: true,
-        darkModeFollowSystem: false,
-        smtpHost: "",
-        smtpPort: 587,
-        smtpUser: "",
-        smtpPass: "",
-        smtpSecure: false,
-      };
       return reply.send({
-        ...raw,
-        smtpPass: raw.smtpPass ? "****" : "",
+        ...config,
+        smtpPass: config.smtpPass ? "****" : "",
       });
     },
   );
@@ -71,7 +66,10 @@ export default async function configRoutes(fastify: FastifyInstance) {
         platformName?: string;
         refreshInterval?: number;
         realtimeAlertEnabled?: boolean;
-        darkModeFollowSystem?: boolean;
+        timezone?: string;
+        autoBackup?: boolean;
+        backupRetentionDays?: number;
+        sessionTimeout?: number;
         smtpHost?: string;
         smtpPort?: number;
         smtpUser?: string;
@@ -81,18 +79,21 @@ export default async function configRoutes(fastify: FastifyInstance) {
       const existing = await findPlatformConfig();
 
       const updated = {
-        platformName: body.platformName ?? existing?.platformName ?? "EcoCtrl 能管平台",
-        refreshInterval: body.refreshInterval ?? existing?.refreshInterval ?? 30,
-        realtimeAlertEnabled: body.realtimeAlertEnabled ?? existing?.realtimeAlertEnabled ?? true,
-        darkModeFollowSystem: body.darkModeFollowSystem ?? existing?.darkModeFollowSystem ?? false,
-        smtpHost: body.smtpHost ?? existing?.smtpHost ?? "",
-        smtpPort: body.smtpPort ?? existing?.smtpPort ?? 587,
-        smtpUser: body.smtpUser ?? existing?.smtpUser ?? "",
-        smtpSecure: body.smtpSecure ?? existing?.smtpSecure ?? false,
+        platformName: body.platformName ?? existing.platformName,
+        refreshInterval: body.refreshInterval ?? existing.refreshInterval,
+        realtimeAlertEnabled: body.realtimeAlertEnabled ?? existing.realtimeAlertEnabled,
+        timezone: body.timezone ?? existing.timezone,
+        autoBackup: body.autoBackup ?? existing.autoBackup,
+        backupRetentionDays: body.backupRetentionDays ?? existing.backupRetentionDays,
+        sessionTimeout: body.sessionTimeout ?? existing.sessionTimeout,
+        smtpHost: body.smtpHost ?? existing.smtpHost,
+        smtpPort: body.smtpPort ?? existing.smtpPort,
+        smtpUser: body.smtpUser ?? existing.smtpUser,
+        smtpSecure: body.smtpSecure ?? existing.smtpSecure,
         smtpPass:
           body.smtpPass && body.smtpPass !== "****"
             ? body.smtpPass
-            : existing?.smtpPass ?? "",
+            : existing.smtpPass,
       };
       await updatePlatformConfig(updated);
       return reply.send({
