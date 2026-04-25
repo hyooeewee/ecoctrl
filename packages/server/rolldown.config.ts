@@ -5,7 +5,7 @@ export default defineConfig({
   input: "index.ts",
 
   output: {
-    file: "dist/index.js",
+    file: "dist/index.mjs",
     format: "esm",
     sourcemap: false,
   },
@@ -25,6 +25,7 @@ export default defineConfig({
     "@fastify/multipart",
     "@fastify/static",
     "@fastify/swagger",
+    "@fastify/swagger-ui",
     "@fastify/jwt",
     "dotenv",
     "drizzle-orm",
