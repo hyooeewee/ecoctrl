@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "NODE_ENV=development tsx watch index.ts",
-    "build": "pnpm clean && rolldown -c && cp .env.example ecosystem.config.cjs dist/",
+    "build": "pnpm clean && rolldown -c && cp .env.example ecoctrl.config.cjs dist/",
     "build:watch": "pnpm clean && rolldown -c -w",
     "preview": "NODE_ENV=staging pnpm build && node dist/index.js",
-    "start": "NODE_ENV=production pnpm build && cp .env.local dist/ && cd dist && pm2 start ecosystem.config.cjs",
+    "start": "NODE_ENV=production pnpm build && cp .env.local dist/ && cd dist && pm2 start ecoctrl.config.cjs",
     "clean": "rimraf dist",
     "check": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
