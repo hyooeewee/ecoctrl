@@ -34,6 +34,7 @@ const SYNCABLE_FIELDS: (keyof SettingsState)[] = [
   "dataRefreshInterval",
   "navHideDelay",
   "editAutoExitDelay",
+  "showLoadingAnimation",
   "bentoLayout",
 ];
 
@@ -53,6 +54,7 @@ export interface SettingsState {
   bentoLayout: BentoLayoutItem[];
   bentoDragEnabled: boolean;
   editAutoExitDelay: number; // ms; 0 = disabled
+  showLoadingAnimation: boolean;
 
   // --- Sync status (not persisted to localStorage) ---
   syncStatus: "idle" | "syncing" | "saved" | "error";
@@ -73,6 +75,7 @@ interface SettingsStore extends SettingsState {
   setReducedMotion: (value: boolean) => void;
   setBentoDragEnabled: (value: boolean) => void;
   setEditAutoExitDelay: (value: number) => void;
+  setShowLoadingAnimation: (value: boolean) => void;
   setBentoItemHidden: (id: string, hidden: boolean) => void;
   resizeBentoItem: (id: string, w: number, h: number) => void;
   swapBentoItems: (idA: string, idB: string) => void;
@@ -102,6 +105,7 @@ const defaults: SettingsState = {
   bentoLayout: defaultBentoLayout,
   bentoDragEnabled: false,
   editAutoExitDelay: 30000,
+  showLoadingAnimation: true,
   syncStatus: "idle",
   hasUnsavedChanges: false,
   syncDebounceMs: 500,
@@ -176,6 +180,10 @@ export const useSettingsStore = create<SettingsStore>()(
       },
       setEditAutoExitDelay: (value) => {
         set({ editAutoExitDelay: value, hasUnsavedChanges: true, syncStatus: "idle" });
+        scheduleSync(get);
+      },
+      setShowLoadingAnimation: (value) => {
+        set({ showLoadingAnimation: value, hasUnsavedChanges: true, syncStatus: "idle" });
         scheduleSync(get);
       },
 

@@ -2,7 +2,7 @@
 @import "@ecoctrl/ui/index.css";
 @import "@fontsource-variable/geist-mono";
 
-@source "../../node_modules/@ecoctrl/ui/src";
+@source "../node_modules/@ecoctrl/ui/src";
 @source ".";
 
 @theme inline {
