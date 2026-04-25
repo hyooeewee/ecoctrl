@@ -60,6 +60,11 @@ export interface WidgetConfig {
   id: string;
   titleKey: string;
   icon: string;
+  layoutX: number;
+  layoutY: number;
+  layoutW: number;
+  layoutH: number;
+  hidden: boolean;
   data: WidgetData;
 }
 

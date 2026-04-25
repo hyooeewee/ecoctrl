@@ -12,6 +12,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLoaderData } from "react-router";
 
 import { BentoGrid } from "~/components/dashboard/bento-grid";
+import { BlueprintLoader } from "~/components/dashboard/blueprint-loader";
 import { BuildingView, type BuildingViewRef } from "~/components/dashboard/building-view";
 import { DashboardHeader } from "~/components/dashboard/dashboard-header";
 import { DashboardNav } from "~/components/dashboard/dashboard-nav";
@@ -19,7 +20,7 @@ import { DashboardWidgets } from "~/components/dashboard/widgets";
 import { fetchDashboardData, type DashboardData } from "~/lib/dashboard-api";
 import { cn } from "~/lib/utils";
 import { locale, useLocale } from "~/locales";
-import { defaultWidgetLayouts, useSettingsStore, type BentoLayoutItem } from "~/store/settings";
+import { useSettingsStore, type BentoLayoutItem } from "~/store/settings";
 
 import type { Route } from "./+types/home";
 
@@ -90,6 +91,8 @@ export default function Home() {
   const [navVisible, setNavVisible] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [activeLabel, setActiveLabel] = useState<string | null>(null);
+  const [modelLoaded, setModelLoaded] = useState(false);
+  const [modelLoadProgress, setModelLoadProgress] = useState(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const buildingRef = useRef<BuildingViewRef>(null);
   const layoutSnapshotRef = useRef<BentoLayoutItem[] | null>(null);
@@ -112,7 +115,8 @@ export default function Home() {
   }, [loadSettings]);
 
   // Sync backend widget metadata → bentoLayout.
-  // Layout (position / size / hidden) is sourced from settings, not the dashboard API.
+  // Layout (position / size / hidden) now comes directly from the API,
+  // which merges dashboard_widgets defaults with user_settings overrides.
   useEffect(() => {
     if (!loaderData?.widgets?.length) return;
 
@@ -122,44 +126,18 @@ export default function Home() {
     // Remove widgets that the backend no longer returns.
     const cleaned = bentoLayout.filter((l) => incomingIds.has(l.id));
 
-    // Assign default layout for newly discovered widgets.
+    // Use API layout for newly discovered widgets.
     const newItems: BentoLayoutItem[] = [];
     for (const w of loaderData.widgets) {
       if (currentIds.has(w.id)) continue;
-
-      const preset = defaultWidgetLayouts[w.id];
-      if (preset) {
-        newItems.push({ id: w.id, ...preset, hidden: false });
-        continue;
-      }
-
-      // Auto-placement fallback: find the first 4×4 free slot on a 16×8 grid.
-      const occupied = new Set(
-        [...cleaned, ...newItems].flatMap((item) =>
-          Array.from({ length: item.w }, (_, dx) =>
-            Array.from({ length: item.h }, (_, dy) => `${item.x + dx},${item.y + dy}`),
-          ),
-        ),
-      );
-      let placed = false;
-      for (let y = 1; y <= 8 - 3 && !placed; y++) {
-        for (let x = 1; x <= 16 - 3 && !placed; x++) {
-          let fits = true;
-          for (let dy = 0; dy < 4; dy++) {
-            for (let dx = 0; dx < 4; dx++) {
-              if (occupied.has(`${x + dx},${y + dy}`)) {
-                fits = false;
-                break;
-              }
-            }
-            if (!fits) break;
-          }
-          if (fits) {
-            newItems.push({ id: w.id, x, y, w: 4, h: 4, hidden: false });
-            placed = true;
-          }
-        }
-      }
+      newItems.push({
+        id: w.id,
+        x: w.layoutX,
+        y: w.layoutY,
+        w: w.layoutW,
+        h: w.layoutH,
+        hidden: w.hidden,
+      });
     }
 
     const next = [...cleaned, ...newItems];
@@ -259,6 +237,9 @@ export default function Home() {
   return (
     <div className="dark">
       <div className="text-foreground relative h-screen overflow-hidden font-mono">
+        {/* Blueprint loading overlay — covers everything until model is ready */}
+        {!modelLoaded && <BlueprintLoader progress={modelLoadProgress} />}
+
         {/* Full-page 3D building background */}
         <BuildingView
           ref={buildingRef}
@@ -267,6 +248,8 @@ export default function Home() {
           sidebarWidth={activeLabel ? SIDEBAR_W : 0}
           onLabelClick={setActiveLabel}
           onCanvasClick={() => setActiveLabel(null)}
+          onLoad={() => setModelLoaded(true)}
+          onProgress={setModelLoadProgress}
         />
 
         {/* Label info sidebar (left panel) */}
