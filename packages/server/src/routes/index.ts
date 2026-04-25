@@ -37,6 +37,8 @@ export default async function apiRoutes(fastify: FastifyInstance) {
       "/api/dashboard",
     ];
     if (publicPaths.some((p) => request.url.startsWith(p))) return;
+    // Avatar file requests cannot carry Authorization headers from <img> tags
+    if (/^\/api\/users\/[^\/]+\/avatar/.test(request.url)) return;
     try {
       await request.jwtVerify();
     } catch {
