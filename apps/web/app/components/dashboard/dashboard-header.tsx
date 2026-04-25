@@ -1,4 +1,4 @@
-import { IconLayoutNavbar, IconLayoutNavbarCollapse } from "@tabler/icons-react";
+import { PanelTop } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { cn } from "~/lib/utils";
@@ -97,7 +97,7 @@ export function DashboardHeader({ className, onLogoClick, navVisible }: Dashboar
           <div className="border-cyber-cyan/40 bg-cyber-cyan/10 group-hover:bg-cyber-cyan/15 relative flex size-9 items-center justify-center rounded-full border transition-colors">
             <img src="/favicon.ico" alt={t.common.logoAlt} className="size-4 object-contain" />
             <span className="border-cyber-cyan/40 bg-panel-dark text-cyber-cyan/70 absolute -right-1 -bottom-1 flex size-3.5 items-center justify-center rounded-full border">
-              {navVisible ? <IconLayoutNavbar size={8} /> : <IconLayoutNavbarCollapse size={8} />}
+              <PanelTop size={8} />
             </span>
           </div>
           <div className="flex flex-col items-start gap-0">

@@ -1,13 +1,4 @@
-import {
-  IconArrowBackUp,
-  IconCheck,
-  IconMaximize,
-  IconMinimize,
-  IconMinus,
-  IconPlus,
-  IconReload,
-  IconX,
-} from "@tabler/icons-react";
+import { Undo2, Check, Maximize, Minimize, Minus, Plus, RotateCcw, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLoaderData } from "react-router";
 
@@ -62,7 +53,7 @@ function LabelInfoPanel({ labelKey, onClose }: { labelKey: string; onClose: () =
           onClick={onClose}
           className="text-foreground/60 hover:text-foreground flex size-7 items-center justify-center rounded-md transition-colors hover:bg-white/10"
         >
-          <IconX size={16} />
+          <X size={16} />
         </button>
       </div>
 
@@ -310,7 +301,7 @@ export default function Home() {
               className="text-cyber-cyan flex size-8 items-center justify-center transition-colors hover:bg-white/10"
               title={fullscreen ? t.controls.exitFullscreen : t.controls.fullscreen}
             >
-              {fullscreen ? <IconMinimize size={16} /> : <IconMaximize size={16} />}
+              {fullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
             </button>
             <div className="h-px bg-white/10" />
             <button
@@ -319,7 +310,7 @@ export default function Home() {
               className="text-cyber-cyan flex size-8 items-center justify-center transition-colors hover:bg-white/10"
               title={t.controls.zoomIn}
             >
-              <IconPlus size={16} />
+              <Plus size={16} />
             </button>
             <div className="h-px bg-white/10" />
             <button
@@ -328,7 +319,7 @@ export default function Home() {
               className="text-cyber-cyan flex size-8 items-center justify-center transition-colors hover:bg-white/10"
               title={t.controls.zoomOut}
             >
-              <IconMinus size={16} />
+              <Minus size={16} />
             </button>
             <div className="h-px bg-white/10" />
             <button
@@ -341,7 +332,7 @@ export default function Home() {
               className="text-cyber-cyan flex size-8 items-center justify-center transition-colors hover:bg-white/10"
               title={t.controls.reset}
             >
-              <IconReload size={16} />
+              <RotateCcw size={16} />
             </button>
           </div>
 
@@ -353,7 +344,7 @@ export default function Home() {
                 onClick={() => setBentoDragEnabled(false)}
                 className="text-foreground/80 hover:text-cyber-cyan flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/5"
               >
-                <IconCheck size={14} />
+                <Check size={14} />
                 {t.editLayout.done}
               </button>
               <div className="h-4 w-px bg-white/10" />
@@ -376,7 +367,7 @@ export default function Home() {
                 onClick={() => resetBentoLayout()}
                 className="text-foreground/80 hover:text-cyber-cyan flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/5"
               >
-                <IconArrowBackUp size={14} />
+                <Undo2 size={14} />
                 {t.editLayout.reset}
               </button>
             </div>
