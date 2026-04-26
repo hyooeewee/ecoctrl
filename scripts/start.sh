@@ -5,6 +5,28 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 LOG_DIR="$ROOT/logs"
 mkdir -p "$LOG_DIR"
 
+# Built-in defaults for the front-end proxy. Overridden, in order:
+#   1. shell env (e.g. `API_BASE_URL=... ./start.sh`)  ← highest
+#   2. <app>/.env.local                                 ← per-app override
+#   3. $ROOT/.env.local                                 ← shared fallback (optional)
+#   4. these defaults                                   ← lowest
+DEFAULT_API_BASE_URL="http://localhost:3000"
+DEFAULT_API_PREFIX="/api"
+DEFAULT_STATIC_PREFIX="/static"
+
+# Source one or more env files in order; later files override earlier ones.
+# Missing files are silently skipped.
+load_env() {
+  for f in "$@"; do
+    if [[ -f "$f" ]]; then
+      set -a
+      # shellcheck disable=SC1090
+      source "$f"
+      set +a
+    fi
+  done
+}
+
 ADMIN_PORT="${ADMIN_PORT:-4173}"
 WEB_PORT="${WEB_PORT:-8081}"
 PM2_APP="ecoctrl-server"
@@ -20,20 +42,43 @@ is_pm2_online() {
   npx --yes pm2 jlist 2>/dev/null | grep -q "\"name\":\"$PM2_APP\""
 }
 
-# ---------- start ----------
-start_admin() {
-  echo "Starting admin on :$ADMIN_PORT ..."
-  pnpm dlx serve "$ROOT/admin" -l "$ADMIN_PORT" --single \
-    > "$LOG_DIR/admin.log" 2>&1 &
-  echo $! > "$LOG_DIR/admin.pid"
+# Start a SPA bundle on $port serving $dir. Client bundles always issue requests
+# against fixed /api and /static prefixes; lws rewrites them onto the real backend
+# at ${API_BASE_URL}${API_PREFIX|STATIC_PREFIX}, so backend host or path-prefix
+# moves only require editing .env.local. Note: \$1 is escaped so lws — not bash —
+# sees the capture group.
+lws_serve() {
+  local dir="$1" port="$2" log="$3" pidfile="$4"
+  pnpm dlx local-web-server \
+    --port "$port" \
+    --directory "$dir" \
+    --spa index.html \
+    --rewrite "/api/(.*) -> ${API_BASE_URL}${API_PREFIX}/\$1" \
+    --rewrite "/static/(.*) -> ${API_BASE_URL}${STATIC_PREFIX}/\$1" \
+    > "$log" 2>&1 &
+  echo $! > "$pidfile"
 }
 
-start_web() {
-  echo "Starting web on :$WEB_PORT ..."
-  pnpm dlx serve "$ROOT/web" -l "$WEB_PORT" --single \
-    > "$LOG_DIR/web.log" 2>&1 &
-  echo $! > "$LOG_DIR/web.pid"
-}
+# ---------- start ----------
+# Each app starts in a subshell so that per-app env vars (loaded from
+# <app>/.env.local) don't leak into siblings.
+start_admin() (
+  load_env "$ROOT/.env.local" "$ROOT/admin/.env.local"
+  API_BASE_URL="${API_BASE_URL:-$DEFAULT_API_BASE_URL}"
+  API_PREFIX="${API_PREFIX:-$DEFAULT_API_PREFIX}"
+  STATIC_PREFIX="${STATIC_PREFIX:-$DEFAULT_STATIC_PREFIX}"
+  echo "Starting admin on :$ADMIN_PORT (proxy ${API_PREFIX} ${STATIC_PREFIX} -> ${API_BASE_URL}) ..."
+  lws_serve "$ROOT/admin" "$ADMIN_PORT" "$LOG_DIR/admin.log" "$LOG_DIR/admin.pid"
+)
+
+start_web() (
+  load_env "$ROOT/.env.local" "$ROOT/web/.env.local"
+  API_BASE_URL="${API_BASE_URL:-$DEFAULT_API_BASE_URL}"
+  API_PREFIX="${API_PREFIX:-$DEFAULT_API_PREFIX}"
+  STATIC_PREFIX="${STATIC_PREFIX:-$DEFAULT_STATIC_PREFIX}"
+  echo "Starting web on :$WEB_PORT (proxy ${API_PREFIX} ${STATIC_PREFIX} -> ${API_BASE_URL}) ..."
+  lws_serve "$ROOT/web" "$WEB_PORT" "$LOG_DIR/web.log" "$LOG_DIR/web.pid"
+)
 
 start_server() {
   echo "Preparing server ..."
@@ -41,6 +86,7 @@ start_server() {
   echo "Installing server dependencies ..."
   (cd "$ROOT/server" && pnpm install --prod)
 
+  # pm2 inherits cwd, so node + dotenv inside the server reads server/.env.local automatically.
   echo "Starting server via pm2 ($PM2_CONFIG) ..."
   (cd "$ROOT/server" && npx --yes pm2 startOrRestart "$PM2_CONFIG")
 }
