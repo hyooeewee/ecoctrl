@@ -3,8 +3,8 @@
 # Build context: monorepo root (required for workspace:* resolution)
 #   docker build -f apps/web/Dockerfile -t ecoctrl-web .
 #
-# Run:
-#   docker run -d -p 8081:80 --name ecoctrl-web ecoctrl-web
+# Run (pass .env.local for API proxy config):
+#   docker run -d -p 8081:80 --env-file .env.local --name ecoctrl-web ecoctrl-web
 
 # ────────────────────────────
 # Stage 1: Builder
@@ -49,5 +49,7 @@ COPY --from=builder /app/apps/web/build/client /usr/share/caddy
 
 EXPOSE 80
 
-# Caddy's default config path is /etc/caddy/Caddyfile
+# Runtime env var for API reverse proxy (override via --env-file or -e)
+ENV VITE_API_BASE_URL=http://localhost:3000
+
 CMD ["caddy", "run"]
