@@ -55,7 +55,6 @@ cd docker && docker compose up --build
 pnpm install
 
 # Build workspace dependencies and the web app
-pnpm --filter @ecoctrl/shared build
 pnpm --filter @ecoctrl/ui build
 pnpm --filter @ecoctrl/web build
 

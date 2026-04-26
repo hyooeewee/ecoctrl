@@ -15,11 +15,11 @@ An energy & IoT control platform built as a pnpm monorepo, featuring 3D visualiz
 
 | Package | Stack | Description |
 |---------|-------|-------------|
-| `apps/admin` | React 19 + Vite + TailwindCSS + Recharts | Admin dashboard |
-| `apps/web` | React Router 7 + Babylon.js + TailwindCSS | Public 3D portal |
-| `packages/server` | Fastify 5 + Drizzle ORM + PostgreSQL | REST API |
+| `apps/admin` | React 19 + vite-plus + TailwindCSS + Recharts | Admin dashboard |
+| `apps/web` | React Router 7 + Babylon.js + vite-plus + TailwindCSS | Public 3D portal |
+| `packages/server` | Fastify 5 + Drizzle ORM + PostgreSQL + Rolldown | REST API (bundled with auto-generated `dist/package.json`) |
 | `packages/ui` | React + TailwindCSS + Base UI | Shared component library |
-| `packages/shared` | Zod + TypeScript | Shared schemas and types |
+| `packages/shared` | Zod + TypeScript + shared Vite configs | Shared schemas, types, and build utilities |
 
 ## Running with Docker (Recommended)
 
@@ -95,9 +95,9 @@ Or manually:
 
 ```bash
 # Stop server
-cd server && pnpm exec pm2 delete ecoctrl-server
+npx pm2 delete ecoctrl-server
 
-# Stop admin & web (find PIDs from logs/)
+# Stop admin & web
 kill $(cat logs/admin.pid)
 kill $(cat logs/web.pid)
 ```
@@ -145,6 +145,14 @@ pnpm db:seed
 cd ../..
 ```
 
+Other useful commands:
+
+```bash
+pnpm db:refresh   # drop + push + seed + studio (destructive)
+pnpm db:migrate   # apply pending migrations
+pnpm db:studio    # open Drizzle Studio
+```
+
 ### 5. Build UI Library
 
 ```bash
@@ -182,6 +190,7 @@ Authentication: `Authorization: Bearer <accessToken>` (except public paths).
 | `BASE_URL` / `APP_ID` | External API credentials (optional) |
 | `SMTP_*` | SMTP configuration for email |
 | `OPENWEATHER_API_KEY` | OpenWeatherMap API key |
+| `WEATHER_LAT` / `WEATHER_LNG` / `WEATHER_LOCATION` | Default weather coordinates (default: Beijing) |
 | `WECHAT_*` / `FEISHU_*` | OAuth app credentials (optional) |
 
 ### Client (`apps/admin/.env.example`, `apps/web/.env.local`)

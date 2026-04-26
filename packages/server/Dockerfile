@@ -34,8 +34,7 @@ COPY packages/server/ packages/server/
 COPY packages/shared/ packages/shared/
 
 # Build workspace dependencies then the server
-RUN pnpm --filter @ecoctrl/shared build \
-    && pnpm --filter @ecoctrl/server build
+RUN pnpm --filter @ecoctrl/server build
 
 # ────────────────────────────
 # Stage 2: Production
@@ -57,7 +56,6 @@ RUN pnpm install --prod --frozen-lockfile
 
 # Copy built assets from builder (flatten dist to /app/dist for shorter CMD)
 COPY --from=builder /app/packages/server/dist ./dist
-COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 
 # Ensure uploads directory exists and is writable
 RUN mkdir -p /app/uploads && chmod 755 /app/uploads
