@@ -3,9 +3,14 @@
   "compilerOptions": {
     "experimentalDecorators": true,
     "useDefineForClassFields": false,
-    "types": ["vite-plus/client"],
+    "types": [
+      "vite-plus/client"
+    ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*",
+        "../../packages/ui/src/*"
+      ]
     }
   }
 }
