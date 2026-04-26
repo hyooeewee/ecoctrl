@@ -2,6 +2,9 @@
     root * /usr/share/caddy
     file_server
 
+    # Proxy API requests to the backend server
+    reverse_proxy /api/* {$VITE_API_BASE_URL:http://localhost:3000}
+
     # SPA fallback: all routes -> index.html
     try_files {path} /index.html
 

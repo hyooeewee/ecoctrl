@@ -14,6 +14,7 @@ export async function fetchDashboardData(): Promise<DashboardData | null> {
     return res.data;
   }
 
+  console.error("[fetchDashboardData] API error:", res.error ?? "no data");
   return null;
 }
 
