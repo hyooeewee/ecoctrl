@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
@@ -487,13 +487,6 @@ export default async function authRoutes(fastify: FastifyInstance) {
   fastify.get(
     "/me",
     {
-      preHandler: async (request: FastifyRequest, reply: FastifyReply) => {
-        try {
-          await request.jwtVerify();
-        } catch {
-          return reply.status(401).send({ error: "Unauthorized" });
-        }
-      },
       schema: {
         tags: ["Auth"],
         summary: "Get current user",

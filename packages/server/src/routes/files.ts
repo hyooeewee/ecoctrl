@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import fs from "node:fs";
 import path from "node:path";
@@ -102,7 +102,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
         filename: safeName,
         mimeType,
         size: stats.size,
-        fileUrl: `/uploads/files/${safeName}`,
+        fileUrl: `/api/files/${fileId}/preview`,
       });
       return reply.status(201).send(created);
     },
@@ -111,13 +111,6 @@ export default async function fileRoutes(fastify: FastifyInstance) {
   fastify.get(
     "/:id",
     {
-      preHandler: async (request: FastifyRequest, reply: FastifyReply) => {
-        try {
-          await request.jwtVerify();
-        } catch {
-          return reply.status(401).send({ error: "Unauthorized" });
-        }
-      },
       schema: {
         tags: ["Files"],
         summary: "Download raw file",
