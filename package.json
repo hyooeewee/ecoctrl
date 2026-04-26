@@ -11,7 +11,7 @@
     "build:web": "pnpm --filter @ecoctrl/web build",
     "build:admin": "pnpm --filter @ecoctrl/admin build",
     "build:server": "pnpm --filter @ecoctrl/server build",
-    "build": "pnpm --filter=@ecoctrl/shared build && pnpm build:ui && pnpm --filter=@ecoctrl/web --filter=@ecoctrl/admin --filter=@ecoctrl/server build",
+    "build": "pnpm build:ui && pnpm --filter=@ecoctrl/web --filter=@ecoctrl/admin --filter=@ecoctrl/server build",
     "preview": "pnpm --filter=@ecoctrl/web --filter=@ecoctrl/admin --filter=@ecoctrl/server preview",
     "start": "pnpm --filter=@ecoctrl/web --filter=@ecoctrl/admin --filter=@ecoctrl/server start",
     "check": "pnpm -r check",

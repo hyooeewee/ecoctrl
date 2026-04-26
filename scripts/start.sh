@@ -37,7 +37,7 @@ start_web() {
 
 start_server() {
   echo "Starting server via pm2 ($PM2_CONFIG) ..."
-  (cd "$ROOT/server" && npx --yes pm2 start "$PM2_CONFIG")
+  (cd "$ROOT/server" && npx --yes pm2 startOrRestart "$PM2_CONFIG")
 }
 
 start_all() {
