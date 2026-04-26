@@ -1,0 +1,15 @@
+{
+  "name": "@ecoctrl/docs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vitepress dev --port 5174",
+    "build": "vitepress build",
+    "preview": "vitepress preview --port 5174"
+  },
+  "devDependencies": {
+    "oxc-minify": "^0.127.0",
+    "vitepress": "2.0.0-alpha.17"
+  }
+}
