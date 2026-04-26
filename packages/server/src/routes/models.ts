@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import fs from "node:fs";
 import path from "node:path";
@@ -125,7 +125,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
           return reply.status(400).send({ error: "ZIP must contain a .gltf file" });
         }
 
-        fileUrl = `/uploads/models/${modelId}/${gltfFile}`;
+        fileUrl = `/static/models/${modelId}/${gltfFile}`;
         format = "GLTF";
       } else {
         const filename = `${modelId}${ext}`;
@@ -134,7 +134,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
 
         const stats = fs.statSync(dest);
         sizeBytes = stats.size;
-        fileUrl = `/uploads/models/${filename}`;
+        fileUrl = `/static/models/${filename}`;
         format = FORMAT_MAP[ext.slice(1)] || ext.slice(1).toUpperCase();
       }
 
@@ -173,7 +173,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
 
       // Delete physical file or directory
       if (model.fileUrl) {
-        const relativePath = model.fileUrl.replace("/uploads/", "");
+        const relativePath = model.fileUrl.replace("/static/", "");
         const filePath = path.join(BASE_UPLOAD_DIR, relativePath);
         if (fs.existsSync(filePath)) {
           // If it's inside a modelId directory, remove the whole directory
@@ -197,13 +197,6 @@ export default async function modelRoutes(fastify: FastifyInstance) {
   fastify.get(
     "/:id/file",
     {
-      preHandler: async (request: FastifyRequest, reply: FastifyReply) => {
-        try {
-          await request.jwtVerify();
-        } catch {
-          return reply.status(401).send({ error: "Unauthorized" });
-        }
-      },
       schema: {
         tags: ["Models"],
         summary: "Get 3D model file",
@@ -222,7 +215,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         return reply.status(404).send({ error: "Model or file not found" });
       }
 
-      const relativePath = model.fileUrl.replace("/uploads/", "");
+      const relativePath = model.fileUrl.replace("/static/", "");
       const filePath = path.join(BASE_UPLOAD_DIR, relativePath);
       if (!fs.existsSync(filePath)) {
         return reply.status(404).send({ error: "File not found" });

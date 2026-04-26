@@ -27,15 +27,13 @@ function ensureAvatarDir() {
   }
 }
 
-function deleteOldAvatar(avatarUrl: string | null) {
-  if (!avatarUrl) return;
-  const prefix = "/uploads/avatar/";
-  if (avatarUrl.startsWith(prefix)) {
-    const filename = avatarUrl.slice(prefix.length);
-    const filePath = path.join(AVATAR_DIR, filename);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
+function deleteOldAvatar(avatarValue: string | null) {
+  if (!avatarValue) return;
+  // External OAuth avatar URLs are not stored on disk
+  if (/^https?:/i.test(avatarValue)) return;
+  const filePath = path.join(AVATAR_DIR, avatarValue);
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
   }
 }
 
@@ -227,10 +225,9 @@ export default async function accountRoutes(fastify: FastifyInstance) {
         deleteOldAvatar(user.avatarUrl);
       }
 
-      const url = `/uploads/avatar/${safeName}`;
-      await updateUser(id, { avatarUrl: url });
+      await updateUser(id, { avatarUrl: safeName });
 
-      return reply.send({ url });
+      return reply.send({ url: safeName });
     },
   );
 
@@ -251,13 +248,12 @@ export default async function accountRoutes(fastify: FastifyInstance) {
         return reply.status(404).send({ error: "Avatar not found" });
       }
 
-      const prefix = "/uploads/avatar/";
-      if (!user.avatarUrl.startsWith(prefix)) {
-        // External URL — redirect
+      // External OAuth avatar — redirect
+      if (/^https?:/i.test(user.avatarUrl)) {
         return reply.redirect(user.avatarUrl);
       }
 
-      const filename = user.avatarUrl.slice(prefix.length);
+      const filename = user.avatarUrl;
       const filePath = path.join(AVATAR_DIR, filename);
       if (!fs.existsSync(filePath)) {
         return reply.status(404).send({ error: "Avatar file not found" });
