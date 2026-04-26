@@ -64,4 +64,4 @@ RUN mkdir -p /app/uploads && chmod 755 /app/uploads
 
 EXPOSE 3000
 
-CMD ["node", "dist/index.js"]
+CMD ["node", "dist/index.mjs"]

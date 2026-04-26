@@ -1,5 +1,3 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
-
 export interface ApiResponse<T> {
   data?: T;
   error?: string;
@@ -36,12 +34,7 @@ async function request<T>(
   extraHeaders?: Record<string, string>,
   params?: Record<string, string>,
 ): Promise<ApiResponse<T>> {
-  let url: string;
-  if (BASE_URL) {
-    url = `${BASE_URL.replace(/\/$/, "")}/${endpoint.replace(/^\//, "")}`;
-  } else {
-    url = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
-  }
+  let url = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
 
   if (params && Object.keys(params).length > 0) {
     const search = new URLSearchParams(params).toString();

@@ -2,6 +2,19 @@
     root * /usr/share/caddy
     file_server
 
+    # Client bundles always emit fixed /api and /static prefixes; we strip them
+    # here and re-prefix with the env-defined real backend prefix, so changing
+    # API_PREFIX / STATIC_PREFIX in apps/<x>/.env.local does NOT require rebuild.
+    handle_path /api/* {
+        rewrite * {$API_PREFIX:/api}{uri}
+        reverse_proxy {$API_BASE_URL:http://localhost:3000}
+    }
+
+    handle_path /static/* {
+        rewrite * {$STATIC_PREFIX:/static}{uri}
+        reverse_proxy {$API_BASE_URL:http://localhost:3000}
+    }
+
     # SPA fallback: all routes -> index.html
     try_files {path} /index.html
 

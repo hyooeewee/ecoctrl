@@ -3,8 +3,8 @@
 # Build context: monorepo root (required for workspace:* resolution)
 #   docker build -f apps/web/Dockerfile -t ecoctrl-web .
 #
-# Run (pass .env.local for API proxy config):
-#   docker run -d -p 8081:80 --env-file .env.local --name ecoctrl-web ecoctrl-web
+# Run (pass .env.local for Caddy to read API_BASE_URL / API_PREFIX / STATIC_PREFIX):
+#   docker run -d -p 8081:80 --env-file apps/web/.env.local --name ecoctrl-web ecoctrl-web
 
 # ────────────────────────────
 # Stage 1: Builder
@@ -22,10 +22,6 @@ COPY apps/web/package.json apps/web/
 COPY packages/shared/package.json packages/shared/
 COPY packages/ui/package.json packages/ui/
 
-# Build-time env vars — consumed by Vite at build time
-ARG VITE_API_BASE_URL
-ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
-
 # Install dependencies (resolves workspace:* protocol)
 RUN pnpm install --frozen-lockfile
 
@@ -33,8 +29,7 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 
 # Build workspace dependencies then the web app
-RUN pnpm --filter @ecoctrl/ui build \
-    && pnpm --filter @ecoctrl/web build
+RUN pnpm --filter @ecoctrl/web build
 
 # ────────────────────────────
 # Stage 2: Production
@@ -49,7 +44,7 @@ COPY --from=builder /app/apps/web/build/client /usr/share/caddy
 
 EXPOSE 80
 
-# Runtime env var for API reverse proxy (override via --env-file or -e)
-ENV VITE_API_BASE_URL=http://localhost:3000
+# Caddy reads API_BASE_URL / API_PREFIX / STATIC_PREFIX from the container env
+# at runtime (override via --env-file or compose env_file). See apps/web/.env.local.
 
 CMD ["caddy", "run"]

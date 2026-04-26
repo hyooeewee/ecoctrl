@@ -2,8 +2,8 @@ import type { DashboardData } from "~/components/dashboard/widgets/types";
 import type { ApiResponse } from "~/lib/api";
 
 import { apiGet, apiPatch } from "~/lib/api";
+import { API_PREFIX } from "~/lib/env";
 
-const API_PREFIX = import.meta.env.VITE_API_PREFIX ?? "";
 const DASHBOARD_ENDPOINT = `${API_PREFIX}/dashboard`;
 const SETTINGS_ENDPOINT = `${API_PREFIX}/dashboard/settings`;
 
