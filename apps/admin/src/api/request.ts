@@ -1,5 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
-const API_PREFIX = import.meta.env.VITE_API_PREFIX || "/api";
+import { API_BASE_URL, API_PREFIX } from "../lib/env";
 
 const ACCESS_TOKEN_KEY = "accessToken";
 const REFRESH_TOKEN_KEY = "refreshToken";

@@ -12,7 +12,7 @@
  * <model-viewer>, window.open(), etc., where the request would otherwise
  * be resolved against the admin site's origin.
  */
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "";
+import { API_BASE_URL } from "./env";
 
 export function resolveAssetUrl(path: string): string;
 export function resolveAssetUrl(path: null): null;
