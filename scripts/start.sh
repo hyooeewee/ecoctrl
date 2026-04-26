@@ -49,7 +49,7 @@ is_pm2_online() {
 # sees the capture group.
 lws_serve() {
   local dir="$1" port="$2" log="$3" pidfile="$4"
-  pnpm dlx local-web-server \
+  npx --yes local-web-server \
     --port "$port" \
     --directory "$dir" \
     --spa index.html \
@@ -84,7 +84,7 @@ start_server() {
   echo "Preparing server ..."
 
   echo "Installing server dependencies ..."
-  (cd "$ROOT/server" && pnpm install --prod)
+  (cd "$ROOT/server" && npm install --omit=dev)
 
   # pm2 inherits cwd, so node + dotenv inside the server reads server/.env.local automatically.
   echo "Starting server via pm2 ($PM2_CONFIG) ..."
