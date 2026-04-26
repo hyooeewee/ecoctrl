@@ -1,5 +1,12 @@
 # @ecoctrl/server
 
+## 0.1.1
+
+### Patch Changes
+
+- e2183a8: Fix production path resolve error
+- 60bc129: Add deploy script
+
 ## 0.1.0
 
 ### Minor Changes
