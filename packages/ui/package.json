@@ -10,7 +10,8 @@
       "types": "./src/index.ts",
       "import": "./src/index.ts"
     },
-    "./index.css": "./src/index.css"
+    "./index.css": "./src/index.css",
+    "./package.json": "./package.json"
   },
   "peerDependencies": {
     "react": "^19.0.0",
