@@ -38,8 +38,10 @@ services:
       - ..:/app
       - /app/node_modules
       - /app/apps/web/node_modules
-    environment:
-      VITE_API_BASE_URL: http://localhost:3000
+    env_file:
+      # Caddy / dev server reads API_BASE_URL / API_PREFIX / STATIC_PREFIX from this file.
+      # For docker network, set API_BASE_URL=http://server:3000 (compose service name).
+      - ../apps/web/.env.local
     ports:
       - "8080:8080"
 
@@ -49,8 +51,10 @@ services:
       - ..:/app
       - /app/node_modules
       - /app/apps/admin/node_modules
-    environment:
-      VITE_API_BASE_URL: http://localhost:3000
+    env_file:
+      # Caddy / dev server reads API_BASE_URL / API_PREFIX / STATIC_PREFIX from this file.
+      # For docker network, set API_BASE_URL=http://server:3000 (compose service name).
+      - ../apps/admin/.env.local
     ports:
       # Default Vite dev port. Change if your vp/vite config uses another port.
       - "5173:5173"

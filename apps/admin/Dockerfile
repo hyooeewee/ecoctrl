@@ -3,8 +3,8 @@
 # Build context: monorepo root (required for workspace:* resolution)
 #   docker build -f apps/admin/Dockerfile -t ecoctrl-admin .
 #
-# Run:
-#   docker run -d -p 4173:80 --name ecoctrl-admin ecoctrl-admin
+# Run (pass .env.local for Caddy to read API_BASE_URL / API_PREFIX / STATIC_PREFIX):
+#   docker run -d -p 4173:80 --env-file apps/admin/.env.local --name ecoctrl-admin ecoctrl-admin
 
 # ────────────────────────────
 # Stage 1: Builder
@@ -22,10 +22,6 @@ COPY apps/admin/package.json apps/admin/
 COPY packages/shared/package.json packages/shared/
 COPY packages/ui/package.json packages/ui/
 
-# Build-time env vars — consumed by Vite at build time
-ARG VITE_API_BASE_URL
-ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
-
 # Install dependencies (resolves workspace:* protocol)
 RUN pnpm install --frozen-lockfile
 
@@ -33,8 +29,7 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 
 # Build workspace dependencies then the admin app
-RUN pnpm --filter @ecoctrl/ui build \
-    && pnpm --filter @ecoctrl/admin build
+RUN pnpm --filter @ecoctrl/admin build
 
 # ────────────────────────────
 # Stage 2: Production
@@ -49,5 +44,7 @@ COPY --from=builder /app/apps/admin/dist /usr/share/caddy
 
 EXPOSE 80
 
-# Caddy's default config path is /etc/caddy/Caddyfile
+# Caddy reads API_BASE_URL / API_PREFIX / STATIC_PREFIX from the container env
+# at runtime (override via --env-file or compose env_file). See apps/admin/.env.local.
+
 CMD ["caddy", "run"]

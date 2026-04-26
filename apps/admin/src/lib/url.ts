@@ -1,18 +1,17 @@
 /**
- * Resolve a server-side relative path (e.g. "/uploads/models/x.glb",
- * "/api/files/:id/preview") to an absolute URL using VITE_API_BASE_URL.
+ * Resolve a server-side relative path (e.g. "/static/models/x.glb",
+ * "/api/files/:id/preview") for use in <img>, <a>, <model-viewer>,
+ * window.open(), etc.
  *
  * Behaviour:
  * - Empty / null / undefined → returned as-is.
  * - Absolute URLs (http://, https://, blob:, data:) → returned as-is.
- * - Paths starting with "/" → prefixed with VITE_API_BASE_URL.
- * - Other strings → returned as-is.
+ * - Other strings (including paths starting with "/") → returned as-is.
  *
- * Use this for resources that the browser loads directly via <img>, <a>,
- * <model-viewer>, window.open(), etc., where the request would otherwise
- * be resolved against the admin site's origin.
+ * Same-origin paths like "/static/*" are proxied to the backend by the
+ * front-end server (lws / caddy in production, vite dev server in
+ * development), so no host prefixing is needed.
  */
-import { API_BASE_URL } from "./env";
 
 export function resolveAssetUrl(path: string): string;
 export function resolveAssetUrl(path: null): null;
@@ -21,6 +20,5 @@ export function resolveAssetUrl(path: string | null | undefined): string | null 
 export function resolveAssetUrl(path: string | null | undefined): string | null | undefined {
   if (path == null || path === "") return path;
   if (/^(https?:|blob:|data:)/i.test(path)) return path;
-  if (path.startsWith("/")) return `${API_BASE_URL}${path}`;
   return path;
 }
