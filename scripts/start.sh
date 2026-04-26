@@ -36,6 +36,11 @@ start_web() {
 }
 
 start_server() {
+  echo "Preparing server ..."
+
+  echo "Installing server dependencies ..."
+  (cd "$ROOT/server" && pnpm install --prod)
+
   echo "Starting server via pm2 ($PM2_CONFIG) ..."
   (cd "$ROOT/server" && npx --yes pm2 startOrRestart "$PM2_CONFIG")
 }
