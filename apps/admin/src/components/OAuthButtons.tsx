@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 
 import { oauthApi, type OAuthProvider } from "@/api/oauth";
+import { API_BASE_URL, API_PREFIX } from "@/lib/env";
 import { wechatIcon, wecomIcon, feishuIcon, dingtalkIcon } from "@/assets/icons";
 
 interface OAuthButtonsProps {
@@ -107,9 +108,7 @@ export default function OAuthButtons({
 
   const handleOAuthLogin = (providerId: string) => {
     const redirectUri = `${window.location.origin}/oauth/callback`;
-    const apiBase = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
-    const apiPrefix = import.meta.env.VITE_API_PREFIX || "/api";
-    const url = `${apiBase}${apiPrefix}/auth/oauth/${providerId}/authorize?redirectUri=${encodeURIComponent(redirectUri)}`;
+    const url = `${API_BASE_URL}${API_PREFIX}/auth/oauth/${providerId}/authorize?redirectUri=${encodeURIComponent(redirectUri)}`;
 
     const width = 600;
     const height = 700;
