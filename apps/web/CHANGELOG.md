@@ -1,5 +1,11 @@
 # @ecoctrl/web
 
+## 0.1.2
+
+### Patch Changes
+
+- 603f2d2: migrate to local-web-server and fix the bug
+
 ## 0.1.1
 
 ### Patch Changes
