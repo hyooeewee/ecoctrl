@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import crypto from "node:crypto";
 import {
@@ -610,13 +610,6 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
   fastify.delete(
     "/:provider",
     {
-      preHandler: async (request: FastifyRequest, reply: FastifyReply) => {
-        try {
-          await request.jwtVerify();
-        } catch {
-          return reply.status(401).send({ error: "Unauthorized" });
-        }
-      },
       schema: {
         tags: ["OAuth"],
         summary: "Unlink OAuth provider",
@@ -642,13 +635,6 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
   fastify.get(
     "/linked",
     {
-      preHandler: async (request: FastifyRequest, reply: FastifyReply) => {
-        try {
-          await request.jwtVerify();
-        } catch {
-          return reply.status(401).send({ error: "Unauthorized" });
-        }
-      },
       schema: {
         tags: ["OAuth"],
         summary: "Get linked OAuth accounts",

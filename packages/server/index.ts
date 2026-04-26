@@ -48,12 +48,7 @@ await fastify.register(multipart, {
 });
 await fastify.register(fastifyStatic, {
   root: path.join(UPLOAD_DIR, "models"),
-  prefix: "/uploads/models/",
-});
-await fastify.register(fastifyStatic, {
-  root: path.join(UPLOAD_DIR, "files"),
-  prefix: "/uploads/files/",
-  decorateReply: false,
+  prefix: "/static/models/",
 });
 await fastify.register(swagger, {
   transform: jsonSchemaTransform,
