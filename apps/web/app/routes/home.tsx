@@ -26,7 +26,8 @@ export function meta(_args: Route.MetaArgs) {
 export async function clientLoader(): Promise<DashboardData | null> {
   try {
     return await fetchDashboardData();
-  } catch {
+  } catch (err) {
+    console.error("[clientLoader] fetchDashboardData failed:", err);
     return null;
   }
 }
@@ -358,7 +359,7 @@ export default function Home() {
                 }}
                 className="text-foreground/80 hover:text-cyber-cyan flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/5"
               >
-                <IconX size={14} />
+                <X size={14} />
                 {t.editLayout.cancel}
               </button>
               <div className="h-4 w-px bg-white/10" />
