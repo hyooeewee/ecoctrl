@@ -1,16 +1,14 @@
 import { useEffect, useState } from "react";
 
-function getToken(): string | null {
-  return localStorage.getItem("accessToken");
-}
+import { fetchRaw } from "../api/request";
 
 /**
  * Resolve an avatar URL for display.
  *
  * - External URLs (OAuth avatars) are returned as-is.
  * - Internal paths are fetched via the protected API endpoint so the request
- *   carries the Authorization header. The resulting Blob is turned into an
- *   object URL that is revoked on cleanup.
+ *   carries the Authorization header (handled by fetchRaw). The resulting Blob
+ *   is turned into an object URL that is revoked on cleanup.
  */
 export function useAvatar(
   userId: string | undefined,
@@ -36,32 +34,12 @@ export function useAvatar(
       return;
     }
 
-    const token = getToken();
-    if (!token) {
-      setSrc(null);
-      return;
-    }
-
     let objectUrl: string | null = null;
     let cancelled = false;
 
     // Cache-buster to avoid stale images after upload
-    const cacheBust = Date.now();
-
-    const baseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined) || "";
-    const endpoint = baseUrl
-      ? `${baseUrl}/api/users/${userId}/avatar`
-      : `/api/users/${userId}/avatar`;
-
-    fetch(`${endpoint}?_=${cacheBust}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to load avatar");
-        return res.blob();
-      })
+    fetchRaw(`/users/${userId}/avatar`, { params: { _: String(Date.now()) } })
+      .then((res) => res.blob())
       .then((blob) => {
         if (cancelled) return;
         objectUrl = URL.createObjectURL(blob);

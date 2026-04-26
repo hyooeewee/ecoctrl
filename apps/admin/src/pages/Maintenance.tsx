@@ -33,7 +33,6 @@ import {
 import AppButton from "@/components/AppButton";
 
 import { cn } from "@/lib/utils";
-import { resolveAssetUrl } from "@/lib/url";
 import type { MaintenanceReminder, MaintenanceReminderDetail } from "@ecoctrl/shared";
 import { filesApi } from "../api/files";
 import { maintenanceApi } from "../api/maintenance";
