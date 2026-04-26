@@ -1,8 +1,6 @@
 {
   "extends": "@ecoctrl/shared/tsconfig.app.json",
   "compilerOptions": {
-    "noEmit": false,
-    "allowImportingTsExtensions": false,
     "paths": {
       "@/*": [
         "./src/*"
