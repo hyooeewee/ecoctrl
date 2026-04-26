@@ -33,9 +33,11 @@ import {
 import AppButton from "@/components/AppButton";
 
 import { cn } from "@/lib/utils";
+import { resolveAssetUrl } from "@/lib/url";
 import type { MaintenanceReminder, MaintenanceReminderDetail } from "@ecoctrl/shared";
 import { filesApi } from "../api/files";
 import { maintenanceApi } from "../api/maintenance";
+import { fetchRaw } from "../api/request";
 
 interface Manual {
   id: string;
@@ -250,9 +252,16 @@ export default function Maintenance() {
     }
   };
 
-  const handleManualClick = (manual: Manual) => {
+  const handleManualClick = async (manual: Manual) => {
     if (manual.fileUrl) {
-      window.open(`/api/files/${manual.id}/preview`, "_blank");
+      try {
+        const res = await fetchRaw(`/files/${manual.id}/preview`);
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        window.open(url, "_blank");
+      } catch {
+        alert("文件预览失败");
+      }
     } else {
       setPreviewManual(manual.name);
     }

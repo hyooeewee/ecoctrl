@@ -20,6 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@ecoctrl/ui";
 
 import AppButton from "@/components/AppButton";
+import { resolveAssetUrl } from "@/lib/url";
 import type { Model3D } from "@ecoctrl/shared";
 import { modelsApi } from "../api/models";
 import ModelViewer from "../components/ModelViewer";
@@ -224,14 +225,14 @@ export default function Models() {
                       >
                         {model.thumbnailUrl ? (
                           <img
-                            src={model.thumbnailUrl}
+                            src={resolveAssetUrl(model.thumbnailUrl)}
                             alt={model.name}
                             className="h-full w-full object-cover"
                           />
                         ) : model.fileUrl &&
                           CARD_PREVIEW_FORMATS.has(model.format.toUpperCase()) ? (
                           <model-viewer
-                            src={model.fileUrl}
+                            src={resolveAssetUrl(model.fileUrl)}
                             alt={model.name}
                             auto-rotate
                             interaction-prompt="none"
@@ -453,7 +454,7 @@ export default function Models() {
           <div className="flex-1 overflow-hidden bg-muted p-4">
             {previewModel ? (
               <ModelViewer
-                src={previewModel.fileUrl ?? null}
+                src={resolveAssetUrl(previewModel.fileUrl) ?? null}
                 alt={previewModel.name}
                 format={previewModel.format}
               />
