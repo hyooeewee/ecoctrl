@@ -33,8 +33,7 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 
 # Build workspace dependencies then the admin app
-RUN pnpm --filter @ecoctrl/shared build \
-    && pnpm --filter @ecoctrl/ui build \
+RUN pnpm --filter @ecoctrl/ui build \
     && pnpm --filter @ecoctrl/admin build
 
 # ────────────────────────────
