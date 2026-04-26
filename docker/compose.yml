@@ -56,11 +56,11 @@ services:
     build:
       context: ..
       dockerfile: apps/web/Dockerfile
-      args:
-        # Passed to Dockerfile as ARG for build-time static replacement.
-        # Browser-side code will call http://localhost:3000 for API requests.
-        VITE_API_BASE_URL: http://localhost:3000
     container_name: ecoctrl-web
+    env_file:
+      # Caddy reads API_BASE_URL / API_PREFIX / STATIC_PREFIX from this file.
+      # For docker network, set API_BASE_URL=http://server:3000 (compose service name).
+      - ../apps/web/.env.local
     ports:
       - "8081:80"
     depends_on:
@@ -71,6 +71,10 @@ services:
       context: ..
       dockerfile: apps/admin/Dockerfile
     container_name: ecoctrl-admin
+    env_file:
+      # Caddy reads API_BASE_URL / API_PREFIX / STATIC_PREFIX from this file.
+      # For docker network, set API_BASE_URL=http://server:3000 (compose service name).
+      - ../apps/admin/.env.local
     ports:
       - "4173:80"
     depends_on:
