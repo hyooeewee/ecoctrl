@@ -13,7 +13,14 @@ export interface MetricCardProps {
   icon: any;
 }
 
+export interface PointProp {
+  key: string;
+  name: string;
+  unit?: string;
+}
+
 export interface PointItem {
   id: string;
   name: string;
+  props: PointProp[];
 }
