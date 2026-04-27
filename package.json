@@ -16,10 +16,14 @@
     "check:fix": "pnpm --filter @ecoctrl/web check:fix && pnpm --filter @ecoctrl/admin check:fix",
     "changeset": "changeset",
     "version": "changeset version",
-    "release": "changeset tag"
+    "release": "changeset tag",
+    "prepare": "husky",
+    "sync:env": "pnpm -r --if-present env:sync",
+    "sync:env:check": "pnpm -r --if-present env:check"
   },
   "packageManager": "pnpm@10.33.1",
   "devDependencies": {
-    "@changesets/cli": "^2.31.0"
+    "@changesets/cli": "^2.31.0",
+    "husky": "^9.1.7"
   }
 }

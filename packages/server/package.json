@@ -19,7 +19,9 @@
     "db:reset": "dotenv -e .env.local -- tsx scripts/reset.ts",
     "db:drop:db": "dotenv -e .env.local -- tsx scripts/drop.ts",
     "db:refresh": "pnpm db:drop:db && pnpm db:push && pnpm db:seed && pnpm db:studio",
-    "db:drop": "drizzle-kit drop"
+    "db:drop": "drizzle-kit drop",
+    "env:sync": "node ../../packages/shared/scripts/gen-env-example.mjs",
+    "env:check": "node ../../packages/shared/scripts/gen-env-example.mjs --check"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.0",

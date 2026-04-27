@@ -11,7 +11,9 @@
     "fmt": "vp fmt",
     "lint": "vp lint",
     "check": "vp check",
-    "check:fix": "vp check --fix"
+    "check:fix": "vp check --fix",
+    "env:sync": "node ../../packages/shared/scripts/gen-env-example.mjs",
+    "env:check": "node ../../packages/shared/scripts/gen-env-example.mjs --check"
   },
   "dependencies": {
     "@base-ui/react": "catalog:",

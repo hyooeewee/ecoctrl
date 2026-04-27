@@ -25,6 +25,9 @@ config/
   tsconfig.app.json     # 前端应用 tsconfig 模板
   tsconfig.node.json    # Node.js 后端 tsconfig 模板
   vite.config.base.ts   # 共享的 vp 配置 (fmt, lint, staged)
+scripts/
+  gen-env-example.mjs   # 从 .env.local 生成 .env.example (支持 @secret / @example 注解)
+  README.md             # 脚本使用说明
 types/
   index.ts              # 类型统一导出
   api/
