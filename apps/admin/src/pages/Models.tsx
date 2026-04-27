@@ -138,7 +138,12 @@ export default function Models() {
     setIsUploading(true);
     setUploadError("");
     try {
-      const validPoints = uploadPoints.filter((p) => p.id.trim() || p.name.trim());
+      const validPoints = uploadPoints
+        .filter((p) => p.id.trim() || p.name.trim())
+        .map((p) => ({
+          ...p,
+          props: p.props.filter((prop) => prop.key.trim() || prop.name.trim()),
+        }));
       await modelsApi.upload(uploadFile, {
         name: uploadName.trim(),
         version: uploadVersion.trim() || "v1.0",
@@ -164,7 +169,43 @@ export default function Models() {
   };
 
   const addPoint = () => {
-    setUploadPoints((prev) => [...prev, { id: "", name: "" }]);
+    setUploadPoints((prev) => [...prev, { id: "", name: "", props: [] }]);
+  };
+
+  const addProp = (pointIndex: number) => {
+    setUploadPoints((prev) =>
+      prev.map((p, i) =>
+        i === pointIndex ? { ...p, props: [...p.props, { key: "", name: "" }] } : p,
+      ),
+    );
+  };
+
+  const removeProp = (pointIndex: number, propIndex: number) => {
+    setUploadPoints((prev) =>
+      prev.map((p, i) =>
+        i === pointIndex ? { ...p, props: p.props.filter((_, j) => j !== propIndex) } : p,
+      ),
+    );
+  };
+
+  const updateProp = (
+    pointIndex: number,
+    propIndex: number,
+    field: "key" | "name" | "unit",
+    value: string,
+  ) => {
+    setUploadPoints((prev) =>
+      prev.map((p, i) =>
+        i === pointIndex
+          ? {
+              ...p,
+              props: p.props.map((prop, j) =>
+                j === propIndex ? { ...prop, [field]: value } : prop,
+              ),
+            }
+          : p,
+      ),
+    );
   };
 
   const removePoint = (index: number) => {
@@ -424,7 +465,7 @@ export default function Models() {
             </div>
 
             {/* Points configuration */}
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label>点位配置（可选）</Label>
                 <Button
@@ -439,32 +480,98 @@ export default function Models() {
                 </Button>
               </div>
               {uploadPoints.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-2">未配置点位</p>
+                <p className="text-xs text-muted-foreground py-1">未配置点位</p>
               ) : (
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                  {uploadPoints.map((point, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <Input
-                        value={point.id}
-                        onChange={(e) => updatePoint(index, "id", e.target.value)}
-                        placeholder="点位 ID"
-                        className="h-8 text-sm flex-1"
-                      />
-                      <Input
-                        value={point.name}
-                        onChange={(e) => updatePoint(index, "name", e.target.value)}
-                        placeholder="点位名称"
-                        className="h-8 text-sm flex-1"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 shrink-0 text-muted-foreground hover:text-red-500"
-                        onClick={() => removePoint(index)}
-                      >
-                        <Trash2 size={14} />
-                      </Button>
+                <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                  {uploadPoints.map((point, pointIdx) => (
+                    <div
+                      key={pointIdx}
+                      className="rounded-lg border border-border bg-muted/40 p-3 space-y-2"
+                    >
+                      {/* Point header */}
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={point.id}
+                          onChange={(e) => updatePoint(pointIdx, "id", e.target.value)}
+                          placeholder="点位 ID"
+                          className="h-8 text-sm flex-1"
+                        />
+                        <Input
+                          value={point.name}
+                          onChange={(e) => updatePoint(pointIdx, "name", e.target.value)}
+                          placeholder="点位名称"
+                          className="h-8 text-sm flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0 text-muted-foreground hover:text-red-500"
+                          onClick={() => removePoint(pointIdx)}
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
+
+                      {/* Props section */}
+                      <div className="space-y-1.5 pl-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">属性定义</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 gap-1 text-xs text-blue-600 hover:text-blue-700"
+                            onClick={() => addProp(pointIdx)}
+                          >
+                            <Plus size={12} />
+                            添加属性
+                          </Button>
+                        </div>
+                        {point.props.length === 0 ? (
+                          <p className="text-xs text-muted-foreground/70 py-1">无属性</p>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {point.props.map((prop, propIdx) => (
+                              <div key={propIdx} className="flex items-center gap-2">
+                                <Input
+                                  value={prop.key}
+                                  onChange={(e) =>
+                                    updateProp(pointIdx, propIdx, "key", e.target.value)
+                                  }
+                                  placeholder="key"
+                                  className="h-7 text-xs flex-1"
+                                />
+                                <Input
+                                  value={prop.name}
+                                  onChange={(e) =>
+                                    updateProp(pointIdx, propIdx, "name", e.target.value)
+                                  }
+                                  placeholder="名称"
+                                  className="h-7 text-xs flex-1"
+                                />
+                                <Input
+                                  value={prop.unit ?? ""}
+                                  onChange={(e) =>
+                                    updateProp(pointIdx, propIdx, "unit", e.target.value)
+                                  }
+                                  placeholder="单位"
+                                  className="h-7 text-xs w-16"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 shrink-0 text-muted-foreground hover:text-red-500"
+                                  onClick={() => removeProp(pointIdx, propIdx)}
+                                >
+                                  <Trash2 size={12} />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
