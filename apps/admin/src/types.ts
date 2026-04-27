@@ -12,3 +12,8 @@ export interface MetricCardProps {
   trendType?: "up" | "down" | "neutral";
   icon: any;
 }
+
+export interface PointItem {
+  id: string;
+  name: string;
+}
