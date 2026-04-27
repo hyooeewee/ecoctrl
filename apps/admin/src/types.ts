@@ -24,3 +24,18 @@ export interface PointItem {
   name: string;
   props: PointProp[];
 }
+
+export interface ObjectPoint {
+  id: string;
+  pointId: string;
+  pointName: string;
+  values: Record<string, string>;
+}
+
+export interface BusinessObject {
+  id: string;
+  name: string;
+  modelId: string;
+  modelName: string;
+  points: ObjectPoint[];
+}
