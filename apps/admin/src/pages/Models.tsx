@@ -17,9 +17,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@ecoctrl/ui";
 import { Input } from "@ecoctrl/ui";
 import { Label } from "@ecoctrl/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@ecoctrl/ui";
 
 import AppButton from "@/components/AppButton";
+import TruncatedText from "@/components/TruncatedText";
 import { resolveAssetUrl } from "@/lib/url";
 import type { Model3D } from "@ecoctrl/shared";
 import { modelsApi } from "../api/models";
@@ -274,9 +274,11 @@ export default function Models() {
                         </AppButton>
                       </div>
                       <CardContent className="px-4 py-3">
-                        <p className="truncate text-sm font-semibold" title={model.name}>
-                          {model.name}
-                        </p>
+                        <TruncatedText
+                          text={model.name}
+                          className="block text-sm font-semibold"
+                          showTooltip={false}
+                        />
                         <p className="mt-1 text-xs text-nowrap text-muted-foreground">
                           {model.version} / {model.format} / {model.size}
                         </p>
@@ -431,26 +433,18 @@ export default function Models() {
       {/* Preview Dialog */}
       <Dialog open={!!previewModel} onOpenChange={(open) => !open && setPreviewModel(null)}>
         <DialogContent className="flex h-[80vh] max-w-5xl flex-col overflow-hidden p-0">
-          <DialogHeader className="border-b p-4 pr-14 overflow-hidden">
-            <DialogTitle className="flex min-w-0 w-full items-center gap-2">
-              <Box className="text-blue-600 shrink-0" size={18} />
-              <div className="min-w-0 flex-1">
-                <TooltipProvider delayDuration={300}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <p className="max-w-full truncate text-base font-semibold">
-                        {previewModel?.name}
-                      </p>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" align="start">
-                      {previewModel?.name}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+          <DialogHeader className="border-b p-4 pr-14">
+            <DialogTitle className="min-w-0">
+              <div className="flex items-center gap-2">
+                <Box className="text-blue-600 shrink-0" size={18} />
+                <TruncatedText
+                  text={previewModel?.name ?? ""}
+                  className="text-base font-semibold"
+                />
+                <span className="text-muted-foreground ml-auto shrink-0 text-sm font-normal">
+                  {previewModel?.version} / {previewModel?.format}
+                </span>
               </div>
-              <span className="text-muted-foreground ml-2 shrink-0 text-sm font-normal">
-                {previewModel?.version} / {previewModel?.format}
-              </span>
             </DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-hidden bg-muted p-4">
