@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from "@ecoctrl/ui";
 import AppButton from "@/components/AppButton";
+import TruncatedText from "@/components/TruncatedText";
 
 import { cn } from "@/lib/utils";
 import type { MaintenanceReminder, MaintenanceReminderDetail } from "@ecoctrl/shared";
@@ -361,7 +362,11 @@ export default function Maintenance() {
                         size={16}
                         className="text-muted-foreground shrink-0 group-hover:text-blue-600"
                       />
-                      <span className="block truncate">{manual.name}</span>
+                      <TruncatedText
+                        text={manual.name}
+                        className="block text-sm"
+                        showTooltip={false}
+                      />
                     </button>
                     <AppButton
                       level="danger"
