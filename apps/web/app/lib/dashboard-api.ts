@@ -4,8 +4,8 @@ import type { ApiResponse } from "~/lib/api";
 import { apiGet, apiPatch } from "~/lib/api";
 import { API_PREFIX } from "~/lib/env";
 
-const DASHBOARD_ENDPOINT = `${API_PREFIX}/dashboard`;
-const SETTINGS_ENDPOINT = `${API_PREFIX}/dashboard/settings`;
+const DASHBOARD_ENDPOINT = `${API_PREFIX}/public/dashboard`;
+const SETTINGS_ENDPOINT = `${API_PREFIX}/public/settings`;
 
 export async function fetchDashboardData(): Promise<DashboardData | null> {
   const res = await apiGet<DashboardData>(DASHBOARD_ENDPOINT);
