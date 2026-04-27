@@ -1,5 +1,5 @@
 {
-  "extends": "@ecoctrl/shared/tsconfig.app.json",
+  "extends": "../../packages/shared/config/tsconfig.app.json",
   "compilerOptions": {
     "experimentalDecorators": true,
     "useDefineForClassFields": false,

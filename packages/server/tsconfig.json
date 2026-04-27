@@ -1,5 +1,5 @@
 {
-  "extends": "@ecoctrl/shared/tsconfig.node.json",
+  "extends": "../shared/config/tsconfig.node.json",
   "compilerOptions": {
     "module": "ESNext",
     "moduleResolution": "Bundler",

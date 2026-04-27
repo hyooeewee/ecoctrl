@@ -1,7 +1,12 @@
 import { defineConfig } from "rolldown";
 import path from "node:path";
-import { writeFile } from "node:fs/promises";
+import { writeFile, readFile } from "node:fs/promises";
 import pkg from "./package.json" with { type: "json" };
+
+const staticAssets = [
+  "ecoctrl.config.cjs",
+  ".env.example",
+];
 
 export default defineConfig({
   input: "index.ts",
@@ -30,6 +35,15 @@ export default defineConfig({
   },
 
   plugins: [
+    {
+      name: "emit-static-assets",
+      async generateBundle() {
+        for (const file of staticAssets) {
+          const source = await readFile(file);
+          this.emitFile({ type: "asset", fileName: file, source });
+        }
+      },
+    },
     {
       name: "emit-runtime-pkg",
       async writeBundle(_opts, bundle) {

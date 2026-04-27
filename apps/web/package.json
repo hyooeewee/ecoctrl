@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "react-router dev --port 8080",
-    "build": "react-router build",
+    "build": "react-router build && cp .env.example build/client/.env.example",
     "preview": "pnpm build && pnpm dlx dotenv-cli -e .env.local -- pnpm dlx serve build/client -p 8081 -s",
     "start": "pnpm build && pnpm dlx dotenv-cli -e .env.local -- pnpm dlx serve build/client -p 8081 -s",
     "typecheck": "react-router typegen && tsc",
