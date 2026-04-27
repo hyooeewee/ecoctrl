@@ -1,5 +1,5 @@
 {
-  "extends": "@ecoctrl/shared/tsconfig.app.json",
+  "extends": "../shared/config/tsconfig.app.json",
   "compilerOptions": {
     "paths": {
       "@/*": [
