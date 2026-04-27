@@ -15,6 +15,8 @@ export interface PlatformConfig {
   smtpUser: string;
   smtpPass: string;
   smtpSecure: boolean;
+  allowRegistration: boolean;
+  allowPasswordReset: boolean;
 }
 
 const DEFAULT_CONFIG: PlatformConfig = {
@@ -30,6 +32,8 @@ const DEFAULT_CONFIG: PlatformConfig = {
   smtpUser: "",
   smtpPass: "",
   smtpSecure: false,
+  allowRegistration: true,
+  allowPasswordReset: true,
 };
 
 export async function findPlatformConfig(): Promise<PlatformConfig> {
@@ -51,6 +55,8 @@ export async function findPlatformConfig(): Promise<PlatformConfig> {
       smtpUser: r.smtpUser,
       smtpPass: r.smtpPass,
       smtpSecure: r.smtpSecure,
+      allowRegistration: r.allowRegistration,
+      allowPasswordReset: r.allowPasswordReset,
     };
   }
   const r = rows[0];
@@ -67,6 +73,8 @@ export async function findPlatformConfig(): Promise<PlatformConfig> {
     smtpUser: r.smtpUser,
     smtpPass: r.smtpPass,
     smtpSecure: r.smtpSecure,
+    allowRegistration: r.allowRegistration,
+    allowPasswordReset: r.allowPasswordReset,
   };
 }
 
@@ -88,6 +96,8 @@ export async function updatePlatformConfig(config: PlatformConfig): Promise<Plat
       smtpUser: r.smtpUser,
       smtpPass: r.smtpPass,
       smtpSecure: r.smtpSecure,
+      allowRegistration: r.allowRegistration,
+      allowPasswordReset: r.allowPasswordReset,
     };
   } else {
     const result = await db.update(platformConfigs).set(config).where(eq(platformConfigs.id, rows[0].id)).returning();
@@ -105,6 +115,8 @@ export async function updatePlatformConfig(config: PlatformConfig): Promise<Plat
       smtpUser: r.smtpUser,
       smtpPass: r.smtpPass,
       smtpSecure: r.smtpSecure,
+      allowRegistration: r.allowRegistration,
+      allowPasswordReset: r.allowPasswordReset,
     };
   }
 }

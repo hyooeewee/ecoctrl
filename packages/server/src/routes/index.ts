@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 
+import { findPlatformConfig } from "@/repositories/platformConfig";
 import fileRoutes from "@/routes/files";
 import maintenanceRoutes from "@/routes/maintenance";
 import faultRoutes from "@/routes/faults";
@@ -35,6 +36,7 @@ export default async function apiRoutes(fastify: FastifyInstance) {
       "/api/auth/oauth/bind",
       "/api/auth/oauth/register-and-bind",
       "/api/dashboard",
+      "/api/public",
     ];
     if (publicPaths.some((p) => request.url.startsWith(p))) return;
     try {
@@ -42,6 +44,15 @@ export default async function apiRoutes(fastify: FastifyInstance) {
     } catch {
       return reply.status(401).send({ error: "Unauthorized" });
     }
+  });
+
+  fastify.get("/public/config", async (_request, reply) => {
+    const config = await findPlatformConfig();
+    return reply.send({
+      platformName: config.platformName,
+      allowRegistration: config.allowRegistration,
+      allowPasswordReset: config.allowPasswordReset,
+    });
   });
 
   await fastify.register(fileRoutes, { prefix: "/files" });

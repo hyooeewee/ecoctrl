@@ -18,6 +18,7 @@ import {
   deleteRefreshTokensByUserId,
 } from "@/repositories/refreshTokens";
 import { sendMail } from "@/lib/mailer";
+import { findPlatformConfig } from "@/repositories/platformConfig";
 
 const hashRefreshToken = (token: string) => crypto.createHash("sha256").update(token).digest("hex");
 
@@ -81,6 +82,11 @@ export default async function authRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      const platformConfig = await findPlatformConfig();
+      if (!platformConfig.allowRegistration) {
+        return reply.status(403).send({ error: "当前平台已关闭注册" });
+      }
+
       const { email } = request.body as { email: string };
       const existing = await findUserByEmail(email);
       if (existing) {
@@ -160,6 +166,11 @@ export default async function authRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      const platformConfig = await findPlatformConfig();
+      if (!platformConfig.allowRegistration) {
+        return reply.status(403).send({ error: "当前平台已关闭注册" });
+      }
+
       const { username, email, password, code } = request.body as {
         username: string;
         email: string;
@@ -353,6 +364,11 @@ export default async function authRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      const platformConfig = await findPlatformConfig();
+      if (!platformConfig.allowPasswordReset) {
+        return reply.status(403).send({ error: "当前平台已关闭密码重置功能" });
+      }
+
       const { email } = request.body as { email: string };
       const user = await findUserByEmail(email);
       if (!user) {
@@ -457,6 +473,11 @@ export default async function authRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      const platformConfig = await findPlatformConfig();
+      if (!platformConfig.allowPasswordReset) {
+        return reply.status(403).send({ error: "当前平台已关闭密码重置功能" });
+      }
+
       const { email, code, newPassword } = request.body as {
         email: string;
         code: string;

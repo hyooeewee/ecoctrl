@@ -15,6 +15,8 @@ const configSchema = z.object({
   smtpUser: z.string(),
   smtpPass: z.string(),
   smtpSecure: z.boolean(),
+  allowRegistration: z.boolean(),
+  allowPasswordReset: z.boolean(),
 });
 
 const configBodySchema = z.object({
@@ -30,6 +32,8 @@ const configBodySchema = z.object({
   smtpUser: z.string().optional(),
   smtpPass: z.string().optional(),
   smtpSecure: z.boolean().optional(),
+  allowRegistration: z.boolean().optional(),
+  allowPasswordReset: z.boolean().optional(),
 });
 
 export default async function configRoutes(fastify: FastifyInstance) {
@@ -62,6 +66,11 @@ export default async function configRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      const user = request.user as { role?: string } | undefined;
+      if (user?.role !== "super_admin") {
+        return reply.status(403).send({ error: "Forbidden" });
+      }
+
       const body = request.body as {
         platformName?: string;
         refreshInterval?: number;
@@ -75,6 +84,8 @@ export default async function configRoutes(fastify: FastifyInstance) {
         smtpUser?: string;
         smtpPass?: string;
         smtpSecure?: boolean;
+        allowRegistration?: boolean;
+        allowPasswordReset?: boolean;
       };
       const existing = await findPlatformConfig();
 
@@ -94,6 +105,8 @@ export default async function configRoutes(fastify: FastifyInstance) {
           body.smtpPass && body.smtpPass !== "****"
             ? body.smtpPass
             : existing.smtpPass,
+        allowRegistration: body.allowRegistration ?? existing.allowRegistration,
+        allowPasswordReset: body.allowPasswordReset ?? existing.allowPasswordReset,
       };
       await updatePlatformConfig(updated);
       return reply.send({

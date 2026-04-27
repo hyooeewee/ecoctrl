@@ -23,8 +23,17 @@ export const SystemConfigSchema = z.object({
   autoBackup: z.boolean(),
   backupRetentionDays: z.number(),
   sessionTimeout: z.number(),
+  allowRegistration: z.boolean(),
+  allowPasswordReset: z.boolean(),
 });
 export type SystemConfig = z.infer<typeof SystemConfigSchema>;
+
+export const PublicSystemConfigSchema = z.object({
+  platformName: z.string(),
+  allowRegistration: z.boolean(),
+  allowPasswordReset: z.boolean(),
+});
+export type PublicSystemConfig = z.infer<typeof PublicSystemConfigSchema>;
 
 export const BackupScheduleSchema = z.object({
   nextBackup: z.string(),
