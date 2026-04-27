@@ -431,21 +431,23 @@ export default function Models() {
       {/* Preview Dialog */}
       <Dialog open={!!previewModel} onOpenChange={(open) => !open && setPreviewModel(null)}>
         <DialogContent className="flex h-[80vh] max-w-5xl flex-col overflow-hidden p-0">
-          <DialogHeader className="border-b p-4">
-            <DialogTitle className="flex min-w-0 items-center gap-2 overflow-hidden">
+          <DialogHeader className="border-b p-4 pr-14 overflow-hidden">
+            <DialogTitle className="flex min-w-0 w-full items-center gap-2">
               <Box className="text-blue-600 shrink-0" size={18} />
-              <TooltipProvider delayDuration={300}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="min-w-0 flex-1 truncate text-base font-semibold">
+              <div className="min-w-0 flex-1">
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <p className="max-w-full truncate text-base font-semibold">
+                        {previewModel?.name}
+                      </p>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" align="start">
                       {previewModel?.name}
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" align="start">
-                    {previewModel?.name}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <span className="text-muted-foreground ml-2 shrink-0 text-sm font-normal">
                 {previewModel?.version} / {previewModel?.format}
               </span>
