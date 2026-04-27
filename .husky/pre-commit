@@ -1,2 +1,7 @@
 pnpm sync:env
-git add apps/*/.env.example
+git add apps/*/.env.example packages/*/.env.example
+for app in apps/*; do
+  if [ -d "$app" ] && [ -f "$app/vite.config.ts" ]; then
+    (cd "$app" && pnpm vp staged)
+  fi
+done
