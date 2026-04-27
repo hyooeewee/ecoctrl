@@ -310,7 +310,7 @@ export default function Models() {
           if (!open) resetUpload();
         }}
       >
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Upload size={18} />
@@ -336,7 +336,7 @@ export default function Models() {
                 <div className="flex items-center gap-3">
                   <File size={32} className="text-blue-500" />
                   <div className="text-left">
-                    <p className="text-sm font-medium">{uploadFile.name}</p>
+                    <p className="max-w-[200px] break-all text-sm font-medium">{uploadFile.name}</p>
                     <p className="text-xs text-muted-foreground">
                       {formatFileSize(uploadFile.size)} /{" "}
                       {FORMAT_MAP[uploadFile.name.split(".").pop()?.toLowerCase() ?? ""] ??
