@@ -1,6 +1,8 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 
 import { findPlatformConfig } from "@/repositories/platformConfig";
+import { findDashboardData } from "@/repositories/dashboard";
+import { findOnlineUser } from "@/repositories/users";
 import fileRoutes from "@/routes/files";
 import maintenanceRoutes from "@/routes/maintenance";
 import faultRoutes from "@/routes/faults";
@@ -9,7 +11,6 @@ import threeDConfigRoutes from "@/routes/threeDConfig";
 import energyRoutes from "@/routes/energy";
 import reportRoutes from "@/routes/reports";
 import userRoutes from "@/routes/users";
-import dashboardRoutes from "@/routes/dashboard";
 import overviewRoutes from "@/routes/overview";
 import alertRoutes from "@/routes/alerts";
 import settingsRoutes from "@/routes/settings";
@@ -35,7 +36,6 @@ export default async function apiRoutes(fastify: FastifyInstance) {
       "/api/auth/oauth/feishu/callback",
       "/api/auth/oauth/bind",
       "/api/auth/oauth/register-and-bind",
-      "/api/dashboard",
       "/api/public",
     ];
     if (publicPaths.some((p) => request.url.startsWith(p))) return;
@@ -55,6 +55,12 @@ export default async function apiRoutes(fastify: FastifyInstance) {
     });
   });
 
+  fastify.get("/public/dashboard", async (_request, reply) => {
+    const user = await findOnlineUser();
+    const data = await findDashboardData(user?.id);
+    return reply.send(data);
+  });
+
   await fastify.register(fileRoutes, { prefix: "/files" });
   await fastify.register(maintenanceRoutes, { prefix: "/maintenance" });
   await fastify.register(faultRoutes, { prefix: "/faults" });
@@ -63,10 +69,9 @@ export default async function apiRoutes(fastify: FastifyInstance) {
   await fastify.register(energyRoutes, { prefix: "/energy" });
   await fastify.register(reportRoutes, { prefix: "/reports" });
   await fastify.register(userRoutes, { prefix: "/users" });
-  await fastify.register(dashboardRoutes, { prefix: "/dashboard" });
   await fastify.register(overviewRoutes, { prefix: "/overview" });
   await fastify.register(alertRoutes, { prefix: "/alerts" });
-  await fastify.register(settingsRoutes, { prefix: "/dashboard/settings" });
+  await fastify.register(settingsRoutes, { prefix: "/public/settings" });
   await fastify.register(iotRoutes, { prefix: "/iot" });
   await fastify.register(modelRoutes, { prefix: "/models" });
   await fastify.register(backupScheduleRoutes, { prefix: "/system" });
