@@ -8,6 +8,7 @@ import {
   X,
   File,
   AlertCircle,
+  Plus,
 } from "lucide-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
@@ -21,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui";
 import AppButton from "@/components/AppButton";
 import TruncatedText from "@/components/TruncatedText";
 import { resolveAssetUrl } from "@/lib/url";
+import type { PointItem } from "@/types";
 import type { Model3D } from "@ecoctrl/shared";
 import { modelsApi } from "../api/models";
 import ModelViewer from "../components/ModelViewer";
@@ -58,6 +60,7 @@ export default function Models() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [dragActive, setDragActive] = useState(false);
+  const [uploadPoints, setUploadPoints] = useState<PointItem[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const fetchModels = useCallback(async () => {
@@ -123,12 +126,23 @@ export default function Models() {
 
   const handleUpload = async () => {
     if (!uploadFile || !uploadName.trim()) return;
+
+    // Validate duplicate point IDs
+    const ids = uploadPoints.map((p) => p.id.trim()).filter(Boolean);
+    const dup = ids.find((id, i) => ids.indexOf(id) !== i);
+    if (dup) {
+      setUploadError(`点位 ID "${dup}" 重复，请检查`);
+      return;
+    }
+
     setIsUploading(true);
     setUploadError("");
     try {
+      const validPoints = uploadPoints.filter((p) => p.id.trim() || p.name.trim());
       await modelsApi.upload(uploadFile, {
         name: uploadName.trim(),
         version: uploadVersion.trim() || "v1.0",
+        points: validPoints.length ? validPoints : undefined,
       });
       setUploadOpen(false);
       resetUpload();
@@ -146,6 +160,19 @@ export default function Models() {
     setUploadVersion("v1.0");
     setUploadError("");
     setDragActive(false);
+    setUploadPoints([]);
+  };
+
+  const addPoint = () => {
+    setUploadPoints((prev) => [...prev, { id: "", name: "" }]);
+  };
+
+  const removePoint = (index: number) => {
+    setUploadPoints((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const updatePoint = (index: number, field: keyof PointItem, value: string) => {
+    setUploadPoints((prev) => prev.map((p, i) => (i === index ? { ...p, [field]: value } : p)));
   };
 
   const handleDelete = async (id: string, name: string) => {
@@ -396,6 +423,54 @@ export default function Models() {
               </div>
             </div>
 
+            {/* Points configuration */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>点位配置（可选）</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1 text-xs text-blue-600 hover:text-blue-700"
+                  onClick={addPoint}
+                >
+                  <Plus size={14} />
+                  添加点位
+                </Button>
+              </div>
+              {uploadPoints.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-2">未配置点位</p>
+              ) : (
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  {uploadPoints.map((point, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <Input
+                        value={point.id}
+                        onChange={(e) => updatePoint(index, "id", e.target.value)}
+                        placeholder="点位 ID"
+                        className="h-8 text-sm flex-1"
+                      />
+                      <Input
+                        value={point.name}
+                        onChange={(e) => updatePoint(index, "name", e.target.value)}
+                        placeholder="点位名称"
+                        className="h-8 text-sm flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0 text-muted-foreground hover:text-red-500"
+                        onClick={() => removePoint(index)}
+                      >
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {uploadError && (
               <div className="flex items-center gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
                 <AlertCircle size={14} />
@@ -434,17 +509,17 @@ export default function Models() {
       <Dialog open={!!previewModel} onOpenChange={(open) => !open && setPreviewModel(null)}>
         <DialogContent className="flex h-[80vh] max-w-5xl flex-col overflow-hidden p-0">
           <DialogHeader className="border-b p-4 pr-14">
-            <DialogTitle className="min-w-0">
-              <div className="flex items-center gap-2">
-                <Box className="text-blue-600 shrink-0" size={18} />
+            <DialogTitle className="grid grid-cols-[auto_1fr_auto] items-center gap-2">
+              <Box className="text-blue-600" size={18} />
+              <div className="min-w-0 overflow-hidden">
                 <TruncatedText
                   text={previewModel?.name ?? ""}
-                  className="text-base font-semibold"
+                  className="block text-base font-semibold"
                 />
-                <span className="text-muted-foreground ml-auto shrink-0 text-sm font-normal">
-                  {previewModel?.version} / {previewModel?.format}
-                </span>
               </div>
+              <span className="text-muted-foreground text-sm font-normal">
+                {previewModel?.version} / {previewModel?.format}
+              </span>
             </DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-hidden bg-muted p-4">
