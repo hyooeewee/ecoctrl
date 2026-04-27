@@ -5,6 +5,8 @@ import { Button, Input, Label, Switch } from "@ecoctrl/ui";
 
 import { authApi } from "../api/auth";
 import type { AuthUser } from "../api/auth";
+import { systemConfigApi } from "../api/systemConfig";
+import type { PublicSystemConfig } from "@ecoctrl/shared";
 import OAuthButtons from "../components/OAuthButtons";
 import OAuthBindDialog from "../components/OAuthBindDialog";
 import { BrandLogo } from "../components/BrandLogo";
@@ -43,6 +45,9 @@ export default function Login({ onLogin }: LoginProps) {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [sysConfig, setSysConfig] = useState<PublicSystemConfig | null>(null);
+  const [sysConfigLoading, setSysConfigLoading] = useState(true);
+
   // OAuth bind dialog state
   const [bindDialogOpen, setBindDialogOpen] = useState(false);
   const [bindPayload, setBindPayload] = useState<{
@@ -55,6 +60,36 @@ export default function Login({ onLogin }: LoginProps) {
     setMode(m);
     setError("");
   };
+
+  // Load public system config on mount
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const data = await systemConfigApi.getPublic();
+        setSysConfig(data);
+      } catch {
+        setSysConfig({
+          platformName: "",
+          allowRegistration: true,
+          allowPasswordReset: true,
+        });
+      } finally {
+        setSysConfigLoading(false);
+      }
+    };
+    fetchConfig();
+  }, []);
+
+  // Auto-switch mode if current mode is disabled by config
+  useEffect(() => {
+    if (sysConfigLoading) return;
+    if (mode === "register" && sysConfig?.allowRegistration === false) {
+      switchMode("login");
+    }
+    if (mode === "forgot-password" && sysConfig?.allowPasswordReset === false) {
+      switchMode("login");
+    }
+  }, [mode, sysConfig, sysConfigLoading]);
 
   // Countdown timer for verification code
   useEffect(() => {
@@ -252,17 +287,19 @@ export default function Login({ onLogin }: LoginProps) {
                 >
                   登录
                 </button>
-                <button
-                  type="button"
-                  onClick={() => switchMode("register")}
-                  className={`flex-1 rounded-full py-1.5 text-sm font-medium transition-all ${
-                    mode === "register"
-                      ? "bg-white/90 text-slate-900"
-                      : "text-white/70 hover:text-white"
-                  }`}
-                >
-                  注册
-                </button>
+                {sysConfig?.allowRegistration !== false && (
+                  <button
+                    type="button"
+                    onClick={() => switchMode("register")}
+                    className={`flex-1 rounded-full py-1.5 text-sm font-medium transition-all ${
+                      mode === "register"
+                        ? "bg-white/90 text-slate-900"
+                        : "text-white/70 hover:text-white"
+                    }`}
+                  >
+                    注册
+                  </button>
+                )}
               </div>
             )}
 
@@ -347,13 +384,15 @@ export default function Login({ onLogin }: LoginProps) {
                       记住我
                     </Label>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => switchMode("forgot-password")}
-                    className="text-xs text-white/70 underline underline-offset-2 transition-colors hover:text-white"
-                  >
-                    忘记密码？
-                  </button>
+                  {sysConfig?.allowPasswordReset !== false && (
+                    <button
+                      type="button"
+                      onClick={() => switchMode("forgot-password")}
+                      className="text-xs text-white/70 underline underline-offset-2 transition-colors hover:text-white"
+                    >
+                      忘记密码？
+                    </button>
+                  )}
                 </div>
 
                 {error && (

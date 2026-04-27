@@ -23,6 +23,7 @@ import Reports from "@/pages/Reports";
 import ThreeDConfig from "@/pages/ThreeDConfig";
 import { initTheme, loadThemeFromServer, applyDarkMode } from "@/lib/darkMode";
 import { authApi } from "./api/auth";
+import type { AuthUser } from "./api/auth";
 import { preferencesApi } from "./api/preferences";
 import type { UserPreferences } from "./types";
 
@@ -30,7 +31,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("overview");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authReady, setAuthReady] = useState(false);
-  const [userDetail, setUserDetail] = useState<{ id: string } | null>(null);
+  const [userDetail, setUserDetail] = useState<AuthUser | null>(null);
   const [userPrefs, setUserPrefs] = useState<UserPreferences | null>(null);
 
   useEffect(() => {
@@ -89,7 +90,7 @@ export default function App() {
       case "overview":
         return <Overview />;
       case "config":
-        return <Config />;
+        return <Config user={userDetail} />;
       case "accounts":
         return <Accounts />;
       case "models":

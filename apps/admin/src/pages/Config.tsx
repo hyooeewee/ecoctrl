@@ -31,8 +31,9 @@ import SettingsPage from "@/components/SettingsPage";
 
 import type { SystemConfig } from "@ecoctrl/shared";
 import { systemConfigApi } from "../api/systemConfig";
+import type { AuthUser } from "../api/auth";
 
-export default function SystemConfig() {
+export default function SystemConfig({ user }: { user: AuthUser | null }) {
   const [config, setConfig] = useState<SystemConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -76,10 +77,53 @@ export default function SystemConfig() {
     autoBackup: true,
     backupRetentionDays: 30,
     sessionTimeout: 30,
+    allowRegistration: true,
+    allowPasswordReset: true,
   };
 
   const updateField = <K extends keyof SystemConfig>(key: K, value: SystemConfig[K]) => {
     setConfig((prev) => (prev ? { ...prev, [key]: value } : prev));
+  };
+
+  const isSuperAdmin = user?.role === "super_admin";
+
+  const accessSection = {
+    id: "access",
+    label: "访问控制",
+    icon: Shield,
+    description: "控制用户注册、密码重置等功能的可用性。",
+    content: (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Shield size={18} />
+            <div>
+              <Label className="text-sm font-semibold">允许开放注册</Label>
+              <p className="text-muted-foreground text-xs">
+                关闭后，新用户将无法通过邮箱验证码注册。
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={currentConfig.allowRegistration}
+            onCheckedChange={(checked) => updateField("allowRegistration", checked)}
+          />
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Shield size={18} />
+            <div>
+              <Label className="text-sm font-semibold">允许密码重置</Label>
+              <p className="text-muted-foreground text-xs">关闭后，用户无法使用"忘记密码"功能。</p>
+            </div>
+          </div>
+          <Switch
+            checked={currentConfig.allowPasswordReset}
+            onCheckedChange={(checked) => updateField("allowPasswordReset", checked)}
+          />
+        </div>
+      </div>
+    ),
   };
 
   const sections = [
@@ -336,7 +380,7 @@ export default function SystemConfig() {
         </div>
       ),
     },
-  ];
+  ].concat(isSuperAdmin ? [accessSection] : []);
 
   const actions = (
     <div className="flex justify-end">
