@@ -1,0 +1,2 @@
+pnpm sync:env
+git add apps/*/.env.example
