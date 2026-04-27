@@ -138,7 +138,7 @@ export default function App() {
         />
 
         <main className="bg-background flex-1 overflow-hidden flex flex-col">
-          {activeTab === "config" || activeTab === "preferences" ? (
+          {activeTab === "config" || activeTab === "preferences" || activeTab === "profile" ? (
             <div className="flex-1 flex flex-col overflow-hidden">{renderContent()}</div>
           ) : (
             <ScrollArea className="h-full w-full">
