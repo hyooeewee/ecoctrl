@@ -71,6 +71,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
   fastify.post(
     "/register/send-code",
     {
+      config: { rateLimit: { max: 3, timeWindow: "1 minute" } },
       schema: {
         tags: ["Auth"],
         summary: "Send verification code for registration",
@@ -154,6 +155,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
   fastify.post(
     "/register",
     {
+      config: { rateLimit: { max: 5, timeWindow: "1 minute" } },
       schema: {
         tags: ["Auth"],
         summary: "Register a new user",
@@ -239,6 +241,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
   fastify.post(
     "/login",
     {
+      config: { rateLimit: { max: 5, timeWindow: "1 minute" } },
       schema: {
         tags: ["Auth"],
         summary: "Login with username and password",
@@ -362,6 +365,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
   fastify.post(
     "/forgot-password/send-code",
     {
+      config: { rateLimit: { max: 3, timeWindow: "1 minute" } },
       schema: {
         tags: ["Auth"],
         summary: "Send verification code to email",

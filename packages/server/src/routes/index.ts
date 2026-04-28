@@ -48,7 +48,10 @@ export default async function apiRoutes(fastify: FastifyInstance) {
     }
   });
 
-  fastify.get("/public/config", async (_request, reply) => {
+  fastify.get("/public/config", {
+    config: { rateLimit: { max: 200, timeWindow: "1 minute" } },
+    schema: { tags: ["Public"], summary: "Get public platform config", security: [] },
+  }, async (_request, reply) => {
     const config = await findPlatformConfig();
     return reply.send({
       platformName: config.platformName,
@@ -57,7 +60,10 @@ export default async function apiRoutes(fastify: FastifyInstance) {
     });
   });
 
-  fastify.get("/public/dashboard", async (_request, reply) => {
+  fastify.get("/public/dashboard", {
+    config: { rateLimit: { max: 200, timeWindow: "1 minute" } },
+    schema: { tags: ["Public"], summary: "Get public dashboard data", security: [] },
+  }, async (_request, reply) => {
     const user = await findOnlineUser();
     const data = await findDashboardData(user?.id);
     return reply.send(data);
