@@ -70,6 +70,17 @@ export const enUS = {
     editAutoExitDelay: "Edit Mode Auto-Exit",
     editAutoExitDelayDesc: "Automatically exit edit mode after a period of inactivity",
     editAutoExitNever: "Never",
+    // Account / Login
+    loginEmail: "Email Address",
+    loginPassword: "Password",
+    loginButton: "Sign In",
+    loginSuccess: "Signed in successfully",
+    loginError: "Sign in failed, please check your email and password",
+    logoutButton: "Sign Out",
+    logoutSuccess: "Signed out successfully",
+    roleLabel: "Role",
+    pleaseEnterEmail: "Please enter your email",
+    pleaseEnterPassword: "Please enter your password",
   },
 
   // ── Edit Layout Floating Toolbar ────────────────────────────────────────────

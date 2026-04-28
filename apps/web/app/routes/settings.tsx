@@ -1,9 +1,9 @@
-import { Undo2, ArrowLeft, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Undo2, ArrowLeft, Loader2, LogOut, Mail, Shield, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
-import { Label, Separator, Switch } from "@ecoctrl/ui";
+import { Input, Label, Separator, Switch } from "@ecoctrl/ui";
 import { Slider } from "~/components/ui-adapter/slider";
 
 import { Button } from "~/components/ui-adapter/button";
@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "~/components/ui-adapter/select";
 import { locale, useLocale } from "~/locales";
+import { useAuthStore } from "~/store/auth";
 import { useSettingsStore } from "~/store/settings";
 
 import type { Route } from "./+types/settings";
@@ -34,6 +35,13 @@ export default function SettingsPage() {
   const isScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [activeId, setActiveId] = useState<SectionId>("general");
+
+  const auth = useAuthStore();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const {
     autoRotate,
@@ -86,6 +94,43 @@ export default function SettingsPage() {
       flushSync();
     };
   }, [flushSync]);
+
+  const handleLogin = async () => {
+    if (!email.trim()) {
+      toast.error(t.settings.pleaseEnterEmail);
+      return;
+    }
+    if (!password) {
+      toast.error(t.settings.pleaseEnterPassword);
+      return;
+    }
+    setIsLoggingIn(true);
+    try {
+      await auth.login(email.trim(), password);
+      toast.success(t.settings.loginSuccess);
+      setPassword("");
+      navigate("/");
+    } catch {
+      toast.error(t.settings.loginError);
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await auth.logout();
+      toast.success(t.settings.logoutSuccess);
+      navigate("/");
+    } catch {
+      // logout already clears local state on error
+      toast.success(t.settings.logoutSuccess);
+      navigate("/");
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   const handleReset = () => {
     reset();
@@ -495,13 +540,96 @@ export default function SettingsPage() {
             {/* Account */}
             <section id="account" className="py-6">
               <h3 className="mb-5 text-xl font-semibold tracking-tight">{t.settings.account}</h3>
-              <div className="rounded-lg border border-dashed border-white/10 bg-white/[0.02] px-4 py-8 text-center">
-                <p className="text-muted-foreground text-sm">
-                  {language === "zh-CN"
-                    ? "账户功能开发中，敬请期待"
-                    : "Account features are coming soon"}
-                </p>
-              </div>
+              {auth.isLoggedIn() ? (
+                <div className="rounded-lg border border-white/10 bg-white/[0.02] p-5">
+                  <div className="flex items-center gap-3">
+                    <div className="flex size-10 items-center justify-center rounded-full border border-white/10 bg-white/5">
+                      <User size={18} className="text-cyber-cyan" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{auth.user?.username}</p>
+                      <p className="text-muted-foreground truncate text-xs">{auth.user?.email}</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center gap-2 text-xs">
+                    <Shield size={12} className="text-muted-foreground" />
+                    <span className="text-muted-foreground">
+                      {t.settings.roleLabel}: {auth.user?.role}
+                    </span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-4 w-full"
+                    disabled={isLoggingOut}
+                    onClick={handleLogout}
+                  >
+                    {isLoggingOut ? (
+                      <Loader2 size={14} className="mr-1.5 animate-spin" />
+                    ) : (
+                      <LogOut size={14} className="mr-1.5" />
+                    )}
+                    {t.settings.logoutButton}
+                  </Button>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-white/10 bg-white/[0.02] p-5">
+                  <div className="flex flex-col gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">{t.settings.loginEmail}</Label>
+                      <div className="relative">
+                        <Mail
+                          size={14}
+                          className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2"
+                        />
+                        <Input
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="you@example.com"
+                          className="border-white/10 bg-white/5 pl-9 text-sm"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleLogin();
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">{t.settings.loginPassword}</Label>
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="border-white/10 bg-white/5 pr-9 text-sm"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleLogin();
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((v) => !v)}
+                          className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2"
+                          tabIndex={-1}
+                        >
+                          {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                      </div>
+                    </div>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="w-full"
+                      disabled={isLoggingIn}
+                      onClick={handleLogin}
+                    >
+                      {isLoggingIn && <Loader2 size={14} className="mr-1.5 animate-spin" />}
+                      {t.settings.loginButton}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </section>
           </div>
         </div>

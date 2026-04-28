@@ -11,6 +11,7 @@ import { DashboardWidgets } from "~/components/dashboard/widgets";
 import { fetchDashboardData, type DashboardData } from "~/lib/dashboard-api";
 import { cn } from "~/lib/utils";
 import { locale, useLocale } from "~/locales";
+import { useAuthStore } from "~/store/auth";
 import { useSettingsStore, type BentoLayoutItem } from "~/store/settings";
 
 import type { Route } from "./+types/home";
@@ -71,6 +72,8 @@ function LabelInfoPanel({ labelKey, onClose }: { labelKey: string; onClose: () =
 export default function Home() {
   const t = useLocale();
   const loaderData = useLoaderData() as DashboardData | null;
+  const isLoggedIn = useAuthStore((state) => state.isLoggedIn());
+  const fetchUser = useAuthStore((state) => state.fetchUser);
   const navHideDelay = useSettingsStore((state) => state.navHideDelay);
   const bentoDragEnabled = useSettingsStore((state) => state.bentoDragEnabled);
   const bentoLayout = useSettingsStore((state) => state.bentoLayout);
@@ -106,6 +109,13 @@ export default function Home() {
   useEffect(() => {
     loadSettings();
   }, [loadSettings]);
+
+  // Refresh user info on mount if already logged in.
+  useEffect(() => {
+    if (isLoggedIn) {
+      fetchUser();
+    }
+  }, [isLoggedIn, fetchUser]);
 
   // Sync backend widget metadata → bentoLayout.
   // Layout (position / size / hidden) now comes directly from the API,

@@ -1,7 +1,12 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 
-import { fetchDashboardSettings, patchDashboardSettings } from "~/lib/dashboard-api";
+import {
+  fetchDashboardSettings,
+  fetchUserSettings,
+  patchDashboardSettings,
+  patchUserSettings,
+} from "~/lib/dashboard-api";
 
 // ─── Bento layout types ───────────────────────────────────────────────────────
 
@@ -113,8 +118,39 @@ const defaults: SettingsState = {
 
 // Module-level debounce timer for auto-sync.
 let syncTimer: ReturnType<typeof setTimeout> | null = null;
-// Tracks whether we have already fetched server settings this session.
-let settingsLoadedOnce = false;
+// Tracks the last user whose settings were loaded; re-fetch on user switch.
+let lastLoadedUserId: string | null = null;
+
+// Read current user id from persisted auth store (no import to avoid cycles).
+function getCurrentUserId(): string | null {
+  try {
+    const raw = localStorage.getItem("ecoctrl-auth");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed?.state?.user?.id || null;
+  } catch {
+    return null;
+  }
+}
+
+// Custom storage that isolates settings per user in localStorage.
+const userAwareStorage = createJSONStorage(() => ({
+  getItem: (name: string) => {
+    const userId = getCurrentUserId();
+    const key = userId ? `${name}--${userId}` : name;
+    return localStorage.getItem(key);
+  },
+  setItem: (name: string, value: string) => {
+    const userId = getCurrentUserId();
+    const key = userId ? `${name}--${userId}` : name;
+    localStorage.setItem(key, value);
+  },
+  removeItem: (name: string) => {
+    const userId = getCurrentUserId();
+    const key = userId ? `${name}--${userId}` : name;
+    localStorage.removeItem(key);
+  },
+}));
 
 function scheduleSync(getState: () => SettingsStore) {
   if (syncTimer) {
@@ -131,6 +167,9 @@ function scheduleSync(getState: () => SettingsStore) {
     }
   }, syncDebounceMs);
 }
+
+// Global event to trigger settings rehydration when user switches.
+const SETTINGS_REHYDRATE_EVENT = "ecoctrl:rehydrate-settings";
 
 export const useSettingsStore = create<SettingsStore>()(
   persist(
@@ -252,16 +291,33 @@ export const useSettingsStore = create<SettingsStore>()(
 
       // ─── Server sync ────────────────────────────────────────────────────────
       loadSettings: async () => {
-        if (settingsLoadedOnce) return;
-        settingsLoadedOnce = true;
+        const currentUserId = getCurrentUserId();
+        if (lastLoadedUserId === currentUserId) return;
+        lastLoadedUserId = currentUserId;
 
         const state = get();
+
+        // Authenticated users: try user-specific endpoint first.
+        if (currentUserId) {
+          const userRes = await fetchUserSettings();
+          if (userRes.ok && userRes.data) {
+            if (state.hasUnsavedChanges) return;
+            const remote = userRes.data as Record<string, unknown>;
+            const updates: Record<string, unknown> = {};
+            for (const key of SYNCABLE_FIELDS) {
+              if (key in remote && remote[key] !== undefined) {
+                updates[key] = remote[key];
+              }
+            }
+            set(updates);
+            return;
+          }
+          // If user endpoint fails (e.g. not yet implemented), fall through to public.
+        }
+
         const res = await fetchDashboardSettings();
-
         if (res.ok && res.data) {
-          // If there are unsaved local changes, don't overwrite them.
           if (state.hasUnsavedChanges) return;
-
           const remote = res.data as Record<string, unknown>;
           const updates: Record<string, unknown> = {};
           for (const key of SYNCABLE_FIELDS) {
@@ -281,8 +337,18 @@ export const useSettingsStore = create<SettingsStore>()(
         }
 
         set({ syncStatus: "syncing" });
-        const res = await patchDashboardSettings(payload);
 
+        // Authenticated users: save to user-specific endpoint.
+        if (getCurrentUserId()) {
+          const userRes = await patchUserSettings(payload);
+          if (userRes.ok) {
+            set({ syncStatus: "saved", hasUnsavedChanges: false });
+            return;
+          }
+          // Fall through to public endpoint if user endpoint fails.
+        }
+
+        const res = await patchDashboardSettings(payload);
         if (res.ok) {
           set({ syncStatus: "saved", hasUnsavedChanges: false });
         } else {
@@ -305,6 +371,7 @@ export const useSettingsStore = create<SettingsStore>()(
     }),
     {
       name: "ecoctrl-settings",
+      storage: userAwareStorage,
       // Exclude transient sync state from localStorage.
       partialize: (state) => {
         const { syncStatus: _, hasUnsavedChanges: __, ...persisted } = state;
@@ -313,3 +380,13 @@ export const useSettingsStore = create<SettingsStore>()(
     },
   ),
 );
+
+// Rehydrate settings when user logs in/out so the correct per-user localStorage key is read.
+if (typeof window !== "undefined") {
+  window.addEventListener(SETTINGS_REHYDRATE_EVENT, () => {
+    lastLoadedUserId = null;
+    void (
+      useSettingsStore as unknown as { persist: { rehydrate: () => Promise<void> } }
+    ).persist.rehydrate();
+  });
+}
