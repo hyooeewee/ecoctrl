@@ -20,6 +20,7 @@ import {
 import { ensureDatabase } from "@/lib/ensureDatabase";
 import { UPLOAD_DIR } from "@/lib/paths";
 import databasePlugin from "@/plugins/database";
+import rateLimitPlugin from "@/plugins/rateLimit";
 import apiRoutes from "@/routes";
 import { syncSmtpFromEnv } from "@/repositories/platformConfig";
 
@@ -32,6 +33,7 @@ fastify.setValidatorCompiler(validatorCompiler);
 fastify.setSerializerCompiler(serializerCompiler);
 
 await fastify.register(databasePlugin);
+await fastify.register(rateLimitPlugin);
 await fastify.register(fastifyJwt, {
   secret: process.env.JWT_SECRET!,
   sign: { expiresIn: "15m" },
