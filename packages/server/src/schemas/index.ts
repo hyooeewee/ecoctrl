@@ -11,6 +11,7 @@ export * from "./iotTokens";
 export * from "./backupSchedule";
 export * from "./energyAreas";
 export * from "./models";
+export * from "./objects";
 export * from "./threeDConfig";
 export * from "./platformConfig";
 export * from "./dashboardWidgets";

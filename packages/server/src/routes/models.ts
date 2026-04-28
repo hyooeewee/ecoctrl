@@ -6,9 +6,15 @@ import { pipeline } from "node:stream/promises";
 import { createReadStream } from "node:fs";
 import { mkdir, readdir, rm } from "node:fs/promises";
 import unzipper from "unzipper";
-import { Model3DSchema } from "@ecoctrl/shared";
+import { Model3DSchema, PointItemSchema } from "@ecoctrl/shared";
 import { UPLOAD_DIR as BASE_UPLOAD_DIR } from "@/lib/paths";
-import { findManyModels, findModelById, createModel, deleteModel } from "@/repositories/models";
+import {
+  findManyModels,
+  findModelById,
+  createModel,
+  updateModel,
+  deleteModel,
+} from "@/repositories/models";
 
 // Temporary directory for immediate stream consumption during multipart parsing
 const TMP_DIR = path.join(BASE_UPLOAD_DIR, ".tmp");
@@ -71,6 +77,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
       let fileInfo: { filename: string; tempPath: string } | undefined;
       let name = "";
       let version = "";
+      let pointsRaw = "";
 
       try {
         for await (const part of parts) {
@@ -82,6 +89,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
           } else {
             if (part.fieldname === "name") name = part.value as string;
             if (part.fieldname === "version") version = part.value as string;
+            if (part.fieldname === "points") pointsRaw = part.value as string;
           }
         }
       } catch (_err) {
@@ -97,6 +105,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
 
       const finalName = name || fileInfo.filename.replace(/\.[^/.]+$/, "");
       const finalVersion = version || "v1.0";
+      const points = pointsRaw ? JSON.parse(pointsRaw) : [];
 
       const ext = path.extname(fileInfo.filename).toLowerCase();
       const modelId = crypto.randomUUID();
@@ -146,8 +155,48 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         fileUrl,
         thumbnailUrl: null,
         docUrl: null,
+        points,
       });
       return reply.status(201).send(created);
+    },
+  );
+
+  fastify.put(
+    "/:id",
+    {
+      schema: {
+        tags: ["Models"],
+        summary: "Update a 3D model",
+        params: z.object({ id: z.string().describe("Model ID") }),
+        body: z.object({
+          name: z.string(),
+          version: z.string(),
+          points: z.array(PointItemSchema).optional(),
+        }),
+        response: {
+          200: Model3DSchema,
+          404: z.object({ error: z.string() }),
+        },
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const { name, version, points } = request.body as {
+        name: string;
+        version: string;
+        points?: unknown[];
+      };
+
+      const existing = await findModelById(id);
+      if (!existing) {
+        return reply.status(404).send({ error: "Model not found" });
+      }
+
+      const updated = await updateModel(id, { name, version, points });
+      if (!updated) {
+        return reply.status(404).send({ error: "Model not found" });
+      }
+      return updated;
     },
   );
 
