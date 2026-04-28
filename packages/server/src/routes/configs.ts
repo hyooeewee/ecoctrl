@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { findPlatformConfig, updatePlatformConfig } from "@/repositories/platformConfig";
+import { findUserById } from "@/repositories/users";
 
 const configSchema = z.object({
   platformName: z.string(),
@@ -66,7 +67,8 @@ export default async function configRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const user = request.user as { role?: string } | undefined;
+      const payload = request.user as { userId: string } | undefined;
+      const user = payload?.userId ? await findUserById(payload.userId) : null;
       if (user?.role !== "super_admin") {
         return reply.status(403).send({ error: "Forbidden" });
       }
