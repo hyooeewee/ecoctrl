@@ -31,7 +31,7 @@ export default function AppButton({ level = "action", className = "", ...props }
       "border-border bg-background text-foreground hover:bg-muted hover:text-foreground active:bg-muted/80",
     danger:
       "border-transparent bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 active:bg-red-200 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/60",
-    ghost: "text-foreground hover:bg-muted active:bg-muted/70",
+    ghost: "bg-transparent text-foreground hover:bg-muted active:bg-muted/70",
   };
 
   return <Button className={`${levelStyles[level]} ${className}`} {...props} />;
