@@ -11,6 +11,7 @@ export async function findManyModels(): Promise<Model3D[]> {
     version: r.version,
     format: r.format,
     size: r.size,
+    deviceType: r.deviceType,
     fileUrl: r.fileUrl ?? null,
     thumbnailUrl: r.thumbnailUrl ?? null,
     docUrl: r.docUrl ?? null,
@@ -28,6 +29,7 @@ export async function findModelById(id: string): Promise<Model3D | null> {
     version: r.version,
     format: r.format,
     size: r.size,
+    deviceType: r.deviceType,
     fileUrl: r.fileUrl ?? null,
     thumbnailUrl: r.thumbnailUrl ?? null,
     docUrl: r.docUrl ?? null,
@@ -43,6 +45,7 @@ export async function createModel(data: Omit<Model3D, "id">): Promise<Model3D> {
       version: data.version,
       format: data.format,
       size: data.size,
+      deviceType: data.deviceType,
       fileUrl: data.fileUrl,
       thumbnailUrl: data.thumbnailUrl,
       docUrl: data.docUrl,
@@ -56,6 +59,7 @@ export async function createModel(data: Omit<Model3D, "id">): Promise<Model3D> {
     version: r.version,
     format: r.format,
     size: r.size,
+    deviceType: r.deviceType,
     fileUrl: r.fileUrl ?? null,
     thumbnailUrl: r.thumbnailUrl ?? null,
     docUrl: r.docUrl ?? null,
@@ -65,7 +69,9 @@ export async function createModel(data: Omit<Model3D, "id">): Promise<Model3D> {
 
 export async function updateModel(
   id: string,
-  data: Partial<Pick<Model3D, "name" | "version" | "points" | "format" | "size" | "fileUrl">>,
+  data: Partial<
+    Pick<Model3D, "name" | "version" | "points" | "format" | "size" | "fileUrl" | "deviceType">
+  >,
 ): Promise<Model3D | null> {
   const updateData: Record<string, unknown> = {};
   if (data.name !== undefined) updateData.name = data.name;
@@ -73,6 +79,7 @@ export async function updateModel(
   if (data.points !== undefined) updateData.points = data.points;
   if (data.format !== undefined) updateData.format = data.format;
   if (data.size !== undefined) updateData.size = data.size;
+  if (data.deviceType !== undefined) updateData.deviceType = data.deviceType;
   if (data.fileUrl !== undefined) updateData.fileUrl = data.fileUrl;
 
   const result = await db.update(models).set(updateData).where(eq(models.id, id)).returning();
@@ -84,6 +91,7 @@ export async function updateModel(
     version: r.version,
     format: r.format,
     size: r.size,
+    deviceType: r.deviceType,
     fileUrl: r.fileUrl ?? null,
     thumbnailUrl: r.thumbnailUrl ?? null,
     docUrl: r.docUrl ?? null,
@@ -101,6 +109,7 @@ export async function deleteModel(id: string): Promise<Model3D | null> {
     version: r.version,
     format: r.format,
     size: r.size,
+    deviceType: r.deviceType,
     fileUrl: r.fileUrl ?? null,
     thumbnailUrl: r.thumbnailUrl ?? null,
     docUrl: r.docUrl ?? null,

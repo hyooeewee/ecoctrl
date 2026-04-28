@@ -1,9 +1,9 @@
 import { db } from "@/config/database";
-import { dashboardStats } from "@/schemas/dashboard";
+import { platformMetrics } from "@/schemas/dashboard";
 import { energyReadings } from "@/schemas/energy";
 import { alerts } from "@/schemas/alerts";
 import { dashboardWidgets } from "@/schemas/dashboardWidgets";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, inArray } from "drizzle-orm";
 import type {
   DashboardStats,
   EnergyChartItem,
@@ -15,7 +15,7 @@ import { fetchWeather } from "@/services/weather";
 import { findUserSettings } from "@/repositories/userSettings";
 
 export async function findDashboardStats(): Promise<DashboardStats> {
-  const rows = await db.select().from(dashboardStats);
+  const rows = await db.select().from(platformMetrics);
   const stats: Record<
     string,
     { value: string; unit: string; trend: string; trendType: "up" | "down" }
@@ -62,6 +62,37 @@ export async function findDashboardData(
     .where(eq(dashboardWidgets.enabled, true))
     .orderBy(asc(dashboardWidgets.sortOrder));
 
+  // Batch-fetch latest metric snapshots for stat widgets
+  const metricKeys = rows
+    .filter((r) => r.dataType === "stat" && r.metricKey)
+    .map((r) => r.metricKey!);
+
+  const metricMap = new Map<
+    string,
+    { value: string; unit: string; trend: string; trendType: "up" | "down" }
+  >();
+  const snapshotMap = new Map<string, Date | null>();
+
+  if (metricKeys.length > 0) {
+    const allMetrics = await db
+      .select()
+      .from(platformMetrics)
+      .where(inArray(platformMetrics.key, metricKeys));
+
+    for (const m of allMetrics) {
+      const existingSnap = snapshotMap.get(m.key);
+      if (!existingSnap || (m.snapshotAt && existingSnap && m.snapshotAt > existingSnap)) {
+        snapshotMap.set(m.key, m.snapshotAt);
+        metricMap.set(m.key, {
+          value: m.value,
+          unit: m.unit,
+          trend: m.trend,
+          trendType: m.trendType as "up" | "down",
+        });
+      }
+    }
+  }
+
   const userOverrides = new Map<
     string,
     { hidden?: boolean; x?: number; y?: number; w?: number; h?: number }
@@ -99,6 +130,15 @@ export async function findDashboardData(
 
     if (r.dataType === "weather") {
       data = await fetchWeather();
+    } else if (r.dataType === "stat" && r.metricKey && metricMap.has(r.metricKey)) {
+      const m = metricMap.get(r.metricKey)!;
+      const base = (r.dataJson ?? {}) as Record<string, unknown>;
+      data = {
+        ...base,
+        value: m.value,
+        unit: m.unit,
+        delta: m.trend,
+      } as WidgetConfig["data"];
     }
 
     const override = userOverrides.get(r.id);

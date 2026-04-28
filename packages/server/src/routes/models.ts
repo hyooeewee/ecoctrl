@@ -94,6 +94,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
       let fileInfo: { filename: string; tempPath: string } | undefined;
       let name = "";
       let version = "";
+      let deviceType = "";
       let pointsRaw = "";
 
       try {
@@ -106,6 +107,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
           } else {
             if (part.fieldname === "name") name = part.value as string;
             if (part.fieldname === "version") version = part.value as string;
+            if (part.fieldname === "deviceType") deviceType = part.value as string;
             if (part.fieldname === "points") pointsRaw = part.value as string;
           }
         }
@@ -169,6 +171,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         version: finalVersion,
         format,
         size: formatFileSize(sizeBytes),
+        deviceType,
         fileUrl,
         thumbnailUrl: null,
         docUrl: null,
@@ -188,6 +191,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         body: z.object({
           name: z.string(),
           version: z.string(),
+          deviceType: z.string(),
           points: z.array(PointItemSchema).default([]),
           fileUrl: z.string().nullable().optional(),
         }),
@@ -199,9 +203,10 @@ export default async function modelRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const { name, version, points, fileUrl } = request.body as {
+      const { name, version, deviceType, points, fileUrl } = request.body as {
         name: string;
         version: string;
+        deviceType: string;
         points?: PointItem[];
         fileUrl?: string | null;
       };
@@ -216,7 +221,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         deleteModelFile(existing.fileUrl);
       }
 
-      const updated = await updateModel(id, { name, version, points, fileUrl });
+      const updated = await updateModel(id, { name, version, deviceType, points, fileUrl });
       if (!updated) {
         return reply.status(404).send({ error: "Model not found" });
       }

@@ -107,6 +107,16 @@ async function seedUsers() {
     username: "ecoctrl",
     email: "ecoctrl@example.com",
     password: mockPassword,
+    role: "super_admin",
+    status: "online",
+    lastLogin: null,
+    avatarUrl: null,
+  });
+  await db.insert(schema.users).values({
+    id: crypto.randomUUID(),
+    username: "admin",
+    email: "admin@example.com",
+    password: mockPassword,
     role: "admin",
     status: "online",
     lastLogin: null,
@@ -203,7 +213,7 @@ async function seedDashboard() {
     { key: "pendingAlerts", value: "04", unit: "项", trend: "-2", trendType: "down" as const },
     { key: "carbonEmission", value: "842", unit: "kg", trend: "-4.2%", trendType: "down" as const },
   ];
-  await db.insert(schema.dashboardStats).values(stats);
+  await db.insert(schema.platformMetrics).values(stats);
 
   const energyChart = [
     { name: "Mon", value: 400 },
@@ -319,10 +329,8 @@ async function seedDashboardWidgets() {
       layoutH: 2,
       hidden: true,
       dataType: "stat" as const,
+      metricKey: "totalEnergy",
       dataJson: {
-        value: "8,456",
-        unit: "kWh",
-        delta: "+12%",
         deltaVariant: "up-bad",
         sparkline: [280, 310, 295, 340, 380, 420, 395, 440, 410, 460, 480, 500],
         sparklineColor: "var(--color-chart-1)",
@@ -359,10 +367,8 @@ async function seedDashboardWidgets() {
       layoutH: 2,
       hidden: false,
       dataType: "stat" as const,
+      metricKey: "carbonEmission",
       dataJson: {
-        value: "2,340",
-        unit: "kg CO₂",
-        delta: "+2%",
         deltaVariant: "up-bad",
         sparkline: [280, 320, 290, 350, 310, 270, 340],
         sparklineColor: "var(--color-chart-2)",
