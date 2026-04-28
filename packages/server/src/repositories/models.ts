@@ -14,6 +14,7 @@ export async function findManyModels(): Promise<Model3D[]> {
     fileUrl: r.fileUrl ?? null,
     thumbnailUrl: r.thumbnailUrl ?? null,
     docUrl: r.docUrl ?? null,
+    points: r.points ?? [],
   }));
 }
 
@@ -30,6 +31,7 @@ export async function findModelById(id: string): Promise<Model3D | null> {
     fileUrl: r.fileUrl ?? null,
     thumbnailUrl: r.thumbnailUrl ?? null,
     docUrl: r.docUrl ?? null,
+    points: r.points ?? [],
   };
 }
 
@@ -44,6 +46,7 @@ export async function createModel(data: Omit<Model3D, "id">): Promise<Model3D> {
       fileUrl: data.fileUrl,
       thumbnailUrl: data.thumbnailUrl,
       docUrl: data.docUrl,
+      points: data.points,
     })
     .returning();
   const r = result[0];
@@ -56,6 +59,36 @@ export async function createModel(data: Omit<Model3D, "id">): Promise<Model3D> {
     fileUrl: r.fileUrl ?? null,
     thumbnailUrl: r.thumbnailUrl ?? null,
     docUrl: r.docUrl ?? null,
+    points: r.points ?? [],
+  };
+}
+
+export async function updateModel(
+  id: string,
+  data: Partial<Pick<Model3D, "name" | "version" | "points">>,
+): Promise<Model3D | null> {
+  const updateData: Record<string, unknown> = {};
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.version !== undefined) updateData.version = data.version;
+  if (data.points !== undefined) updateData.points = data.points;
+
+  const result = await db
+    .update(models)
+    .set(updateData)
+    .where(eq(models.id, id))
+    .returning();
+  if (result.length === 0) return null;
+  const r = result[0];
+  return {
+    id: r.id,
+    name: r.name,
+    version: r.version,
+    format: r.format,
+    size: r.size,
+    fileUrl: r.fileUrl ?? null,
+    thumbnailUrl: r.thumbnailUrl ?? null,
+    docUrl: r.docUrl ?? null,
+    points: r.points ?? [],
   };
 }
 
@@ -72,5 +105,6 @@ export async function deleteModel(id: string): Promise<Model3D | null> {
     fileUrl: r.fileUrl ?? null,
     thumbnailUrl: r.thumbnailUrl ?? null,
     docUrl: r.docUrl ?? null,
+    points: r.points ?? [],
   };
 }

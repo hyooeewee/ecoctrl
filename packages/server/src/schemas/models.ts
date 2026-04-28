@@ -1,4 +1,10 @@
-import { pgTable, uuid, varchar } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, jsonb } from "drizzle-orm/pg-core";
+
+export interface PointItem {
+  id: string;
+  name: string;
+  props: { key: string; name: string; unit?: string }[];
+}
 
 export const models = pgTable("models", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -9,4 +15,5 @@ export const models = pgTable("models", {
   fileUrl: varchar("file_url", { length: 500 }),
   thumbnailUrl: varchar("thumbnail_url", { length: 500 }),
   docUrl: varchar("doc_url", { length: 500 }),
+  points: jsonb("points").$type<PointItem[]>().default([]),
 });
