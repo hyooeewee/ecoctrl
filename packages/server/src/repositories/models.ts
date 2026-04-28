@@ -65,12 +65,15 @@ export async function createModel(data: Omit<Model3D, "id">): Promise<Model3D> {
 
 export async function updateModel(
   id: string,
-  data: Partial<Pick<Model3D, "name" | "version" | "points">>,
+  data: Partial<Pick<Model3D, "name" | "version" | "points" | "format" | "size" | "fileUrl">>,
 ): Promise<Model3D | null> {
   const updateData: Record<string, unknown> = {};
   if (data.name !== undefined) updateData.name = data.name;
   if (data.version !== undefined) updateData.version = data.version;
   if (data.points !== undefined) updateData.points = data.points;
+  if (data.format !== undefined) updateData.format = data.format;
+  if (data.size !== undefined) updateData.size = data.size;
+  if (data.fileUrl !== undefined) updateData.fileUrl = data.fileUrl;
 
   const result = await db
     .update(models)

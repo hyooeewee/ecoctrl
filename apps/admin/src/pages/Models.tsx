@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoc
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@ecoctrl/ui";
 import { Input } from "@ecoctrl/ui";
 import { Label } from "@ecoctrl/ui";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ecoctrl/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui";
 
 import AppButton from "@/components/AppButton";
@@ -71,6 +72,9 @@ export default function Models() {
   const [editPoints, setEditPoints] = useState<PointItem[]>([]);
   const [editError, setEditError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [editFile, setEditFile] = useState<File | null>(null);
+  const [editDragActive, setEditDragActive] = useState(false);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   // Objects tab state
   const [objects, setObjects] = useState<BusinessObject[]>([]);
@@ -336,12 +340,43 @@ export default function Models() {
     setEditOpen(true);
   };
 
+  const handleEditFileSelect = (file: File) => {
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+    if (!FORMAT_MAP[ext]) {
+      setEditError(`不支持的格式: .${ext}，请上传 ${ACCEPTED_FORMATS} 文件`);
+      return;
+    }
+    setEditFile(file);
+    setEditError("");
+  };
+
+  const handleEditDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setEditDragActive(true);
+    } else if (e.type === "dragleave") {
+      setEditDragActive(false);
+    }
+  };
+
+  const handleEditDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditDragActive(false);
+    if (e.dataTransfer.files?.[0]) {
+      handleEditFileSelect(e.dataTransfer.files[0]);
+    }
+  };
+
   const resetEditForm = () => {
     setEditModelId("");
     setEditName("");
     setEditVersion("");
     setEditPoints([]);
     setEditError("");
+    setEditFile(null);
+    setEditDragActive(false);
   };
 
   const handleSaveEdit = async () => {
@@ -364,11 +399,18 @@ export default function Models() {
           ...p,
           props: p.props.filter((prop) => prop.key.trim() || prop.name.trim()),
         }));
+      // 1. Update metadata
       await modelsApi.update(editModelId, {
         name: editName.trim(),
         version: editVersion.trim() || "v1.0",
-        points: validPoints.length ? validPoints : undefined,
+        points: validPoints.length ? validPoints : [],
       });
+
+      // 2. Replace file if selected
+      if (editFile) {
+        await modelsApi.replaceFile(editModelId, editFile);
+      }
+
       setEditOpen(false);
       resetEditForm();
       await fetchModels();
@@ -894,6 +936,21 @@ export default function Models() {
 
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
+              <Label>选择模型</Label>
+              <Select value={selectedModelId} onValueChange={setSelectedModelId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="请选择模型" />
+                </SelectTrigger>
+                <SelectContent>
+                  {models.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
               <Label htmlFor="object-id">对象ID</Label>
               <Input
                 id="object-id"
@@ -910,22 +967,6 @@ export default function Models() {
                 onChange={(e) => setObjectName(e.target.value)}
                 placeholder="请输入对象名称"
               />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="object-model">选择模型</Label>
-              <select
-                id="object-model"
-                value={selectedModelId}
-                onChange={(e) => setSelectedModelId(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                <option value="">请选择模型</option>
-                {models.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                  </option>
-                ))}
-              </select>
             </div>
 
             {/* Point values section */}
@@ -1041,6 +1082,86 @@ export default function Models() {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
+            {/* Replace file zone */}
+            <div className="space-y-1.5">
+              <Label>替换模型文件（可选）</Label>
+              <div
+                className={`relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors ${
+                  editDragActive
+                    ? "border-blue-400 bg-blue-50/50"
+                    : "border-border bg-muted hover:border-muted-foreground/50"
+                }`}
+                onDragEnter={handleEditDrag}
+                onDragOver={handleEditDrag}
+                onDragLeave={handleEditDrag}
+                onDrop={handleEditDrop}
+                onClick={() => editFileInputRef.current?.click()}
+              >
+                {(() => {
+                  const model = models.find((m) => m.id === editModelId);
+                  const currentFile = model?.fileUrl;
+                  if (editFile) {
+                    return (
+                      <div className="flex items-center gap-3">
+                        <File size={28} className="text-blue-500" />
+                        <div className="text-left">
+                          <p className="max-w-[200px] break-all text-sm font-medium">
+                            {editFile.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatFileSize(editFile.size)} /{" "}
+                            {FORMAT_MAP[editFile.name.split(".").pop()?.toLowerCase() ?? ""] ??
+                              "Unknown"}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="ml-2 h-7 w-7"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditFile(null);
+                          }}
+                        >
+                          <X size={14} />
+                        </Button>
+                      </div>
+                    );
+                  }
+                  if (currentFile) {
+                    return (
+                      <div className="flex items-center gap-3">
+                        <File size={28} className="text-blue-500" />
+                        <div className="text-left">
+                          <p className="max-w-[200px] break-all text-sm font-medium">
+                            {model?.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {model?.size} / {model?.format}
+                          </p>
+                        </div>
+                        <span className="ml-2 text-xs text-muted-foreground">点击替换</span>
+                      </div>
+                    );
+                  }
+                  return (
+                    <>
+                      <Upload size={28} className="text-muted-foreground/40" />
+                      <p className="mt-2 text-sm font-medium">点击或拖拽上传文件</p>
+                      <p className="mt-1 text-xs text-muted-foreground">支持 {ACCEPTED_FORMATS}</p>
+                    </>
+                  );
+                })()}
+                <input
+                  ref={editFileInputRef}
+                  type="file"
+                  accept={ACCEPTED_FORMATS}
+                  className="hidden"
+                  onChange={(e) => e.target.files?.[0] && handleEditFileSelect(e.target.files[0])}
+                />
+              </div>
+            </div>
+
             {/* Fields */}
             <div className="space-y-3">
               <div className="space-y-1.5">
