@@ -10,8 +10,10 @@ localStorage.removeItem("ecoctrl_mock_objects");
 export const modelsApi = {
   list: () => get<Model3D[]>("/models"),
 
-  update: (id: string, data: { name: string; version: string; points?: PointItem[] }) =>
-    put<Model3D>(`/models/${id}`, data),
+  update: (
+    id: string,
+    data: { name: string; version: string; points?: PointItem[]; fileUrl?: string | null },
+  ) => put<Model3D>(`/models/${id}`, data),
 
   replaceFile: (id: string, file: File) => {
     const formData = new FormData();

@@ -28,6 +28,22 @@ function ensureUploadDir() {
   }
 }
 
+function deleteModelFile(fileUrl: string) {
+  const relativePath = fileUrl.replace("/static/", "");
+  const filePath = path.join(BASE_UPLOAD_DIR, relativePath);
+  if (fs.existsSync(filePath)) {
+    const parts = relativePath.split(path.sep);
+    if (parts.length >= 2) {
+      const modelDir = path.join(UPLOAD_DIR, parts[1]);
+      if (fs.existsSync(modelDir)) {
+        fs.rmSync(modelDir, { recursive: true, force: true });
+      }
+    } else {
+      fs.unlinkSync(filePath);
+    }
+  }
+}
+
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes}B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
@@ -173,6 +189,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
           name: z.string(),
           version: z.string(),
           points: z.array(PointItemSchema).default([]),
+          fileUrl: z.string().nullable().optional(),
         }),
         response: {
           200: Model3DSchema,
@@ -182,10 +199,11 @@ export default async function modelRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const { name, version, points } = request.body as {
+      const { name, version, points, fileUrl } = request.body as {
         name: string;
         version: string;
         points?: PointItem[];
+        fileUrl?: string | null;
       };
 
       const existing = await findModelById(id);
@@ -193,7 +211,12 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         return reply.status(404).send({ error: "Model not found" });
       }
 
-      const updated = await updateModel(id, { name, version, points });
+      // Delete physical file when fileUrl is explicitly set to null
+      if (fileUrl === null && existing.fileUrl) {
+        deleteModelFile(existing.fileUrl);
+      }
+
+      const updated = await updateModel(id, { name, version, points, fileUrl });
       if (!updated) {
         return reply.status(404).send({ error: "Model not found" });
       }
@@ -332,20 +355,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
 
       // Delete physical file or directory
       if (model.fileUrl) {
-        const relativePath = model.fileUrl.replace("/static/", "");
-        const filePath = path.join(BASE_UPLOAD_DIR, relativePath);
-        if (fs.existsSync(filePath)) {
-          // If it's inside a modelId directory, remove the whole directory
-          const parts = relativePath.split(path.sep);
-          if (parts.length >= 2) {
-            const modelDir = path.join(UPLOAD_DIR, parts[1]);
-            if (fs.existsSync(modelDir)) {
-              fs.rmSync(modelDir, { recursive: true, force: true });
-            }
-          } else {
-            fs.unlinkSync(filePath);
-          }
-        }
+        deleteModelFile(model.fileUrl);
       }
 
       await deleteModel(id);
