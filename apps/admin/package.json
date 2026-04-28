@@ -8,10 +8,8 @@
     "build": "vp build && cp .env.example dist/",
     "preview": "vp preview",
     "start": "pnpm build && pnpm dlx dotenv-cli -e .env.local -- pnpm dlx serve dist -p 4173",
-    "fmt": "vp fmt",
-    "lint": "vp lint",
-    "check": "vp check",
-    "check:fix": "vp check --fix",
+    "fmt": "vp fmt -c $(pwd)/.oxfmtrc.json",
+    "check": "pnpm fmt && vp lint",
     "env:sync": "node ../../packages/shared/scripts/gen-env-example.mjs",
     "env:check": "node ../../packages/shared/scripts/gen-env-example.mjs --check"
   },

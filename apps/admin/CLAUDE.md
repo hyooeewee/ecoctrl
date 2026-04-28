@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Start dev server**: `pnpm dev` (runs on port 3000)
 - **Build for production**: `pnpm build`
 - **Preview production build**: `pnpm preview`
-- **Format + lint + type check**: `pnpm lint` (runs `vp check`)
+- **Format + lint + type check**: `pnpm -w check:fix`
 - **Clean dist**: `pnpm clean`
 
 No test runner is currently configured.
