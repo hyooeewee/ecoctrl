@@ -50,6 +50,7 @@ types/
 ```
 
 使用方式：
+
 - 其他包通过 `"@ecoctrl/shared": "workspace:*"` 依赖引用
 - 配置继承：`"extends": "@ecoctrl/shared/tsconfig.base.json"`
 - 类型导入：`import type { SomeType } from "@ecoctrl/shared/types"`

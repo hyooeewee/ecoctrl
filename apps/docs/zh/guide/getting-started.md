@@ -2,11 +2,11 @@
 
 EcoCtrl 提供三种运行方式，按需选择：
 
-| 你的目标 | 推荐路径 |
-|---|---|
-| 用容器一键体验整个平台 | [Docker Compose](#docker-compose-启动) |
+| 你的目标                  | 推荐路径                                 |
+| ------------------------- | ---------------------------------------- |
+| 用容器一键体验整个平台    | [Docker Compose](#docker-compose-启动)   |
 | 从 release 产物部署到生产 | [预构建 Release](#从预构建-release-启动) |
-| 在本地修改源码并热更新 | 见 [开发指南](./development) |
+| 在本地修改源码并热更新    | 见 [开发指南](./development)             |
 
 ## Docker Compose 启动
 
@@ -29,11 +29,11 @@ docker compose -f compose.yml up --build
 
 构建完成后，可通过以下地址访问：
 
-| 服务 | URL |
-|---|---|
-| Web 门户 | http://localhost:8081 |
-| Admin 后台 | http://localhost:4173 |
-| REST API | http://localhost:3000 |
+| 服务       | URL                                 |
+| ---------- | ----------------------------------- |
+| Web 门户   | http://localhost:8081               |
+| Admin 后台 | http://localhost:4173               |
+| REST API   | http://localhost:3000               |
 | Swagger UI | http://localhost:3000/documentation |
 
 ::: tip 首次登录

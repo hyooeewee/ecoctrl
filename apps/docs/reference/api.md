@@ -15,18 +15,18 @@ The full, authoritative API reference is the OpenAPI document Fastify generates 
 
 These are the only paths the global `onRequest` hook lets through:
 
-| Method | Path | Purpose |
-|---|---|---|
-| POST | `/api/auth/login` | Username/email + password login. |
-| POST | `/api/auth/register` | Create a user. Requires the verification code from `/auth/register/send-code`. |
-| POST | `/api/auth/register/send-code` | Email a 6-digit code (5-minute TTL). |
-| POST | `/api/auth/refresh` | Exchange a refresh token for a new access + refresh pair. |
-| POST | `/api/auth/forgot-password/send-code` | Email a password-reset code. |
-| POST | `/api/auth/forgot-password/reset` | Reset password with the code. |
-| GET  | `/api/auth/oauth/providers` | List configured OAuth providers. |
-| GET/POST | `/api/auth/oauth/wechat/...`, `/api/auth/oauth/feishu/...` | OAuth start/callback. |
-| POST | `/api/auth/oauth/bind`, `/api/auth/oauth/register-and-bind` | Link an OAuth identity to an account. |
-| GET  | `/api/dashboard` | Public read-only dashboard payload (used by `apps/web`). |
+| Method   | Path                                                        | Purpose                                                                        |
+| -------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| POST     | `/api/auth/login`                                           | Username/email + password login.                                               |
+| POST     | `/api/auth/register`                                        | Create a user. Requires the verification code from `/auth/register/send-code`. |
+| POST     | `/api/auth/register/send-code`                              | Email a 6-digit code (5-minute TTL).                                           |
+| POST     | `/api/auth/refresh`                                         | Exchange a refresh token for a new access + refresh pair.                      |
+| POST     | `/api/auth/forgot-password/send-code`                       | Email a password-reset code.                                                   |
+| POST     | `/api/auth/forgot-password/reset`                           | Reset password with the code.                                                  |
+| GET      | `/api/auth/oauth/providers`                                 | List configured OAuth providers.                                               |
+| GET/POST | `/api/auth/oauth/wechat/...`, `/api/auth/oauth/feishu/...`  | OAuth start/callback.                                                          |
+| POST     | `/api/auth/oauth/bind`, `/api/auth/oauth/register-and-bind` | Link an OAuth identity to an account.                                          |
+| GET      | `/api/dashboard`                                            | Public read-only dashboard payload (used by `apps/web`).                       |
 
 Everything else is protected.
 
@@ -34,26 +34,26 @@ Everything else is protected.
 
 ### `/api/auth/*`
 
-| Method | Path | Summary |
-|---|---|---|
-| POST | `/auth/login` | Login with username and password |
-| POST | `/auth/register` | Register a new user |
-| POST | `/auth/register/send-code` | Send registration verification code |
-| POST | `/auth/refresh` | Refresh access token (rotates refresh token) |
-| POST | `/auth/logout` | Invalidate the current refresh token |
-| POST | `/auth/forgot-password/send-code` | Send password-reset code |
-| POST | `/auth/forgot-password/reset` | Reset password with code |
-| GET  | `/auth/me` | Current user |
+| Method | Path                              | Summary                                      |
+| ------ | --------------------------------- | -------------------------------------------- |
+| POST   | `/auth/login`                     | Login with username and password             |
+| POST   | `/auth/register`                  | Register a new user                          |
+| POST   | `/auth/register/send-code`        | Send registration verification code          |
+| POST   | `/auth/refresh`                   | Refresh access token (rotates refresh token) |
+| POST   | `/auth/logout`                    | Invalidate the current refresh token         |
+| POST   | `/auth/forgot-password/send-code` | Send password-reset code                     |
+| POST   | `/auth/forgot-password/reset`     | Reset password with code                     |
+| GET    | `/auth/me`                        | Current user                                 |
 
 ### `/api/auth/oauth/*`
 
-| Method | Path | Summary |
-|---|---|---|
-| GET  | `/auth/oauth/providers` | Available OAuth providers |
-| GET  | `/auth/oauth/:provider/authorize` | Begin authorization (returns provider redirect URL) |
-| GET/POST | `/auth/oauth/:provider/callback` | Provider callback |
-| POST | `/auth/oauth/bind` | Link to an existing account |
-| POST | `/auth/oauth/register-and-bind` | Create an account from a provider profile |
+| Method   | Path                              | Summary                                             |
+| -------- | --------------------------------- | --------------------------------------------------- |
+| GET      | `/auth/oauth/providers`           | Available OAuth providers                           |
+| GET      | `/auth/oauth/:provider/authorize` | Begin authorization (returns provider redirect URL) |
+| GET/POST | `/auth/oauth/:provider/callback`  | Provider callback                                   |
+| POST     | `/auth/oauth/bind`                | Link to an existing account                         |
+| POST     | `/auth/oauth/register-and-bind`   | Create an account from a provider profile           |
 
 ### `/api/users/*`
 
@@ -61,12 +61,12 @@ User CRUD, role and avatar management. All endpoints are protected.
 
 ### `/api/dashboard/*`
 
-| Method | Path | Notes |
-|---|---|---|
-| GET | `/dashboard` | **Public** — full dashboard payload for the public web portal. |
-| GET | `/dashboard/alerts` | Recent alerts. |
-| GET | `/dashboard/settings` | Per-user dashboard configuration. |
-| PUT | `/dashboard/settings` | Update per-user dashboard configuration. |
+| Method | Path                  | Notes                                                          |
+| ------ | --------------------- | -------------------------------------------------------------- |
+| GET    | `/dashboard`          | **Public** — full dashboard payload for the public web portal. |
+| GET    | `/dashboard/alerts`   | Recent alerts.                                                 |
+| GET    | `/dashboard/settings` | Per-user dashboard configuration.                              |
+| PUT    | `/dashboard/settings` | Update per-user dashboard configuration.                       |
 
 ### `/api/overview/*`
 
@@ -94,13 +94,13 @@ Report plans CRUD and report templates listing.
 
 ### `/api/files/*`
 
-| Method | Path | Notes |
-|---|---|---|
-| GET    | `/files` | List uploads. |
-| POST   | `/files` | Multipart upload, max 100 MB per file. |
-| GET    | `/files/:id` | Metadata only. |
-| GET    | `/files/:id/raw` | Stream the binary. |
-| DELETE | `/files/:id` | Remove. |
+| Method | Path             | Notes                                  |
+| ------ | ---------------- | -------------------------------------- |
+| GET    | `/files`         | List uploads.                          |
+| POST   | `/files`         | Multipart upload, max 100 MB per file. |
+| GET    | `/files/:id`     | Metadata only.                         |
+| GET    | `/files/:id/raw` | Stream the binary.                     |
+| DELETE | `/files/:id`     | Remove.                                |
 
 ### `/api/models/*`
 
@@ -110,13 +110,13 @@ Equivalent to `/files` but specialized for 3D model uploads. Files land in `uplo
 
 Proxy layer for the upstream IoT gateway. Inputs and outputs match the upstream contract; EcoCtrl handles token refresh transparently using the `iot_tokens` row.
 
-| Path | Description |
-|---|---|
-| `/iot/token` | Returns the cached access token. |
-| `/iot/codes/values` | Read current point values. |
-| `/iot/codes/history` | Historical values for a point. |
-| `/iot/codes/set`, `/iot/codes/force-set` | Write back. |
-| `/iot/alarms`, `/iot/alarm-configs` | Alarm history and configuration. |
+| Path                                     | Description                      |
+| ---------------------------------------- | -------------------------------- |
+| `/iot/token`                             | Returns the cached access token. |
+| `/iot/codes/values`                      | Read current point values.       |
+| `/iot/codes/history`                     | Historical values for a point.   |
+| `/iot/codes/set`, `/iot/codes/force-set` | Write back.                      |
+| `/iot/alarms`, `/iot/alarm-configs`      | Alarm history and configuration. |
 
 ### `/api/system/*`
 

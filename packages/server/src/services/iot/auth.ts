@@ -43,9 +43,10 @@ async function getToken(): Promise<TokenData | null> {
 
 function parseJwtExp(token: string): number {
   try {
-    const payload = JSON.parse(
-      Buffer.from(token.split(".")[1], "base64url").toString(),
-    ) as Record<string, unknown>;
+    const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString()) as Record<
+      string,
+      unknown
+    >;
     const exp = Number(payload.exp);
     if (exp && exp > 1_000_000_000) return exp * 1000; // JWT exp is in seconds
   } catch {
@@ -56,10 +57,10 @@ function parseJwtExp(token: string): number {
 
 function extractTokenData(data: Record<string, unknown>): TokenData {
   const accessToken = String(data.access_token ?? "");
-  const refreshToken = String(data.refresh_token ?? "");
+  const rt = String(data.refresh_token ?? "");
   return {
     accessToken,
-    refreshToken,
+    refreshToken: rt,
     expiresAt: parseJwtExp(accessToken),
   };
 }
@@ -84,9 +85,7 @@ async function fetchToken(
   const body = (await res.json()) as Record<string, unknown>;
 
   if (body.code !== undefined && body.code !== 200) {
-    throw new Error(
-      `Token ${grantType} failed: code=${body.code}, msg=${JSON.stringify(body)}`,
-    );
+    throw new Error(`Token ${grantType} failed: code=${body.code}, msg=${JSON.stringify(body)}`);
   }
 
   const tokenData = extractTokenData(body);

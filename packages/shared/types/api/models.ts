@@ -3,11 +3,13 @@ import { z } from "zod";
 export const PointItemSchema = z.object({
   id: z.string(),
   name: z.string(),
-  props: z.array(z.object({
-    key: z.string(),
-    name: z.string(),
-    unit: z.string().optional(),
-  })),
+  props: z.array(
+    z.object({
+      key: z.string(),
+      name: z.string(),
+      unit: z.string().optional(),
+    }),
+  ),
 });
 export type PointItem = z.infer<typeof PointItemSchema>;
 

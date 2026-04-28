@@ -12,12 +12,11 @@ export async function createReportPlan(plan: ReportPlan): Promise<ReportPlan> {
   return result[0] as ReportPlan;
 }
 
-export async function updateReportPlan(id: string, patch: Partial<ReportPlan>): Promise<ReportPlan | null> {
-  const result = await db
-    .update(reportPlans)
-    .set(patch)
-    .where(eq(reportPlans.id, id))
-    .returning();
+export async function updateReportPlan(
+  id: string,
+  patch: Partial<ReportPlan>,
+): Promise<ReportPlan | null> {
+  const result = await db.update(reportPlans).set(patch).where(eq(reportPlans.id, id)).returning();
   if (result.length === 0) return null;
   return result[0] as ReportPlan;
 }

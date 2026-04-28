@@ -43,7 +43,12 @@ export default async function objectRoutes(fastify: FastifyInstance) {
         name: string;
         modelId: string;
         modelName: string;
-        points: { id: string; pointId: string; pointName: string; values: Record<string, string> }[];
+        points: {
+          id: string;
+          pointId: string;
+          pointName: string;
+          values: Record<string, string>;
+        }[];
       };
 
       const existing = await findObjectById(data.id);

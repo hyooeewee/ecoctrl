@@ -109,14 +109,14 @@ export default function OverviewContent() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [statsData, energyData, alertsData, backupData] = await Promise.all([
+        const [statsData, energyRes, alertsData, backupData] = await Promise.all([
           overviewApi.stats(),
           overviewApi.energyChart(),
           overviewApi.alerts(),
           overviewApi.backupSchedule(),
         ]);
         setStats(statsData);
-        setEnergyData(energyData);
+        setEnergyData(energyRes);
         setAlerts(alertsData);
         setBackupSchedule(backupData);
       } catch (err) {

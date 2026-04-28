@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import type { MaintenanceReminderDetail, MaintenanceReminder } from "@ecoctrl/shared";
+import type { MaintenanceReminderDetail } from "@ecoctrl/shared";
 import { db } from "@/config/database";
 import { maintenanceReminders } from "@/schemas/maintenance";
 
@@ -19,8 +19,14 @@ export async function findManyReminders(): Promise<MaintenanceReminderDetail[]> 
   }));
 }
 
-export async function updateReminder(data: Partial<MaintenanceReminderDetail> & { id: string }): Promise<MaintenanceReminderDetail | null> {
-  const result = await db.update(maintenanceReminders).set(data).where(eq(maintenanceReminders.id, data.id)).returning();
+export async function updateReminder(
+  data: Partial<MaintenanceReminderDetail> & { id: string },
+): Promise<MaintenanceReminderDetail | null> {
+  const result = await db
+    .update(maintenanceReminders)
+    .set(data)
+    .where(eq(maintenanceReminders.id, data.id))
+    .returning();
   if (result.length === 0) return null;
   const r = result[0];
   return {
@@ -38,7 +44,10 @@ export async function updateReminder(data: Partial<MaintenanceReminderDetail> & 
 }
 
 export async function deleteReminder(id: string): Promise<MaintenanceReminderDetail | null> {
-  const result = await db.delete(maintenanceReminders).where(eq(maintenanceReminders.id, id)).returning();
+  const result = await db
+    .delete(maintenanceReminders)
+    .where(eq(maintenanceReminders.id, id))
+    .returning();
   if (result.length === 0) return null;
   const r = result[0];
   return {

@@ -2,11 +2,11 @@
 
 There are three supported ways to run EcoCtrl. Pick the one that matches your situation:
 
-| You want to… | Use this path |
-|---|---|
-| Try it out quickly with everything in containers | [Docker Compose](#run-with-docker-compose) |
+| You want to…                                      | Use this path                                      |
+| ------------------------------------------------- | -------------------------------------------------- |
+| Try it out quickly with everything in containers  | [Docker Compose](#run-with-docker-compose)         |
 | Deploy a production build from a release artifact | [Pre-built Release](#run-from-a-pre-built-release) |
-| Hack on the code locally with hot reload | See the [Development guide](./development) |
+| Hack on the code locally with hot reload          | See the [Development guide](./development)         |
 
 ## Run with Docker Compose
 
@@ -29,12 +29,12 @@ docker compose -f compose.yml up --build
 
 When the build finishes, the stack is reachable at:
 
-| Service | URL |
-|---|---|
-| Web portal | http://localhost:8081 |
-| Admin dashboard | http://localhost:4173 |
-| REST API | http://localhost:3000 |
-| Swagger UI | http://localhost:3000/documentation |
+| Service         | URL                                 |
+| --------------- | ----------------------------------- |
+| Web portal      | http://localhost:8081               |
+| Admin dashboard | http://localhost:4173               |
+| REST API        | http://localhost:3000               |
+| Swagger UI      | http://localhost:3000/documentation |
 
 ::: tip First-time login
 The seeded admin account is created on the very first run. Open the admin dashboard, register or sign in, and you are ready to explore.

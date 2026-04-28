@@ -74,8 +74,8 @@ Most workspace UI libraries ship a compiled bundle under `dist/`. `@ecoctrl/ui` 
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./index.css": "./src/index.css"
-  }
+    "./index.css": "./src/index.css",
+  },
 }
 ```
 
@@ -111,11 +111,11 @@ The release workflow (see [Deployment](/reference/deployment)) takes care of bum
 
 ## Path aliases recap
 
-| App | Alias | Resolves to |
-|---|---|---|
-| `apps/admin` | `@/` | `apps/admin/src/` |
-| `apps/web` | `~/` | `apps/web/app/` |
-| `apps/web` | `~/components/ui` | `apps/web/app/components/ui` (project shadcn copies) |
-| `packages/server` | `@/` | `packages/server/src/` |
+| App               | Alias             | Resolves to                                          |
+| ----------------- | ----------------- | ---------------------------------------------------- |
+| `apps/admin`      | `@/`              | `apps/admin/src/`                                    |
+| `apps/web`        | `~/`              | `apps/web/app/`                                      |
+| `apps/web`        | `~/components/ui` | `apps/web/app/components/ui` (project shadcn copies) |
+| `packages/server` | `@/`              | `packages/server/src/`                               |
 
 If you encounter `@/` inside a `@ecoctrl/ui` source file, that is the case `resolveUiAlias()` handles for you — do not change it.

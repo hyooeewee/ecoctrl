@@ -3,10 +3,7 @@ import path from "node:path";
 import { writeFile, readFile } from "node:fs/promises";
 import pkg from "./package.json" with { type: "json" };
 
-const staticAssets = [
-  "ecoctrl.config.cjs",
-  ".env.example",
-];
+const staticAssets = ["ecoctrl.config.cjs", ".env.example"];
 
 export default defineConfig({
   input: "index.ts",
@@ -63,7 +60,7 @@ export default defineConfig({
         // 用源 package.json 的版本号回填
         const sourceDeps = pkg.dependencies as Record<string, string>;
         const deps: Record<string, string> = {};
-        for (const name of [...externals].sort()) {
+        for (const name of [...externals].toSorted()) {
           const v = sourceDeps[name];
           if (v) deps[name] = v;
           else this.warn(`no version found for "${name}" in package.json`);

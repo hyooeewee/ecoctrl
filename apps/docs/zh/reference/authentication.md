@@ -4,10 +4,10 @@ EcoCtrl 使用短生命周期的 JWT Access Token 配合可轮换的 Refresh Tok
 
 ## Token 模型
 
-| Token | 有效期 | 存放位置 | 签发方 |
-|---|---|---|---|
-| Access | 15 分钟 | 内存（admin） / `localStorage`（web） | `fastify.jwt.sign({ userId, username })` |
-| Refresh | 7 天 | `refresh_tokens` 表（保存 sha256） | `crypto.randomBytes(32).toString("base64")` |
+| Token   | 有效期  | 存放位置                              | 签发方                                      |
+| ------- | ------- | ------------------------------------- | ------------------------------------------- |
+| Access  | 15 分钟 | 内存（admin） / `localStorage`（web） | `fastify.jwt.sign({ userId, username })`    |
+| Refresh | 7 天    | `refresh_tokens` 表（保存 sha256）    | `crypto.randomBytes(32).toString("base64")` |
 
 Access Token 携带 `{ userId, username }`，每个受保护路由的全局 `onRequest` 钩子里调用 `request.jwtVerify()` 进行校验。Refresh Token 是不可解析的随机串 — 数据库里只有它的 sha256 哈希，因此即使数据库泄漏也无法直接复用。
 
@@ -48,7 +48,7 @@ POST /api/auth/refresh { refreshToken }
   200 { accessToken, refreshToken }
 ```
 
-这就是 *Rotating Refresh*：旧的 Refresh Token 不能再次使用。如果传来的 hash 已经不存在，接口返回 `401`，客户端必须重新登录。
+这就是 _Rotating Refresh_：旧的 Refresh Token 不能再次使用。如果传来的 hash 已经不存在，接口返回 `401`，客户端必须重新登录。
 
 ## 注册流程
 
@@ -115,11 +115,11 @@ FEISHU_SECRET=...
 
 ## 客户端 Token 存放位置
 
-| App | Access Token | Refresh Token |
-|---|---|---|
-| `apps/web` | `localStorage` | `localStorage` |
-| `apps/admin` | `localStorage` | `localStorage` |
-| Swagger UI | `localStorage`（`swagger_auto_access_token`） | `localStorage`（`swagger_auto_refresh_token`） |
+| App          | Access Token                                  | Refresh Token                                  |
+| ------------ | --------------------------------------------- | ---------------------------------------------- |
+| `apps/web`   | `localStorage`                                | `localStorage`                                 |
+| `apps/admin` | `localStorage`                                | `localStorage`                                 |
+| Swagger UI   | `localStorage`（`swagger_auto_access_token`） | `localStorage`（`swagger_auto_refresh_token`） |
 
 前端共享一个类 Axios 客户端（`apps/admin/src/api/request.ts`、`apps/web/app/lib/api.ts`），它会：
 

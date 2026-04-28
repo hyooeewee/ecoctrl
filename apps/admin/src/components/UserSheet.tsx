@@ -39,10 +39,10 @@ const ROLE_LABELS: Record<UserRole, string> = {
   viewer: "查看员",
 };
 
-const VALID_STATUSES: User["status"][] = ["online", "offline", "disabled", "busy"];
+const VALID_STATUSES: User["status"][] = new Set(["online", "offline", "disabled", "busy"]);
 
 function normalizeStatus(s: string): User["status"] {
-  return VALID_STATUSES.includes(s as User["status"]) ? (s as User["status"]) : "offline";
+  return VALID_STATUSES.has(s as User["status"]) ? (s as User["status"]) : "offline";
 }
 
 function normalizeRole(s: string): UserRole {

@@ -17,16 +17,19 @@ export async function findManyUsers(): Promise<User[]> {
 }
 
 export async function createUser(user: User & { password?: string | null }): Promise<User> {
-  const result = await db.insert(users).values({
-    id: user.id,
-    username: user.username,
-    email: user.email,
-    role: user.role,
-    status: user.status,
-    lastLogin: user.lastLogin,
-    avatarUrl: user.avatarUrl,
-    password: user.password ?? null,
-  }).returning();
+  const result = await db
+    .insert(users)
+    .values({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      lastLogin: user.lastLogin,
+      avatarUrl: user.avatarUrl,
+      password: user.password ?? null,
+    })
+    .returning();
   const r = result[0];
   return {
     id: r.id,
@@ -39,20 +42,15 @@ export async function createUser(user: User & { password?: string | null }): Pro
   };
 }
 
-export async function findUserByIdentifier(
-  identifier: string,
-): Promise<
-  | {
-      id: string;
-      username: string;
-      email: string;
-      role: string;
-      avatarUrl: string | null;
-      password: string | null;
-      status: string;
-    }
-  | null
-> {
+export async function findUserByIdentifier(identifier: string): Promise<{
+  id: string;
+  username: string;
+  email: string;
+  role: string;
+  avatarUrl: string | null;
+  password: string | null;
+  status: string;
+} | null> {
   const rows = await db
     .select()
     .from(users)
@@ -71,20 +69,15 @@ export async function findUserByIdentifier(
   };
 }
 
-export async function findUserByUsername(
-  username: string,
-): Promise<
-  | {
-      id: string;
-      username: string;
-      email: string;
-      role: string;
-      avatarUrl: string | null;
-      password: string | null;
-      status: string;
-    }
-  | null
-> {
+export async function findUserByUsername(username: string): Promise<{
+  id: string;
+  username: string;
+  email: string;
+  role: string;
+  avatarUrl: string | null;
+  password: string | null;
+  status: string;
+} | null> {
   const rows = await db.select().from(users).where(eq(users.username, username)).limit(1);
   if (rows.length === 0) return null;
   const r = rows[0];
@@ -99,20 +92,15 @@ export async function findUserByUsername(
   };
 }
 
-export async function findUserByEmail(
-  email: string,
-): Promise<
-  | {
-      id: string;
-      username: string;
-      email: string;
-      role: string;
-      avatarUrl: string | null;
-      password: string | null;
-      status: string;
-    }
-  | null
-> {
+export async function findUserByEmail(email: string): Promise<{
+  id: string;
+  username: string;
+  email: string;
+  role: string;
+  avatarUrl: string | null;
+  password: string | null;
+  status: string;
+} | null> {
   const rows = await db.select().from(users).where(eq(users.email, email)).limit(1);
   if (rows.length === 0) return null;
   const r = rows[0];
@@ -127,9 +115,7 @@ export async function findUserByEmail(
   };
 }
 
-export async function findUserById(
-  id: string,
-): Promise<User | null> {
+export async function findUserById(id: string): Promise<User | null> {
   const rows = await db.select().from(users).where(eq(users.id, id)).limit(1);
   if (rows.length === 0) return null;
   const r = rows[0];
@@ -150,20 +136,15 @@ export async function findUserByIdOrThrow(id: string): Promise<User> {
   return user;
 }
 
-export async function findUserByIdWithPassword(
-  id: string,
-): Promise<
-  | {
-      id: string;
-      username: string;
-      email: string;
-      role: string;
-      avatarUrl: string | null;
-      password: string | null;
-      status: string;
-    }
-  | null
-> {
+export async function findUserByIdWithPassword(id: string): Promise<{
+  id: string;
+  username: string;
+  email: string;
+  role: string;
+  avatarUrl: string | null;
+  password: string | null;
+  status: string;
+} | null> {
   const rows = await db.select().from(users).where(eq(users.id, id)).limit(1);
   if (rows.length === 0) return null;
   const r = rows[0];
@@ -203,7 +184,15 @@ export async function findOnlineUser(): Promise<{ id: string; username: string }
 
 export async function updateUser(
   id: string,
-  data: Partial<{ username: string; password: string; email: string; role: string; status: string; avatarUrl: string | null; preferences: UserPreferences }>,
+  data: Partial<{
+    username: string;
+    password: string;
+    email: string;
+    role: string;
+    status: string;
+    avatarUrl: string | null;
+    preferences: UserPreferences;
+  }>,
 ): Promise<User | null> {
   const result = await db.update(users).set(data).where(eq(users.id, id)).returning();
   if (result.length === 0) return null;
@@ -220,7 +209,11 @@ export async function updateUser(
 }
 
 export async function findUserPreferences(id: string): Promise<UserPreferences> {
-  const rows = await db.select({ preferences: users.preferences }).from(users).where(eq(users.id, id)).limit(1);
+  const rows = await db
+    .select({ preferences: users.preferences })
+    .from(users)
+    .where(eq(users.id, id))
+    .limit(1);
   if (rows.length === 0) return {};
   return (rows[0].preferences ?? {}) as UserPreferences;
 }

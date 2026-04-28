@@ -22,7 +22,14 @@ export default async function threeDConfigRoutes(fastify: FastifyInstance) {
     },
     async (_request, reply) => {
       const config = await findThreeDConfig();
-      return reply.send(config ?? { cameraPreset: "Default_View_01", ambientLightIntensity: 0.85, hotspots: [], labels: [] });
+      return reply.send(
+        config ?? {
+          cameraPreset: "Default_View_01",
+          ambientLightIntensity: 0.85,
+          hotspots: [],
+          labels: [],
+        },
+      );
     },
   );
 
@@ -46,7 +53,8 @@ export default async function threeDConfigRoutes(fastify: FastifyInstance) {
       const existing = await findThreeDConfig();
       const updated = {
         cameraPreset: body.cameraPreset ?? existing?.cameraPreset ?? "Default_View_01",
-        ambientLightIntensity: body.ambientLightIntensity ?? existing?.ambientLightIntensity ?? 0.85,
+        ambientLightIntensity:
+          body.ambientLightIntensity ?? existing?.ambientLightIntensity ?? 0.85,
         hotspots: body.hotspots ?? existing?.hotspots ?? [],
         labels: body.labels ?? existing?.labels ?? [],
       };

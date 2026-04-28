@@ -2,11 +2,11 @@
 
 EcoCtrl 支持三种生产部署形态：
 
-| 形态 | 适用场景 | 依赖 |
-|---|---|---|
-| [Docker Compose](#docker-compose) | 单机部署、私有部署 | Docker 24+ |
-| [预构建 release zip](#预构建-release) | 不使用 Docker 的 Linux 主机 | Node 20+、PostgreSQL、pm2 |
-| [Cloudflare Workers Static Assets](#docs-站点) | 文档站点 | Cloudflare 账号 |
+| 形态                                           | 适用场景                    | 依赖                      |
+| ---------------------------------------------- | --------------------------- | ------------------------- |
+| [Docker Compose](#docker-compose)              | 单机部署、私有部署          | Docker 24+                |
+| [预构建 release zip](#预构建-release)          | 不使用 Docker 的 Linux 主机 | Node 20+、PostgreSQL、pm2 |
+| [Cloudflare Workers Static Assets](#docs-站点) | 文档站点                    | Cloudflare 账号           |
 
 文档站点已固定使用 Cloudflare Workers 部署；本页其余部分聚焦于业务应用栈。
 
@@ -31,13 +31,13 @@ docker compose -f compose.yml up --build
 
 服务列表：
 
-| 服务 | 端口 | 地址 |
-|---|---|---|
-| Web 门户 | 8081 | `http://<host>:8081` |
-| Admin 后台 | 4173 | `http://<host>:4173` |
-| REST API | 3000 | `http://<host>:3000` |
+| 服务       | 端口 | 地址                               |
+| ---------- | ---- | ---------------------------------- |
+| Web 门户   | 8081 | `http://<host>:8081`               |
+| Admin 后台 | 4173 | `http://<host>:4173`               |
+| REST API   | 3000 | `http://<host>:3000`               |
 | Swagger UI | 3000 | `http://<host>:3000/documentation` |
-| PostgreSQL | 5432 | 容器内部 |
+| PostgreSQL | 5432 | 容器内部                           |
 
 ### 自定义
 
@@ -173,8 +173,8 @@ pnpm --filter @ecoctrl/docs build
   "compatibility_date": "2026-04-26",
   "assets": {
     "directory": "./.vitepress/dist/",
-    "not_found_handling": "404-page"
-  }
+    "not_found_handling": "404-page",
+  },
 }
 ```
 

@@ -101,10 +101,7 @@ export default async function configRoutes(fastify: FastifyInstance) {
         smtpPort: body.smtpPort ?? existing.smtpPort,
         smtpUser: body.smtpUser ?? existing.smtpUser,
         smtpSecure: body.smtpSecure ?? existing.smtpSecure,
-        smtpPass:
-          body.smtpPass && body.smtpPass !== "****"
-            ? body.smtpPass
-            : existing.smtpPass,
+        smtpPass: body.smtpPass && body.smtpPass !== "****" ? body.smtpPass : existing.smtpPass,
         allowRegistration: body.allowRegistration ?? existing.allowRegistration,
         allowPasswordReset: body.allowPasswordReset ?? existing.allowPasswordReset,
       };

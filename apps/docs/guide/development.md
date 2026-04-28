@@ -66,12 +66,12 @@ cd ../..
 
 Other useful database scripts:
 
-| Command | Description |
-|---|---|
-| `pnpm db:migrate` | Apply pending migrations from `drizzle/` |
-| `pnpm db:studio` | Open Drizzle Studio in your browser |
-| `pnpm db:refresh` | Drop, push, seed and open Studio. **Destructive — wipes all data.** |
-| `pnpm db:generate` | Generate a new migration from current schema diff |
+| Command            | Description                                                         |
+| ------------------ | ------------------------------------------------------------------- |
+| `pnpm db:migrate`  | Apply pending migrations from `drizzle/`                            |
+| `pnpm db:studio`   | Open Drizzle Studio in your browser                                 |
+| `pnpm db:refresh`  | Drop, push, seed and open Studio. **Destructive — wipes all data.** |
+| `pnpm db:generate` | Generate a new migration from current schema diff                   |
 
 ## 5. Run the dev servers
 

@@ -1,13 +1,7 @@
 import { z } from "zod";
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
-export const DeltaVariantSchema = z.enum([
-  "up-good",
-  "up-bad",
-  "down-good",
-  "down-bad",
-  "neutral",
-]);
+export const DeltaVariantSchema = z.enum(["up-good", "up-bad", "down-good", "down-bad", "neutral"]);
 export type DeltaVariant = z.infer<typeof DeltaVariantSchema>;
 
 export const AlertLevelSchema = z.enum(["high", "medium", "low"]);

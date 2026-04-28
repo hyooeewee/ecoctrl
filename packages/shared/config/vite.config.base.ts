@@ -78,8 +78,8 @@ export function createDevProxy(
     },
   };
 
-  for (const path of options.extraPaths ?? []) {
-    proxy[path] = { target: apiBaseUrl, changeOrigin: true };
+  for (const extraPath of options.extraPaths ?? []) {
+    proxy[extraPath] = { target: apiBaseUrl, changeOrigin: true };
   }
 
   return { proxy };

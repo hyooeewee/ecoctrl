@@ -12,14 +12,14 @@ EcoCtrl backend API service. Fastify 5 + TypeScript (ESM).
 
 ## Stack
 
-| Layer | Technology |
-|---|---|
-| Framework | Fastify 5, TypeScript (ESM) |
-| ORM | Drizzle ORM + drizzle-kit |
-| Database | PostgreSQL (`postgres` driver) |
-| Build | Rolldown (`rolldown.config.ts`) |
-| Process Manager | PM2 (`ecosystem.config.cjs`) |
-| Dev Runner | tsx (watch mode) |
+| Layer           | Technology                      |
+| --------------- | ------------------------------- |
+| Framework       | Fastify 5, TypeScript (ESM)     |
+| ORM             | Drizzle ORM + drizzle-kit       |
+| Database        | PostgreSQL (`postgres` driver)  |
+| Build           | Rolldown (`rolldown.config.ts`) |
+| Process Manager | PM2 (`ecosystem.config.cjs`)    |
+| Dev Runner      | tsx (watch mode)                |
 
 ## Common Commands
 
@@ -83,18 +83,19 @@ drizzle/          # Migration output directory (auto-generated)
 
 Prisma Client style. All repository functions live in `src/repositories/`.
 
-| Operation | Pattern | Return | Notes |
-|---|---|---|---|
-| Create | `createXxx` | Full object | Never `void` or bare `id` |
-| List | `findManyXxx` | `T[]` | Empty array on no results |
-| Find one | `findXxxByYyy` | `T \| null` | e.g. `findUserById` |
-| Find or throw | `findXxxByYyyOrThrow` | `T` | For hot-path lookups where missing is exceptional |
-| Update | `updateXxx` | `T \| null` | Never `boolean` |
-| Delete | `deleteXxx` | `T \| null` | Returns deleted record for cleanup |
-| Upsert | `upsertXxx` | `T` | Insert or update, return final record |
-| Count | `countXxx` | `number` | Add when needed |
+| Operation     | Pattern               | Return      | Notes                                             |
+| ------------- | --------------------- | ----------- | ------------------------------------------------- |
+| Create        | `createXxx`           | Full object | Never `void` or bare `id`                         |
+| List          | `findManyXxx`         | `T[]`       | Empty array on no results                         |
+| Find one      | `findXxxByYyy`        | `T \| null` | e.g. `findUserById`                               |
+| Find or throw | `findXxxByYyyOrThrow` | `T`         | For hot-path lookups where missing is exceptional |
+| Update        | `updateXxx`           | `T \| null` | Never `boolean`                                   |
+| Delete        | `deleteXxx`           | `T \| null` | Returns deleted record for cleanup                |
+| Upsert        | `upsertXxx`           | `T`         | Insert or update, return final record             |
+| Count         | `countXxx`            | `number`    | Add when needed                                   |
 
 **Constraints:**
+
 - No `boolean` or `void` returns from `create` / `update` / `delete`.
 - `findMany` always returns an array; `findBy` returns a single nullable record.
 
@@ -120,13 +121,13 @@ Prisma Client style. All repository functions live in `src/repositories/`.
 - No content (optional): `204`.
 - Error shape: `{ error: string }`, with `details` when helpful.
 
-| Status | Usage |
-|---|---|
-| `400` | Validation failure, wrong code |
-| `401` | Invalid or missing JWT |
-| `403` | Insufficient permission (e.g. wrong old password) |
-| `404` | Resource not found |
-| `409` | Conflict (username/email already taken) |
+| Status | Usage                                             |
+| ------ | ------------------------------------------------- |
+| `400`  | Validation failure, wrong code                    |
+| `401`  | Invalid or missing JWT                            |
+| `403`  | Insufficient permission (e.g. wrong old password) |
+| `404`  | Resource not found                                |
+| `409`  | Conflict (username/email already taken)           |
 
 ### Authentication
 

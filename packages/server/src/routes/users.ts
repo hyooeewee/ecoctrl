@@ -1,13 +1,27 @@
-import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
+import type { FastifyInstance } from "fastify";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
-import { UserSchema, UserCreateBodySchema, UserUpdateBodySchema, USER_ROLE_LIST } from "@ecoctrl/shared";
+import {
+  UserSchema,
+  UserCreateBodySchema,
+  UserUpdateBodySchema,
+  USER_ROLE_LIST,
+} from "@ecoctrl/shared";
 import type { User, UserCreateBody, UserUpdateBody } from "@ecoctrl/shared";
-import { findManyUsers, createUser, deleteUser, updateUser, findUserByIdWithPassword, findUserById, findUserPreferences, updateUserPreferences } from "@/repositories/users";
+import {
+  findManyUsers,
+  createUser,
+  deleteUser,
+  updateUser,
+  findUserByIdWithPassword,
+  findUserById,
+  findUserPreferences,
+  updateUserPreferences,
+} from "@/repositories/users";
 import { UPLOAD_DIR } from "@/lib/paths";
 import type { UserPreferences } from "@ecoctrl/shared";
 

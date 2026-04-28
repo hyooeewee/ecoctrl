@@ -16,7 +16,10 @@ import { findUserSettings } from "@/repositories/userSettings";
 
 export async function findDashboardStats(): Promise<DashboardStats> {
   const rows = await db.select().from(dashboardStats);
-  const stats: Record<string, { value: string; unit: string; trend: string; trendType: "up" | "down" }> = {};
+  const stats: Record<
+    string,
+    { value: string; unit: string; trend: string; trendType: "up" | "down" }
+  > = {};
   for (const r of rows) {
     stats[r.key] = {
       value: r.value,
@@ -66,14 +69,17 @@ export async function findDashboardData(
 
   if (userId) {
     const settings = await findUserSettings(userId);
-    const bentoLayout = (settings.bentoLayout as Array<{
-      id: string;
-      x?: number;
-      y?: number;
-      w?: number;
-      h?: number;
-      hidden?: boolean;
-    }> | undefined) ?? [];
+    const bentoLayout =
+      (settings.bentoLayout as
+        | Array<{
+            id: string;
+            x?: number;
+            y?: number;
+            w?: number;
+            h?: number;
+            hidden?: boolean;
+          }>
+        | undefined) ?? [];
 
     for (const item of bentoLayout) {
       userOverrides.set(item.id, {

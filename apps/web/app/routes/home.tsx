@@ -96,7 +96,7 @@ export default function Home() {
 
   const rightmostTopWidget = bentoLayout
     .filter((item) => !item.hidden && item.y <= 4)
-    .sort((a, b) => b.x + b.w - (a.x + a.w))[0];
+    .toSorted((a, b) => b.x + b.w - (a.x + a.w))[0];
 
   const colsFromRight = rightmostTopWidget ? 16 - rightmostTopWidget.x + 1 : 0;
   const controlsRight =
@@ -159,7 +159,7 @@ export default function Home() {
   const resetTimer = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => setNavVisible(false), navHideDelay);
-  }, []);
+  }, [navHideDelay]);
 
   // Toggle nav on logo click
   const handleLogoClick = useCallback(() => {
@@ -172,7 +172,7 @@ export default function Home() {
       }
       return !prev;
     });
-  }, []);
+  }, [navHideDelay]);
 
   // Reset countdown on any user interaction while nav is open
   useEffect(() => {
