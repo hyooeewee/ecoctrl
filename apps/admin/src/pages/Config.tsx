@@ -1,6 +1,7 @@
 import {
   Archive,
   CalendarDays,
+  Check,
   Clock,
   Database,
   Globe,
@@ -37,6 +38,7 @@ export default function SystemConfig({ user }: { user: AuthUser | null }) {
   const [config, setConfig] = useState<SystemConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -55,8 +57,11 @@ export default function SystemConfig({ user }: { user: AuthUser | null }) {
   const handleSave = async () => {
     if (!config) return;
     setSaving(true);
+    setSaveSuccess(false);
     try {
       await systemConfigApi.update(config);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
       console.error(err);
       alert("保存配置失败，请重试");
@@ -383,7 +388,13 @@ export default function SystemConfig({ user }: { user: AuthUser | null }) {
   ].concat(isSuperAdmin ? [accessSection] : []);
 
   const actions = (
-    <div className="flex justify-end">
+    <div className="flex items-center justify-end gap-3">
+      {saveSuccess && (
+        <span className="flex items-center gap-1 text-sm text-green-600">
+          <Check size={16} />
+          保存成功
+        </span>
+      )}
       <Button variant="outline" size="sm" onClick={handleSave} disabled={saving} className="gap-2">
         <Save size={16} />
         {saving ? "保存中..." : "保存所有配置"}
