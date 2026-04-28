@@ -5,7 +5,9 @@ import { apiGet, apiPatch } from "~/lib/api";
 import { API_PREFIX } from "~/lib/env";
 
 const DASHBOARD_ENDPOINT = `${API_PREFIX}/public/dashboard`;
-const SETTINGS_ENDPOINT = `${API_PREFIX}/public/settings`;
+const PUBLIC_SETTINGS_ENDPOINT = `${API_PREFIX}/public/settings`;
+// TODO: backend needs authenticated /api/settings (or /api/dashboard/setting)
+const USER_SETTINGS_ENDPOINT = `${API_PREFIX}/settings`;
 
 export async function fetchDashboardData(): Promise<DashboardData | null> {
   const res = await apiGet<DashboardData>(DASHBOARD_ENDPOINT);
@@ -45,13 +47,25 @@ export interface DashboardSettingsPayload {
 }
 
 export async function fetchDashboardSettings(): Promise<ApiResponse<DashboardSettingsPayload>> {
-  return apiGet<DashboardSettingsPayload>(SETTINGS_ENDPOINT);
+  return apiGet<DashboardSettingsPayload>(PUBLIC_SETTINGS_ENDPOINT);
 }
 
 export async function patchDashboardSettings(
   payload: DashboardSettingsPayload,
 ): Promise<ApiResponse<void>> {
-  return apiPatch<void>(SETTINGS_ENDPOINT, payload);
+  return apiPatch<void>(PUBLIC_SETTINGS_ENDPOINT, payload);
+}
+
+// ─── User-specific Settings (authenticated) ───────────────────────────────────
+
+export async function fetchUserSettings(): Promise<ApiResponse<DashboardSettingsPayload>> {
+  return apiGet<DashboardSettingsPayload>(USER_SETTINGS_ENDPOINT);
+}
+
+export async function patchUserSettings(
+  payload: DashboardSettingsPayload,
+): Promise<ApiResponse<void>> {
+  return apiPatch<void>(USER_SETTINGS_ENDPOINT, payload);
 }
 
 export type {

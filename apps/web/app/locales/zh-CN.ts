@@ -74,6 +74,17 @@ export const zhCN = {
     editAutoExitDelay: "编辑模式自动退出",
     editAutoExitDelayDesc: "无操作一段时间后自动退出编辑模式",
     editAutoExitNever: "不自动退出",
+    // Account / Login
+    loginEmail: "邮箱地址",
+    loginPassword: "密码",
+    loginButton: "登录",
+    loginSuccess: "登录成功",
+    loginError: "登录失败，请检查邮箱和密码",
+    logoutButton: "退出登录",
+    logoutSuccess: "已退出登录",
+    roleLabel: "角色",
+    pleaseEnterEmail: "请输入邮箱",
+    pleaseEnterPassword: "请输入密码",
   },
 
   // ── 编辑布局浮动工具栏 ──────────────────────────────────────────────────────
