@@ -78,6 +78,28 @@ export async function findFileByUrl(fileUrl: string): Promise<FileItem | null> {
   };
 }
 
+export async function updateFile(
+  id: string,
+  data: Partial<Pick<FileItem, "name">>,
+): Promise<FileItem | null> {
+  const result = await db
+    .update(files)
+    .set({ name: data.name })
+    .where(eq(files.id, id))
+    .returning();
+  if (result.length === 0) return null;
+  const r = result[0];
+  return {
+    id: r.id,
+    name: r.name,
+    filename: r.filename,
+    mimeType: r.mimeType ?? null,
+    size: r.size,
+    fileUrl: r.fileUrl ?? null,
+    createdAt: r.createdAt ? r.createdAt.toISOString() : null,
+  };
+}
+
 export async function deleteFile(id: string): Promise<FileItem | null> {
   const result = await db.delete(files).where(eq(files.id, id)).returning();
   if (result.length === 0) return null;

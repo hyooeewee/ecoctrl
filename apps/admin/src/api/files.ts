@@ -1,4 +1,4 @@
-import { get, del } from "./request";
+import { get, del, patch } from "./request";
 import { request } from "./request";
 
 export interface FileMeta {
@@ -14,5 +14,6 @@ export const filesApi = {
     formData.append("file", file);
     return request<FileMeta>("/files", { method: "POST", body: formData });
   },
+  update: (id: string, name: string) => patch<FileMeta>(`/files/${id}`, { name }),
   delete: (id: string) => del<void>(`/files/${id}`),
 };

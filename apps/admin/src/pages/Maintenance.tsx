@@ -5,6 +5,7 @@ import {
   ChevronRight,
   Clock,
   FileText,
+  Pencil,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -203,6 +204,9 @@ export default function Maintenance() {
   const [editForm, setEditForm] = useState<Partial<MaintenanceReminderDetail>>({});
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
+  const [renaming, setRenaming] = useState(false);
 
   const fetchManuals = async () => {
     try {
@@ -274,6 +278,36 @@ export default function Maintenance() {
     } catch (err) {
       console.error(err);
       alert("删除失败，请重试");
+    }
+  };
+
+  const startRename = (manual: Manual) => {
+    setEditingId(manual.id);
+    setEditingName(manual.name);
+  };
+
+  const cancelRename = () => {
+    setEditingId(null);
+    setEditingName("");
+  };
+
+  const handleRenameSave = async (id: string) => {
+    const trimmed = editingName.trim();
+    if (!trimmed) {
+      cancelRename();
+      return;
+    }
+    setRenaming(true);
+    try {
+      await filesApi.update(id, trimmed);
+      await fetchManuals();
+      setEditingId(null);
+      setEditingName("");
+    } catch (err) {
+      console.error(err);
+      alert("重命名失败，请重试");
+    } finally {
+      setRenaming(false);
     }
   };
 
@@ -351,31 +385,71 @@ export default function Maintenance() {
                 {manuals.map((manual) => (
                   <div
                     key={manual.id}
-                    className="group flex h-10 items-center justify-between overflow-hidden rounded-md px-6 hover:bg-blue-50"
+                    className="group flex h-10 items-center justify-between overflow-hidden rounded-md px-6"
                   >
-                    <button
-                      className="flex min-w-0 flex-1 items-center gap-2 text-sm text-left hover:text-blue-700"
-                      onClick={() => handleManualClick(manual)}
-                      title={manual.name}
-                    >
-                      <FileText
-                        size={16}
-                        className="text-muted-foreground shrink-0 group-hover:text-blue-600"
-                      />
-                      <TruncatedText
-                        text={manual.name}
-                        className="block text-sm"
-                        showTooltip={false}
-                      />
-                    </button>
-                    <AppButton
-                      level="danger"
-                      size="icon-sm"
-                      className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100"
-                      onClick={() => handleDelete(manual.id)}
-                    >
-                      <Trash2 size={14} />
-                    </AppButton>
+                    {editingId === manual.id ? (
+                      <div className="flex min-w-0 flex-1 items-center gap-2">
+                        <FileText size={16} className="text-muted-foreground shrink-0" />
+                        <input
+                          autoFocus
+                          className="flex-1 rounded border border-blue-300 bg-background px-2 py-0.5 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleRenameSave(manual.id);
+                            } else if (e.key === "Escape") {
+                              cancelRename();
+                            }
+                          }}
+                          onBlur={() => handleRenameSave(manual.id)}
+                          disabled={renaming}
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          className="flex min-w-0 flex-1 items-center gap-2 text-sm text-left hover:text-blue-700"
+                          onClick={() => handleManualClick(manual)}
+                          title={manual.name}
+                        >
+                          <FileText
+                            size={16}
+                            className="text-muted-foreground shrink-0 group-hover:text-blue-600"
+                          />
+                          <TruncatedText
+                            text={manual.name}
+                            className="block text-sm"
+                            showTooltip={false}
+                          />
+                        </button>
+                        <div className="flex shrink-0 gap-0.5 opacity-0 group-hover:opacity-100">
+                          <AppButton
+                            level="ghost"
+                            size="icon-sm"
+                            className="text-muted-foreground hover:text-blue-600 h-7 w-7"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              startRename(manual);
+                            }}
+                          >
+                            <Pencil size={14} />
+                          </AppButton>
+                          <AppButton
+                            level="ghost"
+                            size="icon-sm"
+                            className="text-muted-foreground hover:text-red-600 h-7 w-7"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(manual.id);
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </AppButton>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
                 {!loading && manuals.length === 0 && (

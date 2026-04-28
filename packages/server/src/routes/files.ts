@@ -5,7 +5,13 @@ import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import { createReadStream } from "node:fs";
 import { UPLOAD_DIR as BASE_UPLOAD_DIR } from "@/lib/paths";
-import { findManyFiles, findFileById, createFile, deleteFile } from "@/repositories/files";
+import {
+  findManyFiles,
+  findFileById,
+  createFile,
+  updateFile,
+  deleteFile,
+} from "@/repositories/files";
 
 const FILES_DIR = path.join(BASE_UPLOAD_DIR, "files");
 
@@ -159,6 +165,31 @@ export default async function fileRoutes(fastify: FastifyInstance) {
       const contentType = file.mimeType || "application/octet-stream";
       const stream = createReadStream(filePath);
       return reply.type(contentType).send(stream);
+    },
+  );
+
+  fastify.patch(
+    "/:id",
+    {
+      schema: {
+        tags: ["Files"],
+        summary: "Update file name",
+        params: z.object({ id: z.string().describe("File ID") }),
+        body: z.object({ name: z.string().min(1) }),
+        response: {
+          200: fileItemSchema,
+          404: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const { name } = request.body as { name: string };
+      const updated = await updateFile(id, { name });
+      if (!updated) {
+        return reply.status(404).send({ error: "File not found" });
+      }
+      return reply.send(updated);
     },
   );
 
