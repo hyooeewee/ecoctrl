@@ -81,6 +81,7 @@ export default function Home() {
   const showLoadingAnimation = useSettingsStore((state) => state.showLoadingAnimation);
   const setBentoDragEnabled = useSettingsStore((state) => state.setBentoDragEnabled);
   const setBentoLayout = useSettingsStore((state) => state.setBentoLayout);
+  const hydrateBentoLayout = useSettingsStore((state) => state.hydrateBentoLayout);
   const resetBentoLayout = useSettingsStore((state) => state.resetBentoLayout);
   const loadSettings = useSettingsStore((state) => state.loadSettings);
 
@@ -120,6 +121,8 @@ export default function Home() {
   // Sync backend widget metadata → bentoLayout.
   // Layout (position / size / hidden) now comes directly from the API,
   // which merges dashboard_widgets defaults with user_settings overrides.
+  // Uses hydrateBentoLayout so this effect does NOT mark hasUnsavedChanges,
+  // preventing loadSettings() from skipping the server fetch.
   useEffect(() => {
     if (!loaderData?.widgets?.length) return;
 
@@ -145,14 +148,14 @@ export default function Home() {
 
     const next = [...cleaned, ...newItems];
     if (bentoLayout.length === 0) {
-      setBentoLayout(next);
+      hydrateBentoLayout(next);
       return;
     }
 
     if (cleaned.length !== bentoLayout.length || newItems.length > 0) {
-      setBentoLayout(next);
+      hydrateBentoLayout(next);
     }
-  }, [loaderData, bentoLayout, setBentoLayout]);
+  }, [loaderData, bentoLayout, hydrateBentoLayout]);
 
   // When a label is selected, animate camera to focus on it.
   // For lobby: enable horizontal cross-section clip plane.
