@@ -3,6 +3,8 @@ import { z } from "zod";
 export const PointItemSchema = z.object({
   id: z.string(),
   name: z.string(),
+  pointType: z.string(),
+  pointNo: z.string(),
   props: z.array(
     z.object({
       key: z.string(),
@@ -19,6 +21,7 @@ export const Model3DSchema = z.object({
   version: z.string(),
   format: z.string(),
   size: z.string(),
+  deviceType: z.string(),
   fileUrl: z.string().nullable(),
   thumbnailUrl: z.string().nullable(),
   docUrl: z.string().nullable(),
