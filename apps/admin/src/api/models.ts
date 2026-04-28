@@ -13,6 +13,12 @@ export const modelsApi = {
   update: (id: string, data: { name: string; version: string; points?: PointItem[] }) =>
     put<Model3D>(`/models/${id}`, data),
 
+  replaceFile: (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return request<Model3D>(`/models/${id}/file`, { method: "PUT", body: formData });
+  },
+
   upload: (file: File, data: { name: string; version: string; points?: PointItem[] }) => {
     const formData = new FormData();
     // Append text fields before file so backend can read them first
