@@ -1,0 +1,36 @@
+{
+  "folders": [
+    {
+      "path": ".",
+    },
+    {
+      "path": "apps/admin",
+    },
+    {
+      "path": "apps/web",
+    },
+    {
+      "path": "apps/docs",
+    },
+    {
+      "path": "packages/server",
+    },
+    {
+      "path": "packages/shared",
+    },
+    {
+      "path": "packages/ui",
+    },
+  ],
+  "settings": {
+    "oxc.configPath": ".oxlintrc.json",
+    "oxc.fmt.configPath": ".oxfmtrc.json",
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "oxc.oxc-vscode",
+  },
+  "extensions": {
+    "recommendations": [
+      "oxc.oxc-vscode"
+    ],
+  },
+}
