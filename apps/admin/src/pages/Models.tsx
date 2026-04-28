@@ -4,13 +4,11 @@ import {
   Image as ImageIcon,
   Upload,
   Trash2,
-  X,
-  File,
   AlertCircle,
   Plus,
   Pencil,
 } from "lucide-react";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@ecoctrl/ui";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoctrl/ui";
@@ -21,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui";
 
 import AppButton from "@/components/AppButton";
+import ModelFileZone from "@/components/ModelFileZone";
 import TruncatedText from "@/components/TruncatedText";
 import { resolveAssetUrl } from "@/lib/url";
 import type { BusinessObject, PointItem } from "@/types";
@@ -39,14 +38,6 @@ const FORMAT_MAP: Record<string, string> = {
 
 const CARD_PREVIEW_FORMATS = new Set(["GLB", "GLTF", "GLTF (zip)"]);
 
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`;
-}
-
 export default function Models() {
   const [models, setModels] = useState<Model3D[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,9 +51,7 @@ export default function Models() {
   const [uploadVersion, setUploadVersion] = useState("v1.0");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
-  const [dragActive, setDragActive] = useState(false);
   const [uploadPoints, setUploadPoints] = useState<PointItem[]>([]);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   // Edit dialog state
   const [editOpen, setEditOpen] = useState(false);
@@ -73,8 +62,7 @@ export default function Models() {
   const [editError, setEditError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [editFile, setEditFile] = useState<File | null>(null);
-  const [editDragActive, setEditDragActive] = useState(false);
-  const editFileInputRef = useRef<HTMLInputElement>(null);
+  const [editFileDeleted, setEditFileDeleted] = useState(false);
 
   // Objects tab state
   const [objects, setObjects] = useState<BusinessObject[]>([]);
@@ -118,7 +106,7 @@ export default function Models() {
     }
   }, [models]);
 
-  const handleFile = (file: File) => {
+  const handleUploadFileSelect = (file: File) => {
     const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
     if (!FORMAT_MAP[ext]) {
       setUploadError(`不支持的格式: .${ext}，请上传 ${ACCEPTED_FORMATS} 文件`);
@@ -128,25 +116,6 @@ export default function Models() {
     setUploadError("");
     if (!uploadName) {
       setUploadName(file.name.replace(/\.[^.]+$/, ""));
-    }
-  };
-
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    if (e.dataTransfer.files?.[0]) {
-      handleFile(e.dataTransfer.files[0]);
     }
   };
 
@@ -190,7 +159,6 @@ export default function Models() {
     setUploadName("");
     setUploadVersion("v1.0");
     setUploadError("");
-    setDragActive(false);
     setUploadPoints([]);
   };
 
@@ -336,6 +304,7 @@ export default function Models() {
     setEditName(model.name);
     setEditVersion(model.version);
     setEditPoints((model as Model3D & { points?: PointItem[] }).points ?? []);
+    setEditFileDeleted(false);
     setEditError("");
     setEditOpen(true);
   };
@@ -350,25 +319,6 @@ export default function Models() {
     setEditError("");
   };
 
-  const handleEditDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setEditDragActive(true);
-    } else if (e.type === "dragleave") {
-      setEditDragActive(false);
-    }
-  };
-
-  const handleEditDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setEditDragActive(false);
-    if (e.dataTransfer.files?.[0]) {
-      handleEditFileSelect(e.dataTransfer.files[0]);
-    }
-  };
-
   const resetEditForm = () => {
     setEditModelId("");
     setEditName("");
@@ -376,7 +326,7 @@ export default function Models() {
     setEditPoints([]);
     setEditError("");
     setEditFile(null);
-    setEditDragActive(false);
+    setEditFileDeleted(false);
   };
 
   const handleSaveEdit = async () => {
@@ -399,15 +349,28 @@ export default function Models() {
           ...p,
           props: p.props.filter((prop) => prop.key.trim() || prop.name.trim()),
         }));
-      // 1. Update metadata
-      await modelsApi.update(editModelId, {
+
+      const updatePayload: {
+        name: string;
+        version: string;
+        points: PointItem[];
+        fileUrl?: string | null;
+      } = {
         name: editName.trim(),
         version: editVersion.trim() || "v1.0",
         points: validPoints.length ? validPoints : [],
-      });
+      };
 
-      // 2. Replace file if selected
-      if (editFile) {
+      // If current file was deleted, send fileUrl: null
+      if (editFileDeleted) {
+        updatePayload.fileUrl = null;
+      }
+
+      // 1. Update metadata
+      await modelsApi.update(editModelId, updatePayload);
+
+      // 2. Replace file if selected (only when not deleted)
+      if (editFile && !editFileDeleted) {
         await modelsApi.replaceFile(editModelId, editFile);
       }
 
@@ -696,57 +659,14 @@ export default function Models() {
 
           <div className="space-y-4 py-2">
             {/* Drop zone */}
-            <div
-              className={`relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 transition-colors ${
-                dragActive
-                  ? "border-blue-400 bg-blue-50/50"
-                  : "border-border bg-muted hover:border-muted-foreground/50"
-              }`}
-              onDragEnter={handleDrag}
-              onDragOver={handleDrag}
-              onDragLeave={handleDrag}
-              onDrop={handleDrop}
-              onClick={() => inputRef.current?.click()}
-            >
-              {uploadFile ? (
-                <div className="flex items-center gap-3">
-                  <File size={32} className="text-blue-500" />
-                  <div className="text-left">
-                    <p className="max-w-[200px] break-all text-sm font-medium">{uploadFile.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatFileSize(uploadFile.size)} /{" "}
-                      {FORMAT_MAP[uploadFile.name.split(".").pop()?.toLowerCase() ?? ""] ??
-                        "Unknown"}
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="ml-2 h-7 w-7"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setUploadFile(null);
-                      setUploadName("");
-                    }}
-                  >
-                    <X size={14} />
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <Upload size={32} className="text-muted-foreground/40" />
-                  <p className="mt-2 text-sm font-medium">点击或拖拽文件到此处</p>
-                  <p className="mt-1 text-xs text-muted-foreground">支持 {ACCEPTED_FORMATS}</p>
-                </>
-              )}
-              <input
-                ref={inputRef}
-                type="file"
-                accept={ACCEPTED_FORMATS}
-                className="hidden"
-                onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
-              />
-            </div>
+            <ModelFileZone
+              file={uploadFile}
+              onFileSelect={handleUploadFileSelect}
+              onFileClear={() => {
+                setUploadFile(null);
+                setUploadName("");
+              }}
+            />
 
             {/* Fields */}
             <div className="space-y-3">
@@ -788,7 +708,7 @@ export default function Models() {
               {uploadPoints.length === 0 ? (
                 <p className="text-xs text-muted-foreground py-1">未配置点位</p>
               ) : (
-                <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                <div className="space-y-3 pr-1">
                   {uploadPoints.map((point, pointIdx) => (
                     <div
                       key={pointIdx}
@@ -1085,81 +1005,22 @@ export default function Models() {
             {/* Replace file zone */}
             <div className="space-y-1.5">
               <Label>替换模型文件（可选）</Label>
-              <div
-                className={`relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors ${
-                  editDragActive
-                    ? "border-blue-400 bg-blue-50/50"
-                    : "border-border bg-muted hover:border-muted-foreground/50"
-                }`}
-                onDragEnter={handleEditDrag}
-                onDragOver={handleEditDrag}
-                onDragLeave={handleEditDrag}
-                onDrop={handleEditDrop}
-                onClick={() => editFileInputRef.current?.click()}
-              >
-                {(() => {
-                  const model = models.find((m) => m.id === editModelId);
-                  const currentFile = model?.fileUrl;
-                  if (editFile) {
-                    return (
-                      <div className="flex items-center gap-3">
-                        <File size={28} className="text-blue-500" />
-                        <div className="text-left">
-                          <p className="max-w-[200px] break-all text-sm font-medium">
-                            {editFile.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatFileSize(editFile.size)} /{" "}
-                            {FORMAT_MAP[editFile.name.split(".").pop()?.toLowerCase() ?? ""] ??
-                              "Unknown"}
-                          </p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="ml-2 h-7 w-7"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditFile(null);
-                          }}
-                        >
-                          <X size={14} />
-                        </Button>
-                      </div>
-                    );
-                  }
-                  if (currentFile) {
-                    return (
-                      <div className="flex items-center gap-3">
-                        <File size={28} className="text-blue-500" />
-                        <div className="text-left">
-                          <p className="max-w-[200px] break-all text-sm font-medium">
-                            {model?.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {model?.size} / {model?.format}
-                          </p>
-                        </div>
-                        <span className="ml-2 text-xs text-muted-foreground">点击替换</span>
-                      </div>
-                    );
-                  }
-                  return (
-                    <>
-                      <Upload size={28} className="text-muted-foreground/40" />
-                      <p className="mt-2 text-sm font-medium">点击或拖拽上传文件</p>
-                      <p className="mt-1 text-xs text-muted-foreground">支持 {ACCEPTED_FORMATS}</p>
-                    </>
-                  );
-                })()}
-                <input
-                  ref={editFileInputRef}
-                  type="file"
-                  accept={ACCEPTED_FORMATS}
-                  className="hidden"
-                  onChange={(e) => e.target.files?.[0] && handleEditFileSelect(e.target.files[0])}
-                />
-              </div>
+              {(() => {
+                const model = models.find((m) => m.id === editModelId);
+                const existingInfo =
+                  editFileDeleted || !model?.fileUrl
+                    ? null
+                    : { name: model.name, size: model.size, format: model.format };
+                return (
+                  <ModelFileZone
+                    file={editFile}
+                    existingInfo={existingInfo}
+                    onFileSelect={handleEditFileSelect}
+                    onFileClear={() => setEditFile(null)}
+                    onDeleteExisting={() => setEditFileDeleted(true)}
+                  />
+                );
+              })()}
             </div>
 
             {/* Fields */}
@@ -1202,7 +1063,7 @@ export default function Models() {
               {editPoints.length === 0 ? (
                 <p className="text-xs text-muted-foreground py-1">未配置点位</p>
               ) : (
-                <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                <div className="space-y-3 pr-1">
                   {editPoints.map((point, pointIdx) => (
                     <div
                       key={pointIdx}
