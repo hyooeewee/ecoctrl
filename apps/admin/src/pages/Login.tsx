@@ -274,7 +274,7 @@ export default function Login({ onLogin }: LoginProps) {
             </div>
 
             {/* Mode toggle — hidden when forgot-password */}
-            {mode !== "forgot-password" && (
+            {mode !== "forgot-password" && sysConfig?.allowRegistration !== false && (
               <div className="mb-6 flex rounded-full border border-white/20 bg-white/10 p-1">
                 <button
                   type="button"
@@ -287,19 +287,17 @@ export default function Login({ onLogin }: LoginProps) {
                 >
                   登录
                 </button>
-                {sysConfig?.allowRegistration !== false && (
-                  <button
-                    type="button"
-                    onClick={() => switchMode("register")}
-                    className={`flex-1 rounded-full py-1.5 text-sm font-medium transition-all ${
-                      mode === "register"
-                        ? "bg-white/90 text-slate-900"
-                        : "text-white/70 hover:text-white"
-                    }`}
-                  >
-                    注册
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => switchMode("register")}
+                  className={`flex-1 rounded-full py-1.5 text-sm font-medium transition-all ${
+                    mode === "register"
+                      ? "bg-white/90 text-slate-900"
+                      : "text-white/70 hover:text-white"
+                  }`}
+                >
+                  注册
+                </button>
               </div>
             )}
 
