@@ -62,7 +62,10 @@ export function createDevProxy(
   const apiPrefix = options.apiPrefix?.trim() || "/api";
   const staticPrefix = options.staticPrefix?.trim() || "/static";
 
-  const proxy: Record<string, { target: string; changeOrigin: true; rewrite?: (p: string) => string }> = {
+  const proxy: Record<
+    string,
+    { target: string; changeOrigin: true; rewrite?: (p: string) => string }
+  > = {
     "/api": {
       target: apiBaseUrl,
       changeOrigin: true,
@@ -83,24 +86,7 @@ export function createDevProxy(
 }
 
 export const viteConfig = {
-  staged: {
-    "*": "vp check --fix",
-  },
-  fmt: {
-    ignorePatterns: ["dist/**", "build/**", "node_modules/**", "**/components/ui/**", ".claude/**"],
-    sortImports: true,
-    sortTailwindcss: {
-      functions: ["cn", "cva", "clsx"],
-    },
-  },
-  lint: {
-    ignorePatterns: ["dist/**", "build/**", "node_modules/**", "**/components/ui/**", ".claude/**"],
-    options: {
-      typeAware: true,
-      typeCheck: true,
-    },
-    rules: {
-      "no-unused-vars": "error",
-    },
-  },
+  staged: { "*": "vp check" },
+  fmt: {},
+  lint: {},
 } satisfies UserConfig;

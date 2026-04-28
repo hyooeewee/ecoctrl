@@ -1,0 +1,27 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxfmt/configuration_schema.json",
+  "printWidth": 100,
+  "singleQuote": true,
+  "trailingComma": "all",
+  "endOfLine": "lf",
+  "sortPackageJson": false,
+  "ignorePatterns": [
+    "**/node_modules",
+    "**/dist",
+    "**/build",
+    "**/.next",
+    "**/out",
+    "**/coverage",
+    "**/cache",
+    "**/.changeset",
+    "**/drizzle/meta",
+    "**/ui/src/components",
+    "**/pnpm-lock.yaml",
+    "**/CHANGELOG.md",
+    "**/LICENSE",
+    "**/*.svg",
+    "**/*.png",
+    "**/*.jpg",
+    "**/*.woff2"
+  ]
+}
