@@ -78,10 +78,7 @@ async function fetchWeatherFromApi(): Promise<WeatherData> {
   const list = (forecastBody.list as Array<Record<string, unknown>>) ?? [];
 
   // Aggregate 3-hour steps into daily high/low
-  const dailyMap = new Map<
-    string,
-    { high: number; low: number; condition: string; dt: number }
-  >();
+  const dailyMap = new Map<string, { high: number; low: number; condition: string; dt: number }>();
 
   for (const item of list) {
     const dt = Number(item.dt);
@@ -124,16 +121,13 @@ async function fetchWeatherFromApi(): Promise<WeatherData> {
   };
 }
 
-const cached = withCache(
-  async () => {
-    try {
-      return await fetchWeatherFromApi();
-    } catch {
-      return DEFAULT_WEATHER;
-    }
-  },
-  CACHE_TTL_MS,
-);
+const cached = withCache(async () => {
+  try {
+    return await fetchWeatherFromApi();
+  } catch {
+    return DEFAULT_WEATHER;
+  }
+}, CACHE_TTL_MS);
 
 export async function fetchWeather(): Promise<WeatherData> {
   return cached.get();

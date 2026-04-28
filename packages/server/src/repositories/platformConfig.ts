@@ -100,7 +100,11 @@ export async function updatePlatformConfig(config: PlatformConfig): Promise<Plat
       allowPasswordReset: r.allowPasswordReset,
     };
   } else {
-    const result = await db.update(platformConfigs).set(config).where(eq(platformConfigs.id, rows[0].id)).returning();
+    const result = await db
+      .update(platformConfigs)
+      .set(config)
+      .where(eq(platformConfigs.id, rows[0].id))
+      .returning();
     const r = result[0];
     return {
       platformName: r.platformName,

@@ -15,18 +15,18 @@
 
 以下是 `onRequest` 钩子放行的全部路径：
 
-| Method | 路径 | 用途 |
-|---|---|---|
-| POST | `/api/auth/login` | 用户名/邮箱 + 密码登录。 |
-| POST | `/api/auth/register` | 创建用户。需要先调用 `/auth/register/send-code`。 |
-| POST | `/api/auth/register/send-code` | 发送 6 位验证码（5 分钟有效）。 |
-| POST | `/api/auth/refresh` | 用 Refresh Token 换取新的 Access + Refresh 对。 |
-| POST | `/api/auth/forgot-password/send-code` | 发送密码重置验证码。 |
-| POST | `/api/auth/forgot-password/reset` | 通过验证码重置密码。 |
-| GET  | `/api/auth/oauth/providers` | 列出已配置的 OAuth Provider。 |
-| GET/POST | `/api/auth/oauth/wechat/...`、`/api/auth/oauth/feishu/...` | OAuth 授权与回调。 |
-| POST | `/api/auth/oauth/bind`、`/api/auth/oauth/register-and-bind` | 把 OAuth 身份绑定到账号。 |
-| GET  | `/api/dashboard` | 公开只读看板数据（供 `apps/web` 使用）。 |
+| Method   | 路径                                                        | 用途                                              |
+| -------- | ----------------------------------------------------------- | ------------------------------------------------- |
+| POST     | `/api/auth/login`                                           | 用户名/邮箱 + 密码登录。                          |
+| POST     | `/api/auth/register`                                        | 创建用户。需要先调用 `/auth/register/send-code`。 |
+| POST     | `/api/auth/register/send-code`                              | 发送 6 位验证码（5 分钟有效）。                   |
+| POST     | `/api/auth/refresh`                                         | 用 Refresh Token 换取新的 Access + Refresh 对。   |
+| POST     | `/api/auth/forgot-password/send-code`                       | 发送密码重置验证码。                              |
+| POST     | `/api/auth/forgot-password/reset`                           | 通过验证码重置密码。                              |
+| GET      | `/api/auth/oauth/providers`                                 | 列出已配置的 OAuth Provider。                     |
+| GET/POST | `/api/auth/oauth/wechat/...`、`/api/auth/oauth/feishu/...`  | OAuth 授权与回调。                                |
+| POST     | `/api/auth/oauth/bind`、`/api/auth/oauth/register-and-bind` | 把 OAuth 身份绑定到账号。                         |
+| GET      | `/api/dashboard`                                            | 公开只读看板数据（供 `apps/web` 使用）。          |
 
 其他路由全部需要认证。
 
@@ -34,26 +34,26 @@
 
 ### `/api/auth/*`
 
-| Method | 路径 | 摘要 |
-|---|---|---|
-| POST | `/auth/login` | 用户名密码登录 |
-| POST | `/auth/register` | 注册新用户 |
-| POST | `/auth/register/send-code` | 发送注册验证码 |
-| POST | `/auth/refresh` | 刷新 Access Token（同时轮换 Refresh Token） |
-| POST | `/auth/logout` | 注销并使当前 Refresh Token 失效 |
-| POST | `/auth/forgot-password/send-code` | 发送密码重置验证码 |
-| POST | `/auth/forgot-password/reset` | 凭验证码重置密码 |
-| GET  | `/auth/me` | 当前用户信息 |
+| Method | 路径                              | 摘要                                        |
+| ------ | --------------------------------- | ------------------------------------------- |
+| POST   | `/auth/login`                     | 用户名密码登录                              |
+| POST   | `/auth/register`                  | 注册新用户                                  |
+| POST   | `/auth/register/send-code`        | 发送注册验证码                              |
+| POST   | `/auth/refresh`                   | 刷新 Access Token（同时轮换 Refresh Token） |
+| POST   | `/auth/logout`                    | 注销并使当前 Refresh Token 失效             |
+| POST   | `/auth/forgot-password/send-code` | 发送密码重置验证码                          |
+| POST   | `/auth/forgot-password/reset`     | 凭验证码重置密码                            |
+| GET    | `/auth/me`                        | 当前用户信息                                |
 
 ### `/api/auth/oauth/*`
 
-| Method | 路径 | 摘要 |
-|---|---|---|
-| GET  | `/auth/oauth/providers` | 可用 OAuth Provider |
-| GET  | `/auth/oauth/:provider/authorize` | 获取 Provider 的授权跳转地址 |
-| GET/POST | `/auth/oauth/:provider/callback` | Provider 回调 |
-| POST | `/auth/oauth/bind` | 绑定到现有账号 |
-| POST | `/auth/oauth/register-and-bind` | 用 Provider 资料创建并绑定账号 |
+| Method   | 路径                              | 摘要                           |
+| -------- | --------------------------------- | ------------------------------ |
+| GET      | `/auth/oauth/providers`           | 可用 OAuth Provider            |
+| GET      | `/auth/oauth/:provider/authorize` | 获取 Provider 的授权跳转地址   |
+| GET/POST | `/auth/oauth/:provider/callback`  | Provider 回调                  |
+| POST     | `/auth/oauth/bind`                | 绑定到现有账号                 |
+| POST     | `/auth/oauth/register-and-bind`   | 用 Provider 资料创建并绑定账号 |
 
 ### `/api/users/*`
 
@@ -61,12 +61,12 @@
 
 ### `/api/dashboard/*`
 
-| Method | 路径 | 备注 |
-|---|---|---|
-| GET | `/dashboard` | **公开** — 供公共门户使用的完整看板数据。 |
-| GET | `/dashboard/alerts` | 最近告警。 |
-| GET | `/dashboard/settings` | 当前用户的看板配置。 |
-| PUT | `/dashboard/settings` | 更新当前用户的看板配置。 |
+| Method | 路径                  | 备注                                      |
+| ------ | --------------------- | ----------------------------------------- |
+| GET    | `/dashboard`          | **公开** — 供公共门户使用的完整看板数据。 |
+| GET    | `/dashboard/alerts`   | 最近告警。                                |
+| GET    | `/dashboard/settings` | 当前用户的看板配置。                      |
+| PUT    | `/dashboard/settings` | 更新当前用户的看板配置。                  |
 
 ### `/api/overview/*`
 
@@ -94,13 +94,13 @@
 
 ### `/api/files/*`
 
-| Method | 路径 | 说明 |
-|---|---|---|
-| GET    | `/files` | 列出上传文件。 |
-| POST   | `/files` | multipart 上传，单文件最大 100 MB。 |
-| GET    | `/files/:id` | 仅元数据。 |
-| GET    | `/files/:id/raw` | 流式返回二进制。 |
-| DELETE | `/files/:id` | 删除。 |
+| Method | 路径             | 说明                                |
+| ------ | ---------------- | ----------------------------------- |
+| GET    | `/files`         | 列出上传文件。                      |
+| POST   | `/files`         | multipart 上传，单文件最大 100 MB。 |
+| GET    | `/files/:id`     | 仅元数据。                          |
+| GET    | `/files/:id/raw` | 流式返回二进制。                    |
+| DELETE | `/files/:id`     | 删除。                              |
 
 ### `/api/models/*`
 
@@ -110,13 +110,13 @@
 
 代理上游 IoT 网关。请求/响应保持上游契约，EcoCtrl 透明处理 token 刷新（依赖 `iot_tokens` 表）。
 
-| 路径 | 说明 |
-|---|---|
-| `/iot/token` | 返回缓存的 Access Token。 |
-| `/iot/codes/values` | 读取当前点位值。 |
-| `/iot/codes/history` | 点位历史值。 |
-| `/iot/codes/set`、`/iot/codes/force-set` | 点位写值。 |
-| `/iot/alarms`、`/iot/alarm-configs` | 报警历史与报警配置。 |
+| 路径                                     | 说明                      |
+| ---------------------------------------- | ------------------------- |
+| `/iot/token`                             | 返回缓存的 Access Token。 |
+| `/iot/codes/values`                      | 读取当前点位值。          |
+| `/iot/codes/history`                     | 点位历史值。              |
+| `/iot/codes/set`、`/iot/codes/force-set` | 点位写值。                |
+| `/iot/alarms`、`/iot/alarm-configs`      | 报警历史与报警配置。      |
 
 ### `/api/system/*`
 

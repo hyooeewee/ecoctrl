@@ -75,11 +75,7 @@ export async function updateModel(
   if (data.size !== undefined) updateData.size = data.size;
   if (data.fileUrl !== undefined) updateData.fileUrl = data.fileUrl;
 
-  const result = await db
-    .update(models)
-    .set(updateData)
-    .where(eq(models.id, id))
-    .returning();
+  const result = await db.update(models).set(updateData).where(eq(models.id, id)).returning();
   if (result.length === 0) return null;
   const r = result[0];
   return {

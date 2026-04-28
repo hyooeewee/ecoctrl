@@ -24,12 +24,15 @@ export async function findThreeDConfig(): Promise<ThreeDConfig | null> {
 export async function updateThreeDConfig(config: ThreeDConfig): Promise<ThreeDConfig> {
   const rows = await db.select().from(threeDConfigs).limit(1);
   if (rows.length === 0) {
-    const result = await db.insert(threeDConfigs).values({
-      cameraPreset: config.cameraPreset,
-      ambientLightIntensity: config.ambientLightIntensity,
-      hotspots: config.hotspots,
-      labels: config.labels,
-    }).returning();
+    const result = await db
+      .insert(threeDConfigs)
+      .values({
+        cameraPreset: config.cameraPreset,
+        ambientLightIntensity: config.ambientLightIntensity,
+        hotspots: config.hotspots,
+        labels: config.labels,
+      })
+      .returning();
     const r = result[0];
     return {
       cameraPreset: r.cameraPreset,

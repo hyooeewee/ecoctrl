@@ -85,7 +85,7 @@ export default function Preferences({ userId, initialPrefs, onSaved }: Preferenc
       }
     };
     fetchPrefs();
-  }, [userId, initialPrefs]);
+  }, [userId, initialPrefs, onSaved]);
 
   // Cleanup timers on unmount
   useEffect(() => {

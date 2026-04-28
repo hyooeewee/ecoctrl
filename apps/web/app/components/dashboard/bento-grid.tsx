@@ -271,6 +271,21 @@ export function BentoGrid({ children, className }: BentoGridProps) {
 
 // ─── Size Panel ───────────────────────────────────────────────────────────────
 
+function stepBtn(label: string, onClick: () => void) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className="flex h-5 w-5 items-center justify-center rounded bg-white/10 text-[10px] text-foreground hover:bg-white/20"
+    >
+      {label}
+    </button>
+  );
+}
+
 function SizePanel({
   w,
   h,
@@ -331,19 +346,6 @@ function SizePanel({
       commit(localW, val);
     }
   };
-
-  const stepBtn = (label: string, onClick: () => void) => (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick();
-      }}
-      className="flex h-5 w-5 items-center justify-center rounded bg-white/10 text-[10px] text-foreground hover:bg-white/20"
-    >
-      {label}
-    </button>
-  );
 
   return (
     <div

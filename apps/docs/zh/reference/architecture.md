@@ -99,12 +99,12 @@ Repository 函数遵循 Prisma 风格（`createXxx`、`findManyXxx`、`findXxxBy
 
 ## 构建流水线
 
-| 包 | 工具 | 输出 |
-|---|---|---|
-| `apps/web`、`apps/admin` | `vp build`（vite-plus + Rolldown） | 静态 SPA bundle |
-| `packages/server` | `rolldown` | `dist/index.mjs` + 自动生成的 `dist/package.json` |
-| `apps/docs` | `vitepress build` | `.vitepress/dist/` 下的静态站点 |
-| `packages/ui`、`packages/shared` | 无 — 以源码形式被消费 | 不适用 |
+| 包                               | 工具                               | 输出                                              |
+| -------------------------------- | ---------------------------------- | ------------------------------------------------- |
+| `apps/web`、`apps/admin`         | `vp build`（vite-plus + Rolldown） | 静态 SPA bundle                                   |
+| `packages/server`                | `rolldown`                         | `dist/index.mjs` + 自动生成的 `dist/package.json` |
+| `apps/docs`                      | `vitepress build`                  | `.vitepress/dist/` 下的静态站点                   |
+| `packages/ui`、`packages/shared` | 无 — 以源码形式被消费              | 不适用                                            |
 
 服务端的 Rolldown 配置把所有 bare specifier 与 Node 内置全部外部化。一个自定义插件随后扫描 bundle 用到的外部 import，从源 `package.json` 中读取版本，写出仅包含运行时依赖的全新 `dist/package.json`。release zip 因此只需要 `pnpm install --prod` 就能跑起来。
 

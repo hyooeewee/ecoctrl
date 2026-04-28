@@ -14,21 +14,13 @@ import {
   createUser,
   updateUser,
 } from "@/repositories/users";
-import {
-  createRefreshToken,
-  deleteRefreshToken,
-  deleteRefreshTokensByUserId,
-} from "@/repositories/refreshTokens";
+import { createRefreshToken, deleteRefreshTokensByUserId } from "@/repositories/refreshTokens";
 import bcrypt from "bcryptjs";
 
-const hashRefreshToken = (token: string) =>
-  crypto.createHash("sha256").update(token).digest("hex");
+const hashRefreshToken = (token: string) => crypto.createHash("sha256").update(token).digest("hex");
 
 // In-memory state store for OAuth CSRF protection: state -> { provider, redirectUri, expiresAt }
-const stateStore = new Map<
-  string,
-  { provider: string; redirectUri: string; expiresAt: number }
->();
+const stateStore = new Map<string, { provider: string; redirectUri: string; expiresAt: number }>();
 
 // In-memory temp bind token store: token -> { provider, providerUserId, providerEmail, nickname, avatarUrl, expiresAt }
 const tempBindStore = new Map<
@@ -127,19 +119,16 @@ function getFeishuAuthorizeUrl(state: string, redirectUri: string) {
 async function feishuExchangeToken(code: string) {
   const appId = process.env.FEISHU_APP_ID!;
   const secret = process.env.FEISHU_APP_SECRET!;
-  const res = await fetch(
-    "https://open.feishu.cn/open-apis/authen/v2/oauth/token",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        grant_type: "authorization_code",
-        client_id: appId,
-        client_secret: secret,
-        code,
-      }),
-    },
-  );
+  const res = await fetch("https://open.feishu.cn/open-apis/authen/v2/oauth/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      grant_type: "authorization_code",
+      client_id: appId,
+      client_secret: secret,
+      code,
+    }),
+  });
   const json = (await res.json()) as {
     code?: number;
     msg?: string;
@@ -160,12 +149,9 @@ async function feishuExchangeToken(code: string) {
 }
 
 async function feishuGetUserInfo(accessToken: string) {
-  const res = await fetch(
-    "https://open.feishu.cn/open-apis/authen/v2/user_info",
-    {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    },
-  );
+  const res = await fetch("https://open.feishu.cn/open-apis/authen/v2/user_info", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
   const json = (await res.json()) as {
     code?: number;
     msg?: string;
@@ -190,11 +176,7 @@ async function feishuGetUserInfo(accessToken: string) {
 
 // ─── Common helpers ───────────────────────────────────────
 
-async function issueTokens(
-  fastify: FastifyInstance,
-  userId: string,
-  username: string,
-) {
+async function issueTokens(fastify: FastifyInstance, userId: string, username: string) {
   const accessToken = fastify.jwt.sign({ userId, username });
   const refreshToken = crypto.randomBytes(32).toString("base64");
   const tokenHash = hashRefreshToken(refreshToken);
@@ -325,10 +307,7 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
 
         if (provider === "wechat") {
           const tokenData = await wechatExchangeToken(code);
-          const userInfo = await wechatGetUserInfo(
-            tokenData.accessToken,
-            tokenData.openid,
-          );
+          const userInfo = await wechatGetUserInfo(tokenData.accessToken, tokenData.openid);
           oauthInfo = {
             providerUserId: userInfo.providerUserId,
             accessToken: tokenData.accessToken,
@@ -355,24 +334,17 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
         }
 
         // 1. Check if this OAuth account is already bound
-        const existingAccount = await findOAuthAccount(
-          provider,
-          oauthInfo.providerUserId,
-        );
+        const existingAccount = await findOAuthAccount(provider, oauthInfo.providerUserId);
         if (existingAccount) {
           const user = await findUserById(existingAccount.userId);
           if (!user) {
             return reply.status(404).send({ error: "User not found" });
           }
           const tokens = await issueTokens(fastify, user.id, user.username);
-          const redirect = getFrontendRedirectUrl(
-            stored.redirectUri,
-            "/oauth/success",
-            {
-              accessToken: tokens.accessToken,
-              refreshToken: tokens.refreshToken,
-            },
-          );
+          const redirect = getFrontendRedirectUrl(stored.redirectUri, "/oauth/success", {
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
+          });
           return reply.redirect(redirect);
         }
 
@@ -389,19 +361,11 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
               refreshToken: oauthInfo.refreshToken ?? null,
               expiresAt: new Date(Date.now() + oauthInfo.expiresIn * 1000),
             });
-            const tokens = await issueTokens(
-              fastify,
-              userByEmail.id,
-              userByEmail.username,
-            );
-            const redirect = getFrontendRedirectUrl(
-              stored.redirectUri,
-              "/oauth/success",
-              {
-                accessToken: tokens.accessToken,
-                refreshToken: tokens.refreshToken,
-              },
-            );
+            const tokens = await issueTokens(fastify, userByEmail.id, userByEmail.username);
+            const redirect = getFrontendRedirectUrl(stored.redirectUri, "/oauth/success", {
+              accessToken: tokens.accessToken,
+              refreshToken: tokens.refreshToken,
+            });
             return reply.redirect(redirect);
           }
         }
@@ -417,28 +381,17 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
           expiresAt: Date.now() + 10 * 60 * 1000,
         });
 
-        const redirect = getFrontendRedirectUrl(
-          stored.redirectUri,
-          "/oauth/bind",
-          {
-            provider,
-            tempToken,
-            ...(oauthInfo.nickname
-              ? { nickname: oauthInfo.nickname }
-              : {}),
-          },
-        );
+        const redirect = getFrontendRedirectUrl(stored.redirectUri, "/oauth/bind", {
+          provider,
+          tempToken,
+          ...(oauthInfo.nickname ? { nickname: oauthInfo.nickname } : {}),
+        });
         return reply.redirect(redirect);
       } catch (err) {
         fastify.log.error(err);
-        const redirect = getFrontendRedirectUrl(
-          stored.redirectUri,
-          "/oauth/error",
-          {
-            message:
-              err instanceof Error ? err.message : "OAuth authentication failed",
-          },
-        );
+        const redirect = getFrontendRedirectUrl(stored.redirectUri, "/oauth/error", {
+          message: err instanceof Error ? err.message : "OAuth authentication failed",
+        });
         return reply.redirect(redirect);
       }
     },

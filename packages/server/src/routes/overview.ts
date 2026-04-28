@@ -1,9 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import {
-  DashboardStatsSchema,
-  EnergyChartItemSchema,
-} from "@ecoctrl/shared";
+import { DashboardStatsSchema, EnergyChartItemSchema } from "@ecoctrl/shared";
 import type { DashboardStats, EnergyChartItem } from "@ecoctrl/shared";
 import { findDashboardStats, findEnergyChart } from "@/repositories/dashboard";
 

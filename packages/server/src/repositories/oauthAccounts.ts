@@ -12,18 +12,12 @@ export interface OAuthAccountInput {
   expiresAt?: Date | null;
 }
 
-export async function findOAuthAccount(
-  provider: string,
-  providerUserId: string,
-) {
+export async function findOAuthAccount(provider: string, providerUserId: string) {
   const rows = await db
     .select()
     .from(oauthAccounts)
     .where(
-      and(
-        eq(oauthAccounts.provider, provider),
-        eq(oauthAccounts.providerUserId, providerUserId),
-      ),
+      and(eq(oauthAccounts.provider, provider), eq(oauthAccounts.providerUserId, providerUserId)),
     )
     .limit(1);
   return rows[0] ?? null;
@@ -48,12 +42,7 @@ export async function createOAuthAccount(data: OAuthAccountInput) {
 export async function unlinkOAuthAccount(userId: string, provider: string) {
   const result = await db
     .delete(oauthAccounts)
-    .where(
-      and(
-        eq(oauthAccounts.userId, userId),
-        eq(oauthAccounts.provider, provider),
-      ),
-    )
+    .where(and(eq(oauthAccounts.userId, userId), eq(oauthAccounts.provider, provider)))
     .returning();
   return result[0] ?? null;
 }

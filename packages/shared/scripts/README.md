@@ -54,12 +54,12 @@ THIRD_PARTY_TOKEN=your-token-here
 node gen-env-example.mjs [--src <file>] [--dest <file>] [--check] [-h|--help]
 ```
 
-| Flag | 说明 |
-|---|---|
-| `--src <file>` | 源文件路径,默认 `.env.local` |
-| `--dest <file>` | 目标文件路径,默认 `.env.example` |
-| `--check` | 只校验不写入;若目标文件与生成内容不同,exit 1 |
-| `--help` | 显示帮助 |
+| Flag            | 说明                                         |
+| --------------- | -------------------------------------------- |
+| `--src <file>`  | 源文件路径,默认 `.env.local`                 |
+| `--dest <file>` | 目标文件路径,默认 `.env.example`             |
+| `--check`       | 只校验不写入;若目标文件与生成内容不同,exit 1 |
+| `--help`        | 显示帮助                                     |
 
 ## Monorepo 集成
 

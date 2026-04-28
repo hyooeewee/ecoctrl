@@ -33,12 +33,7 @@ async function resolveSmtpConfig(): Promise<SmtpConfig | null> {
   }
 
   const dbConfig = await findPlatformConfig();
-  if (
-    dbConfig &&
-    dbConfig.smtpHost &&
-    dbConfig.smtpUser &&
-    dbConfig.smtpPass
-  ) {
+  if (dbConfig && dbConfig.smtpHost && dbConfig.smtpUser && dbConfig.smtpPass) {
     return {
       smtpHost: dbConfig.smtpHost,
       smtpPort: dbConfig.smtpPort,
@@ -64,8 +59,8 @@ async function buildTransporter(): Promise<Transporter | null> {
   // - 465 (SSL/TLS): secure=true
   // - 587 (STARTTLS): secure=false + requireTLS=true
   // - others: respect env/config settings
-  const useSecure = config.smtpPort === 465 ? true : config.smtpSecure;
-  const requireTLS = config.smtpPort === 587 ? true : false;
+  const useSecure = config.smtpPort === 465 || config.smtpSecure;
+  const requireTLS = config.smtpPort === 587;
 
   const transportOptions = {
     host: config.smtpHost,
@@ -87,7 +82,7 @@ async function buildTransporter(): Promise<Transporter | null> {
   };
 
   console.log(
-    `[SMTP] Connecting to ${config.smtpHost}:${config.smtpPort} (secure=${useSecure}, requireTLS=${requireTLS})`
+    `[SMTP] Connecting to ${config.smtpHost}:${config.smtpPort} (secure=${useSecure}, requireTLS=${requireTLS})`,
   );
 
   const t = nodemailer.createTransport(transportOptions);
@@ -98,7 +93,7 @@ async function buildTransporter(): Promise<Transporter | null> {
   } catch (verifyErr) {
     const err = verifyErr as Error & { code?: string; command?: string };
     console.error(
-      `[SMTP] Connection verify failed: ${err.message} (code=${err.code}, command=${err.command})`
+      `[SMTP] Connection verify failed: ${err.message} (code=${err.code}, command=${err.command})`,
     );
 
     if (err.code === "ETIMEDOUT" || err.message.includes("Timeout")) {
@@ -106,12 +101,14 @@ async function buildTransporter(): Promise<Transporter | null> {
         `SMTP connection timed out to ${config.smtpHost}:${config.smtpPort}. ` +
           `Please verify: 1) Host/port are correct. 2) Firewall allows outbound on this port. ` +
           `3) For 163/QQ mail, you must use the "authorization code" (not login password). ` +
-          `4) Port 465 needs secure=true; port 587 needs secure=false with STARTTLS.`
+          `4) Port 465 needs secure=true; port 587 needs secure=false with STARTTLS.`,
+        { cause: verifyErr },
       );
     }
     if (err.message.includes("Invalid login") || err.message.includes("AUTH")) {
       throw new Error(
-        `SMTP authentication failed. For 163/QQ mail, use the "authorization code" (授权码) instead of your login password.`
+        `SMTP authentication failed. For 163/QQ mail, use the "authorization code" (授权码) instead of your login password.`,
+        { cause: verifyErr },
       );
     }
     throw err;

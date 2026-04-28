@@ -16,9 +16,7 @@ export default defineConfig({
   themeConfig: {
     logo: "/logo.svg",
 
-    socialLinks: [
-      { icon: "github", link: "https://github.com/hyooeewee/ecoctrl" },
-    ],
+    socialLinks: [{ icon: "github", link: "https://github.com/hyooeewee/ecoctrl" }],
 
     search: {
       provider: "local",
@@ -99,8 +97,7 @@ export default defineConfig({
         },
 
         editLink: {
-          pattern:
-            "https://github.com/hyooeewee/ecoctrl/edit/main/apps/docs/:path",
+          pattern: "https://github.com/hyooeewee/ecoctrl/edit/main/apps/docs/:path",
           text: "Edit this page on GitHub",
         },
 
@@ -184,8 +181,7 @@ export default defineConfig({
         },
 
         editLink: {
-          pattern:
-            "https://github.com/hyooeewee/ecoctrl/edit/main/apps/docs/:path",
+          pattern: "https://github.com/hyooeewee/ecoctrl/edit/main/apps/docs/:path",
           text: "在 GitHub 上编辑此页",
         },
 

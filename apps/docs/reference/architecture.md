@@ -99,12 +99,12 @@ Repository functions follow Prisma-style naming (`createXxx`, `findManyXxx`, `fi
 
 ## Build pipeline
 
-| Package | Tool | Output |
-|---|---|---|
-| `apps/web`, `apps/admin` | `vp build` (vite-plus + Rolldown) | static SPA bundle |
-| `packages/server` | `rolldown` | `dist/index.mjs` + auto-emitted `dist/package.json` |
-| `apps/docs` | `vitepress build` | static site under `.vitepress/dist/` |
-| `packages/ui`, `packages/shared` | none — consumed as source | n/a |
+| Package                          | Tool                              | Output                                              |
+| -------------------------------- | --------------------------------- | --------------------------------------------------- |
+| `apps/web`, `apps/admin`         | `vp build` (vite-plus + Rolldown) | static SPA bundle                                   |
+| `packages/server`                | `rolldown`                        | `dist/index.mjs` + auto-emitted `dist/package.json` |
+| `apps/docs`                      | `vitepress build`                 | static site under `.vitepress/dist/`                |
+| `packages/ui`, `packages/shared` | none — consumed as source         | n/a                                                 |
 
 The server's Rolldown config externalizes every bare specifier and Node built-in. A custom plugin then walks the bundle's external imports, looks each version up in the source `package.json`, and writes a fresh `dist/package.json` listing only the runtime dependencies. The released zip can therefore be installed on any host with `pnpm install --prod`.
 

@@ -60,11 +60,13 @@ const tokenResponseSchema = z.object({
   }),
 });
 
-const refreshBodySchema = z.object({
-  refreshToken: z.string(),
-}).meta({
-  example: { refreshToken: "auto-filled after login" },
-});
+const refreshBodySchema = z
+  .object({
+    refreshToken: z.string(),
+  })
+  .meta({
+    example: { refreshToken: "auto-filled after login" },
+  });
 
 export default async function authRoutes(fastify: FastifyInstance) {
   fastify.post(

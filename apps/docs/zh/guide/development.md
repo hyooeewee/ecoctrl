@@ -66,12 +66,12 @@ cd ../..
 
 其他常用数据库脚本：
 
-| 命令 | 作用 |
-|---|---|
-| `pnpm db:migrate` | 应用 `drizzle/` 下的待执行迁移 |
-| `pnpm db:studio` | 在浏览器中打开 Drizzle Studio |
-| `pnpm db:refresh` | 删库 → push → seed → 打开 Studio。**会清空所有数据** |
-| `pnpm db:generate` | 根据 schema 差异生成新的迁移 |
+| 命令               | 作用                                                 |
+| ------------------ | ---------------------------------------------------- |
+| `pnpm db:migrate`  | 应用 `drizzle/` 下的待执行迁移                       |
+| `pnpm db:studio`   | 在浏览器中打开 Drizzle Studio                        |
+| `pnpm db:refresh`  | 删库 → push → seed → 打开 Studio。**会清空所有数据** |
+| `pnpm db:generate` | 根据 schema 差异生成新的迁移                         |
 
 ## 5. 启动开发服务
 

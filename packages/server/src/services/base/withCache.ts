@@ -9,10 +9,7 @@ export interface CacheStats {
   expiresAt: number | null;
 }
 
-export function withCache<T>(
-  fn: () => Promise<T>,
-  ttlMs: number,
-) {
+export function withCache<T>(fn: () => Promise<T>, ttlMs: number) {
   let cache: CacheEntry<T> | null = null;
   let hits = 0;
   let misses = 0;

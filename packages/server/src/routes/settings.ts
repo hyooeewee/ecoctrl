@@ -26,14 +26,16 @@ const DashboardSettingsSchema = z.object({
   defaultRotationY: z.number().min(0).max(360).optional(),
   dataRefreshInterval: z.number().min(5).max(120).optional(),
   navHideDelay: z.number().min(1000).max(15000).optional(),
-  editAutoExitDelay: z.union([
-    z.literal(0),
-    z.literal(15000),
-    z.literal(30000),
-    z.literal(60000),
-    z.literal(120000),
-    z.literal(300000),
-  ]).optional(),
+  editAutoExitDelay: z
+    .union([
+      z.literal(0),
+      z.literal(15000),
+      z.literal(30000),
+      z.literal(60000),
+      z.literal(120000),
+      z.literal(300000),
+    ])
+    .optional(),
   bentoLayout: z.array(BentoLayoutItemSchema).optional(),
 });
 
@@ -71,14 +73,17 @@ export default async function settingsRoutes(fastify: FastifyInstance) {
 
       const settings = await findUserSettings(user.id);
 
-      const existingLayout = (settings.bentoLayout as Array<{
-        id: string;
-        x: number;
-        y: number;
-        w: number;
-        h: number;
-        hidden?: boolean;
-      }> | undefined) ?? [];
+      const existingLayout =
+        (settings.bentoLayout as
+          | Array<{
+              id: string;
+              x: number;
+              y: number;
+              w: number;
+              h: number;
+              hidden?: boolean;
+            }>
+          | undefined) ?? [];
       const existingMap = new Map(existingLayout.map((item) => [item.id, item]));
 
       const mergedLayout = defaultLayout.map((item) => {

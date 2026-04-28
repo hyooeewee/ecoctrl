@@ -4,14 +4,14 @@ EcoCtrl persists everything in a single PostgreSQL database. The schema is defin
 
 ## Workflow
 
-| Command | Purpose |
-|---|---|
+| Command            | Purpose                                                                                                  |
+| ------------------ | -------------------------------------------------------------------------------------------------------- |
 | `pnpm db:generate` | Diff the current schema against the previous one and emit a new migration in `packages/server/drizzle/`. |
-| `pnpm db:migrate` | Apply pending migrations. |
-| `pnpm db:push` | Push the current schema directly (dev shortcut — no migration history). |
-| `pnpm db:seed` | Insert sample users, dashboards and energy data. |
-| `pnpm db:refresh` | Drop → push → seed → open Drizzle Studio. **Destructive.** |
-| `pnpm db:studio` | Open Drizzle Studio against the configured database. |
+| `pnpm db:migrate`  | Apply pending migrations.                                                                                |
+| `pnpm db:push`     | Push the current schema directly (dev shortcut — no migration history).                                  |
+| `pnpm db:seed`     | Insert sample users, dashboards and energy data.                                                         |
+| `pnpm db:refresh`  | Drop → push → seed → open Drizzle Studio. **Destructive.**                                               |
+| `pnpm db:studio`   | Open Drizzle Studio against the configured database.                                                     |
 
 Schemas re-export from `schemas/index.ts`, so any new table only needs to be added once there.
 
@@ -21,43 +21,43 @@ Schemas re-export from `schemas/index.ts`, so any new table only needs to be add
 
 #### `users`
 
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | Generated server-side. |
-| `username` | varchar(255) | Unique-ish — also used as login identifier. |
-| `password` | varchar(255) | bcrypt hash, nullable for OAuth-only accounts. |
-| `email` | varchar(255) | Required, used for verification codes. |
-| `role` | varchar(100) | Defaults to the lowest role from `USER_ROLE_LIST`. |
-| `status` | varchar(20) | `online` / `offline`. |
-| `lastLogin` | varchar(50) | Free-form timestamp string. |
-| `avatarUrl` | varchar(500) | Nullable. |
-| `preferences` | jsonb | UI preferences blob. |
-| `createdAt` | timestamptz | `defaultNow()`. |
+| Column        | Type         | Notes                                              |
+| ------------- | ------------ | -------------------------------------------------- |
+| `id`          | uuid PK      | Generated server-side.                             |
+| `username`    | varchar(255) | Unique-ish — also used as login identifier.        |
+| `password`    | varchar(255) | bcrypt hash, nullable for OAuth-only accounts.     |
+| `email`       | varchar(255) | Required, used for verification codes.             |
+| `role`        | varchar(100) | Defaults to the lowest role from `USER_ROLE_LIST`. |
+| `status`      | varchar(20)  | `online` / `offline`.                              |
+| `lastLogin`   | varchar(50)  | Free-form timestamp string.                        |
+| `avatarUrl`   | varchar(500) | Nullable.                                          |
+| `preferences` | jsonb        | UI preferences blob.                               |
+| `createdAt`   | timestamptz  | `defaultNow()`.                                    |
 
 #### `oauth_accounts`
 
 Links a `users.id` to one or more external providers (WeChat, Feishu).
 
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `userId` | uuid FK → users(id) | `ON DELETE CASCADE`. |
-| `provider` | varchar(50) | `wechat`, `feishu`. |
-| `providerUserId` | varchar(255) | The provider's stable user id. |
-| `providerEmail` | varchar(255) | Optional. |
-| `accessToken` | varchar(1000) | Provider-issued. |
-| `refreshToken` | varchar(1000) | Provider-issued. |
-| `expiresAt` | timestamptz | Provider-issued expiry. |
+| Column           | Type                | Notes                          |
+| ---------------- | ------------------- | ------------------------------ |
+| `id`             | uuid PK             |                                |
+| `userId`         | uuid FK → users(id) | `ON DELETE CASCADE`.           |
+| `provider`       | varchar(50)         | `wechat`, `feishu`.            |
+| `providerUserId` | varchar(255)        | The provider's stable user id. |
+| `providerEmail`  | varchar(255)        | Optional.                      |
+| `accessToken`    | varchar(1000)       | Provider-issued.               |
+| `refreshToken`   | varchar(1000)       | Provider-issued.               |
+| `expiresAt`      | timestamptz         | Provider-issued expiry.        |
 
 #### `refresh_tokens`
 
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `userId` | uuid FK → users(id) | `ON DELETE CASCADE`. |
-| `tokenHash` | varchar(255) | sha256 of the issued refresh token. |
-| `expiresAt` | timestamptz | 7 days from issuance. |
-| `createdAt` | timestamptz | |
+| Column      | Type                | Notes                               |
+| ----------- | ------------------- | ----------------------------------- |
+| `id`        | uuid PK             |                                     |
+| `userId`    | uuid FK → users(id) | `ON DELETE CASCADE`.                |
+| `tokenHash` | varchar(255)        | sha256 of the issued refresh token. |
+| `expiresAt` | timestamptz         | 7 days from issuance.               |
+| `createdAt` | timestamptz         |                                     |
 
 Each successful login deletes the user's previous refresh tokens before inserting the new one — this is the mechanism behind single-device sessions.
 
@@ -71,12 +71,12 @@ Per-user dashboard layout preferences stored as a single jsonb blob, keyed by `u
 
 Single-row token cache for the upstream IoT gateway.
 
-| Column | Type | Notes |
-|---|---|---|
-| `id` | serial PK | |
-| `accessToken` | text | |
-| `refreshToken` | text | |
-| `expiresAt` | bigint | Absolute expiry as ms-epoch. |
+| Column         | Type      | Notes                        |
+| -------------- | --------- | ---------------------------- |
+| `id`           | serial PK |                              |
+| `accessToken`  | text      |                              |
+| `refreshToken` | text      |                              |
+| `expiresAt`    | bigint    | Absolute expiry as ms-epoch. |
 
 ### Operational data
 

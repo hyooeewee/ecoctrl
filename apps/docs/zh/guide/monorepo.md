@@ -74,8 +74,8 @@ vite-plus 是 Voidzero 发行的 Vite 超集，提供：
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./index.css": "./src/index.css"
-  }
+    "./index.css": "./src/index.css",
+  },
 }
 ```
 
@@ -111,11 +111,11 @@ pnpm changeset
 
 ## 路径别名速查
 
-| App | 别名 | 解析到 |
-|---|---|---|
-| `apps/admin` | `@/` | `apps/admin/src/` |
-| `apps/web` | `~/` | `apps/web/app/` |
-| `apps/web` | `~/components/ui` | `apps/web/app/components/ui`（web 项目本地的 shadcn 副本） |
-| `packages/server` | `@/` | `packages/server/src/` |
+| App               | 别名              | 解析到                                                     |
+| ----------------- | ----------------- | ---------------------------------------------------------- |
+| `apps/admin`      | `@/`              | `apps/admin/src/`                                          |
+| `apps/web`        | `~/`              | `apps/web/app/`                                            |
+| `apps/web`        | `~/components/ui` | `apps/web/app/components/ui`（web 项目本地的 shadcn 副本） |
+| `packages/server` | `@/`              | `packages/server/src/`                                     |
 
 如果你在 `@ecoctrl/ui` 源码里看到 `@/`，那正是 `resolveUiAlias()` 处理的场景，请保持原样。

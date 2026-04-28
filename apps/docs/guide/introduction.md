@@ -11,14 +11,14 @@ It is designed for facility teams who need to:
 
 ## At a glance
 
-| Layer | Stack | Purpose |
-|---|---|---|
-| `apps/web` | React Router 7 + Babylon.js + TailwindCSS v4 | Public 3D portal — building view, floors, systems, analysis |
-| `apps/admin` | React 19 + Recharts + TailwindCSS v4 | Internal admin dashboard — accounts, devices, models, reports, settings |
-| `apps/docs` | VitePress 2 | This documentation site |
-| `packages/server` | Fastify 5 + Drizzle ORM + PostgreSQL + Rolldown | REST API and IoT gateway proxy |
-| `packages/ui` | React + Base UI + TailwindCSS v4 | Shared component library (shadcn/ui style) |
-| `packages/shared` | Zod + TypeScript | Shared schemas, types and Vite tooling |
+| Layer             | Stack                                           | Purpose                                                                 |
+| ----------------- | ----------------------------------------------- | ----------------------------------------------------------------------- |
+| `apps/web`        | React Router 7 + Babylon.js + TailwindCSS v4    | Public 3D portal — building view, floors, systems, analysis             |
+| `apps/admin`      | React 19 + Recharts + TailwindCSS v4            | Internal admin dashboard — accounts, devices, models, reports, settings |
+| `apps/docs`       | VitePress 2                                     | This documentation site                                                 |
+| `packages/server` | Fastify 5 + Drizzle ORM + PostgreSQL + Rolldown | REST API and IoT gateway proxy                                          |
+| `packages/ui`     | React + Base UI + TailwindCSS v4                | Shared component library (shadcn/ui style)                              |
+| `packages/shared` | Zod + TypeScript                                | Shared schemas, types and Vite tooling                                  |
 
 ## High-level architecture
 

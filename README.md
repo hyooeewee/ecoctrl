@@ -13,13 +13,13 @@ An energy & IoT control platform built as a pnpm monorepo, featuring 3D visualiz
 
 ## Architecture
 
-| Package | Stack | Description |
-|---------|-------|-------------|
-| `apps/admin` | React 19 + vite-plus + TailwindCSS + Recharts | Admin dashboard |
-| `apps/web` | React Router 7 + Babylon.js + vite-plus + TailwindCSS | Public 3D portal |
-| `packages/server` | Fastify 5 + Drizzle ORM + PostgreSQL + Rolldown | REST API (bundled with auto-generated `dist/package.json`) |
-| `packages/ui` | React + TailwindCSS + Base UI | Shared component library |
-| `packages/shared` | Zod + TypeScript + shared Vite configs | Shared schemas, types, and build utilities |
+| Package           | Stack                                                 | Description                                                |
+| ----------------- | ----------------------------------------------------- | ---------------------------------------------------------- |
+| `apps/admin`      | React 19 + vite-plus + TailwindCSS + Recharts         | Admin dashboard                                            |
+| `apps/web`        | React Router 7 + Babylon.js + vite-plus + TailwindCSS | Public 3D portal                                           |
+| `packages/server` | Fastify 5 + Drizzle ORM + PostgreSQL + Rolldown       | REST API (bundled with auto-generated `dist/package.json`) |
+| `packages/ui`     | React + TailwindCSS + Base UI                         | Shared component library                                   |
+| `packages/shared` | Zod + TypeScript + shared Vite configs                | Shared schemas, types, and build utilities                 |
 
 ## Running with Docker (Recommended)
 
@@ -32,11 +32,11 @@ cp .env.example .env.local
 docker compose -f compose.yml up --build
 ```
 
-| Service | URL |
-|---------|-----|
-| Web | http://localhost:8081 |
-| Admin | http://localhost:4173 |
-| API | http://localhost:3000 |
+| Service  | URL                                 |
+| -------- | ----------------------------------- |
+| Web      | http://localhost:8081               |
+| Admin    | http://localhost:4173               |
+| API      | http://localhost:3000               |
 | API Docs | http://localhost:3000/documentation |
 
 ## Running from Release
@@ -79,11 +79,11 @@ cp server/.env.example server/.env.local
 ./start.sh
 ```
 
-| Service | URL |
-|---------|-----|
-| Web | http://localhost:8081 |
-| Admin | http://localhost:4173 |
-| API | http://localhost:3000 |
+| Service | URL                   |
+| ------- | --------------------- |
+| Web     | http://localhost:8081 |
+| Admin   | http://localhost:4173 |
+| API     | http://localhost:3000 |
 
 To stop:
 
@@ -183,23 +183,22 @@ Authentication: `Authorization: Bearer <accessToken>` (except public paths).
 
 ### Server (`packages/server/.env.example`)
 
-| Variable | Description |
-|----------|-------------|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `JWT_SECRET` | Secret key for JWT signing |
-| `BASE_URL` / `APP_ID` | External API credentials (optional) |
-| `SMTP_*` | SMTP configuration for email |
-| `OPENWEATHER_API_KEY` | OpenWeatherMap API key |
+| Variable                                           | Description                                    |
+| -------------------------------------------------- | ---------------------------------------------- |
+| `DATABASE_URL`                                     | PostgreSQL connection string                   |
+| `JWT_SECRET`                                       | Secret key for JWT signing                     |
+| `BASE_URL` / `APP_ID`                              | External API credentials (optional)            |
+| `SMTP_*`                                           | SMTP configuration for email                   |
+| `OPENWEATHER_API_KEY`                              | OpenWeatherMap API key                         |
 | `WEATHER_LAT` / `WEATHER_LNG` / `WEATHER_LOCATION` | Default weather coordinates (default: Beijing) |
-| `WECHAT_*` / `FEISHU_*` | OAuth app credentials (optional) |
+| `WECHAT_*` / `FEISHU_*`                            | OAuth app credentials (optional)               |
 
 ### Client (`apps/admin/.env.example`, `apps/web/.env.local`)
 
-| Variable | Description |
-|----------|-------------|
-| `VITE_API_BASE_URL` | Backend API base URL |
-| `VITE_API_PREFIX` | API route prefix (default: /api) |
-
+| Variable            | Description                      |
+| ------------------- | -------------------------------- |
+| `VITE_API_BASE_URL` | Backend API base URL             |
+| `VITE_API_PREFIX`   | API route prefix (default: /api) |
 
 ## License
 

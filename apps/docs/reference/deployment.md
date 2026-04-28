@@ -2,11 +2,11 @@
 
 EcoCtrl supports three production deployment shapes:
 
-| Shape | Best for | What you need |
-|---|---|---|
-| [Docker Compose](#docker-compose) | Single-host deploys, on-prem | Docker 24+ |
-| [Pre-built release zip](#pre-built-release) | Bare Linux hosts, no Docker | Node 20+, PostgreSQL, pm2 |
-| [Cloudflare Workers Static Assets](#docs-site) | The docs site | Cloudflare account |
+| Shape                                          | Best for                     | What you need             |
+| ---------------------------------------------- | ---------------------------- | ------------------------- |
+| [Docker Compose](#docker-compose)              | Single-host deploys, on-prem | Docker 24+                |
+| [Pre-built release zip](#pre-built-release)    | Bare Linux hosts, no Docker  | Node 20+, PostgreSQL, pm2 |
+| [Cloudflare Workers Static Assets](#docs-site) | The docs site                | Cloudflare account        |
 
 For the documentation site specifically, we ship to Cloudflare Workers; the rest of this page covers the application stack.
 
@@ -31,13 +31,13 @@ docker compose -f compose.yml up --build
 
 Services:
 
-| Service | Port | URL |
-|---|---|---|
-| Web portal | 8081 | `http://<host>:8081` |
-| Admin dashboard | 4173 | `http://<host>:4173` |
-| REST API | 3000 | `http://<host>:3000` |
-| Swagger UI | 3000 | `http://<host>:3000/documentation` |
-| PostgreSQL | 5432 | internal |
+| Service         | Port | URL                                |
+| --------------- | ---- | ---------------------------------- |
+| Web portal      | 8081 | `http://<host>:8081`               |
+| Admin dashboard | 4173 | `http://<host>:4173`               |
+| REST API        | 3000 | `http://<host>:3000`               |
+| Swagger UI      | 3000 | `http://<host>:3000/documentation` |
+| PostgreSQL      | 5432 | internal                           |
 
 ### Customizing
 
@@ -173,8 +173,8 @@ Output: `apps/docs/.vitepress/dist/`.
   "compatibility_date": "2026-04-26",
   "assets": {
     "directory": "./.vitepress/dist/",
-    "not_found_handling": "404-page"
-  }
+    "not_found_handling": "404-page",
+  },
 }
 ```
 
@@ -215,6 +215,6 @@ Before exposing EcoCtrl to the public internet:
 - [ ] Enable HTTPS at the proxy layer for `admin.*`, `app.*`, `api.*`.
 - [ ] Configure SMTP — without it, registration / password-reset codes fail silently.
 - [ ] If using OAuth, register the production callback URLs with each provider.
-- [ ] Schedule database backups (the platform's `backup_schedules` row only stores the *next* timestamp; real backups are still your responsibility).
+- [ ] Schedule database backups (the platform's `backup_schedules` row only stores the _next_ timestamp; real backups are still your responsibility).
 - [ ] Limit database role privileges in production: revoke `CREATE DATABASE` so the bootstrap auto-create only runs in dev.
 - [ ] Forward server logs to an aggregator (Fastify uses pino — JSON-on-stdout works with everything).

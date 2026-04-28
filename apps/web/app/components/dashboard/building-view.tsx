@@ -197,6 +197,10 @@ function animateCameraTo(
   });
 }
 
+const INITIAL_ALPHA = Math.PI / 4;
+const INITIAL_BETA = Math.PI / 2.8;
+const INITIAL_TARGET = new Vector3(0, 2, 0);
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface BuildingViewProps {
@@ -269,6 +273,25 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
     activeLabelRef.current = activeLabel;
   }, [activeLabel]);
 
+  const propsRef = useRef({
+    onCanvasClick,
+    onLoad,
+    onProgress,
+    glowIntensity,
+    defaultCameraRadius,
+    defaultRotationY,
+  });
+  useEffect(() => {
+    propsRef.current = {
+      onCanvasClick,
+      onLoad,
+      onProgress,
+      glowIntensity,
+      defaultCameraRadius,
+      defaultRotationY,
+    };
+  }, [onCanvasClick, onLoad, onProgress, glowIntensity, defaultCameraRadius, defaultRotationY]);
+
   const labelText: Record<string, string> = {
     office1: t.building.officeArea,
     meeting: t.building.meetingArea,
@@ -312,10 +335,6 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
     }
   }, [sidebarWidth]);
 
-  const initialAlpha = Math.PI / 4;
-  const initialBeta = Math.PI / 2.8;
-  const initialTarget = new Vector3(0, 2, 0);
-
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -332,10 +351,10 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
 
     const camera = new ArcRotateCamera(
       "camera",
-      initialAlpha,
-      initialBeta,
-      defaultCameraRadius,
-      initialTarget.clone(),
+      INITIAL_ALPHA,
+      INITIAL_BETA,
+      propsRef.current.defaultCameraRadius,
+      INITIAL_TARGET.clone(),
       scene,
     );
     camera.attachControl(canvas, true);
@@ -361,8 +380,8 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
 
     // Click on blank canvas to close immersive label view
     scene.onPointerDown = (_evt, pickInfo) => {
-      if (activeLabelRef.current && pickInfo.hit === false && onCanvasClick) {
-        onCanvasClick();
+      if (activeLabelRef.current && pickInfo.hit === false && propsRef.current.onCanvasClick) {
+        propsRef.current.onCanvasClick();
       }
     };
 
@@ -370,18 +389,18 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
     hemi.intensity = 0.6;
 
     const glow = new GlowLayer("glow", scene);
-    glow.intensity = glowIntensity;
+    glow.intensity = propsRef.current.glowIntensity;
     glowRef.current = glow;
 
     const pivot = new TransformNode("rotationPivot", scene);
-    pivot.rotation.y = (defaultRotationY * Math.PI) / 180;
+    pivot.rotation.y = (propsRef.current.defaultRotationY * Math.PI) / 180;
     rootMeshRef.current = pivot;
 
     SceneLoader.ImportMeshAsync("", "/", "building.glb", scene, (event) => {
       if (event.lengthComputable && event.total > 0) {
         const value = Math.min(99, (event.loaded / event.total) * 100);
         setLoadProgress(value);
-        onProgress?.(value);
+        propsRef.current.onProgress?.(value);
       }
     })
       .then((result) => {
@@ -446,7 +465,7 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
         }
         scene.stopAllAnimations();
         setLoadProgress(100);
-        onLoad?.();
+        propsRef.current.onLoad?.();
       })
       .catch((_err) => {
         /* silently ignore load errors */
@@ -537,7 +556,6 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
       },
       resetCamera: () => {
         const camera = cameraRef.current;
-        const canvas = canvasRef.current;
         if (!camera) return;
         const scene = camera.getScene();
         scene.stopAnimation(camera);
@@ -550,10 +568,10 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
           camera.radius = saved.radius;
           camera.target = saved.target.clone();
         } else {
-          camera.alpha = initialAlpha;
-          camera.beta = initialBeta;
+          camera.alpha = INITIAL_ALPHA;
+          camera.beta = INITIAL_BETA;
           camera.radius = defaultCameraRadius;
-          camera.target = initialTarget.clone();
+          camera.target = INITIAL_TARGET.clone();
         }
 
         // Reset viewport (remove sidebar offset)

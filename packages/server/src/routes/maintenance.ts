@@ -1,10 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import crypto from "node:crypto";
 import { z } from "zod";
-import {
-  MaintenanceReminderSchema,
-  MaintenanceReminderDetailSchema,
-} from "@ecoctrl/shared";
+import { MaintenanceReminderSchema, MaintenanceReminderDetailSchema } from "@ecoctrl/shared";
 import type { MaintenanceReminder, MaintenanceReminderDetail } from "@ecoctrl/shared";
 import { findManyReminders, updateReminder, deleteReminder } from "@/repositories/maintenance";
 

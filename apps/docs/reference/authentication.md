@@ -4,10 +4,10 @@ EcoCtrl uses short-lived JWT access tokens combined with rotating refresh tokens
 
 ## Token model
 
-| Token | Lifetime | Stored in | Issued by |
-|---|---|---|---|
-| Access | 15 minutes | Memory (admin) / `localStorage` (web) | `fastify.jwt.sign({ userId, username })` |
-| Refresh | 7 days | `refresh_tokens` table (sha256 hash) | `crypto.randomBytes(32).toString("base64")` |
+| Token   | Lifetime   | Stored in                             | Issued by                                   |
+| ------- | ---------- | ------------------------------------- | ------------------------------------------- |
+| Access  | 15 minutes | Memory (admin) / `localStorage` (web) | `fastify.jwt.sign({ userId, username })`    |
+| Refresh | 7 days     | `refresh_tokens` table (sha256 hash)  | `crypto.randomBytes(32).toString("base64")` |
 
 The access token carries `{ userId, username }` and is verified by Fastify's `request.jwtVerify()` in the global `onRequest` hook on every protected route. The refresh token is opaque — only its sha256 hash hits the database, so a database leak does not yield usable tokens.
 
@@ -48,7 +48,7 @@ POST /api/auth/refresh { refreshToken }
   200 { accessToken, refreshToken }
 ```
 
-This is *rotating refresh*: the previous refresh token cannot be reused. If a refresh request comes in with a hash that no longer exists, the response is `401` and the client must re-authenticate.
+This is _rotating refresh_: the previous refresh token cannot be reused. If a refresh request comes in with a hash that no longer exists, the response is `401` and the client must re-authenticate.
 
 ## Registration flow
 
@@ -115,11 +115,11 @@ Once linked, the user can log in either with username/password or via OAuth — 
 
 ## Token storage on the client
 
-| App | Access token | Refresh token |
-|---|---|---|
-| `apps/web` | `localStorage` | `localStorage` |
-| `apps/admin` | `localStorage` | `localStorage` |
-| Swagger UI | `localStorage` (`swagger_auto_access_token`) | `localStorage` (`swagger_auto_refresh_token`) |
+| App          | Access token                                 | Refresh token                                 |
+| ------------ | -------------------------------------------- | --------------------------------------------- |
+| `apps/web`   | `localStorage`                               | `localStorage`                                |
+| `apps/admin` | `localStorage`                               | `localStorage`                                |
+| Swagger UI   | `localStorage` (`swagger_auto_access_token`) | `localStorage` (`swagger_auto_refresh_token`) |
 
 The frontends share an Axios-like client (`apps/admin/src/api/request.ts`, `apps/web/app/lib/api.ts`) that:
 

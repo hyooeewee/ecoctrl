@@ -27,10 +27,11 @@
     "oxc.fmt.configPath": ".oxfmtrc.json",
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "oxc.oxc-vscode",
+    "[json]": {
+      "editor.defaultFormatter": "oxc.oxc-vscode",
+    },
   },
   "extensions": {
-    "recommendations": [
-      "oxc.oxc-vscode"
-    ],
+    "recommendations": ["oxc.oxc-vscode"],
   },
 }

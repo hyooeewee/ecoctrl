@@ -6,7 +6,7 @@ interface TokenRefreshOptions {
 }
 
 export function withTokenRefresh(opts: TokenRefreshOptions) {
-  const { getToken, refresh, isExpired, bufferMs = 60000 } = opts;
+  const { getToken, refresh, isExpired } = opts;
 
   async function ensure(): Promise<string> {
     const token = await getToken();

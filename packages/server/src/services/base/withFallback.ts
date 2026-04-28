@@ -1,7 +1,4 @@
-export function withFallback<T>(
-  fn: () => Promise<T>,
-  fallback: T | (() => T),
-): () => Promise<T> {
+export function withFallback<T>(fn: () => Promise<T>, fallback: T | (() => T)): () => Promise<T> {
   return async () => {
     try {
       return await fn();

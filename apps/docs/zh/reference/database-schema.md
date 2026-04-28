@@ -4,14 +4,14 @@ EcoCtrl 把所有数据保存在一个 PostgreSQL 数据库中。Schema 使用 [
 
 ## 工作流
 
-| 命令 | 作用 |
-|---|---|
+| 命令               | 作用                                                                    |
+| ------------------ | ----------------------------------------------------------------------- |
 | `pnpm db:generate` | 对比当前 schema 与上一版本，生成新的迁移到 `packages/server/drizzle/`。 |
-| `pnpm db:migrate` | 应用待执行迁移。 |
-| `pnpm db:push` | 直接推送当前 schema（开发期捷径，不保留迁移历史）。 |
-| `pnpm db:seed` | 写入示例用户、看板、能耗数据。 |
-| `pnpm db:refresh` | drop → push → seed → 打开 Drizzle Studio。**破坏性命令**。 |
-| `pnpm db:studio` | 在配置好的数据库上打开 Drizzle Studio。 |
+| `pnpm db:migrate`  | 应用待执行迁移。                                                        |
+| `pnpm db:push`     | 直接推送当前 schema（开发期捷径，不保留迁移历史）。                     |
+| `pnpm db:seed`     | 写入示例用户、看板、能耗数据。                                          |
+| `pnpm db:refresh`  | drop → push → seed → 打开 Drizzle Studio。**破坏性命令**。              |
+| `pnpm db:studio`   | 在配置好的数据库上打开 Drizzle Studio。                                 |
 
 每个 schema 都从 `schemas/index.ts` 重新导出，新增表只需添加一次即可。
 
@@ -21,43 +21,43 @@ EcoCtrl 把所有数据保存在一个 PostgreSQL 数据库中。Schema 使用 [
 
 #### `users`
 
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `id` | uuid PK | 服务端生成。 |
-| `username` | varchar(255) | 通常唯一 — 同时作为登录标识符。 |
-| `password` | varchar(255) | bcrypt 哈希；纯 OAuth 账号可为空。 |
-| `email` | varchar(255) | 必填，用于发送验证码。 |
-| `role` | varchar(100) | 默认是 `USER_ROLE_LIST` 中最低的角色。 |
-| `status` | varchar(20) | `online` / `offline`。 |
-| `lastLogin` | varchar(50) | 时间戳字符串。 |
-| `avatarUrl` | varchar(500) | 可空。 |
-| `preferences` | jsonb | UI 偏好。 |
-| `createdAt` | timestamptz | `defaultNow()`。 |
+| 字段          | 类型         | 说明                                   |
+| ------------- | ------------ | -------------------------------------- |
+| `id`          | uuid PK      | 服务端生成。                           |
+| `username`    | varchar(255) | 通常唯一 — 同时作为登录标识符。        |
+| `password`    | varchar(255) | bcrypt 哈希；纯 OAuth 账号可为空。     |
+| `email`       | varchar(255) | 必填，用于发送验证码。                 |
+| `role`        | varchar(100) | 默认是 `USER_ROLE_LIST` 中最低的角色。 |
+| `status`      | varchar(20)  | `online` / `offline`。                 |
+| `lastLogin`   | varchar(50)  | 时间戳字符串。                         |
+| `avatarUrl`   | varchar(500) | 可空。                                 |
+| `preferences` | jsonb        | UI 偏好。                              |
+| `createdAt`   | timestamptz  | `defaultNow()`。                       |
 
 #### `oauth_accounts`
 
 把 `users.id` 与外部 Provider（微信、飞书）关联。
 
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `id` | uuid PK | |
-| `userId` | uuid FK → users(id) | `ON DELETE CASCADE`。 |
-| `provider` | varchar(50) | `wechat`、`feishu`。 |
-| `providerUserId` | varchar(255) | Provider 的稳定用户 ID。 |
-| `providerEmail` | varchar(255) | 可选。 |
-| `accessToken` | varchar(1000) | Provider 颁发。 |
-| `refreshToken` | varchar(1000) | Provider 颁发。 |
-| `expiresAt` | timestamptz | Provider 给定的过期时间。 |
+| 字段             | 类型                | 说明                      |
+| ---------------- | ------------------- | ------------------------- |
+| `id`             | uuid PK             |                           |
+| `userId`         | uuid FK → users(id) | `ON DELETE CASCADE`。     |
+| `provider`       | varchar(50)         | `wechat`、`feishu`。      |
+| `providerUserId` | varchar(255)        | Provider 的稳定用户 ID。  |
+| `providerEmail`  | varchar(255)        | 可选。                    |
+| `accessToken`    | varchar(1000)       | Provider 颁发。           |
+| `refreshToken`   | varchar(1000)       | Provider 颁发。           |
+| `expiresAt`      | timestamptz         | Provider 给定的过期时间。 |
 
 #### `refresh_tokens`
 
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `id` | uuid PK | |
-| `userId` | uuid FK → users(id) | `ON DELETE CASCADE`。 |
-| `tokenHash` | varchar(255) | 已签发 Refresh Token 的 sha256。 |
-| `expiresAt` | timestamptz | 自签发起 7 天。 |
-| `createdAt` | timestamptz | |
+| 字段        | 类型                | 说明                             |
+| ----------- | ------------------- | -------------------------------- |
+| `id`        | uuid PK             |                                  |
+| `userId`    | uuid FK → users(id) | `ON DELETE CASCADE`。            |
+| `tokenHash` | varchar(255)        | 已签发 Refresh Token 的 sha256。 |
+| `expiresAt` | timestamptz         | 自签发起 7 天。                  |
+| `createdAt` | timestamptz         |                                  |
 
 每次成功登录都会先删除该用户已有的 Refresh Token，再写入新记录 — 这就是单设备会话的机制。
 
@@ -71,12 +71,12 @@ EcoCtrl 把所有数据保存在一个 PostgreSQL 数据库中。Schema 使用 [
 
 为上游 IoT 网关缓存的单行 token。
 
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `id` | serial PK | |
-| `accessToken` | text | |
-| `refreshToken` | text | |
-| `expiresAt` | bigint | 绝对过期时间，毫秒时间戳。 |
+| 字段           | 类型      | 说明                       |
+| -------------- | --------- | -------------------------- |
+| `id`           | serial PK |                            |
+| `accessToken`  | text      |                            |
+| `refreshToken` | text      |                            |
+| `expiresAt`    | bigint    | 绝对过期时间，毫秒时间戳。 |
 
 ### 业务运行数据
 
