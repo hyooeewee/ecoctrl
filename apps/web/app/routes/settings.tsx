@@ -4,6 +4,14 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
 import { Input, Label, Separator, Switch } from "@ecoctrl/ui";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "~/components/ui-adapter/dialog";
 import { Slider } from "~/components/ui-adapter/slider";
 
 import { Button } from "~/components/ui-adapter/button";
@@ -42,6 +50,7 @@ export default function SettingsPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const {
     autoRotate,
@@ -117,7 +126,10 @@ export default function SettingsPage() {
     }
   };
 
+  const confirmLogout = () => setShowLogoutConfirm(true);
+
   const handleLogout = async () => {
+    setShowLogoutConfirm(false);
     setIsLoggingOut(true);
     try {
       await auth.logout();
@@ -562,7 +574,7 @@ export default function SettingsPage() {
                     size="sm"
                     className="mt-4 w-full"
                     disabled={isLoggingOut}
-                    onClick={handleLogout}
+                    onClick={confirmLogout}
                   >
                     {isLoggingOut ? (
                       <Loader2 size={14} className="mr-1.5 animate-spin" />
@@ -634,6 +646,24 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+      {/* Logout confirmation dialog */}
+      <Dialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t.settings.logoutConfirmTitle}</DialogTitle>
+            <DialogDescription>{t.settings.logoutConfirmDesc}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="bg-transparent">
+            <Button variant="outline" size="sm" onClick={() => setShowLogoutConfirm(false)}>
+              {t.settings.logoutCancel}
+            </Button>
+            <Button variant="default" size="sm" onClick={handleLogout} disabled={isLoggingOut}>
+              {isLoggingOut && <Loader2 size={14} className="mr-1.5 animate-spin" />}
+              {t.settings.logoutConfirm}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

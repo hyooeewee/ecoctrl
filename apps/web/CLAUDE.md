@@ -72,7 +72,7 @@ Use `@tabler/icons-react` for all icons.
 ## Agent Checklist
 
 - [ ] Run `vp install` after pulling changes.
-- [ ] Run `vp check` and `vp test` before finishing.
+- [ ] Run `pnpm check:fix` before finishing.
 - [ ] Do not touch formatting in `app/components/`.
 - [ ] Use `~/` aliases instead of deep relative imports.
 - [ ] Update i18n keys if user-facing text changes.
