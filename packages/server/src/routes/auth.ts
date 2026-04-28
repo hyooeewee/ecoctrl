@@ -13,7 +13,6 @@ import {
 import {
   createRefreshToken,
   findValidRefreshToken,
-  deleteRefreshToken,
   deleteRefreshTokenById,
   deleteRefreshTokensByUserId,
 } from "@/repositories/refreshTokens";
@@ -339,14 +338,23 @@ export default async function authRoutes(fastify: FastifyInstance) {
       schema: {
         tags: ["Auth"],
         summary: "Logout and invalidate refresh token",
+        security: [{ bearerAuth: [] }],
         body: z.object({ refreshToken: z.string() }),
         response: { 200: z.object({ ok: z.literal(true) }) },
       },
     },
     async (request, reply) => {
       const { refreshToken } = request.body as { refreshToken: string };
+      const userId = (request.user as { userId: string }).userId;
       const tokenHash = hashRefreshToken(refreshToken);
-      await deleteRefreshToken(tokenHash);
+
+      // Verify the refresh token belongs to the authenticated user.
+      const stored = await findValidRefreshToken(tokenHash);
+      if (!stored || stored.userId !== userId) {
+        return reply.status(403).send({ error: "Invalid token" });
+      }
+
+      await deleteRefreshTokensByUserId(userId);
       return reply.send({ ok: true });
     },
   );

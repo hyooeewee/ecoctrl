@@ -1,6 +1,6 @@
 import { pgTable, serial, varchar, timestamp } from "drizzle-orm/pg-core";
 
-export const dashboardStats = pgTable("dashboard_stats", {
+export const platformMetrics = pgTable("platform_metrics", {
   id: serial("id").primaryKey(),
   key: varchar("key", { length: 50 }).notNull(),
   value: varchar("value", { length: 50 }).notNull(),
