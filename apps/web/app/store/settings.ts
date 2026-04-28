@@ -86,6 +86,7 @@ interface SettingsStore extends SettingsState {
   swapBentoItems: (idA: string, idB: string) => void;
   moveBentoItem: (id: string, x: number, y: number) => void;
   setBentoLayout: (layout: BentoLayoutItem[]) => void;
+  hydrateBentoLayout: (layout: BentoLayoutItem[]) => void;
   resetBentoLayout: () => void;
   reset: () => void;
 
@@ -119,7 +120,8 @@ const defaults: SettingsState = {
 // Module-level debounce timer for auto-sync.
 let syncTimer: ReturnType<typeof setTimeout> | null = null;
 // Tracks the last user whose settings were loaded; re-fetch on user switch.
-let lastLoadedUserId: string | null = null;
+// `undefined` means "never loaded", distinct from `null` (guest / not logged in).
+let lastLoadedUserId: string | null | undefined = undefined;
 
 // Read current user id from persisted auth store (no import to avoid cycles).
 function getCurrentUserId(): string | null {
@@ -273,6 +275,10 @@ export const useSettingsStore = create<SettingsStore>()(
       setBentoLayout: (layout) => {
         set({ bentoLayout: layout, hasUnsavedChanges: true, syncStatus: "idle" });
         scheduleSync(get);
+      },
+      // Hydrate layout from server without marking unsaved (used on initial load).
+      hydrateBentoLayout: (layout) => {
+        set({ bentoLayout: layout });
       },
       resetBentoLayout: () => {
         set({ bentoLayout: defaultBentoLayout, hasUnsavedChanges: true, syncStatus: "idle" });

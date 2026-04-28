@@ -9,7 +9,6 @@ import type {
   EnergyChartItem,
   Alert,
   WidgetConfig,
-  WidgetLayout,
 } from "@ecoctrl/shared";
 import { fetchWeather } from "@/services/weather";
 import { findUserSettings } from "@/repositories/userSettings";
@@ -55,7 +54,7 @@ export async function findManyAlerts(limit?: number): Promise<Alert[]> {
 
 export async function findDashboardData(
   userId?: string,
-): Promise<{ widgets: (WidgetConfig & { hidden: boolean; layout: WidgetLayout })[] }> {
+): Promise<{ widgets: (WidgetConfig & { hidden: boolean; layoutX: number; layoutY: number; layoutW: number; layoutH: number })[] }> {
   const rows = await db
     .select()
     .from(dashboardWidgets)
@@ -123,7 +122,7 @@ export async function findDashboardData(
     }
   }
 
-  const widgets: (WidgetConfig & { hidden: boolean; layout: WidgetLayout })[] = [];
+  const widgets: (WidgetConfig & { hidden: boolean; layoutX: number; layoutY: number; layoutW: number; layoutH: number })[] = [];
 
   for (const r of rows) {
     let data = r.dataJson as WidgetConfig["data"];
@@ -149,12 +148,10 @@ export async function findDashboardData(
       icon: r.icon,
       data,
       hidden: override?.hidden ?? r.hidden,
-      layout: {
-        x: override?.x ?? r.layoutX,
-        y: override?.y ?? r.layoutY,
-        w: override?.w ?? r.layoutW,
-        h: override?.h ?? r.layoutH,
-      },
+      layoutX: override?.x ?? r.layoutX,
+      layoutY: override?.y ?? r.layoutY,
+      layoutW: override?.w ?? r.layoutW,
+      layoutH: override?.h ?? r.layoutH,
     });
   }
 
