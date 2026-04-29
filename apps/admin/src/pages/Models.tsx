@@ -1,5 +1,17 @@
-import { Box, Layers, Image as ImageIcon, Upload, Trash2, Plus, Pencil } from "lucide-react";
-import React, { useCallback, useEffect, useState } from "react";
+import {
+  Box,
+  Layers,
+  Image as ImageIcon,
+  Upload,
+  Trash2,
+  Plus,
+  Pencil,
+  Braces,
+  Maximize2,
+  Minimize2,
+} from "lucide-react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Editor } from "@monaco-editor/react";
 
 import { Button } from "@ecoctrl/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoctrl/ui/card";
@@ -16,7 +28,6 @@ import { Input } from "@ecoctrl/ui/input";
 import { Label } from "@ecoctrl/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ecoctrl/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui/tabs";
-import { Textarea } from "@ecoctrl/ui/textarea";
 
 import AppButton from "@/components/AppButton";
 import ModelFileZone from "@/components/ModelFileZone";
@@ -87,6 +98,10 @@ export default function Models() {
   const [objectJson, setObjectJson] = useState("");
   const [objectMode, setObjectMode] = useState<"form" | "json">("form");
   const [editingObjectUuid, setEditingObjectUuid] = useState<string | null>(null);
+  const [objectFullscreen, setObjectFullscreen] = useState(false);
+  const editorRef = useRef<
+    Parameters<NonNullable<React.ComponentProps<typeof Editor>["onMount"]>>[0] | null
+  >(null);
 
   const fetchModels = useCallback(async () => {
     setLoading(true);
@@ -274,6 +289,7 @@ export default function Models() {
     setObjectMode("form");
     setObjectJson("");
     setEditingObjectUuid(null);
+    setObjectFullscreen(false);
   };
 
   const buildObjectPayload = (): {
@@ -1132,6 +1148,120 @@ export default function Models() {
         </DialogContent>
       </Dialog>
 
+      {/* Fullscreen JSON editor overlay */}
+      {objectFullscreen && (
+        <div className="fixed inset-0 z-[100] bg-background flex flex-col">
+          <div className="flex items-center justify-between px-6 py-3 border-b border-border">
+            <div className="flex items-center gap-2">
+              <Braces size={18} />
+              <h2 className="text-lg font-medium">
+                {editingObjectUuid ? "编辑业务对象" : "新增业务对象"}
+              </h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => {
+                  try {
+                    const parsed = JSON.parse(objectJson);
+                    setObjectJson(JSON.stringify(parsed, null, 2));
+                    editorRef.current?.getAction("editor.action.formatDocument")?.run();
+                  } catch {
+                    setObjectError("JSON 格式错误，无法格式化");
+                  }
+                }}
+              >
+                <Braces size={14} />
+                格式化
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => {
+                  setObjectFullscreen(false);
+                  setObjectOpen(true);
+                }}
+              >
+                <Minimize2 size={14} />
+                退出全屏
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex-1 min-h-0">
+            <Editor
+              height="100%"
+              language="json"
+              value={objectJson}
+              onChange={(v) => setObjectJson(v ?? "")}
+              onMount={(editor) => {
+                editorRef.current = editor;
+              }}
+              options={{
+                minimap: { enabled: false },
+                fontSize: 13,
+                lineNumbers: "on",
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+                tabSize: 2,
+                formatOnPaste: true,
+              }}
+            />
+          </div>
+
+          {objectError && (
+            <div className="px-6 py-2 border-t border-red-200 bg-red-50 text-sm text-red-700">
+              {objectError}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 px-6 py-4 border-t border-border">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setObjectFullscreen(false);
+                setObjectOpen(false);
+              }}
+              className="h-10 px-5"
+            >
+              取消
+            </Button>
+            <AppButton
+              level="action"
+              onClick={() => {
+                const err = syncJsonToForm();
+                if (err) {
+                  setObjectError(err);
+                  return;
+                }
+                if (editingObjectUuid) {
+                  handleUpdateObject();
+                } else {
+                  handleCreateObject();
+                }
+              }}
+              disabled={isCreatingObject}
+              className="h-10 px-5 gap-2"
+            >
+              {isCreatingObject ? (
+                <>
+                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  {editingObjectUuid ? "保存中..." : "创建中..."}
+                </>
+              ) : (
+                <>
+                  {editingObjectUuid ? <Pencil size={16} /> : <Plus size={16} />}
+                  {editingObjectUuid ? "保存修改" : "确认创建"}
+                </>
+              )}
+            </AppButton>
+          </div>
+        </div>
+      )}
+
       {/* Create / Edit Object Dialog */}
       <Dialog
         open={objectOpen}
@@ -1309,15 +1439,65 @@ export default function Models() {
                 )}
               </>
             ) : (
-              <div className="space-y-4">
-                <label className="text-sm font-medium text-foreground block">JSON 数据</label>
-                <Textarea
-                  value={objectJson}
-                  onChange={(e) => setObjectJson(e.target.value)}
-                  className="min-h-[320px] font-mono text-xs"
-                  placeholder='{"id":"0001","name":"...","modelId":"...","points":[]}'
-                  spellCheck={false}
-                />
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-foreground">JSON 数据</label>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      title="格式化 JSON"
+                      onClick={() => {
+                        try {
+                          const parsed = JSON.parse(objectJson);
+                          setObjectJson(JSON.stringify(parsed, null, 2));
+                          editorRef.current?.getAction("editor.action.formatDocument")?.run();
+                        } catch {
+                          setObjectError("JSON 格式错误，无法格式化");
+                        }
+                      }}
+                    >
+                      <Braces size={14} />
+                    </Button>
+                    <div className="w-px h-4 bg-border mx-1" />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      title="全屏编辑"
+                      onClick={() => {
+                        syncFormToJson();
+                        setObjectOpen(false);
+                        setObjectFullscreen(true);
+                      }}
+                    >
+                      <Maximize2 size={14} />
+                    </Button>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-border overflow-hidden">
+                  <Editor
+                    height="320px"
+                    language="json"
+                    value={objectJson}
+                    onChange={(v) => setObjectJson(v ?? "")}
+                    onMount={(editor) => {
+                      editorRef.current = editor;
+                    }}
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 13,
+                      lineNumbers: "on",
+                      scrollBeyondLastLine: false,
+                      automaticLayout: true,
+                      tabSize: 2,
+                      formatOnPaste: true,
+                    }}
+                  />
+                </div>
               </div>
             )}
 
