@@ -1,5 +1,11 @@
 # @ecoctrl/admin
 
+## 0.2.1
+
+### Patch Changes
+
+- 42d3a53: fix the packaging logic
+
 ## 0.2.0
 
 ### Minor Changes
