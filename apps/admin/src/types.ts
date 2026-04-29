@@ -22,17 +22,19 @@ export interface PointProp {
 export interface PointItem {
   id: string;
   name: string;
+  pointType: string;
+  pointNo: string;
   props: PointProp[];
 }
 
 export interface ObjectPoint {
-  id: string;
   pointId: string;
   pointName: string;
   values: Record<string, string>;
 }
 
 export interface BusinessObject {
+  uuid: string;
   id: string;
   name: string;
   modelId: string;

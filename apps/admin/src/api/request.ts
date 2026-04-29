@@ -127,3 +127,6 @@ export const put = <T>(path: string, body?: unknown, options?: RequestOptions) =
 
 export const del = <T>(path: string, options?: RequestOptions) =>
   request<T>(path, { ...options, method: "DELETE" });
+
+export const patch = <T>(path: string, body?: unknown, options?: RequestOptions) =>
+  request<T>(path, { ...options, method: "PATCH", body: body ? JSON.stringify(body) : undefined });
