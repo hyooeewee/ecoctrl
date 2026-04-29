@@ -1,11 +1,21 @@
 pnpm sync:env
 git add apps/*/.env.example packages/*/.env.example
 
-# Only process files that vp can handle, so we don't hit "no target file" errors.
-STAGED=$(git diff --cached --name-only --diff-filter=ACM | paste -sd " " -)
+# Skip in CI — changesets/action commits don't need formatting.
+[ -n "$CI" ] && exit 0
 
-if [ -n "$STAGED" ]; then
-  vp fmt -c "$(pwd)/.oxfmtrc.json" --write $STAGED
-  vp lint --fix $STAGED
-  git add $STAGED
+STAGED=$(git diff --cached --name-only --diff-filter=ACM | paste -sd " " -)
+[ -z "$STAGED" ] && exit 0
+
+# vp fmt: exit 2 means "no supported files" — treat as success.
+bash -c "vp fmt -c '$(pwd)/.oxfmtrc.json' --write $STAGED; ec=\$?; [ \$ec -eq 0 ] || [ \$ec -eq 2 ] || exit \$ec"
+
+# vp lint: ignore exit 1 when no supported files are found.
+LINT_OUT=$(bash -c "vp lint --fix $STAGED 2>&1") || true
+LINT_EC=$?
+if [ $LINT_EC -ne 0 ] && echo "$LINT_OUT" | grep -q "No files found"; then
+  LINT_EC=0
 fi
+[ $LINT_EC -eq 0 ] || { echo "$LINT_OUT"; exit $LINT_EC; }
+
+git add $STAGED
