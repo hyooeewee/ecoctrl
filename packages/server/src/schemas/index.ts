@@ -6,7 +6,6 @@ export * from "./faultStats";
 export * from "./alerts";
 export * from "./reports";
 export * from "./energy";
-export * from "./dashboard";
 export * from "./iotTokens";
 export * from "./backupSchedule";
 export * from "./energyAreas";
