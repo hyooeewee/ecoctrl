@@ -12,7 +12,13 @@ export const modelsApi = {
 
   update: (
     id: string,
-    data: { name: string; version: string; points?: PointItem[]; fileUrl?: string | null },
+    data: {
+      name: string;
+      version: string;
+      deviceType: string;
+      points?: PointItem[];
+      fileUrl?: string | null;
+    },
   ) => put<Model3D>(`/models/${id}`, data),
 
   replaceFile: (id: string, file: File) => {
@@ -21,12 +27,16 @@ export const modelsApi = {
     return request<Model3D>(`/models/${id}/file`, { method: "PUT", body: formData });
   },
 
-  upload: (file: File, data: { name: string; version: string; points?: PointItem[] }) => {
+  upload: (
+    file: File,
+    data: { name: string; version: string; deviceType: string; points?: PointItem[] },
+  ) => {
     const formData = new FormData();
     // Append text fields before file so backend can read them first
     // when iterating multipart parts (file stream must be consumed immediately)
     formData.append("name", data.name);
     formData.append("version", data.version);
+    formData.append("deviceType", data.deviceType);
     if (data.points?.length) {
       formData.append("points", JSON.stringify(data.points));
     }
@@ -45,7 +55,7 @@ export const modelsApi = {
 export const objectsApi = {
   list: () => get<BusinessObject[]>("/objects"),
 
-  create: (data: Omit<BusinessObject, "modelName">) => post<BusinessObject>("/objects", data),
+  create: (data: Omit<BusinessObject, "uuid">) => post<BusinessObject>("/objects", data),
 
-  delete: (id: string) => del<void>(`/objects/${id}`),
+  delete: (uuid: string) => del<void>(`/objects/${uuid}`),
 };
