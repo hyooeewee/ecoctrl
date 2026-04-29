@@ -1,73 +1,17 @@
-# @ecoctrl/ui
+# packages/ui
 
-Internal UI component library for the ecoctrl monorepo.
+See [root CLAUDE.md](../../CLAUDE.md) for global rules.
 
-## Architecture
+Internal UI component library. No build step — consuming apps transpile TSX source directly.
 
-- **No build step** — `package.json` points `main`/`types` directly to `./src/index.ts`. Consuming apps transpile the TSX source.
-- **Base-luma style** — shadcn/ui with large rounded corners (`rounded-4xl`), `oklch()` CSS variables, Inter + Roboto fonts.
-- **Primitives** — `@base-ui/react` (Radix v2). Styling via Tailwind CSS v4 + `class-variance-authority`.
+## Constraints
 
-## Directory Layout
+- Base-luma style: large rounded corners (`rounded-4xl`), `oklch()` CSS variables, Inter + Roboto fonts.
+- Primitives: `@base-ui/react` (Radix v2).
+- Styling via Tailwind CSS v4 + `class-variance-authority`.
+- Do not modify generated shadcn/ui base components directly.
 
-```
-src/
-├── index.ts                 # Barrel exports
-├── index.css                # Tailwind entry + theme variables
-├── lib/
-│   └── utils.ts             # `cn()` = clsx + tailwind-merge
-├── components/
-│   ├── theme-provider.tsx   # Custom theme provider (D key to toggle)
-│   ├── ui/                  # 27 shadcn components
-│   └── community/           # Custom components (e.g. autocomplete)
-```
-
-## Usage
-
-### Barrel import (existing)
-
-```tsx
-import { Button, Dialog, Input, useTheme } from "@ecoctrl/ui";
-```
-
-### Subpath import (tree-shaking friendly)
-
-```tsx
-import { Field } from "@ecoctrl/ui/field";
-import { buttonVariants } from "@ecoctrl/ui/button";
-import { Autocomplete } from "@ecoctrl/ui/autocomplete";
-import { cn } from "@ecoctrl/ui/utils";
-```
-
-Wrap app root with `ThemeProvider` for dark/light/system support.
-
-### UI Adapter Pattern
-
-Apps can customize defaults without modifying the library. Example from `apps/web`:
-
-```tsx
-import { Button as BaseButton } from "@ecoctrl/ui";
-
-function Button({ className, ...props }) {
-  return <BaseButton className={cn("rounded-lg h-8", className)} {...props} />;
-}
-```
-
-## Adding Components
-
-### Add a single component
-
-```bash
-pnpm dlx shadcn@latest add <name> -y && pnpm generate-proxies
-```
-
-### Custom component
-
-1. Create in `src/components/ui/` or `src/components/community/`
-2. Follow existing patterns (see below)
-3. Run `pnpm generate-proxies` to sync `package.json` exports
-
-## Coding Conventions
+## Conventions
 
 | Pattern       | Rule                                                    |
 | ------------- | ------------------------------------------------------- |
@@ -76,3 +20,27 @@ pnpm dlx shadcn@latest add <name> -y && pnpm generate-proxies
 | Styling hooks | Add `data-slot="component-name"` to root elements       |
 | Exports       | Named exports; compound components export all sub-parts |
 | Icons         | Use `lucide-react`                                      |
+
+### Usage
+
+```tsx
+import { Button, Dialog, Input, useTheme } from "@ecoctrl/ui";
+```
+
+Subpath imports (tree-shaking friendly):
+
+```tsx
+import { Field } from "@ecoctrl/ui/field";
+import { buttonVariants } from "@ecoctrl/ui/button";
+import { cn } from "@ecoctrl/ui/utils";
+```
+
+Apps can customize defaults via UI Adapter pattern — wrap base components in app-specific overrides without modifying the library.
+
+### Adding Components
+
+```bash
+pnpm dlx shadcn@latest add <name> -y && pnpm generate-proxies
+```
+
+Custom components: create in `src/components/ui/` or `src/components/community/`, then run `pnpm generate-proxies` to sync `package.json` exports.
