@@ -48,26 +48,34 @@ export default async function apiRoutes(fastify: FastifyInstance) {
     }
   });
 
-  fastify.get("/public/config", {
-    config: { rateLimit: { max: 200, timeWindow: "1 minute" } },
-    schema: { tags: ["Public"], summary: "Get public platform config", security: [] },
-  }, async (_request, reply) => {
-    const config = await findPlatformConfig();
-    return reply.send({
-      platformName: config.platformName,
-      allowRegistration: config.allowRegistration,
-      allowPasswordReset: config.allowPasswordReset,
-    });
-  });
+  fastify.get(
+    "/public/config",
+    {
+      config: { rateLimit: { max: 200, timeWindow: "1 minute" } },
+      schema: { tags: ["Public"], summary: "Get public platform config", security: [] },
+    },
+    async (_request, reply) => {
+      const config = await findPlatformConfig();
+      return reply.send({
+        platformName: config.platformName,
+        allowRegistration: config.allowRegistration,
+        allowPasswordReset: config.allowPasswordReset,
+      });
+    },
+  );
 
-  fastify.get("/public/dashboard", {
-    config: { rateLimit: { max: 200, timeWindow: "1 minute" } },
-    schema: { tags: ["Public"], summary: "Get public dashboard data", security: [] },
-  }, async (_request, reply) => {
-    const user = await findOnlineUser();
-    const data = await findDashboardData(user?.id);
-    return reply.send(data);
-  });
+  fastify.get(
+    "/public/dashboard",
+    {
+      config: { rateLimit: { max: 200, timeWindow: "1 minute" } },
+      schema: { tags: ["Public"], summary: "Get public dashboard data", security: [] },
+    },
+    async (_request, reply) => {
+      const user = await findOnlineUser();
+      const data = await findDashboardData(user?.id);
+      return reply.send(data);
+    },
+  );
 
   await fastify.register(fileRoutes, { prefix: "/files" });
   await fastify.register(maintenanceRoutes, { prefix: "/maintenance" });

@@ -207,14 +207,6 @@ async function seedReports() {
 }
 
 async function seedDashboard() {
-  const stats = [
-    { key: "totalEnergy", value: "12,840", unit: "kWh", trend: "+12%", trendType: "up" as const },
-    { key: "onlineRate", value: "98.2", unit: "%", trend: "+0.5%", trendType: "up" as const },
-    { key: "pendingAlerts", value: "04", unit: "项", trend: "-2", trendType: "down" as const },
-    { key: "carbonEmission", value: "842", unit: "kg", trend: "-4.2%", trendType: "down" as const },
-  ];
-  await db.insert(schema.platformMetrics).values(stats);
-
   const energyChart = [
     { name: "Mon", value: 400 },
     { name: "Tue", value: 300 },
@@ -329,8 +321,10 @@ async function seedDashboardWidgets() {
       layoutH: 2,
       hidden: true,
       dataType: "stat" as const,
-      metricKey: "totalEnergy",
       dataJson: {
+        value: "8,456",
+        unit: "kWh",
+        delta: "+12%",
         deltaVariant: "up-bad",
         sparkline: [280, 310, 295, 340, 380, 420, 395, 440, 410, 460, 480, 500],
         sparklineColor: "var(--color-chart-1)",
@@ -367,8 +361,10 @@ async function seedDashboardWidgets() {
       layoutH: 2,
       hidden: false,
       dataType: "stat" as const,
-      metricKey: "carbonEmission",
       dataJson: {
+        value: "2,340",
+        unit: "kg CO₂",
+        delta: "+2%",
         deltaVariant: "up-bad",
         sparkline: [280, 320, 290, 350, 310, 270, 340],
         sparklineColor: "var(--color-chart-2)",
