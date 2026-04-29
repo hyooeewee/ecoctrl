@@ -60,6 +60,7 @@ export default async function apiRoutes(fastify: FastifyInstance) {
         platformName: config.platformName,
         allowRegistration: config.allowRegistration,
         allowPasswordReset: config.allowPasswordReset,
+        allowOAuthLogin: config.allowOAuthLogin,
       });
     },
   );

@@ -17,6 +17,7 @@ export interface PlatformConfig {
   smtpSecure: boolean;
   allowRegistration: boolean;
   allowPasswordReset: boolean;
+  allowOAuthLogin: boolean;
 }
 
 const DEFAULT_CONFIG: PlatformConfig = {
@@ -34,6 +35,7 @@ const DEFAULT_CONFIG: PlatformConfig = {
   smtpSecure: false,
   allowRegistration: true,
   allowPasswordReset: true,
+  allowOAuthLogin: true,
 };
 
 export async function findPlatformConfig(): Promise<PlatformConfig> {
@@ -57,6 +59,7 @@ export async function findPlatformConfig(): Promise<PlatformConfig> {
       smtpSecure: r.smtpSecure,
       allowRegistration: r.allowRegistration,
       allowPasswordReset: r.allowPasswordReset,
+      allowOAuthLogin: r.allowOAuthLogin,
     };
   }
   const r = rows[0];
@@ -75,6 +78,7 @@ export async function findPlatformConfig(): Promise<PlatformConfig> {
     smtpSecure: r.smtpSecure,
     allowRegistration: r.allowRegistration,
     allowPasswordReset: r.allowPasswordReset,
+    allowOAuthLogin: r.allowOAuthLogin,
   };
 }
 
@@ -98,6 +102,7 @@ export async function updatePlatformConfig(config: PlatformConfig): Promise<Plat
       smtpSecure: r.smtpSecure,
       allowRegistration: r.allowRegistration,
       allowPasswordReset: r.allowPasswordReset,
+      allowOAuthLogin: r.allowOAuthLogin,
     };
   } else {
     const result = await db
@@ -121,6 +126,7 @@ export async function updatePlatformConfig(config: PlatformConfig): Promise<Plat
       smtpSecure: r.smtpSecure,
       allowRegistration: r.allowRegistration,
       allowPasswordReset: r.allowPasswordReset,
+      allowOAuthLogin: r.allowOAuthLogin,
     };
   }
 }

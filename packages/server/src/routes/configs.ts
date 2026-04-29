@@ -18,6 +18,7 @@ const configSchema = z.object({
   smtpSecure: z.boolean(),
   allowRegistration: z.boolean(),
   allowPasswordReset: z.boolean(),
+  allowOAuthLogin: z.boolean(),
 });
 
 const configBodySchema = z.object({
@@ -35,6 +36,7 @@ const configBodySchema = z.object({
   smtpSecure: z.boolean().optional(),
   allowRegistration: z.boolean().optional(),
   allowPasswordReset: z.boolean().optional(),
+  allowOAuthLogin: z.boolean().optional(),
 });
 
 export default async function configRoutes(fastify: FastifyInstance) {
@@ -88,6 +90,7 @@ export default async function configRoutes(fastify: FastifyInstance) {
         smtpSecure?: boolean;
         allowRegistration?: boolean;
         allowPasswordReset?: boolean;
+        allowOAuthLogin?: boolean;
       };
       const existing = await findPlatformConfig();
 
@@ -106,6 +109,7 @@ export default async function configRoutes(fastify: FastifyInstance) {
         smtpPass: body.smtpPass && body.smtpPass !== "****" ? body.smtpPass : existing.smtpPass,
         allowRegistration: body.allowRegistration ?? existing.allowRegistration,
         allowPasswordReset: body.allowPasswordReset ?? existing.allowPasswordReset,
+        allowOAuthLogin: body.allowOAuthLogin ?? existing.allowOAuthLogin,
       };
       await updatePlatformConfig(updated);
       return reply.send({

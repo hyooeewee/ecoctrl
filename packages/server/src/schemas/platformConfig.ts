@@ -14,6 +14,7 @@ export const platformConfigs = pgTable("platform_configs", {
   smtpUser: varchar("smtp_user", { length: 255 }).notNull().default(""),
   smtpPass: varchar("smtp_pass", { length: 255 }).notNull().default(""),
   smtpSecure: boolean("smtp_secure").notNull().default(false),
-  allowRegistration: boolean("allow_registration").notNull().default(true),
-  allowPasswordReset: boolean("allow_password_reset").notNull().default(true),
+  allowRegistration: boolean("allow_registration").notNull().default(false),
+  allowPasswordReset: boolean("allow_password_reset").notNull().default(false),
+  allowOAuthLogin: boolean("allow_oauth_login").notNull().default(false),
 });
