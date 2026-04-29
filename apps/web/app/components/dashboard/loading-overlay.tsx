@@ -1,17 +1,15 @@
 import { useEffect, useState } from "react";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
-interface BlueprintLoaderProps {
+interface LoadingOverlayProps {
   progress: number;
 }
 
 /**
- * Lottie loading animation — replaces the CSS blueprint animation.
- *
- * The lottie file auto-plays in a loop while the model loads.
+ * Lottie loading animation — auto-plays in a loop while the model loads.
  * Fades out when progress reaches 100%.
  */
-export function BlueprintLoader({ progress }: BlueprintLoaderProps) {
+export function LoadingOverlay({ progress }: LoadingOverlayProps) {
   const p = Math.max(0, Math.min(progress, 100));
   const [visible, setVisible] = useState(true);
 

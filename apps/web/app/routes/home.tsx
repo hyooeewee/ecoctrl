@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLoaderData } from "react-router";
 
 import { BentoGrid } from "~/components/dashboard/bento-grid";
-import { BlueprintLoader } from "~/components/dashboard/blueprint-loader";
+import { LoadingOverlay } from "~/components/dashboard/loading-overlay";
 import { BuildingView, type BuildingViewRef } from "~/components/dashboard/building-view";
 import { DashboardHeader } from "~/components/dashboard/dashboard-header";
 import { DashboardNav } from "~/components/dashboard/dashboard-nav";
@@ -244,7 +244,7 @@ export default function Home() {
     <div className="dark">
       <div className="text-foreground relative h-screen overflow-hidden font-mono">
         {/* Blueprint loading overlay — covers everything until model is ready */}
-        {showLoadingAnimation && !modelLoaded && <BlueprintLoader progress={modelLoadProgress} />}
+        {showLoadingAnimation && !modelLoaded && <LoadingOverlay progress={modelLoadProgress} />}
 
         {/* Full-page 3D building background */}
         <BuildingView
