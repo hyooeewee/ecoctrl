@@ -12,16 +12,6 @@ import {
   AutocompleteTrigger,
 } from "@ecoctrl/ui/autocomplete";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@ecoctrl/ui/dialog";
-import {
-  Field,
-  FieldContent,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-  FieldSeparator,
-  FieldTitle,
-} from "@ecoctrl/ui/field";
 import { Input } from "@ecoctrl/ui/input";
 import { Label } from "@ecoctrl/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ecoctrl/ui/select";
@@ -739,107 +729,131 @@ export default function Models() {
           if (!open) resetUpload();
         }}
       >
-        <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+        <DialogContent className="max-h-[90vh] max-w-lg flex flex-col gap-0 p-0">
+          <DialogHeader className="px-6 pt-6 pb-4">
+            <DialogTitle className="flex items-center gap-2 text-lg">
               <Upload size={18} />
               上传 3D 模型
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            <FieldGroup>
-              <Field>
-                <FieldLabel>模型文件</FieldLabel>
-                <FieldContent>
-                  <ModelFileZone
-                    file={uploadFile}
-                    onFileSelect={handleUploadFileSelect}
-                    onFileClear={() => {
-                      setUploadFile(null);
-                      setUploadName("");
-                    }}
-                  />
-                </FieldContent>
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="model-name">模型名称</FieldLabel>
-                <FieldContent>
+          <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-6">
+            {/* File zone */}
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">模型文件</label>
+              <ModelFileZone
+                file={uploadFile}
+                onFileSelect={handleUploadFileSelect}
+                onFileClear={() => {
+                  setUploadFile(null);
+                  setUploadName("");
+                }}
+              />
+            </div>
+
+            {/* Basic info */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label
+                    htmlFor="model-name"
+                    className="text-sm font-medium text-foreground mb-1.5 block"
+                  >
+                    模型名称
+                  </label>
                   <Input
                     id="model-name"
                     value={uploadName}
                     onChange={(e) => setUploadName(e.target.value)}
                     placeholder="请输入模型名称"
+                    className="h-10"
                   />
-                </FieldContent>
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="model-version">版本</FieldLabel>
-                <FieldContent>
+                </div>
+                <div>
+                  <label
+                    htmlFor="model-version"
+                    className="text-sm font-medium text-foreground mb-1.5 block"
+                  >
+                    版本
+                  </label>
                   <Input
                     id="model-version"
                     value={uploadVersion}
                     onChange={(e) => setUploadVersion(e.target.value)}
                     placeholder="v1.0"
+                    className="h-10"
                   />
-                </FieldContent>
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="model-device-type">设备类型</FieldLabel>
-                <FieldContent>
-                  <Autocomplete
-                    value={uploadDeviceType}
-                    onValueChange={(v: string) => setUploadDeviceType(v.toUpperCase())}
-                    items={existingDeviceTypes}
-                    openOnInputClick
-                    filter={() => true}
-                  >
-                    <AutocompleteInput placeholder="1位字符，如 C" maxLength={1}>
-                      <AutocompleteTrigger />
-                    </AutocompleteInput>
-                    <AutocompletePopup className="z-[100]">
-                      <AutocompleteList>
-                        {(type: string) => (
-                          <AutocompleteItem key={type} value={type}>
-                            {type}
-                          </AutocompleteItem>
-                        )}
-                      </AutocompleteList>
-                    </AutocompletePopup>
-                  </Autocomplete>
-                  <FieldDescription>1 位大写字母，如 C</FieldDescription>
-                </FieldContent>
-              </Field>
-            </FieldGroup>
-
-            <FieldSeparator />
-
-            <Field>
-              <FieldContent>
-                <div className="flex items-center justify-between">
-                  <FieldTitle>点位配置（可选）</FieldTitle>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 gap-1 text-xs text-blue-600 hover:text-blue-700"
-                    onClick={addPoint}
-                  >
-                    <Plus size={14} />
-                    添加点位
-                  </Button>
                 </div>
-                {uploadPoints.length === 0 ? (
-                  <p className="text-xs text-muted-foreground py-1">未配置点位</p>
-                ) : (
-                  <div className="space-y-3 pr-1">
-                    {uploadPoints.map((point, pointIdx) => (
-                      <div
-                        key={pointIdx}
-                        className="rounded-lg border border-border bg-muted/40 p-3 space-y-2"
-                      >
-                        {/* Point header */}
-                        <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2">
+              </div>
+              <div>
+                <label
+                  htmlFor="model-device-type"
+                  className="text-sm font-medium text-foreground mb-1.5 block"
+                >
+                  设备类型
+                </label>
+                <Autocomplete
+                  value={uploadDeviceType}
+                  onValueChange={(v: string) => setUploadDeviceType(v.toUpperCase())}
+                  items={existingDeviceTypes}
+                  openOnInputClick
+                  filter={() => true}
+                >
+                  <AutocompleteInput
+                    placeholder="1位字符，如 C"
+                    maxLength={1}
+                    aria-hidden={false}
+                    className="h-10"
+                  >
+                    <AutocompleteTrigger />
+                  </AutocompleteInput>
+                  <AutocompletePopup className="z-[100]">
+                    <AutocompleteList>
+                      {(type: string) => (
+                        <AutocompleteItem key={type} value={type}>
+                          {type}
+                        </AutocompleteItem>
+                      )}
+                    </AutocompleteList>
+                  </AutocompletePopup>
+                </Autocomplete>
+                <p className="text-xs text-muted-foreground mt-1.5">1 位大写字母，如 C</p>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-border" />
+
+            {/* Points */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-semibold text-foreground">点位配置（可选）</h4>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 gap-1.5 text-xs font-medium text-primary hover:text-primary/80 hover:bg-primary/5"
+                  onClick={addPoint}
+                >
+                  <Plus size={14} />
+                  添加点位
+                </Button>
+              </div>
+              {uploadPoints.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border bg-muted/30 py-6 flex flex-col items-center gap-2">
+                  <Layers size={20} className="text-muted-foreground/40" />
+                  <p className="text-xs text-muted-foreground">尚未配置点位</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {uploadPoints.map((point, pointIdx) => (
+                    <div
+                      key={pointIdx}
+                      className="rounded-xl border border-border bg-card p-4 space-y-3 shadow-sm"
+                    >
+                      {/* Point header */}
+                      <div className="flex items-center gap-3">
+                        <div className="w-20 shrink-0">
                           <Autocomplete
                             value={point.pointType}
                             onValueChange={(v: string) =>
@@ -851,8 +865,9 @@ export default function Models() {
                           >
                             <AutocompleteInput
                               placeholder="类型"
-                              className="h-8 text-sm"
+                              className="h-9 text-sm"
                               maxLength={2}
+                              aria-hidden={false}
                             >
                               <AutocompleteTrigger />
                             </AutocompleteInput>
@@ -866,6 +881,8 @@ export default function Models() {
                               </AutocompleteList>
                             </AutocompletePopup>
                           </Autocomplete>
+                        </div>
+                        <div className="w-24 shrink-0">
                           <Input
                             value={point.pointNo}
                             onChange={(e) => updatePoint(pointIdx, "pointNo", e.target.value)}
@@ -873,103 +890,112 @@ export default function Models() {
                               updatePoint(pointIdx, "pointNo", point.pointNo.padStart(4, "0"))
                             }
                             placeholder="编号"
-                            className="h-8 text-sm"
+                            className="h-9 text-sm text-center font-mono"
                             maxLength={4}
                           />
+                        </div>
+                        <div className="flex-1 min-w-0">
                           <Input
                             value={point.name}
                             onChange={(e) => updatePoint(pointIdx, "name", e.target.value)}
                             placeholder="点位名称（可选）"
-                            className="h-8 text-sm"
+                            className="h-9 text-sm"
                           />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0 text-muted-foreground/60 hover:text-red-500 hover:bg-red-50"
+                          onClick={() => removePoint(pointIdx)}
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
+
+                      {/* Props section */}
+                      <div className="rounded-lg bg-muted/40 p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            属性定义
+                          </span>
                           <Button
                             type="button"
                             variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-red-500"
-                            onClick={() => removePoint(pointIdx)}
+                            size="sm"
+                            className="h-6 gap-1 text-xs text-primary hover:text-primary/80 hover:bg-primary/5 px-2"
+                            onClick={() => addProp(pointIdx)}
                           >
-                            <Trash2 size={14} />
+                            <Plus size={12} />
+                            添加
                           </Button>
                         </div>
-
-                        {/* Props section */}
-                        <div className="space-y-1.5 pl-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground">属性定义</span>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 gap-1 text-xs text-blue-600 hover:text-blue-700"
-                              onClick={() => addProp(pointIdx)}
-                            >
-                              <Plus size={12} />
-                              添加属性
-                            </Button>
+                        {point.props.length === 0 ? (
+                          <p className="text-xs text-muted-foreground/60 py-1">暂无属性</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {point.props.map((prop, propIdx) => (
+                              <div key={propIdx} className="flex items-center gap-2">
+                                <Input
+                                  value={prop.name}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    updateProp(pointIdx, propIdx, "name", val);
+                                    updateProp(pointIdx, propIdx, "key", val.trim());
+                                  }}
+                                  placeholder="属性名称"
+                                  className="h-8 text-xs flex-1 bg-background"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 shrink-0 text-muted-foreground/50 hover:text-red-500 hover:bg-red-50"
+                                  onClick={() => removeProp(pointIdx, propIdx)}
+                                >
+                                  <Trash2 size={12} />
+                                </Button>
+                              </div>
+                            ))}
                           </div>
-                          {point.props.length === 0 ? (
-                            <p className="text-xs text-muted-foreground/70 py-1">无属性</p>
-                          ) : (
-                            <div className="space-y-1.5">
-                              {point.props.map((prop, propIdx) => (
-                                <div key={propIdx} className="flex items-center gap-2">
-                                  <Input
-                                    value={prop.name}
-                                    onChange={(e) => {
-                                      const val = e.target.value;
-                                      updateProp(pointIdx, propIdx, "name", val);
-                                      updateProp(pointIdx, propIdx, "key", val.trim());
-                                    }}
-                                    placeholder="属性名称"
-                                    className="h-7 text-xs flex-1"
-                                  />
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 shrink-0 text-muted-foreground hover:text-red-500"
-                                    onClick={() => removeProp(pointIdx, propIdx)}
-                                  >
-                                    <Trash2 size={12} />
-                                  </Button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                )}
-              </FieldContent>
-            </Field>
-
-            <FieldError errors={uploadError ? [{ message: uploadError }] : []} />
-
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setUploadOpen(false)}>
-                取消
-              </Button>
-              <AppButton
-                level="action"
-                onClick={handleUpload}
-                disabled={!uploadFile || !uploadName.trim() || isUploading}
-                className="gap-2"
-              >
-                {isUploading ? (
-                  <>
-                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    上传中...
-                  </>
-                ) : (
-                  <>
-                    <Upload size={16} />
-                    确认上传
-                  </>
-                )}
-              </AppButton>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
+
+            {uploadError && (
+              <div className="rounded-lg border-l-4 border-red-500 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {uploadError}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="border-t border-border px-6 py-4 flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setUploadOpen(false)} className="h-10 px-5">
+              取消
+            </Button>
+            <AppButton
+              level="action"
+              onClick={handleUpload}
+              disabled={!uploadFile || !uploadName.trim() || isUploading}
+              className="h-10 px-5 gap-2"
+            >
+              {isUploading ? (
+                <>
+                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  上传中...
+                </>
+              ) : (
+                <>
+                  <Upload size={16} />
+                  确认上传
+                </>
+              )}
+            </AppButton>
           </div>
         </DialogContent>
       </Dialog>
@@ -982,102 +1008,107 @@ export default function Models() {
           if (!open) resetObjectForm();
         }}
       >
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+        <DialogContent className="max-h-[90vh] max-w-lg flex flex-col gap-0 p-0">
+          <DialogHeader className="px-6 pt-6 pb-4">
+            <DialogTitle className="flex items-center gap-2 text-lg">
               <Plus size={18} />
               新增业务对象
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            <FieldGroup>
-              <Field>
-                <FieldLabel>选择模型</FieldLabel>
-                <FieldContent>
-                  <Select
-                    value={selectedModelId}
-                    onValueChange={(v) => setSelectedModelId(v ?? "")}
+          <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-6">
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">选择模型</label>
+                <Select value={selectedModelId} onValueChange={(v) => setSelectedModelId(v ?? "")}>
+                  <SelectTrigger className="w-full h-10">
+                    <SelectValue placeholder="请选择模型" className="truncate">
+                      {selectedModelId
+                        ? (models.find((m) => m.id === selectedModelId)?.name ?? "请选择模型")
+                        : "请选择模型"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {models.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        <span className="block truncate">{m.name}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label
+                    htmlFor="object-id"
+                    className="text-sm font-medium text-foreground mb-1.5 block"
                   >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="请选择模型" className="truncate">
-                        {selectedModelId
-                          ? (models.find((m) => m.id === selectedModelId)?.name ?? "请选择模型")
-                          : "请选择模型"}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {models.map((m) => (
-                        <SelectItem key={m.id} value={m.id}>
-                          <span className="block truncate">{m.name}</span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FieldContent>
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="object-id">设备编号</FieldLabel>
-                <FieldContent>
+                    设备编号
+                  </label>
                   <Input
                     id="object-id"
                     value={objectId}
                     onChange={(e) => setObjectId(e.target.value)}
-                    placeholder="请输入4位设备编号"
+                    placeholder="4位数字"
                     maxLength={4}
+                    className="h-10 text-center font-mono"
                   />
-                </FieldContent>
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="object-name">对象名称</FieldLabel>
-                <FieldContent>
+                </div>
+                <div>
+                  <label
+                    htmlFor="object-name"
+                    className="text-sm font-medium text-foreground mb-1.5 block"
+                  >
+                    对象名称
+                  </label>
                   <Input
                     id="object-name"
                     value={objectName}
                     onChange={(e) => setObjectName(e.target.value)}
                     placeholder="请输入对象名称"
+                    className="h-10"
                   />
-                </FieldContent>
-              </Field>
-            </FieldGroup>
+                </div>
+              </div>
+            </div>
 
-            <FieldSeparator />
+            <div className="border-t border-border" />
 
             {/* Point values section */}
             {selectedModelId && (
-              <Field>
-                <FieldTitle>点位属性值</FieldTitle>
-                <FieldContent>
-                  {((): PointItem[] => {
-                    const model = models.find((m) => m.id === selectedModelId);
-                    return (model as Model3D & { points?: PointItem[] })?.points ?? [];
-                  })().length === 0 ? (
-                    <p className="text-xs text-muted-foreground py-1">所选模型未配置点位</p>
+              <div>
+                <h4 className="text-sm font-semibold text-foreground mb-3">点位属性值</h4>
+                {(() => {
+                  const selectedModel = models.find((m) => m.id === selectedModelId);
+                  const points =
+                    (selectedModel as Model3D & { points?: PointItem[] })?.points ?? [];
+                  return points.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-border bg-muted/30 py-6 flex flex-col items-center gap-2">
+                      <Layers size={20} className="text-muted-foreground/40" />
+                      <p className="text-xs text-muted-foreground">所选模型未配置点位</p>
+                    </div>
                   ) : (
-                    <div className="space-y-3 pr-1">
-                      {((): PointItem[] => {
-                        const model = models.find((m) => m.id === selectedModelId);
-                        return (model as Model3D & { points?: PointItem[] })?.points ?? [];
-                      })().map((point) => (
+                    <div className="space-y-3">
+                      {points.map((point) => (
                         <div
                           key={point.id}
-                          className="rounded-lg border border-border bg-muted/40 p-3 space-y-2"
+                          className="rounded-xl border border-border bg-card p-4 space-y-3 shadow-sm"
                         >
                           <div className="flex items-center justify-between">
                             <span className="text-sm font-medium">{point.name || point.id}</span>
-                            <span className="text-xs font-mono text-muted-foreground">
+                            <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">
                               {((): string => {
-                                const model = models.find((m) => m.id === selectedModelId);
-                                return `${model?.deviceType ?? "_"}_${objectId.trim() || "____"}_${point.pointType}_${point.pointNo}`;
+                                const m = models.find((mm) => mm.id === selectedModelId);
+                                return `${m?.deviceType ?? "_"}_${objectId.trim() || "____"}_${point.pointType}_${point.pointNo}`;
                               })()}
                             </span>
                           </div>
                           {point.props.length === 0 ? (
-                            <p className="text-xs text-muted-foreground/70 py-1">无属性</p>
+                            <p className="text-xs text-muted-foreground/60 py-1">无属性</p>
                           ) : (
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="grid grid-cols-2 gap-3">
                               {point.props.map((prop) => (
-                                <div key={prop.key} className="space-y-1">
+                                <div key={prop.key} className="space-y-1.5">
                                   <Label className="text-xs text-muted-foreground">
                                     {prop.name || prop.key}
                                     {prop.unit ? ` (${prop.unit})` : ""}
@@ -1094,7 +1125,7 @@ export default function Models() {
                                       }))
                                     }
                                     placeholder="值"
-                                    className="h-8 text-sm"
+                                    className="h-9 text-sm"
                                   />
                                 </div>
                               ))}
@@ -1103,38 +1134,43 @@ export default function Models() {
                         </div>
                       ))}
                     </div>
-                  )}
-                </FieldContent>
-              </Field>
+                  );
+                })()}
+              </div>
             )}
 
-            <FieldError errors={objectError ? [{ message: objectError }] : []} />
+            {objectError && (
+              <div className="rounded-lg border-l-4 border-red-500 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {objectError}
+              </div>
+            )}
+          </div>
 
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setObjectOpen(false)}>
-                取消
-              </Button>
-              <AppButton
-                level="action"
-                onClick={handleCreateObject}
-                disabled={
-                  !objectId.trim() || !objectName.trim() || !selectedModelId || isCreatingObject
-                }
-                className="gap-2"
-              >
-                {isCreatingObject ? (
-                  <>
-                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    创建中...
-                  </>
-                ) : (
-                  <>
-                    <Plus size={16} />
-                    确认创建
-                  </>
-                )}
-              </AppButton>
-            </div>
+          {/* Footer */}
+          <div className="border-t border-border px-6 py-4 flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setObjectOpen(false)} className="h-10 px-5">
+              取消
+            </Button>
+            <AppButton
+              level="action"
+              onClick={handleCreateObject}
+              disabled={
+                !objectId.trim() || !objectName.trim() || !selectedModelId || isCreatingObject
+              }
+              className="h-10 px-5 gap-2"
+            >
+              {isCreatingObject ? (
+                <>
+                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  创建中...
+                </>
+              ) : (
+                <>
+                  <Plus size={16} />
+                  确认创建
+                </>
+              )}
+            </AppButton>
           </div>
         </DialogContent>
       </Dialog>
@@ -1147,119 +1183,141 @@ export default function Models() {
           if (!open) resetEditForm();
         }}
       >
-        <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+        <DialogContent className="max-h-[90vh] max-w-lg flex flex-col gap-0 p-0">
+          <DialogHeader className="px-6 pt-6 pb-4">
+            <DialogTitle className="flex items-center gap-2 text-lg">
               <Pencil size={18} />
               编辑模型
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
+          <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-6">
             {/* Replace file zone */}
-            <Field>
-              <FieldLabel>替换模型文件（可选）</FieldLabel>
-              <FieldContent>
-                {(() => {
-                  const model = models.find((m) => m.id === editModelId);
-                  const existingInfo =
-                    editFileDeleted || !model?.fileUrl
-                      ? null
-                      : { name: model.name, size: model.size, format: model.format };
-                  return (
-                    <ModelFileZone
-                      file={editFile}
-                      existingInfo={existingInfo}
-                      onFileSelect={handleEditFileSelect}
-                      onFileClear={() => setEditFile(null)}
-                      onDeleteExisting={() => setEditFileDeleted(true)}
-                    />
-                  );
-                })()}
-              </FieldContent>
-            </Field>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">
+                替换模型文件（可选）
+              </label>
+              {(() => {
+                const model = models.find((m) => m.id === editModelId);
+                const existingInfo =
+                  editFileDeleted || !model?.fileUrl
+                    ? null
+                    : { name: model.name, size: model.size, format: model.format };
+                return (
+                  <ModelFileZone
+                    file={editFile}
+                    existingInfo={existingInfo}
+                    onFileSelect={handleEditFileSelect}
+                    onFileClear={() => setEditFile(null)}
+                    onDeleteExisting={() => setEditFileDeleted(true)}
+                  />
+                );
+              })()}
+            </div>
 
-            {/* Fields */}
-            <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="edit-name">模型名称</FieldLabel>
-                <FieldContent>
+            {/* Basic info */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label
+                    htmlFor="edit-name"
+                    className="text-sm font-medium text-foreground mb-1.5 block"
+                  >
+                    模型名称
+                  </label>
                   <Input
                     id="edit-name"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
                     placeholder="请输入模型名称"
+                    className="h-10"
                   />
-                </FieldContent>
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="edit-version">版本</FieldLabel>
-                <FieldContent>
+                </div>
+                <div>
+                  <label
+                    htmlFor="edit-version"
+                    className="text-sm font-medium text-foreground mb-1.5 block"
+                  >
+                    版本
+                  </label>
                   <Input
                     id="edit-version"
                     value={editVersion}
                     onChange={(e) => setEditVersion(e.target.value)}
                     placeholder="v1.0"
+                    className="h-10"
                   />
-                </FieldContent>
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="edit-device-type">设备类型</FieldLabel>
-                <FieldContent>
-                  <Autocomplete
-                    value={editDeviceType}
-                    onValueChange={(v: string) => setEditDeviceType(v.toUpperCase())}
-                    items={existingDeviceTypes}
-                    openOnInputClick
-                    filter={() => true}
-                  >
-                    <AutocompleteInput placeholder="1位字符，如 C" maxLength={1}>
-                      <AutocompleteTrigger />
-                    </AutocompleteInput>
-                    <AutocompletePopup className="z-[100]">
-                      <AutocompleteList>
-                        {(type: string) => (
-                          <AutocompleteItem key={type} value={type}>
-                            {type}
-                          </AutocompleteItem>
-                        )}
-                      </AutocompleteList>
-                    </AutocompletePopup>
-                  </Autocomplete>
-                  <FieldDescription>1 位大写字母，如 C</FieldDescription>
-                </FieldContent>
-              </Field>
-            </FieldGroup>
-
-            <FieldSeparator />
-
-            {/* Points configuration */}
-            <Field>
-              <FieldContent>
-                <div className="flex items-center justify-between">
-                  <FieldTitle>点位配置（可选）</FieldTitle>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 gap-1 text-xs text-blue-600 hover:text-blue-700"
-                    onClick={addEditPoint}
-                  >
-                    <Plus size={14} />
-                    添加点位
-                  </Button>
                 </div>
-                {editPoints.length === 0 ? (
-                  <p className="text-xs text-muted-foreground py-1">未配置点位</p>
-                ) : (
-                  <div className="space-y-3 pr-1">
-                    {editPoints.map((point, pointIdx) => (
-                      <div
-                        key={pointIdx}
-                        className="rounded-lg border border-border bg-muted/40 p-3 space-y-2"
-                      >
-                        {/* Point header */}
-                        <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2">
+              </div>
+              <div>
+                <label
+                  htmlFor="edit-device-type"
+                  className="text-sm font-medium text-foreground mb-1.5 block"
+                >
+                  设备类型
+                </label>
+                <Autocomplete
+                  value={editDeviceType}
+                  onValueChange={(v: string) => setEditDeviceType(v.toUpperCase())}
+                  items={existingDeviceTypes}
+                  openOnInputClick
+                  filter={() => true}
+                >
+                  <AutocompleteInput
+                    placeholder="1位字符，如 C"
+                    maxLength={1}
+                    aria-hidden={false}
+                    className="h-10"
+                  >
+                    <AutocompleteTrigger />
+                  </AutocompleteInput>
+                  <AutocompletePopup className="z-[100]">
+                    <AutocompleteList>
+                      {(type: string) => (
+                        <AutocompleteItem key={type} value={type}>
+                          {type}
+                        </AutocompleteItem>
+                      )}
+                    </AutocompleteList>
+                  </AutocompletePopup>
+                </Autocomplete>
+                <p className="text-xs text-muted-foreground mt-1.5">1 位大写字母，如 C</p>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-border" />
+
+            {/* Points */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-semibold text-foreground">点位配置（可选）</h4>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 gap-1.5 text-xs font-medium text-primary hover:text-primary/80 hover:bg-primary/5"
+                  onClick={addEditPoint}
+                >
+                  <Plus size={14} />
+                  添加点位
+                </Button>
+              </div>
+              {editPoints.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border bg-muted/30 py-6 flex flex-col items-center gap-2">
+                  <Layers size={20} className="text-muted-foreground/40" />
+                  <p className="text-xs text-muted-foreground">尚未配置点位</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {editPoints.map((point, pointIdx) => (
+                    <div
+                      key={pointIdx}
+                      className="rounded-xl border border-border bg-card p-4 space-y-3 shadow-sm"
+                    >
+                      {/* Point header */}
+                      <div className="flex items-center gap-3">
+                        <div className="w-20 shrink-0">
                           <Autocomplete
                             value={point.pointType}
                             onValueChange={(v: string) =>
@@ -1271,8 +1329,9 @@ export default function Models() {
                           >
                             <AutocompleteInput
                               placeholder="类型"
-                              className="h-8 text-sm"
+                              className="h-9 text-sm"
                               maxLength={2}
+                              aria-hidden={false}
                             >
                               <AutocompleteTrigger />
                             </AutocompleteInput>
@@ -1286,6 +1345,8 @@ export default function Models() {
                               </AutocompleteList>
                             </AutocompletePopup>
                           </Autocomplete>
+                        </div>
+                        <div className="w-24 shrink-0">
                           <Input
                             value={point.pointNo}
                             onChange={(e) => updateEditPoint(pointIdx, "pointNo", e.target.value)}
@@ -1293,103 +1354,112 @@ export default function Models() {
                               updateEditPoint(pointIdx, "pointNo", point.pointNo.padStart(4, "0"))
                             }
                             placeholder="编号"
-                            className="h-8 text-sm"
+                            className="h-9 text-sm text-center font-mono"
                             maxLength={4}
                           />
+                        </div>
+                        <div className="flex-1 min-w-0">
                           <Input
                             value={point.name}
                             onChange={(e) => updateEditPoint(pointIdx, "name", e.target.value)}
                             placeholder="点位名称（可选）"
-                            className="h-8 text-sm"
+                            className="h-9 text-sm"
                           />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0 text-muted-foreground/60 hover:text-red-500 hover:bg-red-50"
+                          onClick={() => removeEditPoint(pointIdx)}
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
+
+                      {/* Props section */}
+                      <div className="rounded-lg bg-muted/40 p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            属性定义
+                          </span>
                           <Button
                             type="button"
                             variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-red-500"
-                            onClick={() => removeEditPoint(pointIdx)}
+                            size="sm"
+                            className="h-6 gap-1 text-xs text-primary hover:text-primary/80 hover:bg-primary/5 px-2"
+                            onClick={() => addEditProp(pointIdx)}
                           >
-                            <Trash2 size={14} />
+                            <Plus size={12} />
+                            添加
                           </Button>
                         </div>
-
-                        {/* Props section */}
-                        <div className="space-y-1.5 pl-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground">属性定义</span>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 gap-1 text-xs text-blue-600 hover:text-blue-700"
-                              onClick={() => addEditProp(pointIdx)}
-                            >
-                              <Plus size={12} />
-                              添加属性
-                            </Button>
+                        {point.props.length === 0 ? (
+                          <p className="text-xs text-muted-foreground/60 py-1">暂无属性</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {point.props.map((prop, propIdx) => (
+                              <div key={propIdx} className="flex items-center gap-2">
+                                <Input
+                                  value={prop.name}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    updateEditProp(pointIdx, propIdx, "name", val);
+                                    updateEditProp(pointIdx, propIdx, "key", val.trim());
+                                  }}
+                                  placeholder="属性名称"
+                                  className="h-8 text-xs flex-1 bg-background"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 shrink-0 text-muted-foreground/50 hover:text-red-500 hover:bg-red-50"
+                                  onClick={() => removeEditProp(pointIdx, propIdx)}
+                                >
+                                  <Trash2 size={12} />
+                                </Button>
+                              </div>
+                            ))}
                           </div>
-                          {point.props.length === 0 ? (
-                            <p className="text-xs text-muted-foreground/70 py-1">无属性</p>
-                          ) : (
-                            <div className="space-y-1.5">
-                              {point.props.map((prop, propIdx) => (
-                                <div key={propIdx} className="flex items-center gap-2">
-                                  <Input
-                                    value={prop.name}
-                                    onChange={(e) => {
-                                      const val = e.target.value;
-                                      updateEditProp(pointIdx, propIdx, "name", val);
-                                      updateEditProp(pointIdx, propIdx, "key", val.trim());
-                                    }}
-                                    placeholder="属性名称"
-                                    className="h-7 text-xs flex-1"
-                                  />
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 shrink-0 text-muted-foreground hover:text-red-500"
-                                    onClick={() => removeEditProp(pointIdx, propIdx)}
-                                  >
-                                    <Trash2 size={12} />
-                                  </Button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                )}
-              </FieldContent>
-            </Field>
-
-            <FieldError errors={editError ? [{ message: editError }] : []} />
-
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setEditOpen(false)}>
-                取消
-              </Button>
-              <AppButton
-                level="action"
-                onClick={handleSaveEdit}
-                disabled={!editName.trim() || isSaving}
-                className="gap-2"
-              >
-                {isSaving ? (
-                  <>
-                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    保存中...
-                  </>
-                ) : (
-                  <>
-                    <Pencil size={16} />
-                    确认保存
-                  </>
-                )}
-              </AppButton>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
+
+            {editError && (
+              <div className="rounded-lg border-l-4 border-red-500 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {editError}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="border-t border-border px-6 py-4 flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setEditOpen(false)} className="h-10 px-5">
+              取消
+            </Button>
+            <AppButton
+              level="action"
+              onClick={handleSaveEdit}
+              disabled={!editName.trim() || isSaving}
+              className="h-10 px-5 gap-2"
+            >
+              {isSaving ? (
+                <>
+                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  保存中...
+                </>
+              ) : (
+                <>
+                  <Pencil size={16} />
+                  确认保存
+                </>
+              )}
+            </AppButton>
           </div>
         </DialogContent>
       </Dialog>
