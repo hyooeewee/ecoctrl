@@ -3,16 +3,23 @@ import type { BusinessObject } from "@ecoctrl/shared";
 import { db } from "@/config/database";
 import { objects } from "@/schemas/objects";
 
+// NOTE: BusinessObject in @ecoctrl/shared is missing the `status` field.
+// Once shared/types/api/objects.ts is updated, remove the `as` casts below.
+
 export async function findManyObjects(): Promise<BusinessObject[]> {
   const rows = await db.select().from(objects);
-  return rows.map((r) => ({
-    uuid: r.uuid,
-    id: r.id,
-    name: r.name,
-    modelId: r.modelId,
-    modelName: r.modelName,
-    points: r.points ?? [],
-  }));
+  return rows.map(
+    (r) =>
+      ({
+        uuid: r.uuid,
+        id: r.id,
+        name: r.name,
+        modelId: r.modelId,
+        modelName: r.modelName,
+        status: r.status,
+        points: r.points ?? [],
+      }) as BusinessObject,
+  );
 }
 
 export async function findObjectById(id: string): Promise<BusinessObject | null> {
@@ -25,8 +32,9 @@ export async function findObjectById(id: string): Promise<BusinessObject | null>
     name: r.name,
     modelId: r.modelId,
     modelName: r.modelName,
+    status: r.status,
     points: r.points ?? [],
-  };
+  } as BusinessObject;
 }
 
 export async function findObjectByUuid(uuid: string): Promise<BusinessObject | null> {
@@ -39,8 +47,9 @@ export async function findObjectByUuid(uuid: string): Promise<BusinessObject | n
     name: r.name,
     modelId: r.modelId,
     modelName: r.modelName,
+    status: r.status,
     points: r.points ?? [],
-  };
+  } as BusinessObject;
 }
 
 export async function createObject(data: Omit<BusinessObject, "uuid">): Promise<BusinessObject> {
@@ -51,6 +60,7 @@ export async function createObject(data: Omit<BusinessObject, "uuid">): Promise<
       name: data.name,
       modelId: data.modelId,
       modelName: data.modelName,
+      status: (data as unknown as Record<string, string>).status ?? "offline",
       points: data.points,
     })
     .returning();
@@ -61,8 +71,9 @@ export async function createObject(data: Omit<BusinessObject, "uuid">): Promise<
     name: r.name,
     modelId: r.modelId,
     modelName: r.modelName,
+    status: r.status,
     points: r.points ?? [],
-  };
+  } as BusinessObject;
 }
 
 export async function deleteObject(uuid: string): Promise<BusinessObject | null> {
@@ -75,6 +86,7 @@ export async function deleteObject(uuid: string): Promise<BusinessObject | null>
     name: r.name,
     modelId: r.modelId,
     modelName: r.modelName,
+    status: r.status,
     points: r.points ?? [],
-  };
+  } as BusinessObject;
 }
