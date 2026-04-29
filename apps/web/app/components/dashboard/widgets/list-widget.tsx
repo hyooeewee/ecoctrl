@@ -105,9 +105,9 @@ function DeviceListWidget({
       </div>
       <div className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto px-3 pt-2 pb-3">
         <div className="flex flex-col gap-1">
-          {items.map((device, index) => (
+          {items.map((device) => (
             <DeviceItem
-              key={`${device.label}-${index}`}
+              key={device.label}
               icon={<DynamicIcon name={device.icon} size={14} />}
               label={getNestedLocaleValue(t, device.label) ?? device.label}
               count={device.value}
@@ -194,9 +194,9 @@ function AlertListWidget({
       </div>
       <div className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto px-3 pt-2 pb-3">
         <div className="flex flex-col gap-1">
-          {items.map((alert, index) => (
+          {items.map((alert) => (
             <AlertItem
-              key={`${alert.title}-${index}`}
+              key={alert.title}
               icon={<DynamicIcon name={alert.icon} size={12} />}
               title={alert.title}
               subtitle={alert.subtitle}
@@ -260,9 +260,9 @@ function AiListWidget({
       </div>
       <div className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto px-3 pt-2 pb-3">
         <div className="flex flex-col gap-1.5">
-          {items.map((item, index) => (
+          {items.map((item) => (
             <SuggestionItem
-              key={`${item.text}-${index}`}
+              key={item.text}
               icon={<DynamicIcon name={item.icon} size={12} />}
               text={item.text}
               saving={item.saving}
@@ -310,9 +310,9 @@ function GenericListWidget({
       </div>
       <div className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto px-3 pt-2 pb-3">
         <div className="flex flex-col gap-1">
-          {data.items.map((item, index) => (
+          {data.items.map((item) => (
             <div
-              key={index}
+              key={JSON.stringify(item)}
               className="rounded-lg border border-white/8 bg-white/4 px-2.5 py-1.5 text-[11px]"
             >
               {JSON.stringify(item)}

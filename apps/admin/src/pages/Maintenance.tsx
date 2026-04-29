@@ -133,6 +133,7 @@ function MaintenanceCalendar({
 
       <div className="grid grid-cols-7 gap-1">
         {calendarDays.map((day, i) => {
+          // eslint-disable-next-line react/no-array-index-key
           if (!day) return <div key={`empty-${i}`} className="h-9" />;
           const isToday =
             today.getFullYear() === year &&
@@ -165,9 +166,9 @@ function MaintenanceCalendar({
               <span>{day.day}</span>
               {events.length > 0 && (
                 <div className="absolute bottom-0.5 flex gap-0.5">
-                  {events.slice(0, 3).map((e, idx) => (
+                  {events.slice(0, 3).map((e) => (
                     <div
-                      key={idx}
+                      key={e.id}
                       className={cn(
                         "h-1 w-1 rounded-full",
                         isToday
@@ -243,9 +244,7 @@ export default function Maintenance() {
 
     setUploading(true);
     try {
-      for (const file of Array.from(files)) {
-        await filesApi.upload(file);
-      }
+      await Promise.all(Array.from(files).map((file) => filesApi.upload(file)));
       await fetchManuals();
     } catch (err) {
       console.error(err);

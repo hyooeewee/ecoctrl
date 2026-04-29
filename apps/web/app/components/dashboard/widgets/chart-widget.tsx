@@ -25,6 +25,7 @@ export function ChartWidget({ widget, data }: ChartWidgetProps) {
   }
 
   if (data.chartType === "donut") {
+    /* oxlint-disable-next-line no-map-spread */
     const items = (data.items ?? []).map((item) => ({
       ...item,
       label: getNestedLocaleValue(t, item.label) ?? item.label,

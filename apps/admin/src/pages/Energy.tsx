@@ -53,9 +53,9 @@ export default function Energy() {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-            {areas.map((area, i) => (
+            {areas.map((area) => (
               <Card
-                key={i}
+                key={area.id}
                 className="border-border bg-card group relative overflow-hidden border shadow-sm"
               >
                 <CardHeader className="border-border/50 bg-muted/20 border-b px-6 pb-4">
