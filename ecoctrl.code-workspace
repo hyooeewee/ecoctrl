@@ -33,6 +33,9 @@
     "[jsonc]": {
       "editor.defaultFormatter": "oxc.oxc-vscode",
     },
+    "[markdown]": {
+      "editor.defaultFormatter": "oxc.oxc-vscode",
+    },
   },
   "extensions": {
     "recommendations": ["oxc.oxc-vscode"],
