@@ -20,6 +20,7 @@
     "@base-ui/react": "catalog:",
     "@ecoctrl/ui": "workspace:*",
     "@fontsource-variable/geist-mono": "^5.2.7",
+    "@lottiefiles/dotlottie-react": "^0.19.0",
     "@react-router/node": "7.14.0",
     "clsx": "catalog:",
     "isbot": "^5",
