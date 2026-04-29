@@ -1299,7 +1299,7 @@ export default function Models() {
                 }
               }}
             >
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="flex w-full">
                 <TabsTrigger value="form">表单</TabsTrigger>
                 <TabsTrigger value="json">JSON</TabsTrigger>
               </TabsList>
