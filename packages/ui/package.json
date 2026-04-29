@@ -10,6 +10,126 @@
       "types": "./src/index.ts",
       "import": "./src/index.ts"
     },
+    "./autocomplete": {
+      "types": "./src/components/community/autocomplete.tsx",
+      "import": "./src/components/community/autocomplete.tsx"
+    },
+    "./avatar": {
+      "types": "./src/components/ui/avatar.tsx",
+      "import": "./src/components/ui/avatar.tsx"
+    },
+    "./badge": {
+      "types": "./src/components/ui/badge.tsx",
+      "import": "./src/components/ui/badge.tsx"
+    },
+    "./button": {
+      "types": "./src/components/ui/button.tsx",
+      "import": "./src/components/ui/button.tsx"
+    },
+    "./card": {
+      "types": "./src/components/ui/card.tsx",
+      "import": "./src/components/ui/card.tsx"
+    },
+    "./combobox": {
+      "types": "./src/components/ui/combobox.tsx",
+      "import": "./src/components/ui/combobox.tsx"
+    },
+    "./command": {
+      "types": "./src/components/ui/command.tsx",
+      "import": "./src/components/ui/command.tsx"
+    },
+    "./dialog": {
+      "types": "./src/components/ui/dialog.tsx",
+      "import": "./src/components/ui/dialog.tsx"
+    },
+    "./dropdown-menu": {
+      "types": "./src/components/ui/dropdown-menu.tsx",
+      "import": "./src/components/ui/dropdown-menu.tsx"
+    },
+    "./field": {
+      "types": "./src/components/ui/field.tsx",
+      "import": "./src/components/ui/field.tsx"
+    },
+    "./input": {
+      "types": "./src/components/ui/input.tsx",
+      "import": "./src/components/ui/input.tsx"
+    },
+    "./input-group": {
+      "types": "./src/components/ui/input-group.tsx",
+      "import": "./src/components/ui/input-group.tsx"
+    },
+    "./label": {
+      "types": "./src/components/ui/label.tsx",
+      "import": "./src/components/ui/label.tsx"
+    },
+    "./popover": {
+      "types": "./src/components/ui/popover.tsx",
+      "import": "./src/components/ui/popover.tsx"
+    },
+    "./progress": {
+      "types": "./src/components/ui/progress.tsx",
+      "import": "./src/components/ui/progress.tsx"
+    },
+    "./scroll-area": {
+      "types": "./src/components/ui/scroll-area.tsx",
+      "import": "./src/components/ui/scroll-area.tsx"
+    },
+    "./select": {
+      "types": "./src/components/ui/select.tsx",
+      "import": "./src/components/ui/select.tsx"
+    },
+    "./separator": {
+      "types": "./src/components/ui/separator.tsx",
+      "import": "./src/components/ui/separator.tsx"
+    },
+    "./sheet": {
+      "types": "./src/components/ui/sheet.tsx",
+      "import": "./src/components/ui/sheet.tsx"
+    },
+    "./skeleton": {
+      "types": "./src/components/ui/skeleton.tsx",
+      "import": "./src/components/ui/skeleton.tsx"
+    },
+    "./slider": {
+      "types": "./src/components/ui/slider.tsx",
+      "import": "./src/components/ui/slider.tsx"
+    },
+    "./sonner": {
+      "types": "./src/components/ui/sonner.tsx",
+      "import": "./src/components/ui/sonner.tsx"
+    },
+    "./switch": {
+      "types": "./src/components/ui/switch.tsx",
+      "import": "./src/components/ui/switch.tsx"
+    },
+    "./table": {
+      "types": "./src/components/ui/table.tsx",
+      "import": "./src/components/ui/table.tsx"
+    },
+    "./tabs": {
+      "types": "./src/components/ui/tabs.tsx",
+      "import": "./src/components/ui/tabs.tsx"
+    },
+    "./textarea": {
+      "types": "./src/components/ui/textarea.tsx",
+      "import": "./src/components/ui/textarea.tsx"
+    },
+    "./theme-provider": {
+      "types": "./src/components/theme-provider.tsx",
+      "import": "./src/components/theme-provider.tsx"
+    },
+    "./toggle": {
+      "types": "./src/components/ui/toggle.tsx",
+      "import": "./src/components/ui/toggle.tsx"
+    },
+    "./tooltip": {
+      "types": "./src/components/ui/tooltip.tsx",
+      "import": "./src/components/ui/tooltip.tsx"
+    },
+    "./utils": {
+      "types": "./src/lib/utils.ts",
+      "import": "./src/lib/utils.ts"
+    },
     "./index.css": "./src/index.css",
     "./package.json": "./package.json"
   },
@@ -37,5 +157,8 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwindcss": "^4.0.0"
+  },
+  "scripts": {
+    "generate-proxies": "node scripts/generate-proxies.mjs"
   }
 }
