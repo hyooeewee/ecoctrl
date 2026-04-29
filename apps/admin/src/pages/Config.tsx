@@ -82,8 +82,9 @@ export default function SystemConfig({ user }: { user: AuthUser | null }) {
     autoBackup: true,
     backupRetentionDays: 30,
     sessionTimeout: 30,
-    allowRegistration: true,
-    allowPasswordReset: true,
+    allowRegistration: false,
+    allowPasswordReset: false,
+    allowOAuthLogin: false,
   };
 
   const updateField = <K extends keyof SystemConfig>(key: K, value: SystemConfig[K]) => {
@@ -125,6 +126,21 @@ export default function SystemConfig({ user }: { user: AuthUser | null }) {
           <Switch
             checked={currentConfig.allowPasswordReset}
             onCheckedChange={(checked) => updateField("allowPasswordReset", checked)}
+          />
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Shield size={18} />
+            <div>
+              <Label className="text-sm font-semibold">允许第三方认证登录</Label>
+              <p className="text-muted-foreground text-xs">
+                关闭后，用户无法使用微信、企业微信、飞书、钉钉等第三方账号登录。
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={currentConfig.allowOAuthLogin}
+            onCheckedChange={(checked) => updateField("allowOAuthLogin", checked)}
           />
         </div>
       </div>
