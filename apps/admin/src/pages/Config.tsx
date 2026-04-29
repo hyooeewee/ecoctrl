@@ -4,6 +4,8 @@ import {
   Check,
   Clock,
   Database,
+  Eye,
+  EyeOff,
   Globe,
   Hash,
   Lock,
@@ -39,6 +41,7 @@ export default function SystemConfig({ user }: { user: AuthUser | null }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [showSmtpPass, setShowSmtpPass] = useState(false);
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -305,14 +308,23 @@ export default function SystemConfig({ user }: { user: AuthUser | null }) {
                 <p className="text-muted-foreground text-xs">SMTP 认证密码或应用授权码。</p>
               </div>
             </div>
-            <div className="w-full sm:w-48">
+            <div className="relative w-full sm:w-48">
+              {/* Use type="text" with WebkitTextSecurity to avoid Chrome password-form warnings for non-login fields. */}
               <Input
-                type="password"
+                type="text"
                 placeholder="••••••••"
                 value={currentConfig.smtpPass}
                 onChange={(e) => updateField("smtpPass", e.target.value)}
-                className="bg-muted/30 border-border"
+                className="bg-muted/30 border-border pr-10"
+                style={{ WebkitTextSecurity: showSmtpPass ? "none" : "disc" }}
               />
+              <button
+                type="button"
+                onClick={() => setShowSmtpPass((v) => !v)}
+                className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
+              >
+                {showSmtpPass ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
           </div>
           <div className="border-border/50 flex items-center justify-between border-t pt-6">
