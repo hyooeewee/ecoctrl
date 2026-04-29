@@ -7,6 +7,7 @@ import {
   unlinkOAuthAccount,
   findUserOAuthAccounts,
 } from "@/repositories/oauthAccounts";
+import { findPlatformConfig } from "@/repositories/platformConfig";
 import {
   findUserByIdentifier,
   findUserByEmail,
@@ -220,6 +221,11 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
       },
     },
     async (_request, reply) => {
+      const platformConfig = await findPlatformConfig();
+      if (!platformConfig.allowOAuthLogin) {
+        return reply.send([]);
+      }
+
       const providers = [] as { id: string; name: string; icon: string }[];
       if (process.env.WECHAT_APP_ID && process.env.WECHAT_APP_SECRET) {
         providers.push({ id: "wechat", name: "微信", icon: "wechat" });
@@ -244,6 +250,11 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      const platformConfig = await findPlatformConfig();
+      if (!platformConfig.allowOAuthLogin) {
+        return reply.status(403).send({ error: "OAuth login is disabled" });
+      }
+
       const { provider } = request.params as { provider: string };
       const { redirectUri } = request.query as { redirectUri: string };
 
@@ -284,6 +295,11 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      const platformConfig = await findPlatformConfig();
+      if (!platformConfig.allowOAuthLogin) {
+        return reply.status(403).send({ error: "OAuth login is disabled" });
+      }
+
       cleanExpiredEntries();
       const { provider } = request.params as { provider: string };
       const { code, state } = request.query as { code: string; state: string };
@@ -424,10 +440,16 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
           }),
           400: z.object({ error: z.string() }),
           401: z.object({ error: z.string() }),
+          403: z.object({ error: z.string() }),
         },
       },
     },
     async (request, reply) => {
+      const platformConfig = await findPlatformConfig();
+      if (!platformConfig.allowOAuthLogin) {
+        return reply.status(403).send({ error: "OAuth login is disabled" });
+      }
+
       cleanExpiredEntries();
       const { tempToken, username, password } = request.body as {
         tempToken: string;
@@ -498,11 +520,17 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
             }),
           }),
           400: z.object({ error: z.string() }),
+          403: z.object({ error: z.string() }),
           409: z.object({ error: z.string() }),
         },
       },
     },
     async (request, reply) => {
+      const platformConfig = await findPlatformConfig();
+      if (!platformConfig.allowOAuthLogin) {
+        return reply.status(403).send({ error: "OAuth login is disabled" });
+      }
+
       cleanExpiredEntries();
       const { tempToken, username, email } = request.body as {
         tempToken: string;
