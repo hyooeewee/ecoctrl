@@ -16,6 +16,7 @@ import { Input } from "@ecoctrl/ui/input";
 import { Label } from "@ecoctrl/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ecoctrl/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui/tabs";
+import { Textarea } from "@ecoctrl/ui/textarea";
 
 import AppButton from "@/components/AppButton";
 import ModelFileZone from "@/components/ModelFileZone";
@@ -83,6 +84,9 @@ export default function Models() {
   >({});
   const [objectError, setObjectError] = useState("");
   const [isCreatingObject, setIsCreatingObject] = useState(false);
+  const [objectJson, setObjectJson] = useState("");
+  const [objectMode, setObjectMode] = useState<"form" | "json">("form");
+  const [editingObjectUuid, setEditingObjectUuid] = useState<string | null>(null);
 
   const fetchModels = useCallback(async () => {
     setLoading(true);
@@ -157,12 +161,14 @@ export default function Models() {
     try {
       const validPoints = uploadPoints
         .filter((p) => p.pointType.trim())
-        .map((p) => ({
-          ...p,
-          pointType: p.pointType.toUpperCase(),
-          pointNo: p.pointNo.padStart(4, "0"),
-          props: p.props.filter((prop) => prop.key.trim() || prop.name.trim()),
-        }));
+        .map((p) =>
+          // oxlint-disable-next-line oxc/no-map-spread
+          Object.assign({}, p, {
+            pointType: p.pointType.toUpperCase(),
+            pointNo: p.pointNo.padStart(4, "0"),
+            props: p.props.filter((prop) => prop.key.trim() || prop.name.trim()),
+          }),
+        );
       await modelsApi.upload(uploadFile, {
         name: uploadName.trim(),
         version: uploadVersion.trim() || "v1.0",
@@ -265,45 +271,153 @@ export default function Models() {
     setSelectedModelId("");
     setObjectPointValues({});
     setObjectError("");
+    setObjectMode("form");
+    setObjectJson("");
+    setEditingObjectUuid(null);
   };
 
-  const handleCreateObject = async () => {
+  const buildObjectPayload = (): {
+    id: string;
+    name: string;
+    modelId: string;
+    modelName: string;
+    points: { pointId: string; pointName: string; values: Record<string, string> }[];
+  } => {
+    const model = models.find((m) => m.id === selectedModelId)!;
+    const points =
+      (model as Model3D & { points?: PointItem[] }).points?.map((p) => ({
+        pointId: `${model.deviceType.toUpperCase()}_${objectId.trim()}_${p.pointType.toUpperCase()}_${p.pointNo.padStart(4, "0")}`,
+        pointName: p.name,
+        values: objectPointValues[p.id] ?? {},
+      })) ?? [];
+    return {
+      id: objectId.trim(),
+      name: objectName.trim(),
+      modelId: selectedModelId,
+      modelName: model.name,
+      points,
+    };
+  };
+
+  const openEditObjectDialog = (obj: BusinessObject) => {
+    setEditingObjectUuid(obj.uuid);
+    setObjectId(obj.id);
+    setObjectName(obj.name);
+    setSelectedModelId(obj.modelId);
+    setObjectMode("form");
+    setObjectError("");
+
+    // Rebuild objectPointValues from obj.points
+    const model = models.find((m) => m.id === obj.modelId);
+    const values: Record<string, Record<string, string>> = {};
+    if (model) {
+      const modelPoints = (model as Model3D & { points?: PointItem[] }).points ?? [];
+      for (const mp of modelPoints) {
+        const matched = obj.points.find((op) =>
+          op.pointId.endsWith(`_${mp.pointType}_${mp.pointNo.padStart(4, "0")}`),
+        );
+        if (matched && Object.keys(matched.values).length > 0) {
+          values[mp.id] = matched.values;
+        }
+      }
+    }
+    setObjectPointValues(values);
+    setObjectJson("");
+    setObjectOpen(true);
+  };
+
+  const syncFormToJson = () => {
+    if (!objectId.trim() || !objectName.trim() || !selectedModelId) {
+      setObjectJson("");
+      return;
+    }
+    try {
+      const payload = buildObjectPayload();
+      setObjectJson(JSON.stringify(payload, null, 2));
+    } catch {
+      setObjectJson("");
+    }
+  };
+
+  const syncJsonToForm = (): string | undefined => {
+    if (!objectJson.trim()) return;
+    try {
+      const parsed = JSON.parse(objectJson) as {
+        id?: string;
+        name?: string;
+        modelId?: string;
+        points?: { pointId: string; pointName: string; values: Record<string, string> }[];
+      };
+      if (parsed.id !== undefined) setObjectId(String(parsed.id));
+      if (parsed.name !== undefined) setObjectName(String(parsed.name));
+      if (parsed.modelId !== undefined) setSelectedModelId(String(parsed.modelId));
+      if (parsed.points) {
+        const model = models.find((m) => m.id === (parsed.modelId ?? selectedModelId));
+        const values: Record<string, Record<string, string>> = {};
+        if (model) {
+          const modelPoints = (model as Model3D & { points?: PointItem[] }).points ?? [];
+          for (const mp of modelPoints) {
+            const suffix = `_${mp.pointType}_${mp.pointNo.padStart(4, "0")}`;
+            const matched = parsed.points.find((op) => op.pointId.endsWith(suffix));
+            if (matched && Object.keys(matched.values).length > 0) {
+              values[mp.id] = matched.values;
+            }
+          }
+        }
+        setObjectPointValues(values);
+      }
+    } catch (e) {
+      return e instanceof Error ? e.message : "JSON 格式错误";
+    }
+  };
+
+  const validateObjectForm = (): boolean => {
     if (!objectId.trim() || !objectName.trim() || !selectedModelId) {
       setObjectError("请填写对象ID、名称并选择模型");
-      return;
+      return false;
     }
     if (!/^\d{4}$/.test(objectId.trim())) {
       setObjectError("设备编号必须为4位数字");
-      return;
+      return false;
     }
     const model = models.find((m) => m.id === selectedModelId);
     if (!model) {
       setObjectError("所选模型不存在");
-      return;
+      return false;
     }
+    return true;
+  };
 
+  const handleCreateObject = async () => {
+    if (!validateObjectForm()) return;
     setIsCreatingObject(true);
     setObjectError("");
     try {
-      const points =
-        (model as Model3D & { points?: PointItem[] }).points?.map((p) => ({
-          pointId: `${model.deviceType.toUpperCase()}_${objectId.trim()}_${p.pointType.toUpperCase()}_${p.pointNo.padStart(4, "0")}`,
-          pointName: p.name,
-          values: objectPointValues[p.id] ?? {},
-        })) ?? [];
-
-      await objectsApi.create({
-        id: objectId.trim(),
-        name: objectName.trim(),
-        modelId: selectedModelId,
-        modelName: model.name,
-        points,
-      });
+      const payload = buildObjectPayload();
+      await objectsApi.create(payload);
       setObjectOpen(false);
       resetObjectForm();
       await fetchObjects();
     } catch (err) {
       setObjectError(err instanceof Error ? err.message : "创建失败，请重试");
+    } finally {
+      setIsCreatingObject(false);
+    }
+  };
+
+  const handleUpdateObject = async () => {
+    if (!editingObjectUuid) return;
+    if (!validateObjectForm()) return;
+    setIsCreatingObject(true);
+    setObjectError("");
+    try {
+      const payload = buildObjectPayload();
+      await objectsApi.update(editingObjectUuid, payload);
+      setObjectOpen(false);
+      resetObjectForm();
+      await fetchObjects();
+    } catch (err) {
+      setObjectError(err instanceof Error ? err.message : "保存失败，请重试");
     } finally {
       setIsCreatingObject(false);
     }
@@ -395,12 +509,14 @@ export default function Models() {
     try {
       const validPoints = editPoints
         .filter((p) => p.pointType.trim())
-        .map((p) => ({
-          ...p,
-          pointType: p.pointType.toUpperCase(),
-          pointNo: p.pointNo.padStart(4, "0"),
-          props: p.props.filter((prop) => prop.key.trim() || prop.name.trim()),
-        }));
+        .map((p) =>
+          // oxlint-disable-next-line oxc/no-map-spread
+          Object.assign({}, p, {
+            pointType: p.pointType.toUpperCase(),
+            pointNo: p.pointNo.padStart(4, "0"),
+            props: p.props.filter((prop) => prop.key.trim() || prop.name.trim()),
+          }),
+        );
 
       const updatePayload: {
         name: string;
@@ -652,7 +768,14 @@ export default function Models() {
                   <CardTitle>业务对象</CardTitle>
                   <CardDescription>基于模型创建业务对象实例，为点位属性赋值。</CardDescription>
                 </div>
-                <AppButton level="action" className="gap-2" onClick={() => setObjectOpen(true)}>
+                <AppButton
+                  level="action"
+                  className="gap-2"
+                  onClick={() => {
+                    resetObjectForm();
+                    setObjectOpen(true);
+                  }}
+                >
                   <Plus size={16} />
                   新增对象
                 </AppButton>
@@ -701,6 +824,14 @@ export default function Models() {
                           <td className="px-3 py-2.5 text-muted-foreground">{obj.modelName}</td>
                           <td className="px-3 py-2.5">{obj.points.length}</td>
                           <td className="px-3 py-2.5 text-right">
+                            <AppButton
+                              level="secondary"
+                              size="icon-sm"
+                              className="h-7 w-7 mr-1"
+                              onClick={() => openEditObjectDialog(obj)}
+                            >
+                              <Pencil size={14} />
+                            </AppButton>
                             <AppButton
                               level="danger"
                               size="icon-sm"
@@ -848,7 +979,7 @@ export default function Models() {
                 <div className="space-y-3">
                   {uploadPoints.map((point, pointIdx) => (
                     <div
-                      key={pointIdx}
+                      key={point.id || `${point.pointType}-${point.pointNo}`}
                       className="rounded-xl border border-border bg-card p-4 space-y-3 shadow-sm"
                     >
                       {/* Point header */}
@@ -935,6 +1066,7 @@ export default function Models() {
                         ) : (
                           <div className="space-y-2">
                             {point.props.map((prop, propIdx) => (
+                              // eslint-disable-next-line react/no-array-index-key
                               <div key={propIdx} className="flex items-center gap-2">
                                 <Input
                                   value={prop.name}
@@ -1000,7 +1132,7 @@ export default function Models() {
         </DialogContent>
       </Dialog>
 
-      {/* Create Object Dialog */}
+      {/* Create / Edit Object Dialog */}
       <Dialog
         open={objectOpen}
         onOpenChange={(open) => {
@@ -1011,131 +1143,181 @@ export default function Models() {
         <DialogContent className="max-h-[90vh] max-w-lg flex flex-col gap-0 p-0">
           <DialogHeader className="px-6 pt-6 pb-4">
             <DialogTitle className="flex items-center gap-2 text-lg">
-              <Plus size={18} />
-              新增业务对象
+              {editingObjectUuid ? <Pencil size={18} /> : <Plus size={18} />}
+              {editingObjectUuid ? "编辑业务对象" : "新增业务对象"}
             </DialogTitle>
           </DialogHeader>
 
+          {/* Mode toggle */}
+          <div className="px-6 pb-2">
+            <Tabs
+              value={objectMode}
+              onValueChange={(v) => {
+                const mode = v as "form" | "json";
+                if (mode === "json") {
+                  syncFormToJson();
+                  setObjectError("");
+                  setObjectMode(mode);
+                } else {
+                  const err = syncJsonToForm();
+                  if (err) {
+                    setObjectError(err);
+                  } else {
+                    setObjectError("");
+                    setObjectMode(mode);
+                  }
+                }
+              }}
+            >
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="form">表单</TabsTrigger>
+                <TabsTrigger value="json">JSON</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
           <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-6">
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-foreground mb-1.5 block">选择模型</label>
-                <Select value={selectedModelId} onValueChange={(v) => setSelectedModelId(v ?? "")}>
-                  <SelectTrigger className="w-full h-10">
-                    <SelectValue placeholder="请选择模型" className="truncate">
-                      {selectedModelId
-                        ? (models.find((m) => m.id === selectedModelId)?.name ?? "请选择模型")
-                        : "请选择模型"}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {models.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>
-                        <span className="block truncate">{m.name}</span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label
-                    htmlFor="object-id"
-                    className="text-sm font-medium text-foreground mb-1.5 block"
-                  >
-                    设备编号
-                  </label>
-                  <Input
-                    id="object-id"
-                    value={objectId}
-                    onChange={(e) => setObjectId(e.target.value)}
-                    placeholder="4位数字"
-                    maxLength={4}
-                    className="h-10 text-center font-mono"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="object-name"
-                    className="text-sm font-medium text-foreground mb-1.5 block"
-                  >
-                    对象名称
-                  </label>
-                  <Input
-                    id="object-name"
-                    value={objectName}
-                    onChange={(e) => setObjectName(e.target.value)}
-                    placeholder="请输入对象名称"
-                    className="h-10"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="border-t border-border" />
-
-            {/* Point values section */}
-            {selectedModelId && (
-              <div>
-                <h4 className="text-sm font-semibold text-foreground mb-3">点位属性值</h4>
-                {(() => {
-                  const selectedModel = models.find((m) => m.id === selectedModelId);
-                  const points =
-                    (selectedModel as Model3D & { points?: PointItem[] })?.points ?? [];
-                  return points.length === 0 ? (
-                    <div className="rounded-lg border border-dashed border-border bg-muted/30 py-6 flex flex-col items-center gap-2">
-                      <Layers size={20} className="text-muted-foreground/40" />
-                      <p className="text-xs text-muted-foreground">所选模型未配置点位</p>
+            {objectMode === "form" ? (
+              <>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1.5 block">
+                      选择模型
+                    </label>
+                    <Select
+                      value={selectedModelId}
+                      onValueChange={(v) => setSelectedModelId(v ?? "")}
+                    >
+                      <SelectTrigger className="w-full h-10">
+                        <SelectValue placeholder="请选择模型" className="truncate">
+                          {selectedModelId
+                            ? (models.find((m) => m.id === selectedModelId)?.name ?? "请选择模型")
+                            : "请选择模型"}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {models.map((m) => (
+                          <SelectItem key={m.id} value={m.id}>
+                            <span className="block truncate">{m.name}</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label
+                        htmlFor="object-id"
+                        className="text-sm font-medium text-foreground mb-1.5 block"
+                      >
+                        设备编号
+                      </label>
+                      <Input
+                        id="object-id"
+                        value={objectId}
+                        onChange={(e) => setObjectId(e.target.value)}
+                        placeholder="4位数字"
+                        maxLength={4}
+                        className="h-10 text-center font-mono"
+                      />
                     </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {points.map((point) => (
-                        <div
-                          key={point.id}
-                          className="rounded-xl border border-border bg-card p-4 space-y-3 shadow-sm"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">{point.name || point.id}</span>
-                            <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                              {((): string => {
-                                const m = models.find((mm) => mm.id === selectedModelId);
-                                return `${m?.deviceType ?? "_"}_${objectId.trim() || "____"}_${point.pointType}_${point.pointNo}`;
-                              })()}
-                            </span>
-                          </div>
-                          {point.props.length === 0 ? (
-                            <p className="text-xs text-muted-foreground/60 py-1">无属性</p>
-                          ) : (
-                            <div className="grid grid-cols-2 gap-3">
-                              {point.props.map((prop) => (
-                                <div key={prop.key} className="space-y-1.5">
-                                  <Label className="text-xs text-muted-foreground">
-                                    {prop.name || prop.key}
-                                    {prop.unit ? ` (${prop.unit})` : ""}
-                                  </Label>
-                                  <Input
-                                    value={objectPointValues[point.id]?.[prop.key] ?? ""}
-                                    onChange={(e) =>
-                                      setObjectPointValues((prev) => ({
-                                        ...prev,
-                                        [point.id]: {
-                                          ...prev[point.id],
-                                          [prop.key]: e.target.value,
-                                        },
-                                      }))
-                                    }
-                                    placeholder="值"
-                                    className="h-9 text-sm"
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          )}
+                    <div>
+                      <label
+                        htmlFor="object-name"
+                        className="text-sm font-medium text-foreground mb-1.5 block"
+                      >
+                        对象名称
+                      </label>
+                      <Input
+                        id="object-name"
+                        value={objectName}
+                        onChange={(e) => setObjectName(e.target.value)}
+                        placeholder="请输入对象名称"
+                        className="h-10"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-border" />
+
+                {/* Point values section */}
+                {selectedModelId && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-foreground mb-3">点位属性值</h4>
+                    {(() => {
+                      const selectedModel = models.find((m) => m.id === selectedModelId);
+                      const points =
+                        (selectedModel as Model3D & { points?: PointItem[] })?.points ?? [];
+                      return points.length === 0 ? (
+                        <div className="rounded-lg border border-dashed border-border bg-muted/30 py-6 flex flex-col items-center gap-2">
+                          <Layers size={20} className="text-muted-foreground/40" />
+                          <p className="text-xs text-muted-foreground">所选模型未配置点位</p>
                         </div>
-                      ))}
-                    </div>
-                  );
-                })()}
+                      ) : (
+                        <div className="space-y-3">
+                          {points.map((point) => (
+                            <div
+                              key={point.id}
+                              className="rounded-xl border border-border bg-card p-4 space-y-3 shadow-sm"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">
+                                  {point.name || point.id}
+                                </span>
+                                <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                                  {(() => {
+                                    const m = models.find((mm) => mm.id === selectedModelId);
+                                    return `${m?.deviceType ?? "_"}_${objectId.trim() || "____"}_${point.pointType}_${point.pointNo}`;
+                                  })()}
+                                </span>
+                              </div>
+                              {point.props.length === 0 ? (
+                                <p className="text-xs text-muted-foreground/60 py-1">无属性</p>
+                              ) : (
+                                <div className="grid grid-cols-2 gap-3">
+                                  {point.props.map((prop) => (
+                                    <div key={prop.key} className="space-y-1.5">
+                                      <Label className="text-xs text-muted-foreground">
+                                        {prop.name || prop.key}
+                                        {prop.unit ? ` (${prop.unit})` : ""}
+                                      </Label>
+                                      <Input
+                                        value={objectPointValues[point.id]?.[prop.key] ?? ""}
+                                        onChange={(e) =>
+                                          setObjectPointValues((prev) => ({
+                                            ...prev,
+                                            [point.id]: {
+                                              ...prev[point.id],
+                                              [prop.key]: e.target.value,
+                                            },
+                                          }))
+                                        }
+                                        placeholder="值"
+                                        className="h-9 text-sm"
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="space-y-4">
+                <label className="text-sm font-medium text-foreground block">JSON 数据</label>
+                <Textarea
+                  value={objectJson}
+                  onChange={(e) => setObjectJson(e.target.value)}
+                  className="min-h-[320px] font-mono text-xs"
+                  placeholder='{"id":"0001","name":"...","modelId":"...","points":[]}'
+                  spellCheck={false}
+                />
               </div>
             )}
 
@@ -1153,7 +1335,20 @@ export default function Models() {
             </Button>
             <AppButton
               level="action"
-              onClick={handleCreateObject}
+              onClick={() => {
+                if (objectMode === "json") {
+                  const err = syncJsonToForm();
+                  if (err) {
+                    setObjectError(err);
+                    return;
+                  }
+                }
+                if (editingObjectUuid) {
+                  handleUpdateObject();
+                } else {
+                  handleCreateObject();
+                }
+              }}
               disabled={
                 !objectId.trim() || !objectName.trim() || !selectedModelId || isCreatingObject
               }
@@ -1162,19 +1357,18 @@ export default function Models() {
               {isCreatingObject ? (
                 <>
                   <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  创建中...
+                  {editingObjectUuid ? "保存中..." : "创建中..."}
                 </>
               ) : (
                 <>
-                  <Plus size={16} />
-                  确认创建
+                  {editingObjectUuid ? <Pencil size={16} /> : <Plus size={16} />}
+                  {editingObjectUuid ? "保存修改" : "确认创建"}
                 </>
               )}
             </AppButton>
           </div>
         </DialogContent>
       </Dialog>
-
       {/* Edit Dialog */}
       <Dialog
         open={editOpen}
@@ -1312,7 +1506,7 @@ export default function Models() {
                 <div className="space-y-3">
                   {editPoints.map((point, pointIdx) => (
                     <div
-                      key={pointIdx}
+                      key={point.id || `${point.pointType}-${point.pointNo}`}
                       className="rounded-xl border border-border bg-card p-4 space-y-3 shadow-sm"
                     >
                       {/* Point header */}
@@ -1399,6 +1593,7 @@ export default function Models() {
                         ) : (
                           <div className="space-y-2">
                             {point.props.map((prop, propIdx) => (
+                              // eslint-disable-next-line react/no-array-index-key
                               <div key={propIdx} className="flex items-center gap-2">
                                 <Input
                                   value={prop.name}
