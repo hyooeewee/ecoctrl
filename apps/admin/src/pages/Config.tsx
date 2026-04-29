@@ -70,7 +70,7 @@ export default function SystemConfig({ user }: { user: AuthUser | null }) {
     }
   };
 
-  const currentConfig = config ?? {
+  const currentConfig: SystemConfig & { allowOAuthLogin?: boolean } = config ?? {
     platformName: "",
     refreshInterval: 30,
     timezone: "Asia/Shanghai",
@@ -140,7 +140,11 @@ export default function SystemConfig({ user }: { user: AuthUser | null }) {
           </div>
           <Switch
             checked={currentConfig.allowOAuthLogin}
-            onCheckedChange={(checked) => updateField("allowOAuthLogin", checked)}
+            onCheckedChange={(checked) =>
+              setConfig((prev) =>
+                prev ? ({ ...prev, allowOAuthLogin: checked } as SystemConfig) : prev,
+              )
+            }
           />
         </div>
       </div>

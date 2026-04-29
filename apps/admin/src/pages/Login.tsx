@@ -70,9 +70,10 @@ export default function Login({ onLogin }: LoginProps) {
       } catch {
         setSysConfig({
           platformName: "",
-          allowRegistration: true,
-          allowPasswordReset: true,
-        });
+          allowRegistration: false,
+          allowPasswordReset: false,
+          allowOAuthLogin: false,
+        } as PublicSystemConfig);
       } finally {
         setSysConfigLoading(false);
       }
@@ -679,15 +680,16 @@ export default function Login({ onLogin }: LoginProps) {
               </form>
             )}
 
-            {mode === "login" && (
-              <div className="mt-6 pt-2">
-                <OAuthButtons
-                  onSuccess={handleOAuthSuccess}
-                  onError={handleOAuthError}
-                  onBindRequired={handleOAuthBindRequired}
-                />
-              </div>
-            )}
+            {mode === "login" &&
+              (sysConfig as { allowOAuthLogin?: boolean } | null)?.allowOAuthLogin === true && (
+                <div className="mt-6 pt-2">
+                  <OAuthButtons
+                    onSuccess={handleOAuthSuccess}
+                    onError={handleOAuthError}
+                    onBindRequired={handleOAuthBindRequired}
+                  />
+                </div>
+              )}
 
             {/* Footer */}
             <div className="mt-6 text-center text-xs text-white/40">EcoCtrl 能管平台 v1.0</div>
