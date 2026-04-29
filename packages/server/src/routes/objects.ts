@@ -42,6 +42,7 @@ export default async function objectRoutes(fastify: FastifyInstance) {
         name: string;
         modelId: string;
         modelName: string;
+        status?: string;
         points: {
           pointId: string;
           pointName: string;

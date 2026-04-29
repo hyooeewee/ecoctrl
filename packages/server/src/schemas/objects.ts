@@ -12,5 +12,6 @@ export const objects = pgTable("objects", {
   name: varchar("name", { length: 255 }).notNull(),
   modelId: varchar("model_id", { length: 255 }).notNull(),
   modelName: varchar("model_name", { length: 255 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("offline"),
   points: jsonb("points").$type<ObjectPoint[]>().default([]),
 });

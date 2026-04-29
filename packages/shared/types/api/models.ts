@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const PointItemSchema = z.object({
-  id: z.string(),
+  id: z.string().default(""),
   name: z.string(),
   pointType: z.string(),
   pointNo: z.string(),
