@@ -86,6 +86,7 @@ export default async function settingsRoutes(fastify: FastifyInstance) {
           | undefined) ?? [];
       const existingMap = new Map(existingLayout.map((item) => [item.id, item]));
 
+      /* oxlint-disable-next-line no-map-spread */
       const mergedLayout = defaultLayout.map((item) => {
         const existing = existingMap.get(item.id);
         if (existing) {

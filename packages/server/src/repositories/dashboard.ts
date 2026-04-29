@@ -138,11 +138,14 @@ export async function findDashboardData(userId?: string): Promise<{
     layoutH: number;
   })[] = [];
 
+  const hasWeather = rows.some((r) => r.dataType === "weather");
+  const weatherData = hasWeather ? await fetchWeather() : null;
+
   for (const r of rows) {
     let data = r.dataJson as WidgetConfig["data"];
 
     if (r.dataType === "weather") {
-      data = await fetchWeather();
+      data = weatherData;
     }
 
     const override = userOverrides.get(r.id);

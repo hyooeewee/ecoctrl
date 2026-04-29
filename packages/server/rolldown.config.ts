@@ -35,7 +35,9 @@ export default defineConfig({
     {
       name: "emit-static-assets",
       async generateBundle() {
+        // eslint-disable-next-line no-await-in-loop
         for (const file of staticAssets) {
+          // oxlint-disable-next-line no-await-in-loop
           const source = await readFile(file);
           this.emitFile({ type: "asset", fileName: file, source });
         }

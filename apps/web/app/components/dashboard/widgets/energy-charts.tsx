@@ -284,8 +284,8 @@ export function EnergyBreakdownChart({ className, data, title, icon }: EnergyBre
               strokeWidth={0}
               isAnimationActive={false}
             >
-              {data.map((entry, index) => (
-                <Cell key={index} fill={entry.color} />
+              {data.map((entry) => (
+                <Cell key={entry.label} fill={entry.color} />
               ))}
             </Pie>
             <Tooltip content={<PieCustomTooltip />} />

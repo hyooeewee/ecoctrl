@@ -1,5 +1,13 @@
 import { Eye, EyeOff, GripVertical, Settings, Link } from "lucide-react";
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { cn } from "~/lib/utils";
 import { type BentoLayoutItem, useSettingsStore } from "~/store/settings";
@@ -203,8 +211,13 @@ export function BentoGrid({ children, className }: BentoGridProps) {
     [drag, dropResult, swapBentoItems, moveBentoItem],
   );
 
+  const dragCtxValue = useMemo(
+    () => ({ draggingId: drag?.id ?? null, dropResult, startDrag }),
+    [drag?.id, dropResult, startDrag],
+  );
+
   return (
-    <DragContext.Provider value={{ draggingId: drag?.id ?? null, dropResult, startDrag }}>
+    <DragContext.Provider value={dragCtxValue}>
       <div className={cn("relative h-full w-full", className)}>
         {/*
          * Full-screen overlay — rendered only while dragging.
@@ -229,9 +242,12 @@ export function BentoGrid({ children, className }: BentoGridProps) {
             className="pointer-events-none absolute inset-0 z-0"
             style={{ display: "grid", ...GRID_STYLE }}
           >
-            {Array.from({ length: COLS * ROWS }).map((_, i) => (
+            {Array.from(
+              { length: COLS * ROWS },
+              (_, i) => `bg-${Math.floor(i / COLS)}-${i % COLS}`,
+            ).map((key) => (
               <div
-                key={i}
+                key={key}
                 className="rounded-xl"
                 style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.04)" }}
               />
