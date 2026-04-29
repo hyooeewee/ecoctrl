@@ -25,6 +25,7 @@ export const SystemConfigSchema = z.object({
   sessionTimeout: z.number(),
   allowRegistration: z.boolean(),
   allowPasswordReset: z.boolean(),
+  allowOAuthLogin: z.boolean(),
 });
 export type SystemConfig = z.infer<typeof SystemConfigSchema>;
 
@@ -32,6 +33,7 @@ export const PublicSystemConfigSchema = z.object({
   platformName: z.string(),
   allowRegistration: z.boolean(),
   allowPasswordReset: z.boolean(),
+  allowOAuthLogin: z.boolean(),
 });
 export type PublicSystemConfig = z.infer<typeof PublicSystemConfigSchema>;
 
