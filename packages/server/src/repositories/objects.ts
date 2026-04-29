@@ -76,6 +76,34 @@ export async function createObject(data: Omit<BusinessObject, "uuid">): Promise<
   } as BusinessObject;
 }
 
+export async function updateObject(
+  uuid: string,
+  data: Partial<Omit<BusinessObject, "uuid">>,
+): Promise<BusinessObject | null> {
+  const result = await db
+    .update(objects)
+    .set({
+      id: data.id,
+      name: data.name,
+      modelId: data.modelId,
+      modelName: data.modelName,
+      points: data.points,
+    })
+    .where(eq(objects.uuid, uuid))
+    .returning();
+  if (result.length === 0) return null;
+  const r = result[0];
+  return {
+    uuid: r.uuid,
+    id: r.id,
+    name: r.name,
+    modelId: r.modelId,
+    modelName: r.modelName,
+    status: r.status,
+    points: r.points ?? [],
+  } as BusinessObject;
+}
+
 export async function deleteObject(uuid: string): Promise<BusinessObject | null> {
   const result = await db.delete(objects).where(eq(objects.uuid, uuid)).returning();
   if (result.length === 0) return null;
