@@ -8,12 +8,15 @@ permissions:
   contents: write
   pull-requests: write
 
-concurrency: ${{ github.workflow }}-${{ github.ref }}
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   changeset:
     name: Changeset Check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       is_release: ${{ steps.check.outputs.is_release }}
       version: ${{ steps.check.outputs.version }}
@@ -37,6 +40,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Get original commit message
+        id: commit
+        run: |
+          MSG=$(git log -1 --pretty=%s)
+          echo "message=$MSG" >> $GITHUB_OUTPUT
+
       - name: Create Release PR
         uses: changesets/action@v1
         with:
@@ -48,28 +57,61 @@ jobs:
 
       - name: Check if version commit
         id: check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          MSG=$(git log -1 --pretty=%s)
-          echo "commit_message=$MSG"
+          set -euo pipefail
+
+          MSG="${{ steps.commit.outputs.message }}"
+          echo "Original commit message: $MSG"
 
           IS_RELEASE=false
-          if echo "$MSG" | grep -q "^Version Packages"; then
+          REASON=""
+
+          # 方式1: Merge commit
+          if echo "$MSG" | grep -q "^Merge pull request" && echo "$MSG" | grep -q "changeset-release"; then
             IS_RELEASE=true
-          elif echo "$MSG" | grep -q "^Merge pull request" && echo "$MSG" | grep -q "changeset-release"; then
-            IS_RELEASE=true
+            REASON="merge commit from changeset-release PR"
+          fi
+
+          # 方式2 & 3: Squash merge 或 Rebase merge
+          if [ "$IS_RELEASE" = "false" ]; then
+            API_URL="https://api.github.com/repos/${{ github.repository }}/commits/${{ github.sha }}/pulls"
+            echo "Querying associated PRs via GitHub API: $API_URL"
+
+            HTTP_CODE=$(curl -sSL -o /tmp/prs.json -w "%{http_code}" \
+              -H "Authorization: Bearer $GITHUB_TOKEN" \
+              "$API_URL" || true)
+
+            if [ "$HTTP_CODE" != "200" ]; then
+              echo "Error: GitHub API returned HTTP $HTTP_CODE"
+              cat /tmp/prs.json 2>/dev/null || echo "(no response body)"
+              exit 1
+            fi
+
+            PRS=$(cat /tmp/prs.json)
+            echo "Associated PRs response: $PRS"
+
+            if echo "$PRS" | jq -e 'any(.[]; .head.ref | contains("changeset-release"))' >/dev/null 2>&1; then
+              IS_RELEASE=true
+              REASON="commit linked to changeset-release PR (squash/rebase merge)"
+            fi
           fi
 
           VERSION=$(node -p "require('./apps/admin/package.json').version")
           TAG="v$VERSION"
+          echo "Package version: $VERSION, Tag: $TAG"
 
           if [ "$IS_RELEASE" = "true" ] && git rev-parse "$TAG" >/dev/null 2>&1; then
             echo "Tag $TAG already exists, skipping release."
             IS_RELEASE=false
+            REASON="tag $TAG already exists"
           fi
 
           echo "is_release=$IS_RELEASE" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Release decision: IS_RELEASE=$IS_RELEASE, reason: ${REASON:-not a changeset-release merge}"
 
   release:
     name: Build & Release
