@@ -1,12 +1,23 @@
 import { z } from "zod";
 
-export const ThreeDConfigSchema = z.object({
+export const DashboardModelLabelSchema = z.object({
+  key: z.string(),
+  fallbackPosition: z.object({ x: z.number(), y: z.number(), z: z.number() }),
+  meshKeywords: z.array(z.string()),
+  focusAlpha: z.number(),
+  focusBeta: z.number(),
+  focusRadius: z.number(),
+});
+export type DashboardModelLabel = z.infer<typeof DashboardModelLabelSchema>;
+
+export const DashboardModelConfigSchema = z.object({
+  modelFileUrl: z.string().nullable().optional(),
   cameraPreset: z.string(),
   ambientLightIntensity: z.number(),
   hotspots: z.array(z.unknown()),
   labels: z.array(z.unknown()),
 });
-export type ThreeDConfig = z.infer<typeof ThreeDConfigSchema>;
+export type DashboardModelConfig = z.infer<typeof DashboardModelConfigSchema>;
 
 export const SystemConfigSchema = z.object({
   platformName: z.string(),

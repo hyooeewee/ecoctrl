@@ -20,7 +20,7 @@ import Monitoring from "@/pages/Monitoring";
 import Preferences from "@/pages/Preferences";
 import Profile from "@/pages/Profile";
 import Reports from "@/pages/Reports";
-import ThreeDConfig from "@/pages/ThreeDConfig";
+import DashboardModel from "@/pages/DashboardModel";
 import { initTheme, loadThemeFromServer, applyDarkMode } from "@/lib/darkMode";
 import { authApi } from "./api/auth";
 import type { AuthUser } from "./api/auth";
@@ -96,7 +96,7 @@ export default function App() {
       case "models":
         return <Models />;
       case "settingsGroup":
-        return <ThreeDConfig />;
+        return <DashboardModel />;
       case "monitoring":
         return <Monitoring />;
       case "reports":

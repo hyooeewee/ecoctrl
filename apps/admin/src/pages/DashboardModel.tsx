@@ -5,17 +5,17 @@ import { Button } from "@ecoctrl/ui";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoctrl/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui";
 
-import type { ThreeDConfig } from "@ecoctrl/shared";
-import { threeDConfigApi } from "../api/3dConfig";
+import type { DashboardModelConfig } from "@ecoctrl/shared";
+import { dashboardModelApi } from "../api/dashboardModel";
 
-export default function ThreeDConfig() {
-  const [config, setConfig] = useState<ThreeDConfig | null>(null);
+export default function DashboardModel() {
+  const [config, setConfig] = useState<DashboardModelConfig | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchConfig = async () => {
       try {
-        const data = await threeDConfigApi.get();
+        const data = await dashboardModelApi.get();
         setConfig(data);
       } catch (err) {
         console.error(err);

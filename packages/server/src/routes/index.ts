@@ -3,11 +3,12 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { findPlatformConfig } from "@/repositories/platformConfig";
 import { findDashboardData } from "@/repositories/dashboard";
 import { findOnlineUser } from "@/repositories/users";
+import { findDashboardModel } from "@/repositories/dashboardModel";
 import fileRoutes from "@/routes/files";
 import maintenanceRoutes from "@/routes/maintenance";
 import faultRoutes from "@/routes/faults";
 import configsRoutes from "@/routes/configs";
-import threeDConfigRoutes from "@/routes/threeDConfig";
+import dashboardModelRoutes from "@/routes/dashboardModel";
 import energyRoutes from "@/routes/energy";
 import reportRoutes from "@/routes/reports";
 import userRoutes from "@/routes/users";
@@ -78,11 +79,35 @@ export default async function apiRoutes(fastify: FastifyInstance) {
     },
   );
 
+  fastify.get(
+    "/public/model",
+    {
+      config: { rateLimit: { max: 200, timeWindow: "1 minute" } },
+      schema: {
+        tags: ["Public"],
+        summary: "Get dashboard model config",
+        security: [],
+      },
+    },
+    async (_request, reply) => {
+      const config = await findDashboardModel();
+      return reply.send(
+        config ?? {
+          modelFileUrl: null,
+          cameraPreset: "Default_View_01",
+          ambientLightIntensity: 0.85,
+          hotspots: [],
+          labels: [],
+        },
+      );
+    },
+  );
+
   await fastify.register(fileRoutes, { prefix: "/files" });
   await fastify.register(maintenanceRoutes, { prefix: "/maintenance" });
   await fastify.register(faultRoutes, { prefix: "/faults" });
   await fastify.register(configsRoutes, { prefix: "/configs" });
-  await fastify.register(threeDConfigRoutes, { prefix: "/three-d-config" });
+  await fastify.register(dashboardModelRoutes, { prefix: "/dashboard-model" });
   await fastify.register(energyRoutes, { prefix: "/energy" });
   await fastify.register(reportRoutes, { prefix: "/reports" });
   await fastify.register(userRoutes, { prefix: "/users" });

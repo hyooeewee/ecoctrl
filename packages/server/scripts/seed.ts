@@ -282,14 +282,15 @@ async function seedModels() {
   console.log("Skipped seeding models (upload via API)");
 }
 
-async function seedThreeDConfig() {
-  await db.insert(schema.threeDConfigs).values({
+async function seedDashboardModel() {
+  await db.insert(schema.dashboardModels).values({
+    modelFileUrl: null,
     cameraPreset: "Default_View_01",
     ambientLightIntensity: 0.85,
     hotspots: [],
     labels: [],
   });
-  console.log("Seeded 3D config");
+  console.log("Seeded dashboard model config");
 }
 
 async function seedPlatformConfig() {
@@ -597,7 +598,7 @@ async function main() {
   await seedBackupSchedule();
   await seedEnergyAreas();
   await seedModels();
-  await seedThreeDConfig();
+  await seedDashboardModel();
   await seedPlatformConfig();
   await seedIotTokens();
   console.log("Done!");

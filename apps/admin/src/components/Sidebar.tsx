@@ -31,7 +31,7 @@ const navItems = [
   { id: "overview", label: "管理总览", icon: LayoutDashboard },
   { id: "accounts", label: "账户控制", icon: Users },
   { id: "models", label: "模型与对象", icon: Box },
-  { id: "settingsGroup", label: "3D 模型设置", icon: BoxSelect },
+  { id: "settingsGroup", label: "大屏模型", icon: BoxSelect },
   { id: "monitoring", label: "流程图实时监控", icon: Monitor },
   { id: "reports", label: "报表管理", icon: FileBox },
   { id: "maintenance", label: "维保管理", icon: Wrench },

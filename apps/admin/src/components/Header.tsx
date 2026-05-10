@@ -32,7 +32,7 @@ const tabTitleMap: Record<string, string> = {
   config: "系统配置",
   accounts: "账户控制",
   models: "模型与对象",
-  settingsGroup: "3D 模型设置",
+  settingsGroup: "大屏模型",
   monitoring: "流程图实时监控",
   reports: "报表管理",
   maintenance: "维保管理",
