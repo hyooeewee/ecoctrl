@@ -9,6 +9,7 @@ import { DashboardHeader } from "~/components/dashboard/dashboard-header";
 import { DashboardNav } from "~/components/dashboard/dashboard-nav";
 import { DashboardWidgets } from "~/components/dashboard/widgets";
 import { fetchDashboardData, type DashboardData } from "~/lib/dashboard-api";
+import { fetchPublicModel, type PublicModelData } from "~/lib/model-api";
 import { cn } from "~/lib/utils";
 import { locale, useLocale } from "~/locales";
 import { useAuthStore } from "~/store/auth";
@@ -24,13 +25,21 @@ export function meta(_args: Route.MetaArgs) {
 
 // ─── Loader ─────────────────────────────────────────────────────────────────────
 
-export async function clientLoader(): Promise<DashboardData | null> {
-  try {
-    return await fetchDashboardData();
-  } catch (err) {
-    console.error("[clientLoader] fetchDashboardData failed:", err);
-    return null;
-  }
+export async function clientLoader(): Promise<{
+  dashboard: DashboardData | null;
+  model: PublicModelData | null;
+}> {
+  const [dashboard, model] = await Promise.all([
+    fetchDashboardData().catch((err) => {
+      console.error("[clientLoader] fetchDashboardData failed:", err);
+      return null;
+    }),
+    fetchPublicModel().catch((err) => {
+      console.error("[clientLoader] fetchPublicModel failed:", err);
+      return null;
+    }),
+  ]);
+  return { dashboard, model };
 }
 
 // ─── Label info sidebar ─────────────────────────────────────────────────────────
@@ -71,7 +80,10 @@ function LabelInfoPanel({ labelKey, onClose }: { labelKey: string; onClose: () =
 
 export default function Home() {
   const t = useLocale();
-  const loaderData = useLoaderData() as DashboardData | null;
+  const loaderData = useLoaderData() as {
+    dashboard: DashboardData | null;
+    model: PublicModelData | null;
+  };
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn());
   const fetchUser = useAuthStore((state) => state.fetchUser);
   const navHideDelay = useSettingsStore((state) => state.navHideDelay);
@@ -124,9 +136,9 @@ export default function Home() {
   // Uses hydrateBentoLayout so this effect does NOT mark hasUnsavedChanges,
   // preventing loadSettings() from skipping the server fetch.
   useEffect(() => {
-    if (!loaderData?.widgets?.length) return;
+    if (!loaderData?.dashboard?.widgets?.length) return;
 
-    const incomingIds = new Set(loaderData.widgets.map((w) => w.id));
+    const incomingIds = new Set(loaderData.dashboard.widgets.map((w) => w.id));
     const currentIds = new Set(bentoLayout.map((l) => l.id));
 
     // Remove widgets that the backend no longer returns.
@@ -134,7 +146,7 @@ export default function Home() {
 
     // Use API layout for newly discovered widgets.
     const newItems: BentoLayoutItem[] = [];
-    for (const w of loaderData.widgets) {
+    for (const w of loaderData.dashboard.widgets) {
       if (currentIds.has(w.id)) continue;
       newItems.push({
         id: w.id,
@@ -256,6 +268,8 @@ export default function Home() {
           onCanvasClick={() => setActiveLabel(null)}
           onLoad={() => setModelLoaded(true)}
           onProgress={setModelLoadProgress}
+          modelUrl={loaderData?.model?.modelFileUrl}
+          labels={loaderData?.model?.labels}
         />
 
         {/* Label info sidebar (left panel) */}
@@ -279,7 +293,7 @@ export default function Home() {
                 isImmersive && "opacity-0 pointer-events-none",
               )}
             >
-              <DashboardWidgets data={loaderData} />
+              <DashboardWidgets data={loaderData?.dashboard ?? null} />
             </BentoGrid>
           </main>
 

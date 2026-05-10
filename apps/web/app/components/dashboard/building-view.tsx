@@ -68,7 +68,31 @@ interface LabelDef {
   focusRadius: number;
 }
 
-const LABELS: LabelDef[] = [
+export interface ModelLabel {
+  key: string;
+  fallbackPosition: { x: number; y: number; z: number };
+  meshKeywords: string[];
+  focusAlpha: number;
+  focusBeta: number;
+  focusRadius: number;
+}
+
+function toLabelDef(ml: ModelLabel): LabelDef {
+  return {
+    key: ml.key,
+    fallbackPosition: new Vector3(
+      ml.fallbackPosition.x,
+      ml.fallbackPosition.y,
+      ml.fallbackPosition.z,
+    ),
+    meshKeywords: ml.meshKeywords,
+    focusAlpha: ml.focusAlpha,
+    focusBeta: ml.focusBeta,
+    focusRadius: ml.focusRadius,
+  };
+}
+
+const DEFAULT_LABELS: LabelDef[] = [
   {
     key: "office1",
     fallbackPosition: new Vector3(-4, 2.5, -3),
@@ -211,10 +235,22 @@ interface BuildingViewProps {
   onCanvasClick?: () => void;
   onLoad?: () => void;
   onProgress?: (progress: number) => void;
+  modelUrl?: string;
+  labels?: ModelLabel[];
 }
 
 export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(function BuildingView(
-  { className, activeLabel, sidebarWidth = 320, onLabelClick, onCanvasClick, onLoad, onProgress },
+  {
+    className,
+    activeLabel,
+    sidebarWidth = 320,
+    onLabelClick,
+    onCanvasClick,
+    onLoad,
+    onProgress,
+    modelUrl,
+    labels,
+  },
   ref,
 ) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -244,6 +280,15 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
   const clipYRef = useRef(999);
   const clipTargetRef = useRef(999);
   const lobbyTopRef = useRef(2);
+
+  // Use a ref so the scene-init useEffect (dependency []) can read the latest
+  // modelUrl without triggering a scene rebuild.
+  const modelUrlRef = useRef(modelUrl);
+
+  // Use a ref so the scene-init useEffect and imperative handle can read labels
+  // without adding them to dependency arrays.
+  const labelsRef = useRef(DEFAULT_LABELS);
+  labelsRef.current = labels ? labels.map(toLabelDef) : DEFAULT_LABELS;
 
   const {
     autoRotate,
@@ -396,80 +441,120 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
     pivot.rotation.y = (propsRef.current.defaultRotationY * Math.PI) / 180;
     rootMeshRef.current = pivot;
 
-    SceneLoader.ImportMeshAsync("", "/", "building.glb", scene, (event) => {
-      if (event.lengthComputable && event.total > 0) {
-        const value = Math.min(99, (event.loaded / event.total) * 100);
-        setLoadProgress(value);
-        propsRef.current.onProgress?.(value);
+    // Split a model URL into rootUrl + filename for BabylonJS SceneLoader.
+    function splitModelUrl(url: string): { rootUrl: string; filename: string } {
+      const lastSlash = url.lastIndexOf("/");
+      if (lastSlash === -1) {
+        return { rootUrl: "/", filename: url };
       }
-    })
-      .then((result) => {
-        const firstMesh = result.meshes[0];
-        if (firstMesh) {
-          const glbRoot = scene.getTransformNodeByName("__root__") ?? firstMesh;
-          glbRoot.parent = pivot;
+      return {
+        rootUrl: url.substring(0, lastSlash + 1) || "/",
+        filename: url.substring(lastSlash + 1),
+      };
+    }
 
-          const { min, max } = firstMesh.getHierarchyBoundingVectors(true);
-          const size = max.subtract(min);
-          const center = min.add(size.scale(0.5));
-          const maxSize = Math.max(size.x, size.y, size.z);
-          const scale = maxSize > 0 ? 10 / maxSize : 1;
-
-          glbRoot.position.x = -center.x * scale;
-          glbRoot.position.y = -min.y * scale;
-          glbRoot.position.z = -center.z * scale;
-          glbRoot.scaling.scaleInPlace(scale);
-
-          const target = new Vector3(0, (size.y * scale) / 2, 0);
-          camera.setTarget(target);
-
-          // Snapshot the true initial camera state so resetCamera can restore it precisely.
-          postLoadCameraStateRef.current = {
-            alpha: camera.alpha,
-            beta: camera.beta,
-            radius: camera.radius,
-            target: target.clone(),
-          };
-
-          const allNodes = [...scene.meshes, ...scene.transformNodes];
-          const findNode = (keywords: string[]) =>
-            allNodes.find((n) =>
-              keywords.some((kw) => n.name.toLowerCase().includes(kw.toLowerCase())),
-            );
-
-          labelAnchorsRef.current = LABELS.map((cfg) => {
-            const node = findNode(cfg.meshKeywords);
-            let worldPos: Vector3;
-            if (node && (node as any).getBoundingInfo) {
-              worldPos = (node as any).getBoundingInfo().boundingBox.centerWorld.clone();
-            } else if (node) {
-              worldPos = node.getAbsolutePosition().clone();
-            } else {
-              worldPos = cfg.fallbackPosition.clone();
-            }
-            return { key: cfg.key, worldPos };
-          });
-
-          // Detect lobby top height for cross-section clip plane.
-          const lobbyNode = findNode(["lobby", "大堂", "大厅", "entrance"]);
-          if (lobbyNode && (lobbyNode as any).getBoundingInfo) {
-            // Generous margin above lobby top so the lobby itself stays fully visible.
-            lobbyTopRef.current =
-              (lobbyNode as any).getBoundingInfo().boundingBox.maximumWorld.y + 1.5;
-          } else {
-            // Fallback: estimate lobby height as ~35% of total building height.
-            // After repositioning, building base sits at y=0.
-            // Estimate lobby top as ~35% of total building height.
-            lobbyTopRef.current = size.y * scale * 0.35;
-          }
+    function tryLoadModel(url: string) {
+      const { rootUrl, filename } = splitModelUrl(url);
+      return SceneLoader.ImportMeshAsync("", rootUrl, filename, scene, (event) => {
+        if (event.lengthComputable && event.total > 0) {
+          const value = Math.min(99, (event.loaded / event.total) * 100);
+          setLoadProgress(value);
+          propsRef.current.onProgress?.(value);
         }
-        scene.stopAllAnimations();
-        setLoadProgress(100);
-        propsRef.current.onLoad?.();
-      })
-      .catch((_err) => {
-        /* silently ignore load errors */
       });
+    }
+
+    const processLoadedResult = (
+      result: Awaited<ReturnType<typeof SceneLoader.ImportMeshAsync>>,
+    ) => {
+      const firstMesh = result.meshes[0];
+      if (firstMesh) {
+        const glbRoot = scene.getTransformNodeByName("__root__") ?? firstMesh;
+        glbRoot.parent = pivot;
+
+        const { min, max } = firstMesh.getHierarchyBoundingVectors(true);
+        const size = max.subtract(min);
+        const center = min.add(size.scale(0.5));
+        const maxSize = Math.max(size.x, size.y, size.z);
+        const scale = maxSize > 0 ? 10 / maxSize : 1;
+
+        glbRoot.position.x = -center.x * scale;
+        glbRoot.position.y = -min.y * scale;
+        glbRoot.position.z = -center.z * scale;
+        glbRoot.scaling.scaleInPlace(scale);
+
+        const target = new Vector3(0, (size.y * scale) / 2, 0);
+        camera.setTarget(target);
+
+        // Snapshot the true initial camera state so resetCamera can restore it precisely.
+        postLoadCameraStateRef.current = {
+          alpha: camera.alpha,
+          beta: camera.beta,
+          radius: camera.radius,
+          target: target.clone(),
+        };
+
+        const allNodes = [...scene.meshes, ...scene.transformNodes];
+        const findNode = (keywords: string[]) =>
+          allNodes.find((n) =>
+            keywords.some((kw) => n.name.toLowerCase().includes(kw.toLowerCase())),
+          );
+
+        labelAnchorsRef.current = labelsRef.current.map((cfg) => {
+          const node = findNode(cfg.meshKeywords);
+          let worldPos: Vector3;
+          if (node && (node as any).getBoundingInfo) {
+            worldPos = (node as any).getBoundingInfo().boundingBox.centerWorld.clone();
+          } else if (node) {
+            worldPos = node.getAbsolutePosition().clone();
+          } else {
+            worldPos = cfg.fallbackPosition.clone();
+          }
+          return { key: cfg.key, worldPos };
+        });
+
+        // Detect lobby top height for cross-section clip plane.
+        const lobbyNode = findNode(["lobby", "大堂", "大厅", "entrance"]);
+        if (lobbyNode && (lobbyNode as any).getBoundingInfo) {
+          // Generous margin above lobby top so the lobby itself stays fully visible.
+          lobbyTopRef.current =
+            (lobbyNode as any).getBoundingInfo().boundingBox.maximumWorld.y + 1.5;
+        } else {
+          // Fallback: estimate lobby height as ~35% of total building height.
+          // After repositioning, building base sits at y=0.
+          // Estimate lobby top as ~35% of total building height.
+          lobbyTopRef.current = size.y * scale * 0.35;
+        }
+      }
+      scene.stopAllAnimations();
+      setLoadProgress(100);
+      propsRef.current.onLoad?.();
+    };
+
+    const fallbackUrl = "/building.glb";
+
+    const primaryUrl = modelUrlRef.current;
+
+    if (primaryUrl) {
+      tryLoadModel(primaryUrl)
+        .then(processLoadedResult)
+        .catch(() => {
+          console.warn(
+            `[BuildingView] Failed to load model from "${primaryUrl}", falling back to "${fallbackUrl}"`,
+          );
+          tryLoadModel(fallbackUrl)
+            .then(processLoadedResult)
+            .catch(() => {
+              /* silently ignore load errors */
+            });
+        });
+    } else {
+      tryLoadModel(fallbackUrl)
+        .then(processLoadedResult)
+        .catch(() => {
+          /* silently ignore load errors */
+        });
+    }
 
     engine.runRenderLoop(() => {
       if (autoRotateRef.current && !isInteractingRef.current) {
@@ -604,7 +689,7 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
       focusOnLabel: (key: string) => {
         const camera = cameraRef.current;
         if (!camera) return;
-        const def = LABELS.find((l) => l.key === key);
+        const def = labelsRef.current.find((l) => l.key === key);
         if (!def) return;
         animateCameraTo(camera, def.focusAlpha, def.focusBeta, def.focusRadius);
       },
@@ -637,7 +722,7 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
       />
 
       {/* ── Floating area labels ── */}
-      {LABELS.map((cfg) => (
+      {labelsRef.current.map((cfg) => (
         <AreaLabel
           key={cfg.key}
           label={labelText[cfg.key]}
