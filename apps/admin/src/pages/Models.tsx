@@ -10,7 +10,20 @@ import {
   Braces,
   Maximize2,
   Minimize2,
+  ArrowUpDown,
 } from "lucide-react";
+import {
+  useReactTable,
+  getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  getFilteredRowModel,
+  flexRender,
+  type ColumnDef,
+  type SortingState,
+  type ColumnFiltersState,
+} from "@tanstack/react-table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ecoctrl/ui/table";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Editor } from "@monaco-editor/react";
 
@@ -159,19 +172,9 @@ export default function Models() {
   const [importTargetModelId, setImportTargetModelId] = useState("");
 
   // Points tab state
-  const [pointSortField, setPointSortField] = useState<
-    "name" | "pointType" | "pointNo" | "modelName"
-  >("pointType");
-  const [pointSortDir, setPointSortDir] = useState<"asc" | "desc">("asc");
-  const [pointColFilters, setPointColFilters] = useState({
-    pointType: "",
-    pointNo: "",
-    name: "",
-    modelName: "",
-    deviceType: "",
-  });
-  const [pointPage, setPointPage] = useState(1);
-  const [pointPageSize, setPointPageSize] = useState(10);
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [globalFilter, setGlobalFilter] = useState("");
 
   const [activeTab, setActiveTab] = useState("models");
 
@@ -858,55 +861,104 @@ export default function Models() {
     return result;
   }, [models]);
 
-  // Filter, sort and paginate points
-  const filteredPoints = useMemo(() => {
-    let result = [...allPoints];
-
-    if (pointColFilters.pointType) {
-      const v = pointColFilters.pointType.toLowerCase();
-      result = result.filter((p) => p.pointType.toLowerCase().includes(v));
-    }
-    if (pointColFilters.pointNo) {
-      const v = pointColFilters.pointNo.toLowerCase();
-      result = result.filter((p) => p.pointNo.toLowerCase().includes(v));
-    }
-    if (pointColFilters.name) {
-      const v = pointColFilters.name.toLowerCase();
-      result = result.filter((p) => p.name.toLowerCase().includes(v));
-    }
-    if (pointColFilters.modelName) {
-      const v = pointColFilters.modelName.toLowerCase();
-      result = result.filter((p) => p.modelName.toLowerCase().includes(v));
-    }
-    if (pointColFilters.deviceType) {
-      const v = pointColFilters.deviceType.toLowerCase();
-      result = result.filter((p) => p.deviceType.toLowerCase().includes(v));
-    }
-
-    result.sort((a, b) => {
-      const dir = pointSortDir === "asc" ? 1 : -1;
-      switch (pointSortField) {
-        case "name":
-          return a.name.localeCompare(b.name) * dir;
-        case "pointType":
-          return a.pointType.localeCompare(b.pointType) * dir;
-        case "pointNo":
-          return a.pointNo.localeCompare(b.pointNo) * dir;
-        case "modelName":
-          return a.modelName.localeCompare(b.modelName) * dir;
-        default:
-          return 0;
-      }
-    });
-
-    return result;
-  }, [allPoints, pointColFilters, pointSortField, pointSortDir]);
-
-  const totalPointPages = Math.max(1, Math.ceil(filteredPoints.length / pointPageSize));
-  const currentPagePoints = filteredPoints.slice(
-    (pointPage - 1) * pointPageSize,
-    pointPage * pointPageSize,
+  const pointColumns = useMemo<ColumnDef<(typeof allPoints)[number]>[]>(
+    () => [
+      {
+        accessorKey: "pointType",
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            点位类型
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        ),
+        cell: ({ row }) => <span className="font-mono text-xs">{row.getValue("pointType")}</span>,
+      },
+      {
+        accessorKey: "pointNo",
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            点位编号
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        ),
+        cell: ({ row }) => <span className="font-mono text-xs">{row.getValue("pointNo")}</span>,
+      },
+      {
+        accessorKey: "name",
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            点位名称
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        ),
+        cell: ({ row }) => row.getValue("name") || "-",
+      },
+      {
+        accessorKey: "propCount",
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            属性数量
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        ),
+      },
+      {
+        accessorKey: "modelName",
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            所属模型
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        ),
+      },
+      {
+        accessorKey: "deviceType",
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            设备类型
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        ),
+        cell: ({ row }) => <span className="font-mono text-xs">{row.getValue("deviceType")}</span>,
+      },
+    ],
+    [],
   );
+
+  const table = useReactTable({
+    data: allPoints,
+    columns: pointColumns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
+    state: {
+      sorting,
+      columnFilters,
+      globalFilter,
+    },
+  });
 
   return (
     <div className="space-y-6">
@@ -1116,8 +1168,7 @@ export default function Models() {
                           key={obj.uuid}
                           className="border-b border-border/50 hover:bg-muted/50 cursor-pointer"
                           onClick={() => {
-                            setPointColFilters((prev) => ({ ...prev, modelName: obj.modelName }));
-                            setPointPage(1);
+                            setColumnFilters([{ id: "modelName", value: obj.modelName }]);
                             setActiveTab("points");
                           }}
                         >
@@ -1185,232 +1236,109 @@ export default function Models() {
                 <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
                   加载中...
                 </div>
-              ) : currentPagePoints.length === 0 ? (
+              ) : table.getRowModel().rows.length === 0 ? (
                 <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
                   暂无点位数据
                 </div>
               ) : (
                 <>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-border">
-                          <th
-                            className="px-3 py-2.5 text-left font-medium text-muted-foreground cursor-pointer select-none"
-                            onClick={() => {
-                              if (pointSortField === "pointType") {
-                                setPointSortDir(pointSortDir === "asc" ? "desc" : "asc");
-                              } else {
-                                setPointSortField("pointType");
-                                setPointSortDir("asc");
-                              }
-                            }}
-                          >
-                            <span className="flex items-center gap-1">
-                              点位类型
-                              {pointSortField === "pointType" &&
-                                (pointSortDir === "asc" ? "↑" : "↓")}
-                            </span>
-                          </th>
-                          <th
-                            className="px-3 py-2.5 text-left font-medium text-muted-foreground cursor-pointer select-none"
-                            onClick={() => {
-                              if (pointSortField === "pointNo") {
-                                setPointSortDir(pointSortDir === "asc" ? "desc" : "asc");
-                              } else {
-                                setPointSortField("pointNo");
-                                setPointSortDir("asc");
-                              }
-                            }}
-                          >
-                            <span className="flex items-center gap-1">
-                              点位编号
-                              {pointSortField === "pointNo" && (pointSortDir === "asc" ? "↑" : "↓")}
-                            </span>
-                          </th>
-                          <th
-                            className="px-3 py-2.5 text-left font-medium text-muted-foreground cursor-pointer select-none"
-                            onClick={() => {
-                              if (pointSortField === "name") {
-                                setPointSortDir(pointSortDir === "asc" ? "desc" : "asc");
-                              } else {
-                                setPointSortField("name");
-                                setPointSortDir("asc");
-                              }
-                            }}
-                          >
-                            <span className="flex items-center gap-1">
-                              点位名称
-                              {pointSortField === "name" && (pointSortDir === "asc" ? "↑" : "↓")}
-                            </span>
-                          </th>
-                          <th className="px-3 py-2.5 text-left font-medium text-muted-foreground">
-                            属性数量
-                          </th>
-                          <th
-                            className="px-3 py-2.5 text-left font-medium text-muted-foreground cursor-pointer select-none"
-                            onClick={() => {
-                              if (pointSortField === "modelName") {
-                                setPointSortDir(pointSortDir === "asc" ? "desc" : "asc");
-                              } else {
-                                setPointSortField("modelName");
-                                setPointSortDir("asc");
-                              }
-                            }}
-                          >
-                            <span className="flex items-center gap-1">
-                              所属模型
-                              {pointSortField === "modelName" &&
-                                (pointSortDir === "asc" ? "↑" : "↓")}
-                            </span>
-                          </th>
-                          <th className="px-3 py-2.5 text-left font-medium text-muted-foreground">
-                            设备类型
-                          </th>
-                        </tr>
-                        <tr className="border-b border-border bg-muted/30">
-                          <th className="px-3 py-1.5">
-                            <Input
-                              placeholder="筛选"
-                              value={pointColFilters.pointType}
-                              onChange={(e) => {
-                                setPointColFilters((prev) => ({
-                                  ...prev,
-                                  pointType: e.target.value,
-                                }));
-                                setPointPage(1);
-                              }}
-                              className="h-7 text-xs bg-transparent border-0 px-1 shadow-none focus-visible:ring-0"
-                            />
-                          </th>
-                          <th className="px-3 py-1.5">
-                            <Input
-                              placeholder="筛选"
-                              value={pointColFilters.pointNo}
-                              onChange={(e) => {
-                                setPointColFilters((prev) => ({
-                                  ...prev,
-                                  pointNo: e.target.value,
-                                }));
-                                setPointPage(1);
-                              }}
-                              className="h-7 text-xs bg-transparent border-0 px-1 shadow-none focus-visible:ring-0"
-                            />
-                          </th>
-                          <th className="px-3 py-1.5">
-                            <Input
-                              placeholder="筛选"
-                              value={pointColFilters.name}
-                              onChange={(e) => {
-                                setPointColFilters((prev) => ({ ...prev, name: e.target.value }));
-                                setPointPage(1);
-                              }}
-                              className="h-7 text-xs bg-transparent border-0 px-1 shadow-none focus-visible:ring-0"
-                            />
-                          </th>
-                          <th className="px-3 py-1.5" />
-                          <th className="px-3 py-1.5">
-                            <Input
-                              placeholder="筛选"
-                              value={pointColFilters.modelName}
-                              onChange={(e) => {
-                                setPointColFilters((prev) => ({
-                                  ...prev,
-                                  modelName: e.target.value,
-                                }));
-                                setPointPage(1);
-                              }}
-                              className="h-7 text-xs bg-transparent border-0 px-1 shadow-none focus-visible:ring-0"
-                            />
-                          </th>
-                          <th className="px-3 py-1.5">
-                            <Input
-                              placeholder="筛选"
-                              value={pointColFilters.deviceType}
-                              onChange={(e) => {
-                                setPointColFilters((prev) => ({
-                                  ...prev,
-                                  deviceType: e.target.value,
-                                }));
-                                setPointPage(1);
-                              }}
-                              className="h-7 text-xs bg-transparent border-0 px-1 shadow-none focus-visible:ring-0"
-                            />
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {currentPagePoints.map((point) => (
-                          <tr
-                            key={`${point.modelId}-${point.id}`}
-                            className="border-b border-border/50 hover:bg-muted/50"
-                          >
-                            <td className="px-3 py-2.5 font-mono text-xs">{point.pointType}</td>
-                            <td className="px-3 py-2.5 font-mono text-xs">{point.pointNo}</td>
-                            <td className="px-3 py-2.5">{point.name || "-"}</td>
-                            <td className="px-3 py-2.5">{point.propCount}</td>
-                            <td className="px-3 py-2.5">{point.modelName}</td>
-                            <td className="px-3 py-2.5 font-mono text-xs">{point.deviceType}</td>
-                          </tr>
+                  <div className="flex flex-wrap items-center gap-3 py-4">
+                    <Input
+                      placeholder="筛选点位..."
+                      value={globalFilter}
+                      onChange={(e) => setGlobalFilter(e.target.value)}
+                      className="max-w-sm"
+                    />
+                    <Select
+                      value={(table.getColumn("modelName")?.getFilterValue() as string) ?? ""}
+                      onValueChange={(v) => {
+                        table.getColumn("modelName")?.setFilterValue(v || undefined);
+                      }}
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="所属模型">
+                          {(table.getColumn("modelName")?.getFilterValue() as string | undefined) ??
+                            "所属模型"}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">全部模型</SelectItem>
+                        {models.map((m) => (
+                          <SelectItem key={m.id} value={m.name}>
+                            {m.name}
+                          </SelectItem>
                         ))}
-                      </tbody>
-                    </table>
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={(table.getColumn("deviceType")?.getFilterValue() as string) ?? ""}
+                      onValueChange={(v) => {
+                        table.getColumn("deviceType")?.setFilterValue(v || undefined);
+                      }}
+                    >
+                      <SelectTrigger className="w-[120px]">
+                        <SelectValue placeholder="设备类型">
+                          {(table.getColumn("deviceType")?.getFilterValue() as
+                            | string
+                            | undefined) ?? "设备类型"}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">全部类型</SelectItem>
+                        {existingDeviceTypes.map((t) => (
+                          <SelectItem key={t} value={t}>
+                            {t}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-
-                  {/* Pagination */}
-                  <div className="flex items-center justify-between mt-4">
-                    <div className="flex items-center gap-3">
-                      <p className="text-sm text-muted-foreground">
-                        共 {filteredPoints.length} 条，第 {pointPage} / {totalPointPages} 页
-                      </p>
-                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <span>每页</span>
-                        <Select
-                          value={String(pointPageSize)}
-                          onValueChange={(v) => {
-                            setPointPageSize(Number(v));
-                            setPointPage(1);
-                          }}
-                        >
-                          <SelectTrigger className="h-7 w-16 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="10">10</SelectItem>
-                            <SelectItem value="20">20</SelectItem>
-                            <SelectItem value="50">50</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <span>条</span>
-                      </div>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        {table.getHeaderGroups().map((headerGroup) => (
+                          <TableRow key={headerGroup.id}>
+                            {headerGroup.headers.map((header) => (
+                              <TableHead key={header.id}>
+                                {header.isPlaceholder
+                                  ? null
+                                  : flexRender(header.column.columnDef.header, header.getContext())}
+                              </TableHead>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableHeader>
+                      <TableBody>
+                        {table.getRowModel().rows.map((row) => (
+                          <TableRow key={row.id}>
+                            {row.getVisibleCells().map((cell) => (
+                              <TableCell key={cell.id}>
+                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <div className="flex items-center justify-between py-4">
+                    <div className="text-sm text-muted-foreground">
+                      共 {table.getFilteredRowModel().rows.length} 条
                     </div>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center space-x-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-8 px-3"
-                        onClick={() => setPointPage((p) => Math.max(1, p - 1))}
-                        disabled={pointPage <= 1}
+                        onClick={() => table.previousPage()}
+                        disabled={!table.getCanPreviousPage()}
                       >
                         上一页
                       </Button>
-                      {Array.from({ length: totalPointPages }, (_, i) => i + 1).map((p) => (
-                        <Button
-                          key={p}
-                          variant={p === pointPage ? "default" : "outline"}
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          onClick={() => setPointPage(p)}
-                        >
-                          {p}
-                        </Button>
-                      ))}
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-8 px-3"
-                        onClick={() => setPointPage((p) => Math.min(totalPointPages, p + 1))}
-                        disabled={pointPage >= totalPointPages}
+                        onClick={() => table.nextPage()}
+                        disabled={!table.getCanNextPage()}
                       >
                         下一页
                       </Button>
