@@ -1,4 +1,4 @@
-import { Upload, MapPin, Tag } from "lucide-react";
+import { MapPin, Tag } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
 import { Button } from "@ecoctrl/ui";
@@ -7,10 +7,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui";
 
 import type { DashboardModelConfig } from "@ecoctrl/shared";
 import { dashboardModelApi } from "../api/dashboardModel";
+import ModelFileZone from "@/components/ModelFileZone";
 
 export default function DashboardModel() {
   const [config, setConfig] = useState<DashboardModelConfig | null>(null);
   const [loading, setLoading] = useState(true);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -26,6 +29,29 @@ export default function DashboardModel() {
     fetchConfig();
   }, []);
 
+  const handleUpload = async () => {
+    if (!uploadFile) return;
+    setUploading(true);
+    try {
+      const updated = await dashboardModelApi.upload(uploadFile);
+      setConfig(updated);
+      setUploadFile(null);
+    } catch (err) {
+      console.error("Upload failed:", err);
+      alert("上传失败，请重试");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const existingFileInfo = config?.modelFileUrl
+    ? {
+        name: config.modelFileUrl.split("/").pop() ?? "未知",
+        size: "-",
+        format: (config.modelFileUrl.split(".").pop() ?? "").toUpperCase(),
+      }
+    : null;
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
@@ -40,23 +66,30 @@ export default function DashboardModel() {
         <Card className="border-none shadow-sm lg:col-span-1">
           <CardHeader className="px-6">
             <CardTitle className="text-lg">模型上传与显示</CardTitle>
-            <CardDescription>配置模型的基础加载参数和渲染风格。</CardDescription>
+            <CardDescription>配置大屏首页加载的3D模型文件。</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 px-6 pb-6">
-            <div className="flex flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed border-border bg-muted/50 p-8 text-center">
-              <Upload className="text-muted-foreground" size={32} />
-              <div>
-                <p className="text-sm font-medium text-foreground">点击或将模型文件拖拽至此</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  支持 OBJ, GLB, GLTF 格式 (最大 50MB)
-                </p>
-              </div>
-              <Button variant="outline" size="sm">
-                选择文件
+            <ModelFileZone
+              file={uploadFile}
+              existingInfo={existingFileInfo}
+              onFileSelect={setUploadFile}
+              onFileClear={() => setUploadFile(null)}
+              acceptedFormats=".glb,.gltf,.obj"
+            />
+
+            {uploadFile && (
+              <Button className="w-full" onClick={handleUpload} disabled={uploading}>
+                {uploading ? "上传中..." : "确认上传"}
               </Button>
-            </div>
+            )}
 
             <div className="space-y-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">当前模型</span>
+                <span className="font-mono text-xs truncate max-w-[180px]">
+                  {config?.modelFileUrl?.split("/").pop() ?? "未配置"}
+                </span>
+              </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">预设视角</span>
                 <span className="font-mono text-xs">{config?.cameraPreset ?? "--"}</span>

@@ -1,3 +1,4 @@
+import { API_PREFIX } from "~/lib/env";
 import { apiGet } from "./api";
 
 export interface ModelLabel {
@@ -16,7 +17,7 @@ export interface PublicModelData {
 
 export async function fetchPublicModel(): Promise<PublicModelData | null> {
   try {
-    const res = await apiGet<PublicModelData>("/public/model");
+    const res = await apiGet<PublicModelData>(`${API_PREFIX}/public/model`);
     if (res.ok && res.data) return res.data;
   } catch {
     // Endpoint not ready yet — fall back to hardcoded defaults.
