@@ -146,7 +146,7 @@ export default function Models() {
   };
 
   const handleUpload = async () => {
-    if (!uploadFile || !uploadName.trim()) return;
+    if (!uploadName.trim()) return;
     if (!uploadDeviceType.trim()) {
       setUploadError("设备类型不能为空");
       return;
@@ -887,7 +887,9 @@ export default function Models() {
           <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-6">
             {/* File zone */}
             <div>
-              <label className="text-sm font-medium text-foreground mb-2 block">模型文件</label>
+              <label className="text-sm font-medium text-foreground mb-2 block">
+                模型文件（可选）
+              </label>
               <ModelFileZone
                 file={uploadFile}
                 onFileSelect={handleUploadFileSelect}
@@ -921,7 +923,7 @@ export default function Models() {
                     htmlFor="model-version"
                     className="text-sm font-medium text-foreground mb-1.5 block"
                   >
-                    版本
+                    版本（可选）
                   </label>
                   <Input
                     id="model-version"
@@ -1129,7 +1131,7 @@ export default function Models() {
             <AppButton
               level="action"
               onClick={handleUpload}
-              disabled={!uploadFile || !uploadName.trim() || isUploading}
+              disabled={!uploadName.trim() || !uploadDeviceType.trim() || isUploading}
               className="h-10 px-5 gap-2"
             >
               {isUploading ? (
@@ -1612,7 +1614,7 @@ export default function Models() {
                     htmlFor="edit-version"
                     className="text-sm font-medium text-foreground mb-1.5 block"
                   >
-                    版本
+                    版本（可选）
                   </label>
                   <Input
                     id="edit-version"
@@ -1820,7 +1822,7 @@ export default function Models() {
             <AppButton
               level="action"
               onClick={handleSaveEdit}
-              disabled={!editName.trim() || isSaving}
+              disabled={!editName.trim() || !editDeviceType.trim() || isSaving}
               className="h-10 px-5 gap-2"
             >
               {isSaving ? (

@@ -28,7 +28,7 @@ export const modelsApi = {
   },
 
   upload: (
-    file: File,
+    file: File | null,
     data: { name: string; version: string; deviceType: string; points?: PointItem[] },
   ) => {
     const formData = new FormData();
@@ -40,7 +40,9 @@ export const modelsApi = {
     if (data.points?.length) {
       formData.append("points", JSON.stringify(data.points));
     }
-    formData.append("file", file);
+    if (file) {
+      formData.append("file", file);
+    }
     return request<Model3D>("/models", { method: "POST", body: formData });
   },
 
