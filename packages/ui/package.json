@@ -137,6 +137,7 @@
     "@base-ui/react": "catalog:",
     "@fontsource-variable/inter": "catalog:",
     "@fontsource-variable/roboto": "^5.2.10",
+    "@tanstack/react-table": "^8.21.3",
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",
     "cmdk": "^1.1.1",
