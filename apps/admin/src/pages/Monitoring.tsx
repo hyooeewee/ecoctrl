@@ -23,7 +23,7 @@ export default function Monitoring() {
               />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-foreground">流程图实时监控模块</h2>
+          <h2 className="text-xl font-bold text-foreground">逻辑控制模块</h2>
           <p className="font-medium text-muted/100">功能模块正在开发中，敬请期待...</p>
           <div className="flex justify-center gap-1.5 pt-4">
             <span className="h-2 w-2 rounded-full bg-muted"></span>
