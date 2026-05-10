@@ -59,6 +59,12 @@ export const objectsApi = {
 
   create: (data: Omit<BusinessObject, "uuid">) => post<BusinessObject>("/objects", data),
 
+  importBatch: (data: Omit<BusinessObject, "uuid">[]) =>
+    request<{ count: number; items: BusinessObject[] }>("/objects/import", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
   update: (uuid: string, data: Partial<Omit<BusinessObject, "uuid">>) =>
     put<BusinessObject>(`/objects/${uuid}`, data),
 

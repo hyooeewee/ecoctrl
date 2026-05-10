@@ -1,6 +1,7 @@
 import {
   Box,
   Layers,
+  MapPin,
   Image as ImageIcon,
   Upload,
   Trash2,
@@ -10,7 +11,7 @@ import {
   Maximize2,
   Minimize2,
 } from "lucide-react";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Editor } from "@monaco-editor/react";
 
 import { Button } from "@ecoctrl/ui/button";
@@ -53,6 +54,56 @@ function getNextPointNo(points: PointItem[]): string {
   const nos = points.map((p) => parseInt(p.pointNo, 10)).filter((n) => !isNaN(n));
   const max = nos.length > 0 ? Math.max(...nos) : -1;
   return String(max + 1).padStart(4, "0");
+}
+
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const nextChar = line[i + 1];
+
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === "," && !inQuotes) {
+      result.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+
+  result.push(current.trim());
+  return result;
+}
+
+function parseCSV(text: string): Record<string, string>[] {
+  const lines = text
+    .trim()
+    .split(/\r?\n/)
+    .filter((line) => line.trim());
+  if (lines.length < 2) return [];
+
+  const headers = parseCSVLine(lines[0]);
+  const result: Record<string, string>[] = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const values = parseCSVLine(lines[i]);
+    const obj: Record<string, string> = {};
+    headers.forEach((h, idx) => {
+      obj[h] = values[idx] ?? "";
+    });
+    result.push(obj);
+  }
+
+  return result;
 }
 
 export default function Models() {
@@ -99,6 +150,31 @@ export default function Models() {
   const [objectMode, setObjectMode] = useState<"form" | "json">("form");
   const [editingObjectUuid, setEditingObjectUuid] = useState<string | null>(null);
   const [objectFullscreen, setObjectFullscreen] = useState(false);
+
+  // Import dialog state
+  const [importOpen, setImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importError, setImportError] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+  const [importTargetModelId, setImportTargetModelId] = useState("");
+
+  // Points tab state
+  const [pointSortField, setPointSortField] = useState<
+    "name" | "pointType" | "pointNo" | "modelName"
+  >("pointType");
+  const [pointSortDir, setPointSortDir] = useState<"asc" | "desc">("asc");
+  const [pointColFilters, setPointColFilters] = useState({
+    pointType: "",
+    pointNo: "",
+    name: "",
+    modelName: "",
+    deviceType: "",
+  });
+  const [pointPage, setPointPage] = useState(1);
+  const [pointPageSize, setPointPageSize] = useState(10);
+
+  const [activeTab, setActiveTab] = useState("models");
+
   const editorRef = useRef<
     Parameters<NonNullable<React.ComponentProps<typeof Editor>["onMount"]>>[0] | null
   >(null);
@@ -450,6 +526,123 @@ export default function Models() {
     }
   };
 
+  // Import dialog functions
+  const handleImportFileSelect = (file: File) => {
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    if (ext !== "json" && ext !== "csv") {
+      setImportError(`不支持的格式: .${ext}，请上传 .json 或 .csv 文件`);
+      return;
+    }
+    setImportFile(file);
+    setImportError("");
+  };
+
+  const resetImport = () => {
+    setImportFile(null);
+    setImportError("");
+    setImportTargetModelId("");
+  };
+
+  const parseImportFile = async (file: File): Promise<PointItem[]> => {
+    const text = await file.text();
+    const ext = file.name.split(".").pop()?.toLowerCase();
+
+    if (ext === "json") {
+      const parsed = JSON.parse(text);
+      if (!Array.isArray(parsed)) {
+        throw new Error("JSON 文件必须是对象数组格式");
+      }
+      return parsed as PointItem[];
+    }
+
+    if (ext === "csv") {
+      const records = parseCSV(text);
+      return records.map((record) => {
+        let props: { key: string; name: string; unit?: string }[] = [];
+        if (record.props) {
+          try {
+            props = JSON.parse(record.props);
+          } catch {
+            props = [];
+          }
+        }
+        return {
+          id: record.id ?? "",
+          name: record.name ?? "",
+          pointType: record.pointType ?? "",
+          pointNo: record.pointNo ?? "",
+          props,
+        } as PointItem;
+      });
+    }
+
+    throw new Error("不支持的文件格式，请上传 .json 或 .csv 文件");
+  };
+
+  const handleImport = async () => {
+    if (!importFile) return;
+    if (!importTargetModelId) {
+      setImportError("请选择目标模型");
+      return;
+    }
+
+    setIsImporting(true);
+    setImportError("");
+    try {
+      const importedPoints = await parseImportFile(importFile);
+
+      const targetModel = models.find((m) => m.id === importTargetModelId);
+      if (!targetModel) {
+        throw new Error("所选模型不存在");
+      }
+
+      const existingPoints = (targetModel as Model3D & { points?: PointItem[] }).points ?? [];
+
+      // Validate point type length
+      const invalidPoint = importedPoints.find(
+        (p) => p.pointType.trim() && p.pointType.trim().length !== 2,
+      );
+      if (invalidPoint) {
+        throw new Error(`点位类型 "${invalidPoint.pointType}" 必须为 2 位字符`);
+      }
+
+      // Validate duplicate point type + number combinations
+      const allPoints = [...existingPoints, ...importedPoints];
+      const pointKeys = allPoints
+        .map((p) => `${p.pointType.trim()}_${p.pointNo.trim()}`)
+        .filter((k) => k !== "_");
+      const dup = pointKeys.find((k, i) => pointKeys.indexOf(k) !== i);
+      if (dup) {
+        throw new Error(`点位 "${dup}" 重复，请检查`);
+      }
+
+      // Merge and normalize
+      const mergedPoints = allPoints.map((p) =>
+        // oxlint-disable-next-line oxc/no-map-spread
+        Object.assign({}, p, {
+          pointType: p.pointType.toUpperCase(),
+          pointNo: p.pointNo.padStart(4, "0"),
+          props: p.props.filter((prop) => prop.key.trim() || prop.name.trim()),
+        }),
+      );
+
+      await modelsApi.update(importTargetModelId, {
+        name: targetModel.name,
+        version: targetModel.version,
+        deviceType: targetModel.deviceType,
+        points: mergedPoints,
+      });
+
+      setImportOpen(false);
+      resetImport();
+      await fetchModels();
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : "导入失败，请重试");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const handleDelete = async (id: string, name: string) => {
     if (!window.confirm(`确定要删除模型 "${name}" 吗？`)) return;
     try {
@@ -634,9 +827,90 @@ export default function Models() {
     ),
   ].filter(Boolean);
 
+  // Flatten all points from all models
+  const allPoints = useMemo(() => {
+    const result: {
+      id: string;
+      name: string;
+      pointType: string;
+      pointNo: string;
+      propCount: number;
+      modelId: string;
+      modelName: string;
+      deviceType: string;
+    }[] = [];
+
+    for (const model of models) {
+      const modelPoints = (model as Model3D & { points?: PointItem[] }).points ?? [];
+      for (const point of modelPoints) {
+        result.push({
+          id: point.id,
+          name: point.name,
+          pointType: point.pointType,
+          pointNo: point.pointNo,
+          propCount: point.props.length,
+          modelId: model.id,
+          modelName: model.name,
+          deviceType: model.deviceType,
+        });
+      }
+    }
+    return result;
+  }, [models]);
+
+  // Filter, sort and paginate points
+  const filteredPoints = useMemo(() => {
+    let result = [...allPoints];
+
+    if (pointColFilters.pointType) {
+      const v = pointColFilters.pointType.toLowerCase();
+      result = result.filter((p) => p.pointType.toLowerCase().includes(v));
+    }
+    if (pointColFilters.pointNo) {
+      const v = pointColFilters.pointNo.toLowerCase();
+      result = result.filter((p) => p.pointNo.toLowerCase().includes(v));
+    }
+    if (pointColFilters.name) {
+      const v = pointColFilters.name.toLowerCase();
+      result = result.filter((p) => p.name.toLowerCase().includes(v));
+    }
+    if (pointColFilters.modelName) {
+      const v = pointColFilters.modelName.toLowerCase();
+      result = result.filter((p) => p.modelName.toLowerCase().includes(v));
+    }
+    if (pointColFilters.deviceType) {
+      const v = pointColFilters.deviceType.toLowerCase();
+      result = result.filter((p) => p.deviceType.toLowerCase().includes(v));
+    }
+
+    result.sort((a, b) => {
+      const dir = pointSortDir === "asc" ? 1 : -1;
+      switch (pointSortField) {
+        case "name":
+          return a.name.localeCompare(b.name) * dir;
+        case "pointType":
+          return a.pointType.localeCompare(b.pointType) * dir;
+        case "pointNo":
+          return a.pointNo.localeCompare(b.pointNo) * dir;
+        case "modelName":
+          return a.modelName.localeCompare(b.modelName) * dir;
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [allPoints, pointColFilters, pointSortField, pointSortDir]);
+
+  const totalPointPages = Math.max(1, Math.ceil(filteredPoints.length / pointPageSize));
+  const currentPagePoints = filteredPoints.slice(
+    (pointPage - 1) * pointPageSize,
+    pointPage * pointPageSize,
+  );
+
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="models" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="mb-6">
           <TabsTrigger value="models" className="flex items-center gap-2 px-6">
             <Box size={16} />
@@ -645,6 +919,10 @@ export default function Models() {
           <TabsTrigger value="objects" className="flex items-center gap-2 px-6">
             <Layers size={16} />
             业务对象
+          </TabsTrigger>
+          <TabsTrigger value="points" className="flex items-center gap-2 px-6">
+            <MapPin size={16} />
+            点位信息
           </TabsTrigger>
         </TabsList>
 
@@ -834,7 +1112,15 @@ export default function Models() {
                     </thead>
                     <tbody>
                       {objects.map((obj) => (
-                        <tr key={obj.uuid} className="border-b border-border/50 hover:bg-muted/50">
+                        <tr
+                          key={obj.uuid}
+                          className="border-b border-border/50 hover:bg-muted/50 cursor-pointer"
+                          onClick={() => {
+                            setPointColFilters((prev) => ({ ...prev, modelName: obj.modelName }));
+                            setPointPage(1);
+                            setActiveTab("points");
+                          }}
+                        >
                           <td className="px-3 py-2.5 font-mono text-xs">{obj.id}</td>
                           <td className="px-3 py-2.5">{obj.name}</td>
                           <td className="px-3 py-2.5 text-muted-foreground">{obj.modelName}</td>
@@ -844,7 +1130,10 @@ export default function Models() {
                               level="secondary"
                               size="icon-sm"
                               className="h-7 w-7 mr-1"
-                              onClick={() => openEditObjectDialog(obj)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditObjectDialog(obj);
+                              }}
                             >
                               <Pencil size={14} />
                             </AppButton>
@@ -852,7 +1141,10 @@ export default function Models() {
                               level="danger"
                               size="icon-sm"
                               className="h-7 w-7"
-                              onClick={() => handleDeleteObject(obj.uuid, obj.name)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteObject(obj.uuid, obj.name);
+                              }}
                             >
                               <Trash2 size={14} />
                             </AppButton>
@@ -862,6 +1154,269 @@ export default function Models() {
                     </tbody>
                   </table>
                 </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="points" className="mt-0">
+          <Card className="border-none shadow-sm">
+            <CardHeader className="px-6 pb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>点位信息</CardTitle>
+                  <CardDescription>查看所有模型中的点位定义信息。</CardDescription>
+                </div>
+                <AppButton
+                  level="action"
+                  className="gap-2"
+                  onClick={() => {
+                    resetImport();
+                    setImportOpen(true);
+                  }}
+                >
+                  <Upload size={16} />
+                  导入点位
+                </AppButton>
+              </div>
+            </CardHeader>
+            <CardContent className="px-6 pb-6">
+              {loading ? (
+                <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+                  加载中...
+                </div>
+              ) : currentPagePoints.length === 0 ? (
+                <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+                  暂无点位数据
+                </div>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th
+                            className="px-3 py-2.5 text-left font-medium text-muted-foreground cursor-pointer select-none"
+                            onClick={() => {
+                              if (pointSortField === "pointType") {
+                                setPointSortDir(pointSortDir === "asc" ? "desc" : "asc");
+                              } else {
+                                setPointSortField("pointType");
+                                setPointSortDir("asc");
+                              }
+                            }}
+                          >
+                            <span className="flex items-center gap-1">
+                              点位类型
+                              {pointSortField === "pointType" &&
+                                (pointSortDir === "asc" ? "↑" : "↓")}
+                            </span>
+                          </th>
+                          <th
+                            className="px-3 py-2.5 text-left font-medium text-muted-foreground cursor-pointer select-none"
+                            onClick={() => {
+                              if (pointSortField === "pointNo") {
+                                setPointSortDir(pointSortDir === "asc" ? "desc" : "asc");
+                              } else {
+                                setPointSortField("pointNo");
+                                setPointSortDir("asc");
+                              }
+                            }}
+                          >
+                            <span className="flex items-center gap-1">
+                              点位编号
+                              {pointSortField === "pointNo" && (pointSortDir === "asc" ? "↑" : "↓")}
+                            </span>
+                          </th>
+                          <th
+                            className="px-3 py-2.5 text-left font-medium text-muted-foreground cursor-pointer select-none"
+                            onClick={() => {
+                              if (pointSortField === "name") {
+                                setPointSortDir(pointSortDir === "asc" ? "desc" : "asc");
+                              } else {
+                                setPointSortField("name");
+                                setPointSortDir("asc");
+                              }
+                            }}
+                          >
+                            <span className="flex items-center gap-1">
+                              点位名称
+                              {pointSortField === "name" && (pointSortDir === "asc" ? "↑" : "↓")}
+                            </span>
+                          </th>
+                          <th className="px-3 py-2.5 text-left font-medium text-muted-foreground">
+                            属性数量
+                          </th>
+                          <th
+                            className="px-3 py-2.5 text-left font-medium text-muted-foreground cursor-pointer select-none"
+                            onClick={() => {
+                              if (pointSortField === "modelName") {
+                                setPointSortDir(pointSortDir === "asc" ? "desc" : "asc");
+                              } else {
+                                setPointSortField("modelName");
+                                setPointSortDir("asc");
+                              }
+                            }}
+                          >
+                            <span className="flex items-center gap-1">
+                              所属模型
+                              {pointSortField === "modelName" &&
+                                (pointSortDir === "asc" ? "↑" : "↓")}
+                            </span>
+                          </th>
+                          <th className="px-3 py-2.5 text-left font-medium text-muted-foreground">
+                            设备类型
+                          </th>
+                        </tr>
+                        <tr className="border-b border-border bg-muted/30">
+                          <th className="px-3 py-1.5">
+                            <Input
+                              placeholder="筛选"
+                              value={pointColFilters.pointType}
+                              onChange={(e) => {
+                                setPointColFilters((prev) => ({
+                                  ...prev,
+                                  pointType: e.target.value,
+                                }));
+                                setPointPage(1);
+                              }}
+                              className="h-7 text-xs bg-transparent border-0 px-1 shadow-none focus-visible:ring-0"
+                            />
+                          </th>
+                          <th className="px-3 py-1.5">
+                            <Input
+                              placeholder="筛选"
+                              value={pointColFilters.pointNo}
+                              onChange={(e) => {
+                                setPointColFilters((prev) => ({
+                                  ...prev,
+                                  pointNo: e.target.value,
+                                }));
+                                setPointPage(1);
+                              }}
+                              className="h-7 text-xs bg-transparent border-0 px-1 shadow-none focus-visible:ring-0"
+                            />
+                          </th>
+                          <th className="px-3 py-1.5">
+                            <Input
+                              placeholder="筛选"
+                              value={pointColFilters.name}
+                              onChange={(e) => {
+                                setPointColFilters((prev) => ({ ...prev, name: e.target.value }));
+                                setPointPage(1);
+                              }}
+                              className="h-7 text-xs bg-transparent border-0 px-1 shadow-none focus-visible:ring-0"
+                            />
+                          </th>
+                          <th className="px-3 py-1.5" />
+                          <th className="px-3 py-1.5">
+                            <Input
+                              placeholder="筛选"
+                              value={pointColFilters.modelName}
+                              onChange={(e) => {
+                                setPointColFilters((prev) => ({
+                                  ...prev,
+                                  modelName: e.target.value,
+                                }));
+                                setPointPage(1);
+                              }}
+                              className="h-7 text-xs bg-transparent border-0 px-1 shadow-none focus-visible:ring-0"
+                            />
+                          </th>
+                          <th className="px-3 py-1.5">
+                            <Input
+                              placeholder="筛选"
+                              value={pointColFilters.deviceType}
+                              onChange={(e) => {
+                                setPointColFilters((prev) => ({
+                                  ...prev,
+                                  deviceType: e.target.value,
+                                }));
+                                setPointPage(1);
+                              }}
+                              className="h-7 text-xs bg-transparent border-0 px-1 shadow-none focus-visible:ring-0"
+                            />
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {currentPagePoints.map((point) => (
+                          <tr
+                            key={`${point.modelId}-${point.id}`}
+                            className="border-b border-border/50 hover:bg-muted/50"
+                          >
+                            <td className="px-3 py-2.5 font-mono text-xs">{point.pointType}</td>
+                            <td className="px-3 py-2.5 font-mono text-xs">{point.pointNo}</td>
+                            <td className="px-3 py-2.5">{point.name || "-"}</td>
+                            <td className="px-3 py-2.5">{point.propCount}</td>
+                            <td className="px-3 py-2.5">{point.modelName}</td>
+                            <td className="px-3 py-2.5 font-mono text-xs">{point.deviceType}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination */}
+                  <div className="flex items-center justify-between mt-4">
+                    <div className="flex items-center gap-3">
+                      <p className="text-sm text-muted-foreground">
+                        共 {filteredPoints.length} 条，第 {pointPage} / {totalPointPages} 页
+                      </p>
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <span>每页</span>
+                        <Select
+                          value={String(pointPageSize)}
+                          onValueChange={(v) => {
+                            setPointPageSize(Number(v));
+                            setPointPage(1);
+                          }}
+                        >
+                          <SelectTrigger className="h-7 w-16 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="10">10</SelectItem>
+                            <SelectItem value="20">20</SelectItem>
+                            <SelectItem value="50">50</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <span>条</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-3"
+                        onClick={() => setPointPage((p) => Math.max(1, p - 1))}
+                        disabled={pointPage <= 1}
+                      >
+                        上一页
+                      </Button>
+                      {Array.from({ length: totalPointPages }, (_, i) => i + 1).map((p) => (
+                        <Button
+                          key={p}
+                          variant={p === pointPage ? "default" : "outline"}
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => setPointPage(p)}
+                        >
+                          {p}
+                        </Button>
+                      ))}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-3"
+                        onClick={() => setPointPage((p) => Math.min(totalPointPages, p + 1))}
+                        disabled={pointPage >= totalPointPages}
+                      >
+                        下一页
+                      </Button>
+                    </div>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
@@ -1834,6 +2389,95 @@ export default function Models() {
                 <>
                   <Pencil size={16} />
                   确认保存
+                </>
+              )}
+            </AppButton>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Dialog */}
+      <Dialog
+        open={importOpen}
+        onOpenChange={(open) => {
+          setImportOpen(open);
+          if (!open) resetImport();
+        }}
+      >
+        <DialogContent className="max-h-[90vh] max-w-lg flex flex-col gap-0 p-0">
+          <DialogHeader className="px-6 pt-6 pb-4">
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <Upload size={18} />
+              导入点位
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-6">
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1.5 block">目标模型</label>
+              <Select value={importTargetModelId} onValueChange={(v) => setImportTargetModelId(v)}>
+                <SelectTrigger className="w-full h-10">
+                  <SelectValue placeholder="请选择要导入点位的模型">
+                    {importTargetModelId
+                      ? (models.find((m) => m.id === importTargetModelId)?.name ??
+                        "请选择要导入点位的模型")
+                      : "请选择要导入点位的模型"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {models.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      <span className="block truncate">{m.name}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">导入文件</label>
+              <ModelFileZone
+                file={importFile}
+                onFileSelect={handleImportFileSelect}
+                onFileClear={() => {
+                  setImportFile(null);
+                  setImportError("");
+                }}
+                acceptedFormats=".json,.csv"
+              />
+              <p className="text-xs text-muted-foreground mt-1.5">
+                支持 .json（点位数组）或 .csv 格式文件。CSV 需包含 pointType、pointNo、name、props
+                列。
+              </p>
+            </div>
+
+            {importError && (
+              <div className="rounded-lg border-l-4 border-red-500 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {importError}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="border-t border-border px-6 py-4 flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setImportOpen(false)} className="h-10 px-5">
+              取消
+            </Button>
+            <AppButton
+              level="action"
+              onClick={handleImport}
+              disabled={!importFile || !importTargetModelId || isImporting}
+              className="h-10 px-5 gap-2"
+            >
+              {isImporting ? (
+                <>
+                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  导入中...
+                </>
+              ) : (
+                <>
+                  <Upload size={16} />
+                  确认导入
                 </>
               )}
             </AppButton>

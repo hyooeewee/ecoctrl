@@ -5,6 +5,7 @@ import {
   findManyObjects,
   findObjectByUuid,
   createObject,
+  createManyObjects,
   updateObject,
   deleteObject,
 } from "@/repositories/objects";
@@ -79,6 +80,28 @@ export default async function objectRoutes(fastify: FastifyInstance) {
       const data = request.body as Record<string, unknown>;
       const updated = await updateObject(uuid, data);
       return reply.send(updated);
+    },
+  );
+
+  fastify.post(
+    "/import",
+    {
+      schema: {
+        tags: ["Objects"],
+        summary: "Batch import business objects",
+        body: z.array(BusinessObjectSchema.omit({ uuid: true })),
+        response: {
+          201: z.object({
+            count: z.number(),
+            items: z.array(BusinessObjectSchema),
+          }),
+        },
+      },
+    },
+    async (request, reply) => {
+      const dataList = request.body as Omit<BusinessObject, "uuid">[];
+      const items = await createManyObjects(dataList);
+      return reply.status(201).send({ count: items.length, items });
     },
   );
 

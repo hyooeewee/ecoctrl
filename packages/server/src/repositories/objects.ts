@@ -104,6 +104,34 @@ export async function updateObject(
   } as BusinessObject;
 }
 
+export async function createManyObjects(
+  dataList: Omit<BusinessObject, "uuid">[],
+): Promise<BusinessObject[]> {
+  const values = dataList.map((data) => ({
+    id: data.id,
+    name: data.name,
+    modelId: data.modelId,
+    modelName: data.modelName,
+    status: (data as unknown as Record<string, string>).status ?? "offline",
+    points: data.points,
+  }));
+
+  const result = await db.insert(objects).values(values).returning();
+
+  return result.map(
+    (r) =>
+      ({
+        uuid: r.uuid,
+        id: r.id,
+        name: r.name,
+        modelId: r.modelId,
+        modelName: r.modelName,
+        status: r.status,
+        points: r.points ?? [],
+      }) as BusinessObject,
+  );
+}
+
 export async function deleteObject(uuid: string): Promise<BusinessObject | null> {
   const result = await db.delete(objects).where(eq(objects.uuid, uuid)).returning();
   if (result.length === 0) return null;
