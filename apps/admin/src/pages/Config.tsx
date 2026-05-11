@@ -42,6 +42,7 @@ export default function SystemConfig({ user }: { user: AuthUser | null }) {
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showSmtpPass, setShowSmtpPass] = useState(false);
+  const [testingEmail, setTestingEmail] = useState(false);
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -70,6 +71,24 @@ export default function SystemConfig({ user }: { user: AuthUser | null }) {
       alert("保存配置失败，请重试");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleTestEmail = async () => {
+    const to = user?.email;
+    if (!to) {
+      alert("当前用户未设置邮箱地址，无法发送测试邮件");
+      return;
+    }
+    setTestingEmail(true);
+    try {
+      await systemConfigApi.testEmail(to);
+      alert("测试邮件已发送，请查收邮箱");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "发送失败";
+      alert(`测试邮件发送失败：${message}`);
+    } finally {
+      setTestingEmail(false);
     }
   };
 
@@ -341,8 +360,8 @@ export default function SystemConfig({ user }: { user: AuthUser | null }) {
             />
           </div>
           <div className="flex justify-end">
-            <Button variant="outline" size="sm" onClick={() => alert("测试连接功能待实现")}>
-              测试邮件连接
+            <Button variant="outline" size="sm" onClick={handleTestEmail} disabled={testingEmail}>
+              {testingEmail ? "发送中..." : "测试邮件连接"}
             </Button>
           </div>
         </div>

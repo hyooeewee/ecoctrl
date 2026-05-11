@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { findPlatformConfig, updatePlatformConfig } from "@/repositories/platformConfig";
 import { findUserById } from "@/repositories/users";
+import { sendMail } from "@/lib/mailer";
 
 const configSchema = z.object({
   platformName: z.string(),
@@ -37,6 +38,10 @@ const configBodySchema = z.object({
   allowRegistration: z.boolean().optional(),
   allowPasswordReset: z.boolean().optional(),
   allowOAuthLogin: z.boolean().optional(),
+});
+
+const testEmailBodySchema = z.object({
+  to: z.string().email(),
 });
 
 export default async function configRoutes(fastify: FastifyInstance) {
@@ -116,6 +121,39 @@ export default async function configRoutes(fastify: FastifyInstance) {
         ...updated,
         smtpPass: updated.smtpPass ? "****" : "",
       });
+    },
+  );
+
+  fastify.post(
+    "/test-email",
+    {
+      schema: {
+        tags: ["Configs"],
+        summary: "Send test email",
+        body: testEmailBodySchema,
+        response: { 200: z.object({ success: z.boolean() }) },
+      },
+    },
+    async (request, reply) => {
+      const payload = request.user as { userId: string } | undefined;
+      const user = payload?.userId ? await findUserById(payload.userId) : null;
+      if (user?.role !== "super_admin") {
+        return reply.status(403).send({ error: "Forbidden" });
+      }
+
+      const body = request.body as { to: string };
+      try {
+        await sendMail({
+          to: body.to,
+          subject: "EcoCtrl SMTP 测试邮件",
+          text: "这是一封来自 EcoCtrl 平台的 SMTP 测试邮件。如果您收到此邮件，说明邮件服务器配置正确。",
+          html: "<p>这是一封来自 <strong>EcoCtrl</strong> 平台的 SMTP 测试邮件。</p><p>如果您收到此邮件，说明邮件服务器配置正确。</p>",
+        });
+        return reply.send({ success: true });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "发送失败";
+        return reply.status(500).send({ error: message });
+      }
     },
   );
 }
