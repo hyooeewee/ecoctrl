@@ -18,8 +18,9 @@ import { authApi } from "../api/auth";
 import type { AuthUser } from "../api/auth";
 import { useAvatar } from "@/hooks/useAvatar";
 import { useSubBreadcrumb } from "@/hooks/useSubBreadcrumb";
-import { applyDarkMode, getStoredTheme } from "@/lib/darkMode";
+import { applyDarkMode } from "@/lib/darkMode";
 import type { Theme } from "@/lib/darkMode";
+import { useAppStore } from "@/store/appStore";
 
 interface HeaderProps {
   activeTab: string;
@@ -34,7 +35,7 @@ const tabTitleMap: Record<string, string> = {
   accounts: "账户控制",
   models: "设备详情",
   settingsGroup: "大屏模型",
-  monitoring: "逻辑控制",
+  workflows: "逻辑控制",
   reports: "报表管理",
   maintenance: "维保管理",
   faults: "故障管理",
@@ -69,10 +70,10 @@ export default function Header({
   const [avatarVersion, setAvatarVersion] = useState(0);
   const [theme, setTheme] = useState<Theme>(themeProp ?? "system");
   const avatarSrc = useAvatar(user?.id, user?.avatarUrl, avatarVersion);
+  const setPreferenceOverride = useAppStore((state) => state.setPreferenceOverride);
 
   useEffect(() => {
-    const stored = getStoredTheme() ?? "system";
-    const effective = themeProp ?? stored;
+    const effective = themeProp ?? "system";
     setTheme(effective);
     applyDarkMode(effective);
   }, [themeProp]);
@@ -81,6 +82,7 @@ export default function Header({
     const next = THEME_CYCLE[(THEME_CYCLE.indexOf(theme) + 1) % THEME_CYCLE.length];
     setTheme(next);
     applyDarkMode(next);
+    setPreferenceOverride({ theme: next });
   };
 
   useEffect(() => {

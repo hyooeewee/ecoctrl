@@ -22,16 +22,30 @@ import Preferences from "@/pages/Preferences";
 import Profile from "@/pages/Profile";
 import Reports from "@/pages/Reports";
 import DashboardModel from "@/pages/DashboardModel";
-import { initTheme, loadThemeFromServer, applyDarkMode } from "@/lib/darkMode";
+import { applyDarkMode } from "@/lib/darkMode";
 import { authApi } from "./api/auth";
 import type { AuthUser } from "./api/auth";
 import { preferencesApi } from "./api/preferences";
-import type { UserPreferences } from "./types";
+import type { UserPreferences } from "@ecoctrl/shared";
 import { useAppStore } from "./store/appStore";
+
+const DEFAULT_PREFERENCES: UserPreferences = {
+  theme: "system",
+  language: "zh-CN",
+  density: "comfortable",
+  fontSize: "medium",
+  desktopNotification: true,
+  alertSound: true,
+  emailNotification: false,
+  sidebarCollapsed: false,
+  showBreadcrumb: true,
+};
 
 export default function App() {
   const activeTab = useAppStore((state) => state.activeTab);
   const setActiveTab = useAppStore((state) => state.setActiveTab);
+  const preferencesOverride = useAppStore((state) => state.preferencesOverride);
+  const setPreferenceOverride = useAppStore((state) => state.setPreferenceOverride);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [userDetail, setUserDetail] = useState<AuthUser | null>(null);
@@ -44,19 +58,26 @@ export default function App() {
 
   const breadcrumbValue = useMemo(() => ({ subLabel, setSubLabel }), [subLabel, setSubLabel]);
 
+  // Compute effective preferences: override > DB > defaults.
+  const effectivePrefs = useMemo(
+    () => ({ ...DEFAULT_PREFERENCES, ...userPrefs, ...preferencesOverride }),
+    [userPrefs, preferencesOverride],
+  );
+
+  // Apply theme whenever effective theme changes.
   useEffect(() => {
-    initTheme();
-  }, []);
+    if (effectivePrefs.theme) {
+      applyDarkMode(effectivePrefs.theme);
+    }
+  }, [effectivePrefs.theme]);
 
   const loadUserPrefs = async (userId: string) => {
     try {
       const data = await preferencesApi.get(userId);
       setUserPrefs(data);
-      if (data.theme) applyDarkMode(data.theme);
     } catch {
-      // fallback to local defaults
+      // fallback to defaults
     }
-    loadThemeFromServer(userId);
   };
 
   useEffect(() => {
@@ -138,19 +159,23 @@ export default function App() {
         <Sidebar
           activeTab={activeTab}
           setActiveTab={setActiveTab}
-          defaultCollapsed={userPrefs?.sidebarCollapsed}
+          defaultCollapsed={effectivePrefs.sidebarCollapsed}
+          onCollapsedChange={(collapsed) => setPreferenceOverride({ sidebarCollapsed: collapsed })}
         />
 
         <div className="flex h-full min-w-0 flex-1 flex-col">
           <Header
             activeTab={activeTab}
             setActiveTab={setActiveTab}
-            showBreadcrumb={userPrefs?.showBreadcrumb}
-            theme={userPrefs?.theme}
+            showBreadcrumb={effectivePrefs.showBreadcrumb}
+            theme={effectivePrefs.theme}
           />
 
           <main className="bg-background flex-1 overflow-hidden flex flex-col">
-            {activeTab === "config" || activeTab === "preferences" || activeTab === "profile" ? (
+            {activeTab === "config" ||
+            activeTab === "preferences" ||
+            activeTab === "profile" ||
+            activeTab === "workflows" ? (
               <div className="flex-1 flex flex-col overflow-hidden">{renderContent()}</div>
             ) : (
               <ScrollArea className="h-full w-full">

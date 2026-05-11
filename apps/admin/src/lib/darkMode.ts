@@ -1,8 +1,5 @@
-import { preferencesApi } from "@/api/preferences";
-
 export type Theme = "light" | "dark" | "system";
 
-const STORAGE_KEY = "theme";
 const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
 
 let listener: ((e: MediaQueryListEvent) => void) | null = null;
@@ -25,7 +22,6 @@ function apply(mode: Theme) {
 
 export function applyDarkMode(theme: Theme) {
   apply(theme);
-  localStorage.setItem(STORAGE_KEY, theme);
 
   if (theme === "system") {
     listener = () => apply("system");
@@ -35,35 +31,5 @@ export function applyDarkMode(theme: Theme) {
       mediaQuery.removeEventListener("change", listener);
       listener = null;
     }
-  }
-}
-
-export function getStoredTheme(): Theme | null {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw === "light" || raw === "dark" || raw === "system") return raw;
-  return null;
-}
-
-export function initTheme() {
-  const stored = getStoredTheme() ?? "system";
-  applyDarkMode(stored);
-}
-
-export async function loadThemeFromServer(userId: string) {
-  try {
-    const prefs = await preferencesApi.get(userId);
-    if (prefs.theme) {
-      applyDarkMode(prefs.theme);
-    }
-  } catch {
-    // fallback to localStorage already handled by initTheme
-  }
-}
-
-export async function saveThemeToServer(userId: string, theme: Theme) {
-  try {
-    await preferencesApi.update(userId, { theme });
-  } catch {
-    // silently fail; localStorage already saved
   }
 }

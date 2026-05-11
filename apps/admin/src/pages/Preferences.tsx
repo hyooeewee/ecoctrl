@@ -38,6 +38,8 @@ import {
 
 import { preferencesApi } from "@/api/preferences";
 import SettingsPage from "@/components/SettingsPage";
+import { useAppStore } from "@/store/appStore";
+
 import type { UserPreferences } from "@ecoctrl/shared";
 
 const DEFAULT_PREFERENCES: UserPreferences = {
@@ -104,6 +106,8 @@ export default function Preferences({ userId, initialPrefs, onSaved }: Preferenc
       if (nextPrefs.theme) {
         import("@/lib/darkMode").then((m) => m.applyDarkMode(nextPrefs.theme!));
       }
+      // Sync all saved preferences to zustand override so they take effect immediately.
+      useAppStore.getState().setPreferenceOverride(nextPrefs);
       if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
       savedTimerRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
     } catch (err) {
@@ -131,6 +135,8 @@ export default function Preferences({ userId, initialPrefs, onSaved }: Preferenc
       setPrefs(DEFAULT_PREFERENCES);
       onSaved?.(DEFAULT_PREFERENCES);
       import("@/lib/darkMode").then((m) => m.applyDarkMode(DEFAULT_PREFERENCES.theme!));
+      // Clear all local overrides so default values take effect.
+      useAppStore.getState().clearPreferenceOverrides();
       setSaveStatus("saved");
       if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
       savedTimerRef.current = setTimeout(() => setSaveStatus("idle"), 2000);

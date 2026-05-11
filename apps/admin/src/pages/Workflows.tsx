@@ -5,11 +5,10 @@ import {
   Play,
   Loader2,
   Workflow,
-  List,
-  GitGraph,
   History,
   Search,
   X,
+  ArrowLeft,
 } from "lucide-react";
 import {
   useReactTable,
@@ -36,16 +35,14 @@ import {
   DialogFooter,
 } from "@ecoctrl/ui/dialog";
 import { Input } from "@ecoctrl/ui/input";
-import { Label } from "@ecoctrl/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ecoctrl/ui/select";
 import { Switch } from "@ecoctrl/ui/switch";
 import { Badge } from "@ecoctrl/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui/tabs";
 
-import { useAppStore } from "@/store/appStore";
 import { useSubBreadcrumb } from "@/hooks/useSubBreadcrumb";
 import { workflowsApi } from "@/api/workflows";
 import type { WorkflowListItem } from "@/components/workflow-editor/types";
+import { WorkflowCanvas } from "@/components/workflow-editor";
 
 const TRIGGER_LABELS: Record<string, string> = {
   state_change: "状态变更",
@@ -64,8 +61,6 @@ const TRIGGER_VARIANTS: Record<string, "default" | "secondary" | "destructive" |
 };
 
 export default function Workflows() {
-  const workflowTab = useAppStore((s) => s.workflowTab);
-  const setWorkflowTab = useAppStore((s) => s.setWorkflowTab);
   const { setSubLabel } = useSubBreadcrumb();
 
   const [workflows, setWorkflows] = useState<WorkflowListItem[]>([]);
@@ -77,19 +72,10 @@ export default function Workflows() {
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
 
-  // Dialog states
-  const [editingWorkflow, setEditingWorkflow] = useState<WorkflowListItem | null>(null);
-  const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    slug: "",
-    name: "",
-    description: "",
-    triggerType: "manual" as string,
-  });
-  const [formLoading, setFormLoading] = useState(false);
   const [triggerLoadingId, setTriggerLoadingId] = useState<string | null>(null);
+  const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
 
   const fetchWorkflows = useCallback(async () => {
     setLoading(true);
@@ -105,11 +91,14 @@ export default function Workflows() {
   }, [pageIndex, pageSize]);
 
   useEffect(() => {
-    setSubLabel("工作流管理");
-    if (workflowTab === "list") {
+    setSubLabel(editingWorkflowId ? "工作流编辑器" : "工作流管理");
+  }, [setSubLabel, editingWorkflowId]);
+
+  useEffect(() => {
+    if (!editingWorkflowId) {
       fetchWorkflows();
     }
-  }, [fetchWorkflows, setSubLabel, workflowTab]);
+  }, [fetchWorkflows, editingWorkflowId]);
 
   const handleToggleEnabled = useCallback(async (id: string, enabled: boolean) => {
     try {
@@ -132,7 +121,8 @@ export default function Workflows() {
     }
   }, [deletingId]);
 
-  const handleTrigger = useCallback(async (id: string) => {
+  const handleTrigger = useCallback(async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
     setTriggerLoadingId(id);
     try {
       await workflowsApi.trigger(id);
@@ -143,70 +133,33 @@ export default function Workflows() {
     }
   }, []);
 
-  const openCreate = useCallback(() => {
-    setEditingWorkflow(null);
-    setFormData({ slug: "", name: "", description: "", triggerType: "manual" });
-    setIsEditOpen(true);
-  }, []);
-
-  const _openEdit = useCallback((workflow: WorkflowListItem) => {
-    setEditingWorkflow(workflow);
-    setFormData({
-      slug: workflow.slug,
-      name: workflow.name,
-      description: workflow.description ?? "",
-      triggerType: workflow.triggerType,
-    });
-    setIsEditOpen(true);
-  }, []);
-
-  const handleSave = useCallback(async () => {
-    setFormLoading(true);
+  const openCreate = useCallback(async () => {
+    const slug = `wf-${Date.now()}`;
+    const dsl = {
+      version: "1.0" as const,
+      trigger: { type: "manual" as const, config: {} },
+      nodes: [
+        { id: "start", type: "start" as const, name: "开始", config: {} },
+        { id: "end", type: "end" as const, name: "结束", config: {} },
+      ],
+      edges: [{ id: "e-start-end", source: "start", target: "end" }],
+    };
     try {
-      if (editingWorkflow) {
-        await workflowsApi.update(editingWorkflow.id, {
-          slug: formData.slug,
-          name: formData.name,
-          description: formData.description || undefined,
-        });
-        setWorkflows((prev) =>
-          prev.map((w) =>
-            w.id === editingWorkflow.id
-              ? {
-                  ...w,
-                  slug: formData.slug,
-                  name: formData.name,
-                  description: formData.description || null,
-                }
-              : w,
-          ),
-        );
-      } else {
-        const dsl = {
-          version: "1.0" as const,
-          trigger: { type: formData.triggerType as WorkflowListItem["triggerType"], config: {} },
-          nodes: [
-            { id: "start", type: "start" as const, name: "开始", config: {} },
-            { id: "end", type: "end" as const, name: "结束", config: {} },
-          ],
-          edges: [{ id: "e-start-end", source: "start", target: "end" }],
-        };
-        await workflowsApi.create({
-          slug: formData.slug,
-          name: formData.name,
-          description: formData.description || undefined,
-          enabled: true,
-          dsl,
-        });
-        await fetchWorkflows();
-      }
-      setIsEditOpen(false);
+      const { id } = await workflowsApi.create({ slug, name: slug, enabled: true, dsl });
+      setEditingWorkflowId(id);
     } catch {
       // silently fail
-    } finally {
-      setFormLoading(false);
     }
-  }, [editingWorkflow, formData, fetchWorkflows]);
+  }, []);
+
+  const openEditor = useCallback((id: string) => {
+    setEditingWorkflowId(id);
+  }, []);
+
+  const closeEditor = useCallback(() => {
+    setEditingWorkflowId(null);
+    fetchWorkflows();
+  }, [fetchWorkflows]);
 
   const columns = useMemo<ColumnDef<WorkflowListItem>[]>(
     () => [
@@ -265,7 +218,10 @@ export default function Workflows() {
               variant="ghost"
               size="icon"
               className="h-8 w-8"
-              onClick={() => setWorkflowTab("editor")}
+              onClick={(e) => {
+                e.stopPropagation();
+                openEditor(row.original.id);
+              }}
               title="编辑"
             >
               <Pencil size={14} />
@@ -274,7 +230,7 @@ export default function Workflows() {
               variant="ghost"
               size="icon"
               className="h-8 w-8"
-              onClick={() => handleTrigger(row.original.id)}
+              onClick={(e) => handleTrigger(e, row.original.id)}
               disabled={triggerLoadingId === row.original.id}
               title="手动触发"
             >
@@ -288,7 +244,8 @@ export default function Workflows() {
               variant="ghost"
               size="icon"
               className="text-destructive hover:text-destructive h-8 w-8"
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 setDeletingId(row.original.id);
                 setIsDeleteOpen(true);
               }}
@@ -300,7 +257,7 @@ export default function Workflows() {
         ),
       },
     ],
-    [handleToggleEnabled, handleTrigger, triggerLoadingId, setWorkflowTab],
+    [handleToggleEnabled, handleTrigger, triggerLoadingId, openEditor],
   );
 
   const table = useReactTable({
@@ -323,17 +280,32 @@ export default function Workflows() {
     },
   });
 
+  const [activeTab, setActiveTab] = useState("workflows");
+
+  // Full-screen editor overlay
+  if (editingWorkflowId) {
+    return (
+      <div className="flex h-full flex-col">
+        <div className="flex items-center gap-2 border-b px-4 py-2">
+          <Button variant="ghost" size="sm" onClick={closeEditor}>
+            <ArrowLeft size={14} className="mr-1.5" />
+            返回工作流列表
+          </Button>
+        </div>
+        <div className="flex-1 overflow-hidden p-2">
+          <WorkflowCanvas workflowId={editingWorkflowId} onBack={closeEditor} />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-full flex-col gap-4">
-      <Tabs value={workflowTab} onValueChange={setWorkflowTab} className="flex h-full flex-col">
-        <TabsList className="w-fit">
-          <TabsTrigger value="list">
-            <List size={14} className="mr-1.5" />
-            列表
-          </TabsTrigger>
-          <TabsTrigger value="editor">
-            <GitGraph size={14} className="mr-1.5" />
-            编辑器
+    <div className="mx-auto max-w-[1440px] p-8 pb-12">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="mb-4">
+          <TabsTrigger value="workflows">
+            <Workflow size={14} className="mr-1.5" />
+            工作流
           </TabsTrigger>
           <TabsTrigger value="executions">
             <History size={14} className="mr-1.5" />
@@ -341,14 +313,14 @@ export default function Workflows() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="list" className="mt-4 flex-1">
+        <TabsContent value="workflows">
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Workflow size={18} />
-                    工作流列表
+                    工作流
                   </CardTitle>
                   <CardDescription>管理工作流定义与触发配置</CardDescription>
                 </div>
@@ -417,7 +389,11 @@ export default function Workflows() {
                       </TableRow>
                     ) : (
                       table.getRowModel().rows.map((row) => (
-                        <TableRow key={row.id}>
+                        <TableRow
+                          key={row.id}
+                          className="cursor-pointer"
+                          onClick={() => openEditor(row.original.id)}
+                        >
                           {row.getVisibleCells().map((cell) => (
                             <TableCell key={cell.id}>
                               {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -458,101 +434,15 @@ export default function Workflows() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="editor" className="mt-4 flex-1">
-          <Card className="h-full">
-            <CardContent className="flex h-full flex-col items-center justify-center gap-4 py-20">
-              <Workflow size={48} className="text-muted-foreground/30" />
-              <p className="text-muted-foreground">画布编辑器将在阶段三实现</p>
-              <Button variant="outline" onClick={() => setWorkflowTab("list")}>
-                返回列表
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="executions" className="mt-4 flex-1">
-          <Card className="h-full">
-            <CardContent className="flex h-full flex-col items-center justify-center gap-4 py-20">
+        <TabsContent value="executions">
+          <Card>
+            <CardContent className="flex h-64 flex-col items-center justify-center gap-4">
               <History size={48} className="text-muted-foreground/30" />
-              <p className="text-muted-foreground">执行记录将在阶段四实现</p>
-              <Button variant="outline" onClick={() => setWorkflowTab("list")}>
-                返回列表
-              </Button>
+              <p className="text-muted-foreground">执行记录功能开发中</p>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
-
-      {/* Create / Edit Dialog */}
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingWorkflow ? "编辑工作流" : "新建工作流"}</DialogTitle>
-            <DialogDescription>
-              {editingWorkflow ? "修改工作流基本信息" : "创建一个新的工作流定义"}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-2">
-            <div className="grid gap-2">
-              <Label htmlFor="slug">标识符</Label>
-              <Input
-                id="slug"
-                value={formData.slug}
-                onChange={(e) => setFormData((p) => ({ ...p, slug: e.target.value }))}
-                placeholder="unique-workflow-id"
-                disabled={!!editingWorkflow}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="name">名称</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-                placeholder="工作流名称"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="description">描述</Label>
-              <Input
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
-                placeholder="可选描述"
-              />
-            </div>
-            {!editingWorkflow && (
-              <div className="grid gap-2">
-                <Label htmlFor="triggerType">触发器类型</Label>
-                <Select
-                  value={formData.triggerType}
-                  onValueChange={(v) => setFormData((p) => ({ ...p, triggerType: v }))}
-                >
-                  <SelectTrigger id="triggerType">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="manual">手动触发</SelectItem>
-                    <SelectItem value="state_change">状态变更</SelectItem>
-                    <SelectItem value="schedule">定时调度</SelectItem>
-                    <SelectItem value="webhook">Webhook</SelectItem>
-                    <SelectItem value="event">事件</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditOpen(false)}>
-              取消
-            </Button>
-            <Button onClick={handleSave} disabled={formLoading || !formData.slug || !formData.name}>
-              {formLoading && <Loader2 size={14} className="animate-spin mr-1.5" />}
-              保存
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Confirm Dialog */}
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
