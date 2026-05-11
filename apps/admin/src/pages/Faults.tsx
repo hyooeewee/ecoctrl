@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui";
 
 import { useSubBreadcrumb } from "@/hooks/useSubBreadcrumb";
+import { useAppStore } from "@/store/appStore";
 import type { Fault, FaultStats } from "@ecoctrl/shared";
 import { faultsApi } from "../api/faults";
 
@@ -14,7 +15,8 @@ export default function Faults() {
   const [faults, setFaults] = useState<Fault[]>([]);
   const [stats, setStats] = useState<FaultStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("list");
+  const activeTab = useAppStore((state) => state.faultsTab);
+  const setActiveTab = useAppStore((state) => state.setFaultsTab);
   const { setSubLabel } = useSubBreadcrumb();
 
   useEffect(() => {

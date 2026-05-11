@@ -47,6 +47,7 @@ import AppButton from "@/components/AppButton";
 import ModelFileZone from "@/components/ModelFileZone";
 import TruncatedText from "@/components/TruncatedText";
 import { useSubBreadcrumb } from "@/hooks/useSubBreadcrumb";
+import { useAppStore } from "@/store/appStore";
 import { resolveAssetUrl } from "@/lib/url";
 import type { BusinessObject, PointItem } from "@/types";
 import type { Model3D } from "@ecoctrl/shared";
@@ -177,7 +178,8 @@ export default function Models() {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
 
-  const [activeTab, setActiveTab] = useState("models");
+  const activeTab = useAppStore((state) => state.modelsTab);
+  const setActiveTab = useAppStore((state) => state.setModelsTab);
   const { setSubLabel } = useSubBreadcrumb();
 
   useEffect(() => {

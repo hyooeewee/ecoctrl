@@ -19,6 +19,7 @@ import { Badge } from "@ecoctrl/ui";
 
 import AppButton from "@/components/AppButton";
 import { useSubBreadcrumb } from "@/hooks/useSubBreadcrumb";
+import { useAppStore } from "@/store/appStore";
 import type {
   DashboardModelConfig,
   DashboardModelHotspot,
@@ -101,7 +102,8 @@ export default function DashboardModel() {
   const [saving, setSaving] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [activeTab, setActiveTab] = useState("hotspots");
+  const activeTab = useAppStore((state) => state.dashboardModelTab);
+  const setActiveTab = useAppStore((state) => state.setDashboardModelTab);
   const { setSubLabel } = useSubBreadcrumb();
 
   // Hotspot sheet state

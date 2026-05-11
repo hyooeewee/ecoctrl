@@ -27,9 +27,11 @@ import { authApi } from "./api/auth";
 import type { AuthUser } from "./api/auth";
 import { preferencesApi } from "./api/preferences";
 import type { UserPreferences } from "./types";
+import { useAppStore } from "./store/appStore";
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState("overview");
+  const activeTab = useAppStore((state) => state.activeTab);
+  const setActiveTab = useAppStore((state) => state.setActiveTab);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [userDetail, setUserDetail] = useState<AuthUser | null>(null);

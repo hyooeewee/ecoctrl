@@ -1,28 +1,37 @@
-import { Activity, PieChart, Sliders, ExternalLink } from "lucide-react";
+import { Activity, PieChart, Sliders, ExternalLink, RefreshCw } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
 import { Badge } from "@ecoctrl/ui";
+import { Button } from "@ecoctrl/ui";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoctrl/ui";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ecoctrl/ui";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@ecoctrl/ui";
 
 import { useSubBreadcrumb } from "@/hooks/useSubBreadcrumb";
+import { useAppStore } from "@/store/appStore";
 import { Progress } from "../components/Progress";
-import type { EnergyArea } from "@ecoctrl/shared";
+import type { EnergyArea, CarbonFactor } from "@ecoctrl/shared";
 import { energyApi } from "../api/energy";
 
 export default function Energy() {
   const [areas, setAreas] = useState<EnergyArea[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
+  const activeTab = useAppStore((state) => state.energyTab);
+  const setActiveTab = useAppStore((state) => state.setEnergyTab);
   const { setSubLabel } = useSubBreadcrumb();
+
+  const [carbonFactors, setCarbonFactors] = useState<CarbonFactor[]>([]);
+  const [carbonLoading, setCarbonLoading] = useState(false);
+  const [carbonRefreshing, setCarbonRefreshing] = useState(false);
+  const [carbonError, setCarbonError] = useState(false);
 
   useEffect(() => {
     const labels: Record<string, string> = {
       overview: "分区总览",
       details: "详细数据",
       stats: "统计报表",
-      config: "分项配置",
+      config: "碳排放因子",
     };
     setSubLabel(labels[activeTab] ?? null);
   }, [activeTab, setSubLabel]);
@@ -42,13 +51,47 @@ export default function Energy() {
     fetchAreas();
   }, []);
 
+  const fetchCarbonFactors = async () => {
+    setCarbonLoading(true);
+    setCarbonError(false);
+    try {
+      const data = await energyApi.carbonFactors();
+      setCarbonFactors(data);
+    } catch (err) {
+      console.error(err);
+      setCarbonError(true);
+    } finally {
+      setCarbonLoading(false);
+    }
+  };
+
+  const handleRefreshCarbonFactors = async () => {
+    setCarbonRefreshing(true);
+    try {
+      const result = await energyApi.refreshCarbonFactors();
+      alert(`已刷新 ${result.count} 条碳排放因子数据`);
+      await fetchCarbonFactors();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "刷新失败";
+      alert(`刷新失败：${message}`);
+    } finally {
+      setCarbonRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "config") {
+      fetchCarbonFactors();
+    }
+  }, [activeTab]);
+
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
       <TabsList>
         <TabsTrigger value="overview">分区总览</TabsTrigger>
         <TabsTrigger value="details">详细数据</TabsTrigger>
         <TabsTrigger value="stats">统计报表</TabsTrigger>
-        <TabsTrigger value="config">分项配置</TabsTrigger>
+        <TabsTrigger value="config">碳排放因子</TabsTrigger>
       </TabsList>
 
       <TabsContent value="overview" className="space-y-6">
@@ -170,14 +213,76 @@ export default function Energy() {
         </Card>
       </TabsContent>
 
-      <TabsContent value="config">
+      <TabsContent value="config" className="space-y-6">
         <Card className="border-border bg-card border shadow-sm">
-          <CardHeader className="border-border/50 border-b px-6">
-            <CardTitle className="text-base font-bold">分项配置</CardTitle>
-            <CardDescription className="text-xs">能耗分项模型与阈值设置</CardDescription>
+          <CardHeader className="border-border/50 flex flex-row items-center justify-between border-b px-6">
+            <div>
+              <CardTitle className="text-base font-bold">碳排放因子</CardTitle>
+              <CardDescription className="text-xs">
+                数据来源：国家温室气体排放因子库
+                {carbonFactors.length > 0 && carbonFactors[0]?.updatedAt && (
+                  <span className="ml-2 text-muted-foreground">
+                    （最后更新：{new Date(carbonFactors[0].updatedAt).toLocaleString()}）
+                  </span>
+                )}
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={handleRefreshCarbonFactors}
+              disabled={carbonRefreshing}
+            >
+              <RefreshCw size={14} className={carbonRefreshing ? "animate-spin" : ""} />
+              {carbonRefreshing ? "刷新中..." : "刷新数据"}
+            </Button>
           </CardHeader>
-          <CardContent className="mx-6 my-6 flex h-64 items-center justify-center rounded-lg">
-            <p className="text-muted-foreground text-sm">分项配置内容待补充</p>
+          <CardContent className="p-0">
+            {carbonLoading ? (
+              <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+                加载中...
+              </div>
+            ) : carbonError ? (
+              <div className="flex h-64 items-center justify-center text-sm text-red-400">
+                数据加载失败，请稍后重试
+              </div>
+            ) : carbonFactors.length === 0 ? (
+              <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+                暂无碳排放因子数据，请点击右上角刷新获取
+              </div>
+            ) : (
+              <Table>
+                <TableHeader className="bg-muted/50">
+                  <TableRow>
+                    <TableHead className="px-6">过程名称</TableHead>
+                    <TableHead>单位类别</TableHead>
+                    <TableHead>ISIC分类</TableHead>
+                    <TableHead className="text-right">因子值</TableHead>
+                    <TableHead>单位</TableHead>
+                    <TableHead>地理位置</TableHead>
+                    <TableHead className="px-6">来源</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {carbonFactors.map((factor) => (
+                    <TableRow key={factor.id}>
+                      <TableCell className="px-6 font-medium">{factor.name}</TableCell>
+                      <TableCell>{factor.unitGroup ?? "-"}</TableCell>
+                      <TableCell>{factor.category ?? "-"}</TableCell>
+                      <TableCell className="text-right font-mono">
+                        {factor.value?.toLocaleString() ?? "-"}
+                      </TableCell>
+                      <TableCell>{factor.unit ?? "-"}</TableCell>
+                      <TableCell>{factor.location ?? "-"}</TableCell>
+                      <TableCell className="px-6 text-muted-foreground text-xs">
+                        {factor.source ?? "-"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </TabsContent>
