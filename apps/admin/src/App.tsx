@@ -17,7 +17,7 @@ import Faults from "@/pages/Faults";
 import Login from "@/pages/Login";
 import Maintenance from "@/pages/Maintenance";
 import Models from "@/pages/Models";
-import Monitoring from "@/pages/Monitoring";
+import Workflows from "@/pages/Workflows";
 import Preferences from "@/pages/Preferences";
 import Profile from "@/pages/Profile";
 import Reports from "@/pages/Reports";
@@ -107,8 +107,8 @@ export default function App() {
         return <Models />;
       case "settingsGroup":
         return <DashboardModel />;
-      case "monitoring":
-        return <Monitoring />;
+      case "workflows":
+        return <Workflows />;
       case "reports":
         return <Reports />;
       case "maintenance":

@@ -16,6 +16,9 @@ interface AppState {
 
   modelsTab: string;
   setModelsTab: (tab: string) => void;
+
+  workflowTab: string;
+  setWorkflowTab: (tab: string) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -35,6 +38,9 @@ export const useAppStore = create<AppState>()(
 
       modelsTab: "models",
       setModelsTab: (tab) => set({ modelsTab: tab }),
+
+      workflowTab: "list",
+      setWorkflowTab: (tab) => set({ workflowTab: tab }),
     }),
     {
       name: "ecoctrl-admin-storage",
