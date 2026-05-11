@@ -1,0 +1,244 @@
+import type { WorkflowDSL, WorkflowNode, WorkflowEdge, NodeType } from "./types";
+
+export interface ValidationError {
+  field: string;
+  message: string;
+}
+
+const CONTROL_NODES: NodeType[] = [
+  "start",
+  "end",
+  "condition",
+  "switch",
+  "loop",
+  "parallel",
+  "delay",
+];
+const ACTION_NODES: NodeType[] = ["http_request", "database", "email", "variable"];
+const VALID_NODE_TYPES = new Set([...CONTROL_NODES, ...ACTION_NODES]);
+
+function hasEdgeTo(nodeId: string, edges: WorkflowEdge[]): boolean {
+  return edges.some((e) => e.target === nodeId);
+}
+
+function hasEdgeFrom(nodeId: string, edges: WorkflowEdge[]): boolean {
+  return edges.some((e) => e.source === nodeId);
+}
+
+function getOutgoingEdges(nodeId: string, edges: WorkflowEdge[]): WorkflowEdge[] {
+  return edges.filter((e) => e.source === nodeId);
+}
+
+function detectCycle(
+  nodeId: string,
+  edges: WorkflowEdge[],
+  visited: Set<string>,
+  recStack: Set<string>,
+): boolean {
+  visited.add(nodeId);
+  recStack.add(nodeId);
+
+  const outgoing = edges.filter((e) => e.source === nodeId);
+  for (const edge of outgoing) {
+    const target = edge.target;
+    if (!visited.has(target)) {
+      if (detectCycle(target, edges, visited, recStack)) {
+        return true;
+      }
+    } else if (recStack.has(target)) {
+      return true;
+    }
+  }
+
+  recStack.delete(nodeId);
+  return false;
+}
+
+export function validateDsl(dsl: WorkflowDSL): ValidationError[] {
+  const errors: ValidationError[] = [];
+  const { nodes, edges } = dsl;
+
+  // 1. Node type validation
+  for (const node of nodes) {
+    if (!VALID_NODE_TYPES.has(node.type)) {
+      errors.push({ field: `nodes.${node.id}.type`, message: `Invalid node type: ${node.type}` });
+    }
+  }
+
+  // 2. Unique node IDs
+  const nodeIds = new Set<string>();
+  for (const node of nodes) {
+    if (nodeIds.has(node.id)) {
+      errors.push({ field: `nodes.${node.id}.id`, message: `Duplicate node ID: ${node.id}` });
+    }
+    nodeIds.add(node.id);
+  }
+
+  // 3. Edge references exist
+  for (const edge of edges) {
+    if (!nodeIds.has(edge.source)) {
+      errors.push({
+        field: `edges.${edge.id}.source`,
+        message: `Source node not found: ${edge.source}`,
+      });
+    }
+    if (!nodeIds.has(edge.target)) {
+      errors.push({
+        field: `edges.${edge.id}.target`,
+        message: `Target node not found: ${edge.target}`,
+      });
+    }
+  }
+
+  // 4. Exactly one start node
+  const startNodes = nodes.filter((n) => n.type === "start");
+  if (startNodes.length === 0) {
+    errors.push({ field: "nodes", message: "Workflow must have exactly one 'start' node" });
+  } else if (startNodes.length > 1) {
+    errors.push({
+      field: "nodes",
+      message: `Workflow has ${startNodes.length} 'start' nodes, expected 1`,
+    });
+  }
+
+  // 5. At least one end node
+  const endNodes = nodes.filter((n) => n.type === "end");
+  if (endNodes.length === 0) {
+    errors.push({ field: "nodes", message: "Workflow must have at least one 'end' node" });
+  }
+
+  // 6. Connectivity
+  for (const node of nodes) {
+    if (node.type !== "start" && !hasEdgeTo(node.id, edges)) {
+      errors.push({
+        field: `nodes.${node.id}`,
+        message: `Node '${node.name}' has no incoming edges`,
+      });
+    }
+    if (node.type !== "end" && !hasEdgeFrom(node.id, edges)) {
+      errors.push({
+        field: `nodes.${node.id}`,
+        message: `Node '${node.name}' has no outgoing edges`,
+      });
+    }
+  }
+
+  // 7. Condition node labels
+  for (const node of nodes.filter((n) => n.type === "condition")) {
+    const outgoing = getOutgoingEdges(node.id, edges);
+    const labels = new Set(outgoing.map((e) => e.label));
+    if (!labels.has("true")) {
+      errors.push({
+        field: `nodes.${node.id}`,
+        message: `Condition node '${node.name}' missing 'true' branch`,
+      });
+    }
+    if (!labels.has("false")) {
+      errors.push({
+        field: `nodes.${node.id}`,
+        message: `Condition node '${node.name}' missing 'false' branch`,
+      });
+    }
+  }
+
+  // 8. Switch node labels
+  for (const node of nodes.filter((n) => n.type === "switch")) {
+    const cases = (node.config.cases as Array<{ value: string }> | undefined) ?? [];
+    const caseValues = new Set(cases.map((c) => String(c.value)));
+    const outgoing = getOutgoingEdges(node.id, edges);
+    const labels = new Set(outgoing.map((e) => e.label));
+    for (const caseValue of caseValues) {
+      if (!labels.has(caseValue)) {
+        errors.push({
+          field: `nodes.${node.id}`,
+          message: `Switch node '${node.name}' missing edge for case '${caseValue}'`,
+        });
+      }
+    }
+    if (!labels.has("default")) {
+      errors.push({
+        field: `nodes.${node.id}`,
+        message: `Switch node '${node.name}' missing 'default' branch`,
+      });
+    }
+  }
+
+  // 9. Loop node body validation (recursive)
+  for (const node of nodes.filter((n) => n.type === "loop")) {
+    const body = node.config.body as { nodes?: WorkflowNode[]; edges?: WorkflowEdge[] } | undefined;
+    if (body?.nodes && body.edges) {
+      const bodyErrors = validateDsl({
+        version: "1.0",
+        trigger: dsl.trigger,
+        nodes: body.nodes,
+        edges: body.edges,
+      });
+      for (const err of bodyErrors) {
+        errors.push({ field: `nodes.${node.id}.body.${err.field}`, message: err.message });
+      }
+    }
+    const mode = node.config.mode as string | undefined;
+    if (mode === "foreach" && !node.config.items) {
+      errors.push({
+        field: `nodes.${node.id}.config.items`,
+        message: `Loop node '${node.name}' (foreach) requires 'items'`,
+      });
+    }
+    if (mode === "while" && !node.config.condition) {
+      errors.push({
+        field: `nodes.${node.id}.config.condition`,
+        message: `Loop node '${node.name}' (while) requires 'condition'`,
+      });
+    }
+    if (!node.config.itemVar && mode === "foreach") {
+      errors.push({
+        field: `nodes.${node.id}.config.itemVar`,
+        message: `Loop node '${node.name}' requires 'itemVar'`,
+      });
+    }
+  }
+
+  // 10. Parallel node branch validation
+  for (const node of nodes.filter((n) => n.type === "parallel")) {
+    const branches = node.config.branches as
+      | Array<{ nodes?: WorkflowNode[]; edges?: WorkflowEdge[] }>
+      | undefined;
+    if (branches) {
+      for (let i = 0; i < branches.length; i++) {
+        const branch = branches[i]!;
+        if (branch.nodes && branch.edges) {
+          const branchErrors = validateDsl({
+            version: "1.0",
+            trigger: dsl.trigger,
+            nodes: branch.nodes,
+            edges: branch.edges,
+          });
+          for (const err of branchErrors) {
+            errors.push({
+              field: `nodes.${node.id}.branches[${i}].${err.field}`,
+              message: err.message,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // 11. Cycle detection (only on main graph, loop/parallel bodies validated separately)
+  if (startNodes.length === 1) {
+    const visited = new Set<string>();
+    const recStack = new Set<string>();
+    if (detectCycle(startNodes[0]!.id, edges, visited, recStack)) {
+      errors.push({
+        field: "edges",
+        message: "Workflow contains a cycle (loops must use 'loop' node with embedded body)",
+      });
+    }
+  }
+
+  return errors;
+}
+
+export function isValidDsl(dsl: WorkflowDSL): boolean {
+  return validateDsl(dsl).length === 0;
+}

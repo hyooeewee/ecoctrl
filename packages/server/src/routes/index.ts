@@ -22,6 +22,7 @@ import iotRoutes from "@/routes/iot";
 import backupScheduleRoutes from "@/routes/backupSchedule";
 import authRoutes from "@/routes/auth";
 import oauthRoutes from "@/routes/oauth";
+import workflowRoutes, { registerWebhookRoute } from "@/routes/workflows";
 
 export default async function apiRoutes(fastify: FastifyInstance) {
   fastify.addHook("onRequest", async (request: FastifyRequest, reply: FastifyReply) => {
@@ -40,6 +41,7 @@ export default async function apiRoutes(fastify: FastifyInstance) {
       "/api/auth/oauth/bind",
       "/api/auth/oauth/register-and-bind",
       "/api/public",
+      "/api/webhook",
     ];
     if (publicPaths.some((p) => request.url.startsWith(p))) return;
     try {
@@ -121,4 +123,6 @@ export default async function apiRoutes(fastify: FastifyInstance) {
   await fastify.register(backupScheduleRoutes, { prefix: "/system" });
   await fastify.register(authRoutes, { prefix: "/auth" });
   await fastify.register(oauthRoutes, { prefix: "/auth/oauth" });
+  await fastify.register(workflowRoutes, { prefix: "/workflows" });
+  await registerWebhookRoute(fastify);
 }

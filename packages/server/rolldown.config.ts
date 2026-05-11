@@ -6,12 +6,13 @@ import pkg from "./package.json" with { type: "json" };
 const staticAssets = ["ecoctrl.config.cjs", ".env.example"];
 
 export default defineConfig({
-  input: "index.ts",
+  input: ["index.ts", "src/queue/worker.ts"],
 
   output: {
-    file: "dist/index.mjs",
+    dir: "dist",
     format: "esm",
     sourcemap: false,
+    entryFileNames: "[name].mjs",
   },
 
   platform: "node",

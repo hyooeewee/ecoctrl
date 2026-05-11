@@ -2,6 +2,8 @@ import { eq } from "drizzle-orm";
 import type { BusinessObject } from "@ecoctrl/shared";
 import { db } from "@/config/database";
 import { objects } from "@/schemas/objects";
+import { triggerEngine } from "@/engine/trigger";
+import type { ObjectPoint } from "@/schemas/objects";
 
 // NOTE: BusinessObject in @ecoctrl/shared is missing the `status` field.
 // Once shared/types/api/objects.ts is updated, remove the `as` casts below.
@@ -76,10 +78,51 @@ export async function createObject(data: Omit<BusinessObject, "uuid">): Promise<
   } as BusinessObject;
 }
 
+function comparePoints(
+  oldPoints: ObjectPoint[],
+  newPoints: ObjectPoint[],
+): Array<{ pointId: string; key: string; oldValue: string; newValue: string }> {
+  const changes: Array<{ pointId: string; key: string; oldValue: string; newValue: string }> = [];
+  const oldMap = new Map(oldPoints.map((p) => [p.pointId, p]));
+  const newMap = new Map(newPoints.map((p) => [p.pointId, p]));
+
+  for (const [pointId, newPoint] of newMap) {
+    const oldPoint = oldMap.get(pointId);
+    const oldValues = oldPoint?.values ?? {};
+    const newValues = newPoint.values ?? {};
+
+    for (const [key, newValue] of Object.entries(newValues)) {
+      const oldValue = oldValues[key];
+      if (oldValue !== newValue) {
+        changes.push({ pointId, key, oldValue: oldValue ?? "", newValue });
+      }
+    }
+  }
+
+  // Check for removed keys
+  for (const [pointId, oldPoint] of oldMap) {
+    const newPoint = newMap.get(pointId);
+    if (!newPoint) continue;
+    const oldValues = oldPoint.values ?? {};
+    const newValues = newPoint.values ?? {};
+    for (const [key, oldValue] of Object.entries(oldValues)) {
+      if (!(key in newValues)) {
+        changes.push({ pointId, key, oldValue, newValue: "" });
+      }
+    }
+  }
+
+  return changes;
+}
+
 export async function updateObject(
   uuid: string,
   data: Partial<Omit<BusinessObject, "uuid">>,
 ): Promise<BusinessObject | null> {
+  // Read old values before update
+  const oldRows = await db.select().from(objects).where(eq(objects.uuid, uuid)).limit(1);
+  const oldPoints = (oldRows[0]?.points as ObjectPoint[] | undefined) ?? [];
+
   const result = await db
     .update(objects)
     .set({
@@ -93,6 +136,21 @@ export async function updateObject(
     .returning();
   if (result.length === 0) return null;
   const r = result[0];
+
+  // Trigger state_change for point value changes
+  if (data.points) {
+    const newPoints = (data.points as ObjectPoint[] | undefined) ?? [];
+    const changes = comparePoints(oldPoints, newPoints);
+    for (const change of changes) {
+      // Fire and forget - do not block the update
+      triggerEngine
+        .emitStateChange(uuid, change.pointId, change.key, change.oldValue, change.newValue)
+        .catch(() => {
+          // Silently ignore trigger errors
+        });
+    }
+  }
+
   return {
     uuid: r.uuid,
     id: r.id,

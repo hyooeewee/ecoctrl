@@ -22,6 +22,8 @@ import { UPLOAD_DIR } from "@/lib/paths";
 import databasePlugin from "@/plugins/database";
 import rateLimitPlugin from "@/plugins/rateLimit";
 import apiRoutes from "@/routes";
+import { initQueue } from "@/queue/pgboss";
+import { triggerEngine } from "@/engine/trigger";
 import { syncSmtpFromEnv } from "@/repositories/platformConfig";
 
 await ensureDatabase();
@@ -182,6 +184,10 @@ await fastify.register(swaggerUi, {
 });
 
 await fastify.register(apiRoutes, { prefix: "/api" });
+
+// Initialize pg-boss queue and sync schedule triggers
+await initQueue();
+await triggerEngine.syncSchedules();
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || "0.0.0.0";
