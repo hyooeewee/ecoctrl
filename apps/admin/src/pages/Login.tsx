@@ -110,7 +110,9 @@ export default function Login({ onLogin }: LoginProps) {
       const user = await authApi.me();
       onLogin(user);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "登录失败，请重试");
+      let msg = err instanceof Error ? err.message : "登录失败，请重试";
+      if (msg === "Invalid credentials") msg = "账户或密码错误";
+      setError(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -128,7 +130,9 @@ export default function Login({ onLogin }: LoginProps) {
       setCountdown(60);
       setError("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "发送验证码失败，请重试");
+      let msg = err instanceof Error ? err.message : "发送验证码失败，请重试";
+      if (msg === "Email already registered") msg = "该邮箱已被注册";
+      setError(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -159,7 +163,10 @@ export default function Login({ onLogin }: LoginProps) {
       const user = await authApi.me();
       onLogin(user);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "注册失败，请重试");
+      let msg = err instanceof Error ? err.message : "注册失败，请重试";
+      if (msg === "Username already taken") msg = "该用户名已被使用";
+      if (msg === "Email already taken") msg = "该邮箱已被注册";
+      setError(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -177,7 +184,9 @@ export default function Login({ onLogin }: LoginProps) {
       setCountdown(60);
       setError("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "发送验证码失败，请重试");
+      let msg = err instanceof Error ? err.message : "发送验证码失败，请重试";
+      if (msg === "User not found") msg = "用户不存在";
+      setError(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -210,7 +219,9 @@ export default function Login({ onLogin }: LoginProps) {
       setFpConfirm("");
       switchMode("login");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "密码重置失败，请重试");
+      let msg = err instanceof Error ? err.message : "密码重置失败，请重试";
+      if (msg === "User not found") msg = "用户不存在";
+      setError(msg);
     } finally {
       setIsSubmitting(false);
     }

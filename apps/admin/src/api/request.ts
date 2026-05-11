@@ -55,6 +55,21 @@ async function doRequest(url: string, init: RequestInit, token: string | null): 
     });
 
     if (res.status === 401) {
+      // Public auth endpoints return 401 for invalid credentials, not expired sessions.
+      const publicAuthPaths = ["/auth/login", "/auth/register", "/auth/forgot-password/reset"];
+      const isPublicAuth = publicAuthPaths.some((p) => url.includes(p));
+      if (isPublicAuth) {
+        const text = await res.text().catch(() => "");
+        let message = text || res.statusText;
+        try {
+          const body = JSON.parse(text);
+          if (body.error) message = body.error;
+        } catch {
+          // not JSON, keep raw text
+        }
+        throw new Error(message);
+      }
+
       if (!isRefreshing) {
         isRefreshing = true;
         const newToken = await doRefresh();
@@ -79,7 +94,14 @@ async function doRequest(url: string, init: RequestInit, token: string | null): 
 
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      throw new Error(`HTTP ${res.status}: ${text || res.statusText}`);
+      let message = text || res.statusText;
+      try {
+        const body = JSON.parse(text);
+        if (body.error) message = body.error;
+      } catch {
+        // not JSON, keep raw text
+      }
+      throw new Error(message);
     }
 
     return res;
