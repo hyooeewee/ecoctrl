@@ -34,8 +34,8 @@ export default function Faults() {
   }, []);
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div className="flex h-full flex-col overflow-hidden p-6">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 shrink-0 mb-4">
         <Card className="border-l-4 border-none border-l-red-500 bg-red-50 shadow-sm">
           <CardContent className="flex items-center justify-between p-6">
             <div className="space-y-1">
@@ -71,10 +71,14 @@ export default function Faults() {
         </Card>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsContent value="list" className="mt-4">
-          <Card className="border-none shadow-sm">
-            <CardContent className="p-0">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="flex-1 flex flex-col overflow-hidden"
+      >
+        <TabsContent value="list" className="mt-0 flex-1 flex flex-col overflow-hidden">
+          <Card className="flex h-full flex-col overflow-hidden border-none shadow-sm">
+            <CardContent className="flex-1 overflow-auto p-0">
               {loading ? (
                 <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
                   加载中...
@@ -137,8 +141,8 @@ export default function Faults() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="analytics" className="mt-4">
-          <Card className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-none border-border bg-muted shadow-sm">
+        <TabsContent value="analytics" className="mt-0 flex-1 flex flex-col overflow-hidden">
+          <Card className="flex h-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-none border-border bg-muted shadow-sm">
             <div className="text-center text-muted-foreground">
               <BarChart3 className="mx-auto mb-2 opacity-50" />
               <p className="text-sm font-medium">统计分析图表加载中...</p>

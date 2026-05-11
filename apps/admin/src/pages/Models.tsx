@@ -963,11 +963,11 @@ export default function Models() {
   });
 
   return (
-    <div className="space-y-6">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsContent value="models" className="mt-0">
-          <Card className="border-none shadow-sm">
-            <CardHeader className="px-6 pb-4">
+    <div className="flex h-full flex-col overflow-hidden p-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full flex-col">
+        <TabsContent value="models" className="mt-0 flex h-full flex-col">
+          <Card className="flex h-full flex-col overflow-hidden border-none shadow-sm">
+            <CardHeader className="shrink-0 px-6 pb-4">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>模型资源</CardTitle>
@@ -986,7 +986,7 @@ export default function Models() {
                 </AppButton>
               </div>
             </CardHeader>
-            <CardContent className="px-6 pb-6">
+            <CardContent className="flex-1 overflow-auto px-6 pb-6">
               {loading ? (
                 <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
                   加载中...
@@ -1093,9 +1093,9 @@ export default function Models() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="objects" className="mt-0">
-          <Card className="border-none shadow-sm">
-            <CardHeader className="px-6 pb-4">
+        <TabsContent value="objects" className="mt-0 flex h-full flex-col">
+          <Card className="flex h-full flex-col overflow-hidden border-none shadow-sm">
+            <CardHeader className="shrink-0 px-6 pb-4">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>业务对象</CardTitle>
@@ -1114,7 +1114,7 @@ export default function Models() {
                 </AppButton>
               </div>
             </CardHeader>
-            <CardContent className="px-6 pb-6">
+            <CardContent className="flex-1 overflow-auto px-6 pb-6">
               {objectsLoading ? (
                 <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
                   加载中...
@@ -1197,9 +1197,9 @@ export default function Models() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="points" className="mt-0">
-          <Card className="border-none shadow-sm">
-            <CardHeader className="px-6 pb-4">
+        <TabsContent value="points" className="mt-0 flex h-full flex-col">
+          <Card className="flex h-full flex-col overflow-hidden border-none shadow-sm">
+            <CardHeader className="shrink-0 px-6 pb-4">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>点位信息</CardTitle>
@@ -1218,7 +1218,7 @@ export default function Models() {
                 </AppButton>
               </div>
             </CardHeader>
-            <CardContent className="px-6 pb-6">
+            <CardContent className="flex-1 overflow-auto px-6">
               {loading ? (
                 <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
                   加载中...
@@ -1308,32 +1308,32 @@ export default function Models() {
                       </TableBody>
                     </Table>
                   </div>
-                  <div className="flex items-center justify-between py-4">
-                    <div className="text-sm text-muted-foreground">
-                      共 {table.getFilteredRowModel().rows.length} 条
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => table.previousPage()}
-                        disabled={!table.getCanPreviousPage()}
-                      >
-                        上一页
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => table.nextPage()}
-                        disabled={!table.getCanNextPage()}
-                      >
-                        下一页
-                      </Button>
-                    </div>
-                  </div>
                 </>
               )}
             </CardContent>
+            <div className="shrink-0 border-t px-6 py-3 flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                共 {table.getFilteredRowModel().rows.length} 条
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  上一页
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  下一页
+                </Button>
+              </div>
+            </div>
           </Card>
         </TabsContent>
       </Tabs>

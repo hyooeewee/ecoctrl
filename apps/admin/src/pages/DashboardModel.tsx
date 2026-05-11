@@ -317,15 +317,15 @@ export default function DashboardModel() {
   const labels = config?.labels ?? [];
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+    <div className="flex h-full flex-col overflow-hidden p-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 flex-1 min-h-0">
         {/* Left panel: model upload */}
-        <Card className="border-none shadow-sm lg:col-span-1">
-          <CardHeader className="px-6">
+        <Card className="flex flex-col overflow-hidden border-none shadow-sm lg:col-span-1">
+          <CardHeader className="shrink-0 px-6">
             <CardTitle className="text-lg">模型上传与显示</CardTitle>
             <CardDescription>配置大屏首页加载的3D模型文件。</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6 px-6 pb-6">
+          <CardContent className="flex-1 overflow-auto space-y-6 px-6 pb-6">
             <ModelFileZone
               file={uploadFile}
               existingInfo={existingFileInfo}
@@ -364,11 +364,11 @@ export default function DashboardModel() {
         </Card>
 
         {/* Right panel: tabs */}
-        <Card className="h-full border-none shadow-sm lg:col-span-2">
+        <Card className="flex flex-col overflow-hidden border-none shadow-sm lg:col-span-2">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full flex-col">
             {/* Hotspots tab */}
-            <TabsContent value="hotspots" className="flex-1 p-6">
-              <div className="flex items-center justify-between mb-4">
+            <TabsContent value="hotspots" className="flex-1 flex flex-col overflow-hidden">
+              <div className="shrink-0 flex items-center justify-between p-6 pb-4">
                 <div>
                   <h3 className="text-sm font-semibold">热点区域</h3>
                   <p className="text-xs text-muted-foreground">管理3D模型上的可交互热点区域。</p>
@@ -378,82 +378,83 @@ export default function DashboardModel() {
                   新增热点
                 </AppButton>
               </div>
-
-              {hotspots.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted py-16">
-                  <MapPin className="h-12 w-12 text-muted-foreground/40" />
-                  <h3 className="mt-4 text-sm font-semibold text-foreground">暂无热点配置</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    点击右上角"新增热点"按钮添加。
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[140px]">名称</TableHead>
-                        <TableHead>位置 (x, y, z)</TableHead>
-                        <TableHead className="w-[80px]">半径</TableHead>
-                        <TableHead>Mesh关键词</TableHead>
-                        <TableHead>描述</TableHead>
-                        <TableHead className="w-[100px] text-right">操作</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {hotspots.map((h) => (
-                        <TableRow key={h.id}>
-                          <TableCell className="font-medium">{h.name}</TableCell>
-                          <TableCell>
-                            <span className="font-mono text-xs">{formatPos(h.position)}</span>
-                          </TableCell>
-                          <TableCell>{h.radius}</TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {h.meshKeywords.map((kw) => (
-                                <Badge key={kw} variant="secondary" className="text-xs">
-                                  {kw}
-                                </Badge>
-                              ))}
-                              {h.meshKeywords.length === 0 && (
-                                <span className="text-xs text-muted-foreground">-</span>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-xs text-muted-foreground">
-                              {h.description || "-"}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <AppButton
-                              level="ghost"
-                              size="icon-sm"
-                              className="h-7 w-7 mr-1"
-                              onClick={() => openHotspotEdit(h)}
-                            >
-                              <Pencil size={14} />
-                            </AppButton>
-                            <AppButton
-                              level="danger"
-                              size="icon-sm"
-                              className="h-7 w-7"
-                              onClick={() => handleHotspotDelete(h.id, h.name)}
-                            >
-                              <Trash2 size={14} />
-                            </AppButton>
-                          </TableCell>
+              <div className="flex-1 overflow-auto px-6 pb-6">
+                {hotspots.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted py-16">
+                    <MapPin className="h-12 w-12 text-muted-foreground/40" />
+                    <h3 className="mt-4 text-sm font-semibold text-foreground">暂无热点配置</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      点击右上角"新增热点"按钮添加。
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[140px]">名称</TableHead>
+                          <TableHead>位置 (x, y, z)</TableHead>
+                          <TableHead className="w-[80px]">半径</TableHead>
+                          <TableHead>Mesh关键词</TableHead>
+                          <TableHead>描述</TableHead>
+                          <TableHead className="w-[100px] text-right">操作</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
+                      </TableHeader>
+                      <TableBody>
+                        {hotspots.map((h) => (
+                          <TableRow key={h.id}>
+                            <TableCell className="font-medium">{h.name}</TableCell>
+                            <TableCell>
+                              <span className="font-mono text-xs">{formatPos(h.position)}</span>
+                            </TableCell>
+                            <TableCell>{h.radius}</TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">
+                                {h.meshKeywords.map((kw) => (
+                                  <Badge key={kw} variant="secondary" className="text-xs">
+                                    {kw}
+                                  </Badge>
+                                ))}
+                                {h.meshKeywords.length === 0 && (
+                                  <span className="text-xs text-muted-foreground">-</span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-xs text-muted-foreground">
+                                {h.description || "-"}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <AppButton
+                                level="ghost"
+                                size="icon-sm"
+                                className="h-7 w-7 mr-1"
+                                onClick={() => openHotspotEdit(h)}
+                              >
+                                <Pencil size={14} />
+                              </AppButton>
+                              <AppButton
+                                level="danger"
+                                size="icon-sm"
+                                className="h-7 w-7"
+                                onClick={() => handleHotspotDelete(h.id, h.name)}
+                              >
+                                <Trash2 size={14} />
+                              </AppButton>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
             </TabsContent>
 
             {/* Labels tab */}
-            <TabsContent value="labels" className="flex-1 p-6">
-              <div className="flex items-center justify-between mb-4">
+            <TabsContent value="labels" className="flex-1 flex flex-col overflow-hidden">
+              <div className="shrink-0 flex items-center justify-between p-6 pb-4">
                 <div>
                   <h3 className="text-sm font-semibold">标签</h3>
                   <p className="text-xs text-muted-foreground">
@@ -465,78 +466,79 @@ export default function DashboardModel() {
                   新增标签
                 </AppButton>
               </div>
-
-              {labels.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted py-16">
-                  <Tag className="h-12 w-12 text-muted-foreground/40" />
-                  <h3 className="mt-4 text-sm font-semibold text-foreground">暂无标签配置</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    点击右上角"新增标签"按钮添加。
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[120px]">Key</TableHead>
-                        <TableHead>位置 (x, y, z)</TableHead>
-                        <TableHead>Mesh关键词</TableHead>
-                        <TableHead className="w-[180px]">聚焦参数</TableHead>
-                        <TableHead className="w-[100px] text-right">操作</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {labels.map((l) => (
-                        <TableRow key={l.key}>
-                          <TableCell className="font-medium font-mono text-xs">{l.key}</TableCell>
-                          <TableCell>
-                            <span className="font-mono text-xs">
-                              {formatPos(l.fallbackPosition)}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {l.meshKeywords.map((kw) => (
-                                <Badge key={kw} variant="secondary" className="text-xs">
-                                  {kw}
-                                </Badge>
-                              ))}
-                              {l.meshKeywords.length === 0 && (
-                                <span className="text-xs text-muted-foreground">-</span>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <span className="font-mono text-xs text-muted-foreground">
-                              α={l.focusAlpha.toFixed(2)} β={l.focusBeta.toFixed(2)} r=
-                              {l.focusRadius.toFixed(2)}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <AppButton
-                              level="ghost"
-                              size="icon-sm"
-                              className="h-7 w-7 mr-1"
-                              onClick={() => openLabelEdit(l)}
-                            >
-                              <Pencil size={14} />
-                            </AppButton>
-                            <AppButton
-                              level="danger"
-                              size="icon-sm"
-                              className="h-7 w-7"
-                              onClick={() => handleLabelDelete(l.key)}
-                            >
-                              <Trash2 size={14} />
-                            </AppButton>
-                          </TableCell>
+              <div className="flex-1 overflow-auto px-6 pb-6">
+                {labels.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted py-16">
+                    <Tag className="h-12 w-12 text-muted-foreground/40" />
+                    <h3 className="mt-4 text-sm font-semibold text-foreground">暂无标签配置</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      点击右上角"新增标签"按钮添加。
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[120px]">Key</TableHead>
+                          <TableHead>位置 (x, y, z)</TableHead>
+                          <TableHead>Mesh关键词</TableHead>
+                          <TableHead className="w-[180px]">聚焦参数</TableHead>
+                          <TableHead className="w-[100px] text-right">操作</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
+                      </TableHeader>
+                      <TableBody>
+                        {labels.map((l) => (
+                          <TableRow key={l.key}>
+                            <TableCell className="font-medium font-mono text-xs">{l.key}</TableCell>
+                            <TableCell>
+                              <span className="font-mono text-xs">
+                                {formatPos(l.fallbackPosition)}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">
+                                {l.meshKeywords.map((kw) => (
+                                  <Badge key={kw} variant="secondary" className="text-xs">
+                                    {kw}
+                                  </Badge>
+                                ))}
+                                {l.meshKeywords.length === 0 && (
+                                  <span className="text-xs text-muted-foreground">-</span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <span className="font-mono text-xs text-muted-foreground">
+                                α={l.focusAlpha.toFixed(2)} β={l.focusBeta.toFixed(2)} r=
+                                {l.focusRadius.toFixed(2)}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <AppButton
+                                level="ghost"
+                                size="icon-sm"
+                                className="h-7 w-7 mr-1"
+                                onClick={() => openLabelEdit(l)}
+                              >
+                                <Pencil size={14} />
+                              </AppButton>
+                              <AppButton
+                                level="danger"
+                                size="icon-sm"
+                                className="h-7 w-7"
+                                onClick={() => handleLabelDelete(l.key)}
+                              >
+                                <Trash2 size={14} />
+                              </AppButton>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
             </TabsContent>
           </Tabs>
         </Card>

@@ -166,7 +166,11 @@ export default function App() {
           {activeTab === "config" ||
           activeTab === "preferences" ||
           activeTab === "profile" ||
-          activeTab === "workflows" ? (
+          activeTab === "workflows" ||
+          activeTab === "models" ||
+          activeTab === "settingsGroup" ||
+          activeTab === "faults" ||
+          activeTab === "energy" ? (
             <div className="flex-1 flex flex-col overflow-hidden">{renderContent()}</div>
           ) : (
             <ScrollArea className="h-full w-full">
