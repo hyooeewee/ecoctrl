@@ -18,7 +18,6 @@ import { Input } from "@ecoctrl/ui";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ecoctrl/ui";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@ecoctrl/ui";
 
-import { useSubBreadcrumb } from "@/hooks/useSubBreadcrumb";
 import { useAppStore } from "@/store/appStore";
 import { Progress } from "../components/Progress";
 import type { EnergyArea, CarbonFactor, CarbonFactorNode } from "@ecoctrl/shared";
@@ -135,7 +134,6 @@ export default function Energy() {
   const [error, setError] = useState(false);
   const activeTab = useAppStore((state) => state.energyTab);
   const setActiveTab = useAppStore((state) => state.setEnergyTab);
-  const { setSubLabel } = useSubBreadcrumb();
 
   // Carbon factor tree states
   const [treeNodes, setTreeNodes] = useState<CarbonFactorNode[]>([]);
@@ -148,16 +146,6 @@ export default function Energy() {
   const [fetchingPkid, setFetchingPkid] = useState<string | null>(null);
   const [fetchedFactors, setFetchedFactors] = useState<CarbonFactor[]>([]);
   const [carbonFactors, setCarbonFactors] = useState<CarbonFactor[]>([]);
-
-  useEffect(() => {
-    const labels: Record<string, string> = {
-      overview: "分区总览",
-      details: "详细数据",
-      stats: "统计报表",
-      config: "碳排放因子",
-    };
-    setSubLabel(labels[activeTab] ?? null);
-  }, [activeTab, setSubLabel]);
 
   useEffect(() => {
     const fetchAreas = async () => {
@@ -260,13 +248,6 @@ export default function Energy() {
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
-      <TabsList>
-        <TabsTrigger value="overview">分区总览</TabsTrigger>
-        <TabsTrigger value="details">详细数据</TabsTrigger>
-        <TabsTrigger value="stats">统计报表</TabsTrigger>
-        <TabsTrigger value="config">碳排放因子</TabsTrigger>
-      </TabsList>
-
       <TabsContent value="overview" className="space-y-6">
         {loading ? (
           <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">

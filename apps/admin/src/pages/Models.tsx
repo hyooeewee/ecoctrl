@@ -46,7 +46,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui/tabs";
 import AppButton from "@/components/AppButton";
 import ModelFileZone from "@/components/ModelFileZone";
 import TruncatedText from "@/components/TruncatedText";
-import { useSubBreadcrumb } from "@/hooks/useSubBreadcrumb";
 import { useAppStore } from "@/store/appStore";
 import { resolveAssetUrl } from "@/lib/url";
 import type { BusinessObject, PointItem } from "@/types";
@@ -180,16 +179,6 @@ export default function Models() {
 
   const activeTab = useAppStore((state) => state.modelsTab);
   const setActiveTab = useAppStore((state) => state.setModelsTab);
-  const { setSubLabel } = useSubBreadcrumb();
-
-  useEffect(() => {
-    const labels: Record<string, string> = {
-      models: "模型资源",
-      objects: "业务对象",
-      points: "点位信息",
-    };
-    setSubLabel(labels[activeTab] ?? null);
-  }, [activeTab, setSubLabel]);
 
   const editorRef = useRef<
     Parameters<NonNullable<React.ComponentProps<typeof Editor>["onMount"]>>[0] | null
@@ -976,21 +965,6 @@ export default function Models() {
   return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="mb-6">
-          <TabsTrigger value="models" className="flex items-center gap-2 px-6">
-            <Box size={16} />
-            模型资源
-          </TabsTrigger>
-          <TabsTrigger value="objects" className="flex items-center gap-2 px-6">
-            <Layers size={16} />
-            业务对象
-          </TabsTrigger>
-          <TabsTrigger value="points" className="flex items-center gap-2 px-6">
-            <MapPin size={16} />
-            点位信息
-          </TabsTrigger>
-        </TabsList>
-
         <TabsContent value="models" className="mt-0">
           <Card className="border-none shadow-sm">
             <CardHeader className="px-6 pb-4">

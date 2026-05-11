@@ -1,17 +1,4 @@
-import {
-  LayoutDashboard,
-  Settings,
-  Users,
-  Box,
-  Server,
-  Workflow,
-  FileBox,
-  Wrench,
-  AlertTriangle,
-  Zap,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import React from "react";
 
@@ -20,27 +7,21 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@ecoct
 import { cn } from "@/lib/utils";
 
 import { BrandLogo } from "./BrandLogo";
+import { sidebarNavItems } from "./navConfig";
 
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   defaultCollapsed?: boolean;
+  onCollapsedChange?: (collapsed: boolean) => void;
 }
 
-const navItems = [
-  { id: "overview", label: "管理总览", icon: LayoutDashboard },
-  { id: "accounts", label: "账户控制", icon: Users },
-  { id: "models", label: "设备详情", icon: Server },
-  { id: "settingsGroup", label: "大屏模型", icon: Box },
-  { id: "workflows", label: "逻辑控制", icon: Workflow },
-  { id: "reports", label: "报表管理", icon: FileBox },
-  { id: "maintenance", label: "维保管理", icon: Wrench },
-  { id: "faults", label: "故障管理", icon: AlertTriangle },
-  { id: "energy", label: "能耗管理", icon: Zap },
-  { id: "config", label: "系统配置", icon: Settings },
-];
-
-export default function Sidebar({ activeTab, setActiveTab, defaultCollapsed }: SidebarProps) {
+export default function Sidebar({
+  activeTab,
+  setActiveTab,
+  defaultCollapsed,
+  onCollapsedChange,
+}: SidebarProps) {
   const [collapsed, setCollapsed] = React.useState(defaultCollapsed ?? false);
 
   React.useEffect(() => {
@@ -48,6 +29,11 @@ export default function Sidebar({ activeTab, setActiveTab, defaultCollapsed }: S
       setCollapsed(defaultCollapsed);
     }
   }, [defaultCollapsed]);
+
+  const toggleCollapsed = (next: boolean) => {
+    setCollapsed(next);
+    onCollapsedChange?.(next);
+  };
 
   return (
     <motion.aside
@@ -65,7 +51,7 @@ export default function Sidebar({ activeTab, setActiveTab, defaultCollapsed }: S
           "border-border group relative flex h-16 items-center justify-between border-b px-[18px] transition-colors duration-200",
           collapsed && "hover:bg-muted/50 cursor-pointer",
         )}
-        onClick={() => collapsed && setCollapsed(false)}
+        onClick={() => collapsed && toggleCollapsed(false)}
       >
         <div
           className={cn(
@@ -92,7 +78,7 @@ export default function Sidebar({ activeTab, setActiveTab, defaultCollapsed }: S
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={() => toggleCollapsed(!collapsed)}
             className="text-muted-foreground hover:text-foreground h-8 w-8 shrink-0"
           >
             <ChevronLeft size={18} />
@@ -104,7 +90,7 @@ export default function Sidebar({ activeTab, setActiveTab, defaultCollapsed }: S
             size="icon"
             onClick={(e) => {
               e.stopPropagation();
-              setCollapsed(!collapsed);
+              toggleCollapsed(!collapsed);
             }}
             className="text-primary bg-background/80 border-primary/20 absolute left-1/2 h-8 w-8 shrink-0 -translate-x-1/2 scale-75 border opacity-0 shadow-sm backdrop-blur-sm transition-all duration-300 group-hover:scale-100 group-hover:opacity-100"
           >
@@ -117,7 +103,7 @@ export default function Sidebar({ activeTab, setActiveTab, defaultCollapsed }: S
       <TooltipProvider delay={100}>
         <nav className="scrollbar-hide flex-1 overflow-x-hidden overflow-y-auto py-4">
           <ul className="space-y-1 px-3">
-            {navItems.map((item) => {
+            {sidebarNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
               return (

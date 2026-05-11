@@ -19,6 +19,9 @@ interface AppState {
   modelsTab: string;
   setModelsTab: (tab: string) => void;
 
+  workflowsTab: string;
+  setWorkflowsTab: (tab: string) => void;
+
   // Local overrides for user preferences. Keys present here take precedence
   // over database defaults. Allows device/session-level customization.
   preferencesOverride: Partial<UserPreferences>;
@@ -44,6 +47,9 @@ export const useAppStore = create<AppState>()(
       modelsTab: "models",
       setModelsTab: (tab) => set({ modelsTab: tab }),
 
+      workflowsTab: "workflows",
+      setWorkflowsTab: (tab) => set({ workflowsTab: tab }),
+
       preferencesOverride: {},
       setPreferenceOverride: (patch) =>
         set((state) => ({
@@ -59,6 +65,7 @@ export const useAppStore = create<AppState>()(
         faultsTab: state.faultsTab,
         dashboardModelTab: state.dashboardModelTab,
         modelsTab: state.modelsTab,
+        workflowsTab: state.workflowsTab,
         preferencesOverride: state.preferencesOverride,
       }),
     },

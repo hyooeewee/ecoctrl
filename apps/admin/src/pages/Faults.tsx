@@ -6,7 +6,6 @@ import { Card, CardContent } from "@ecoctrl/ui";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ecoctrl/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui";
 
-import { useSubBreadcrumb } from "@/hooks/useSubBreadcrumb";
 import { useAppStore } from "@/store/appStore";
 import type { Fault, FaultStats } from "@ecoctrl/shared";
 import { faultsApi } from "../api/faults";
@@ -17,15 +16,6 @@ export default function Faults() {
   const [loading, setLoading] = useState(true);
   const activeTab = useAppStore((state) => state.faultsTab);
   const setActiveTab = useAppStore((state) => state.setFaultsTab);
-  const { setSubLabel } = useSubBreadcrumb();
-
-  useEffect(() => {
-    const labels: Record<string, string> = {
-      list: "故障列表",
-      analytics: "统计分析",
-    };
-    setSubLabel(labels[activeTab] ?? null);
-  }, [activeTab, setSubLabel]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -82,17 +72,6 @@ export default function Faults() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList>
-          <TabsTrigger value="list" className="gap-2 px-6">
-            <History size={16} />
-            实时故障列表
-          </TabsTrigger>
-          <TabsTrigger value="analytics" className="gap-2 px-6">
-            <BarChart3 size={16} />
-            故障统计分析
-          </TabsTrigger>
-        </TabsList>
-
         <TabsContent value="list" className="mt-4">
           <Card className="border-none shadow-sm">
             <CardContent className="p-0">

@@ -7,7 +7,6 @@ import { ScrollArea } from "@ecoctrl/ui";
 import React, { useEffect, useMemo, useState } from "react";
 
 import Header from "@/components/Header";
-import { SubBreadcrumbContext } from "@/hooks/useSubBreadcrumb";
 import Sidebar from "@/components/Sidebar";
 import Accounts from "@/pages/Accounts";
 import Config from "@/pages/Config";
@@ -50,13 +49,6 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [userDetail, setUserDetail] = useState<AuthUser | null>(null);
   const [userPrefs, setUserPrefs] = useState<UserPreferences | null>(null);
-  const [subLabel, setSubLabel] = useState<string | null>(null);
-
-  useEffect(() => {
-    setSubLabel(null);
-  }, [activeTab]);
-
-  const breadcrumbValue = useMemo(() => ({ subLabel, setSubLabel }), [subLabel, setSubLabel]);
 
   // Compute effective preferences: override > DB > defaults.
   const effectivePrefs = useMemo(
@@ -154,37 +146,35 @@ export default function App() {
   };
 
   return (
-    <SubBreadcrumbContext.Provider value={breadcrumbValue}>
-      <div className="bg-background text-foreground selection:bg-primary/10 selection:text-primary flex h-screen overflow-hidden font-sans">
-        <Sidebar
+    <div className="bg-background text-foreground selection:bg-primary/10 selection:text-primary flex h-screen overflow-hidden font-sans">
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        defaultCollapsed={effectivePrefs.sidebarCollapsed}
+        onCollapsedChange={(collapsed) => setPreferenceOverride({ sidebarCollapsed: collapsed })}
+      />
+
+      <div className="flex h-full min-w-0 flex-1 flex-col">
+        <Header
           activeTab={activeTab}
           setActiveTab={setActiveTab}
-          defaultCollapsed={effectivePrefs.sidebarCollapsed}
-          onCollapsedChange={(collapsed) => setPreferenceOverride({ sidebarCollapsed: collapsed })}
+          showBreadcrumb={effectivePrefs.showBreadcrumb}
+          theme={effectivePrefs.theme}
         />
 
-        <div className="flex h-full min-w-0 flex-1 flex-col">
-          <Header
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            showBreadcrumb={effectivePrefs.showBreadcrumb}
-            theme={effectivePrefs.theme}
-          />
-
-          <main className="bg-background flex-1 overflow-hidden flex flex-col">
-            {activeTab === "config" ||
-            activeTab === "preferences" ||
-            activeTab === "profile" ||
-            activeTab === "workflows" ? (
-              <div className="flex-1 flex flex-col overflow-hidden">{renderContent()}</div>
-            ) : (
-              <ScrollArea className="h-full w-full">
-                <div className="mx-auto max-w-[1440px] p-8 pb-12">{renderContent()}</div>
-              </ScrollArea>
-            )}
-          </main>
-        </div>
+        <main className="bg-background flex-1 overflow-hidden flex flex-col">
+          {activeTab === "config" ||
+          activeTab === "preferences" ||
+          activeTab === "profile" ||
+          activeTab === "workflows" ? (
+            <div className="flex-1 flex flex-col overflow-hidden">{renderContent()}</div>
+          ) : (
+            <ScrollArea className="h-full w-full">
+              <div className="mx-auto max-w-[1440px] p-8 pb-12">{renderContent()}</div>
+            </ScrollArea>
+          )}
+        </main>
       </div>
-    </SubBreadcrumbContext.Provider>
+    </div>
   );
 }

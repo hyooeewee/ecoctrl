@@ -18,7 +18,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui";
 import { Badge } from "@ecoctrl/ui";
 
 import AppButton from "@/components/AppButton";
-import { useSubBreadcrumb } from "@/hooks/useSubBreadcrumb";
 import { useAppStore } from "@/store/appStore";
 import type {
   DashboardModelConfig,
@@ -104,7 +103,6 @@ export default function DashboardModel() {
   const [uploading, setUploading] = useState(false);
   const activeTab = useAppStore((state) => state.dashboardModelTab);
   const setActiveTab = useAppStore((state) => state.setDashboardModelTab);
-  const { setSubLabel } = useSubBreadcrumb();
 
   // Hotspot sheet state
   const [hotspotSheetOpen, setHotspotSheetOpen] = useState(false);
@@ -132,14 +130,6 @@ export default function DashboardModel() {
     focusRadius: "",
     meshKeywords: [] as string[],
   });
-
-  useEffect(() => {
-    const labels: Record<string, string> = {
-      hotspots: "热点配置",
-      labels: "标签配置",
-    };
-    setSubLabel(labels[activeTab] ?? null);
-  }, [activeTab, setSubLabel]);
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -376,19 +366,6 @@ export default function DashboardModel() {
         {/* Right panel: tabs */}
         <Card className="h-full border-none shadow-sm lg:col-span-2">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full flex-col">
-            <div className="px-6 pt-4">
-              <TabsList>
-                <TabsTrigger value="hotspots" className="gap-2">
-                  <MapPin size={14} />
-                  热点区域配置
-                </TabsTrigger>
-                <TabsTrigger value="labels" className="gap-2">
-                  <Tag size={14} />
-                  标签配置
-                </TabsTrigger>
-              </TabsList>
-            </div>
-
             {/* Hotspots tab */}
             <TabsContent value="hotspots" className="flex-1 p-6">
               <div className="flex items-center justify-between mb-4">
