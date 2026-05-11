@@ -1,10 +1,10 @@
-import { AlertCircle, History, BarChart3, Clock } from "lucide-react";
+import { AlertCircle, BarChart3, Clock, Loader2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
 import { Badge } from "@ecoctrl/ui";
 import { Card, CardContent } from "@ecoctrl/ui";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ecoctrl/ui";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ecoctrl/ui/table";
+import { Tabs, TabsContent } from "@ecoctrl/ui";
 
 import { useAppStore } from "@/store/appStore";
 import type { Fault, FaultStats } from "@ecoctrl/shared";
@@ -79,11 +79,7 @@ export default function Faults() {
         <TabsContent value="list" className="mt-0 flex-1 flex flex-col overflow-hidden">
           <Card className="flex h-full flex-col overflow-hidden border-none shadow-sm">
             <CardContent className="flex-1 overflow-auto p-0">
-              {loading ? (
-                <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
-                  加载中...
-                </div>
-              ) : (
+              <div className="rounded-md border">
                 <Table>
                   <TableHeader className="bg-muted/50">
                     <TableRow>
@@ -94,12 +90,15 @@ export default function Faults() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {faults.length === 0 ? (
+                    {loading ? (
                       <TableRow>
-                        <TableCell
-                          colSpan={4}
-                          className="text-center py-8 text-sm text-muted-foreground"
-                        >
+                        <TableCell colSpan={4} className="h-32 text-center">
+                          <Loader2 size={20} className="animate-spin mx-auto" />
+                        </TableCell>
+                      </TableRow>
+                    ) : faults.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
                           暂无故障数据
                         </TableCell>
                       </TableRow>
@@ -136,7 +135,7 @@ export default function Faults() {
                     )}
                   </TableBody>
                 </Table>
-              )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

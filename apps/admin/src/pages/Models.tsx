@@ -1,7 +1,6 @@
 import {
   Box,
   Layers,
-  MapPin,
   Image as ImageIcon,
   Upload,
   Trash2,

@@ -14,7 +14,7 @@ import {
   SheetTitle,
 } from "@ecoctrl/ui";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ecoctrl/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui";
+import { Tabs, TabsContent } from "@ecoctrl/ui";
 import { Badge } from "@ecoctrl/ui";
 
 import AppButton from "@/components/AppButton";
