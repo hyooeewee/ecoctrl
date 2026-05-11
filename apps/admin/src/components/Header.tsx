@@ -17,6 +17,7 @@ import { Input } from "@ecoctrl/ui";
 import { authApi } from "../api/auth";
 import type { AuthUser } from "../api/auth";
 import { useAvatar } from "@/hooks/useAvatar";
+import { useSubBreadcrumb } from "@/hooks/useSubBreadcrumb";
 import { applyDarkMode, getStoredTheme } from "@/lib/darkMode";
 import type { Theme } from "@/lib/darkMode";
 
@@ -63,6 +64,7 @@ export default function Header({
   theme: themeProp,
 }: HeaderProps) {
   const currentTitle = tabTitleMap[activeTab] || "管理总览";
+  const { subLabel } = useSubBreadcrumb();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [avatarVersion, setAvatarVersion] = useState(0);
   const [theme, setTheme] = useState<Theme>(themeProp ?? "system");
@@ -103,9 +105,16 @@ export default function Header({
   return (
     <header className="border-border bg-card sticky top-0 z-30 flex h-16 items-center justify-between border-b px-8">
       {showBreadcrumb !== false ? (
-        <div className="text-muted-foreground flex flex-1 items-center gap-4 text-sm">
-          <span>首页 /</span>
+        <div className="text-muted-foreground flex flex-1 items-center gap-2 text-sm">
+          <span>首页</span>
+          <span>/</span>
           <span className="text-foreground font-semibold">{currentTitle}</span>
+          {subLabel && (
+            <>
+              <span>/</span>
+              <span className="text-foreground font-semibold">{subLabel}</span>
+            </>
+          )}
         </div>
       ) : (
         <div className="text-foreground flex flex-1 items-center text-sm font-semibold">

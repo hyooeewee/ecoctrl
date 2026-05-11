@@ -5,6 +5,7 @@ import { Button } from "@ecoctrl/ui";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoctrl/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui";
 
+import { useSubBreadcrumb } from "@/hooks/useSubBreadcrumb";
 import type { DashboardModelConfig } from "@ecoctrl/shared";
 import { dashboardModelApi } from "../api/dashboardModel";
 import ModelFileZone from "@/components/ModelFileZone";
@@ -14,6 +15,16 @@ export default function DashboardModel() {
   const [loading, setLoading] = useState(true);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [activeTab, setActiveTab] = useState("hotspots");
+  const { setSubLabel } = useSubBreadcrumb();
+
+  useEffect(() => {
+    const labels: Record<string, string> = {
+      hotspots: "热点配置",
+      labels: "标签配置",
+    };
+    setSubLabel(labels[activeTab] ?? null);
+  }, [activeTab, setSubLabel]);
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -103,7 +114,7 @@ export default function DashboardModel() {
         </Card>
 
         <Card className="h-full border-none shadow-sm lg:col-span-2">
-          <Tabs defaultValue="hotspots" className="flex h-full flex-col">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full flex-col">
             <div className="px-6 pt-4">
               <TabsList>
                 <TabsTrigger value="hotspots" className="gap-2">

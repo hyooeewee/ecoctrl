@@ -5,6 +5,7 @@ import { Badge } from "@ecoctrl/ui";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoctrl/ui";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@ecoctrl/ui";
 
+import { useSubBreadcrumb } from "@/hooks/useSubBreadcrumb";
 import { Progress } from "../components/Progress";
 import type { EnergyArea } from "@ecoctrl/shared";
 import { energyApi } from "../api/energy";
@@ -13,6 +14,18 @@ export default function Energy() {
   const [areas, setAreas] = useState<EnergyArea[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
+  const { setSubLabel } = useSubBreadcrumb();
+
+  useEffect(() => {
+    const labels: Record<string, string> = {
+      overview: "分区总览",
+      details: "详细数据",
+      stats: "统计报表",
+      config: "分项配置",
+    };
+    setSubLabel(labels[activeTab] ?? null);
+  }, [activeTab, setSubLabel]);
 
   useEffect(() => {
     const fetchAreas = async () => {
@@ -30,7 +43,7 @@ export default function Energy() {
   }, []);
 
   return (
-    <Tabs defaultValue="overview" className="w-full space-y-6">
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
       <TabsList>
         <TabsTrigger value="overview">分区总览</TabsTrigger>
         <TabsTrigger value="details">详细数据</TabsTrigger>

@@ -46,6 +46,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui/tabs";
 import AppButton from "@/components/AppButton";
 import ModelFileZone from "@/components/ModelFileZone";
 import TruncatedText from "@/components/TruncatedText";
+import { useSubBreadcrumb } from "@/hooks/useSubBreadcrumb";
 import { resolveAssetUrl } from "@/lib/url";
 import type { BusinessObject, PointItem } from "@/types";
 import type { Model3D } from "@ecoctrl/shared";
@@ -177,6 +178,16 @@ export default function Models() {
   const [globalFilter, setGlobalFilter] = useState("");
 
   const [activeTab, setActiveTab] = useState("models");
+  const { setSubLabel } = useSubBreadcrumb();
+
+  useEffect(() => {
+    const labels: Record<string, string> = {
+      models: "模型资源",
+      objects: "业务对象",
+      points: "点位信息",
+    };
+    setSubLabel(labels[activeTab] ?? null);
+  }, [activeTab, setSubLabel]);
 
   const editorRef = useRef<
     Parameters<NonNullable<React.ComponentProps<typeof Editor>["onMount"]>>[0] | null
