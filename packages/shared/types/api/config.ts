@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+export const DashboardModelHotspotSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  position: z.object({ x: z.number(), y: z.number(), z: z.number() }),
+  meshKeywords: z.array(z.string()),
+  radius: z.number(),
+  description: z.string(),
+});
+export type DashboardModelHotspot = z.infer<typeof DashboardModelHotspotSchema>;
+
 export const DashboardModelLabelSchema = z.object({
   key: z.string(),
   fallbackPosition: z.object({ x: z.number(), y: z.number(), z: z.number() }),
@@ -14,8 +24,8 @@ export const DashboardModelConfigSchema = z.object({
   modelFileUrl: z.string().nullable().optional(),
   cameraPreset: z.string(),
   ambientLightIntensity: z.number(),
-  hotspots: z.array(z.unknown()),
-  labels: z.array(z.unknown()),
+  hotspots: z.array(DashboardModelHotspotSchema),
+  labels: z.array(DashboardModelLabelSchema),
 });
 export type DashboardModelConfig = z.infer<typeof DashboardModelConfigSchema>;
 

@@ -3,7 +3,11 @@ import { z } from "zod";
 import fs from "node:fs";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
-import { DashboardModelConfigSchema } from "@ecoctrl/shared";
+import {
+  DashboardModelConfigSchema,
+  DashboardModelHotspotSchema,
+  DashboardModelLabelSchema,
+} from "@ecoctrl/shared";
 import { findDashboardModel, updateDashboardModel } from "@/repositories/dashboardModel";
 import { UPLOAD_DIR } from "@/lib/paths";
 
@@ -16,11 +20,11 @@ function ensureModelsDir() {
 }
 
 const configBodySchema = z.object({
-  modelFileUrl: z.string().optional(),
+  modelFileUrl: z.string().nullable().optional(),
   cameraPreset: z.string().optional(),
   ambientLightIntensity: z.number().optional(),
-  hotspots: z.array(z.unknown()).optional(),
-  labels: z.array(z.unknown()).optional(),
+  hotspots: z.array(DashboardModelHotspotSchema).optional(),
+  labels: z.array(DashboardModelLabelSchema).optional(),
 });
 
 export default async function dashboardModelRoutes(fastify: FastifyInstance) {
@@ -111,7 +115,7 @@ export default async function dashboardModelRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const body = request.body as {
-        modelFileUrl?: string;
+        modelFileUrl?: string | null;
         cameraPreset?: string;
         ambientLightIntensity?: number;
         hotspots?: unknown[];
@@ -119,7 +123,8 @@ export default async function dashboardModelRoutes(fastify: FastifyInstance) {
       };
       const existing = await findDashboardModel();
       const updated = {
-        modelFileUrl: body.modelFileUrl ?? existing?.modelFileUrl ?? null,
+        modelFileUrl:
+          body.modelFileUrl !== undefined ? body.modelFileUrl : (existing?.modelFileUrl ?? null),
         cameraPreset: body.cameraPreset ?? existing?.cameraPreset ?? "Default_View_01",
         ambientLightIntensity:
           body.ambientLightIntensity ?? existing?.ambientLightIntensity ?? 0.85,
