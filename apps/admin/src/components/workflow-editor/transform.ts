@@ -1,5 +1,5 @@
 import type { Node, Edge } from "@xyflow/react";
-import type { WorkflowDSL, WorkflowTrigger } from "./types";
+import type { WorkflowDSL, WorkflowTrigger, WorkflowNode } from "./types";
 
 export function dslToReactFlow(dsl: WorkflowDSL): { nodes: Node[]; edges: Edge[] } {
   return {
@@ -36,18 +36,18 @@ export function reactFlowToDSL(
     nodes: nodes.map((n) => ({
       id: n.id,
       type: n.type as WorkflowDSL["nodes"][number]["type"],
-      name: n.data.label ?? n.id,
-      config: n.data.config ?? {},
-      onError: n.data.onError,
+      name: (n.data.label as string) ?? n.id,
+      config: (n.data.config as Record<string, unknown>) ?? {},
+      onError: n.data.onError as WorkflowNode["onError"],
       position: n.position,
     })),
     edges: edges.map((e) => ({
       id: e.id,
       source: e.source,
       target: e.target,
-      sourceHandle: e.sourceHandle,
-      targetHandle: e.targetHandle,
-      label: e.label,
+      sourceHandle: e.sourceHandle ?? undefined,
+      targetHandle: e.targetHandle ?? undefined,
+      label: e.label as string | undefined,
     })),
   };
 }

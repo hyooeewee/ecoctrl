@@ -1,15 +1,4 @@
-import {
-  Plus,
-  Pencil,
-  Trash2,
-  Play,
-  Loader2,
-  Workflow,
-  History,
-  Search,
-  X,
-  ArrowLeft,
-} from "lucide-react";
+import { Plus, Pencil, Trash2, Play, Loader2, Workflow, History, Search, X } from "lucide-react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -37,9 +26,9 @@ import {
 import { Input } from "@ecoctrl/ui/input";
 import { Switch } from "@ecoctrl/ui/switch";
 import { Badge } from "@ecoctrl/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui/tabs";
+import { Tabs, TabsContent } from "@ecoctrl/ui/tabs";
 
-import { useSubBreadcrumb } from "@/hooks/useSubBreadcrumb";
+import { useAppStore } from "@/store/appStore";
 import { workflowsApi } from "@/api/workflows";
 import type { WorkflowListItem } from "@/components/workflow-editor/types";
 import { WorkflowCanvas } from "@/components/workflow-editor";
@@ -61,8 +50,6 @@ const TRIGGER_VARIANTS: Record<string, "default" | "secondary" | "destructive" |
 };
 
 export default function Workflows() {
-  const { setSubLabel } = useSubBreadcrumb();
-
   const [workflows, setWorkflows] = useState<WorkflowListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [sorting, setSorting] = useState<SortingState>([{ id: "updatedAt", desc: true }]);
@@ -77,6 +64,9 @@ export default function Workflows() {
   const [triggerLoadingId, setTriggerLoadingId] = useState<string | null>(null);
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
 
+  const activeTab = useAppStore((state) => state.workflowsTab);
+  const setActiveTab = useAppStore((state) => state.setWorkflowsTab);
+
   const fetchWorkflows = useCallback(async () => {
     setLoading(true);
     try {
@@ -89,10 +79,6 @@ export default function Workflows() {
       setLoading(false);
     }
   }, [pageIndex, pageSize]);
-
-  useEffect(() => {
-    setSubLabel(editingWorkflowId ? "工作流编辑器" : "工作流管理");
-  }, [setSubLabel, editingWorkflowId]);
 
   useEffect(() => {
     if (!editingWorkflowId) {
@@ -167,9 +153,26 @@ export default function Workflows() {
         accessorKey: "name",
         header: "名称",
         cell: ({ row }) => (
-          <div className="flex flex-col">
-            <span className="font-medium">{row.original.name}</span>
-            <span className="text-muted-foreground text-xs">{row.original.slug}</span>
+          <div className="flex flex-col gap-0.5">
+            <div className="group relative inline-block">
+              <span className="font-medium">{row.original.name}</span>
+              {row.original.description && (
+                <div className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 w-56 -translate-y-1/2 rounded-md border bg-popover p-2.5 shadow-md opacity-0 transition-opacity group-hover:opacity-100">
+                  <p className="text-xs leading-relaxed text-popover-foreground">
+                    {row.original.description}
+                  </p>
+                </div>
+              )}
+            </div>
+            {row.original.tags && row.original.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {row.original.tags.map((tag) => (
+                  <Badge key={tag} variant="outline" className="h-4 px-1 text-[10px]">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
         ),
       },
@@ -280,42 +283,17 @@ export default function Workflows() {
     },
   });
 
-  const [activeTab, setActiveTab] = useState("workflows");
-
   // Full-screen editor overlay
   if (editingWorkflowId) {
-    return (
-      <div className="flex h-full flex-col">
-        <div className="flex items-center gap-2 border-b px-4 py-2">
-          <Button variant="ghost" size="sm" onClick={closeEditor}>
-            <ArrowLeft size={14} className="mr-1.5" />
-            返回工作流列表
-          </Button>
-        </div>
-        <div className="flex-1 overflow-hidden p-2">
-          <WorkflowCanvas workflowId={editingWorkflowId} onBack={closeEditor} />
-        </div>
-      </div>
-    );
+    return <WorkflowCanvas workflowId={editingWorkflowId} onBack={closeEditor} />;
   }
 
   return (
-    <div className="mx-auto max-w-[1440px] p-8 pb-12">
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-4">
-          <TabsTrigger value="workflows">
-            <Workflow size={14} className="mr-1.5" />
-            工作流
-          </TabsTrigger>
-          <TabsTrigger value="executions">
-            <History size={14} className="mr-1.5" />
-            执行记录
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="workflows">
-          <Card>
-            <CardHeader className="pb-3">
+    <div className="flex h-full flex-col overflow-hidden p-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full flex-col">
+        <TabsContent value="workflows" className="mt-0 flex h-full flex-col">
+          <Card className="flex h-full flex-col overflow-hidden">
+            <CardHeader className="shrink-0 pb-3">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2">
@@ -330,7 +308,7 @@ export default function Workflows() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 overflow-auto">
               <div className="mb-4 flex items-center gap-2">
                 <div className="relative flex-1 max-w-sm">
                   <Search
@@ -405,38 +383,37 @@ export default function Workflows() {
                   </TableBody>
                 </Table>
               </div>
-
-              <div className="mt-4 flex items-center justify-between">
-                <div className="text-muted-foreground text-sm">共 {total} 条</div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
-                  >
-                    上一页
-                  </Button>
-                  <span className="text-muted-foreground text-sm">
-                    第 {pageIndex + 1} / {Math.max(1, Math.ceil(total / pageSize))} 页
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
-                  >
-                    下一页
-                  </Button>
-                </div>
-              </div>
             </CardContent>
+            <div className="shrink-0 border-t px-6 py-3 flex items-center justify-between">
+              <div className="text-muted-foreground text-sm">共 {total} 条</div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  上一页
+                </Button>
+                <span className="text-muted-foreground text-sm">
+                  第 {pageIndex + 1} / {Math.max(1, Math.ceil(total / pageSize))} 页
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  下一页
+                </Button>
+              </div>
+            </div>
           </Card>
         </TabsContent>
 
-        <TabsContent value="executions">
-          <Card>
-            <CardContent className="flex h-64 flex-col items-center justify-center gap-4">
+        <TabsContent value="executions" className="mt-0 flex h-full flex-col">
+          <Card className="flex h-full flex-col overflow-hidden">
+            <CardContent className="flex flex-1 flex-col items-center justify-center gap-4">
               <History size={48} className="text-muted-foreground/30" />
               <p className="text-muted-foreground">执行记录功能开发中</p>
             </CardContent>

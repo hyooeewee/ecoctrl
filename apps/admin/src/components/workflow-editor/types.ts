@@ -55,6 +55,7 @@ export interface WorkflowListItem {
   description: string | null;
   enabled: boolean;
   triggerType: string;
+  tags?: string[];
   version: number;
   createdAt: string;
   updatedAt: string;

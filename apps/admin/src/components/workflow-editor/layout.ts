@@ -6,7 +6,7 @@ const NODE_HEIGHT = 60;
 
 export function autoLayout(nodes: Node[], edges: Edge[]): Node[] {
   const g = new dagre.graphlib.Graph();
-  g.setGraph({ rankdir: "TB", nodesep: 80, ranksep: 100, align: "UL" });
+  g.setGraph({ rankdir: "LR", nodesep: 60, ranksep: 120, align: "UL" });
   g.setDefaultEdgeLabel(() => ({}));
 
   for (const node of nodes) {
