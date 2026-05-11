@@ -6,7 +6,7 @@ import { findWorkflowById } from "@/repositories/workflows";
 import { executeWorkflow } from "@/engine/executor";
 import type { ExecutionJobData } from "./pgboss";
 
-const JOB_NAME = "workflow:execute";
+const JOB_NAME = "workflow.execute";
 
 function getEnvVars(): Record<string, string> {
   const allowed = [
@@ -114,5 +114,5 @@ export async function startWorker(): Promise<void> {
     },
   );
 
-  console.log("[worker] Started listening for workflow:execute jobs");
+  console.log("[worker] Started listening for workflow.execute jobs");
 }

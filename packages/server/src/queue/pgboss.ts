@@ -1,6 +1,6 @@
 import { PgBoss } from "pg-boss";
 
-const JOB_NAME = "workflow:execute";
+const JOB_NAME = "workflow.execute";
 
 let boss: PgBoss | null = null;
 
@@ -54,12 +54,12 @@ export async function scheduleWorkflow(
   timezone: string,
 ): Promise<void> {
   const b = getBoss();
-  await b.schedule(`workflow:schedule:${workflowId}`, cron, { workflowId }, { tz: timezone });
+  await b.schedule(`workflow.schedule.${workflowId}`, cron, { workflowId }, { tz: timezone });
 }
 
 export async function unscheduleWorkflow(workflowId: string): Promise<void> {
   const b = getBoss();
-  await b.unschedule(`workflow:schedule:${workflowId}`);
+  await b.unschedule(`workflow.schedule.${workflowId}`);
 }
 
 export async function stopQueue(): Promise<void> {
