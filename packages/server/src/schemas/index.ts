@@ -9,6 +9,8 @@ export * from "./energy";
 export * from "./iotTokens";
 export * from "./backupSchedule";
 export * from "./energyAreas";
+export * from "./carbonFactors";
+export * from "./carbonFactorNodes";
 export * from "./models";
 export * from "./objects";
 export * from "./dashboardModel";

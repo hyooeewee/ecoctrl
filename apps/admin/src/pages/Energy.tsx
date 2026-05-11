@@ -1,17 +1,133 @@
-import { Activity, PieChart, Sliders, ExternalLink, RefreshCw } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import {
+  Activity,
+  PieChart,
+  Sliders,
+  ExternalLink,
+  RefreshCw,
+  Search,
+  ChevronRight,
+  ChevronDown,
+  Loader2,
+} from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@ecoctrl/ui";
 import { Button } from "@ecoctrl/ui";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoctrl/ui";
+import { Input } from "@ecoctrl/ui";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ecoctrl/ui";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@ecoctrl/ui";
 
 import { useSubBreadcrumb } from "@/hooks/useSubBreadcrumb";
 import { useAppStore } from "@/store/appStore";
 import { Progress } from "../components/Progress";
-import type { EnergyArea, CarbonFactor } from "@ecoctrl/shared";
+import type { EnergyArea, CarbonFactor, CarbonFactorNode } from "@ecoctrl/shared";
 import { energyApi } from "../api/energy";
+
+interface TreeNode extends CarbonFactorNode {
+  children: TreeNode[];
+}
+
+function buildTree(nodes: CarbonFactorNode[]): TreeNode[] {
+  const map = new Map<string, TreeNode>();
+  const roots: TreeNode[] = [];
+
+  for (const n of nodes) {
+    map.set(n.pkid, { ...n, children: [] });
+  }
+
+  for (const n of nodes) {
+    const node = map.get(n.pkid)!;
+    if (n.parentPkid && map.has(n.parentPkid)) {
+      map.get(n.parentPkid)!.children.push(node);
+    } else {
+      roots.push(node);
+    }
+  }
+
+  return roots;
+}
+
+function filterTree(nodes: TreeNode[], query: string): TreeNode[] {
+  if (!query.trim()) return nodes;
+  const q = query.toLowerCase();
+
+  return nodes.reduce<TreeNode[]>((acc, node) => {
+    const matches =
+      node.name.toLowerCase().includes(q) ||
+      (node.fullName && node.fullName.toLowerCase().includes(q));
+    const filteredChildren = filterTree(node.children, query);
+
+    if (matches || filteredChildren.length > 0) {
+      acc.push({ ...node, children: filteredChildren });
+    }
+
+    return acc;
+  }, []);
+}
+
+function TreeNodeItem({
+  node,
+  level,
+  expandedPkids,
+  selectedPkid,
+  onToggleExpand,
+  onSelect,
+}: {
+  node: TreeNode;
+  level: number;
+  expandedPkids: Set<string>;
+  selectedPkid: string | null;
+  onToggleExpand: (pkid: string) => void;
+  onSelect: (pkid: string) => void;
+}) {
+  const isExpanded = expandedPkids.has(node.pkid);
+  const isSelected = selectedPkid === node.pkid;
+  const hasChildren = node.children.length > 0;
+
+  return (
+    <div>
+      <div
+        className={`flex items-center gap-1 rounded py-1.5 pr-2 cursor-pointer transition-colors ${isSelected ? "bg-muted" : "hover:bg-muted/60"}`}
+        style={{ paddingLeft: `${level * 16 + 8}px` }}
+        onClick={() => onSelect(node.pkid)}
+      >
+        {hasChildren ? (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleExpand(node.pkid);
+            }}
+            className="flex h-5 w-5 shrink-0 items-center justify-center rounded hover:bg-muted-foreground/20"
+          >
+            {isExpanded ? (
+              <ChevronDown size={14} className="text-muted-foreground" />
+            ) : (
+              <ChevronRight size={14} className="text-muted-foreground" />
+            )}
+          </button>
+        ) : (
+          <span className="inline-block w-5" />
+        )}
+        <span className="text-sm select-none">{node.name}</span>
+        {!hasChildren && <span className="ml-1 text-[10px] text-muted-foreground">叶子</span>}
+      </div>
+      {isExpanded &&
+        hasChildren &&
+        node.children.map((child) => (
+          <TreeNodeItem
+            key={child.pkid}
+            node={child}
+            level={level + 1}
+            expandedPkids={expandedPkids}
+            selectedPkid={selectedPkid}
+            onToggleExpand={onToggleExpand}
+            onSelect={onSelect}
+          />
+        ))}
+    </div>
+  );
+}
 
 export default function Energy() {
   const [areas, setAreas] = useState<EnergyArea[]>([]);
@@ -21,10 +137,17 @@ export default function Energy() {
   const setActiveTab = useAppStore((state) => state.setEnergyTab);
   const { setSubLabel } = useSubBreadcrumb();
 
+  // Carbon factor tree states
+  const [treeNodes, setTreeNodes] = useState<CarbonFactorNode[]>([]);
+  const [treeLoading, setTreeLoading] = useState(false);
+  const [treeRefreshing, setTreeRefreshing] = useState(false);
+  const [treeError, setTreeError] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [expandedPkids, setExpandedPkids] = useState<Set<string>>(new Set());
+  const [selectedPkid, setSelectedPkid] = useState<string | null>(null);
+  const [fetchingPkid, setFetchingPkid] = useState<string | null>(null);
+  const [fetchedFactors, setFetchedFactors] = useState<CarbonFactor[]>([]);
   const [carbonFactors, setCarbonFactors] = useState<CarbonFactor[]>([]);
-  const [carbonLoading, setCarbonLoading] = useState(false);
-  const [carbonRefreshing, setCarbonRefreshing] = useState(false);
-  const [carbonError, setCarbonError] = useState(false);
 
   useEffect(() => {
     const labels: Record<string, string> = {
@@ -51,39 +174,89 @@ export default function Energy() {
     fetchAreas();
   }, []);
 
-  const fetchCarbonFactors = async () => {
-    setCarbonLoading(true);
-    setCarbonError(false);
+  const fetchTreeData = async () => {
+    setTreeLoading(true);
+    setTreeError(false);
     try {
-      const data = await energyApi.carbonFactors();
-      setCarbonFactors(data);
+      const [nodes, factors] = await Promise.all([
+        energyApi.carbonFactorTree(),
+        energyApi.carbonFactors(),
+      ]);
+      setTreeNodes(nodes);
+      setCarbonFactors(factors);
     } catch (err) {
       console.error(err);
-      setCarbonError(true);
+      setTreeError(true);
     } finally {
-      setCarbonLoading(false);
+      setTreeLoading(false);
     }
   };
 
-  const handleRefreshCarbonFactors = async () => {
-    setCarbonRefreshing(true);
+  const handleRefreshTree = async () => {
+    setTreeRefreshing(true);
     try {
-      const result = await energyApi.refreshCarbonFactors();
-      alert(`已刷新 ${result.count} 条碳排放因子数据`);
-      await fetchCarbonFactors();
+      await energyApi.refreshCarbonFactorTree();
+      await fetchTreeData();
     } catch (err) {
       const message = err instanceof Error ? err.message : "刷新失败";
       alert(`刷新失败：${message}`);
+      setTreeError(true);
     } finally {
-      setCarbonRefreshing(false);
+      setTreeRefreshing(false);
+    }
+  };
+
+  const handleToggleExpand = (pkid: string) => {
+    setExpandedPkids((prev) => {
+      const next = new Set(prev);
+      if (next.has(pkid)) {
+        next.delete(pkid);
+      } else {
+        next.add(pkid);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectNode = async (pkid: string) => {
+    setSelectedPkid(pkid);
+
+    const existing = carbonFactors.filter((f) => f.pkid === pkid);
+    if (existing.length > 0) {
+      setFetchedFactors(existing);
+      return;
+    }
+
+    setFetchingPkid(pkid);
+    try {
+      const result = await energyApi.fetchCarbonFactor(pkid);
+      setFetchedFactors(result.data);
+      setCarbonFactors((prev) => {
+        const withoutOld = prev.filter((f) => f.pkid !== pkid);
+        return [...withoutOld, ...result.data];
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "获取失败";
+      alert(`获取因子数据失败：${message}`);
+      setFetchedFactors([]);
+    } finally {
+      setFetchingPkid(null);
     }
   };
 
   useEffect(() => {
     if (activeTab === "config") {
-      fetchCarbonFactors();
+      fetchTreeData();
     }
   }, [activeTab]);
+
+  const tree = useMemo(() => buildTree(treeNodes), [treeNodes]);
+  const filteredTree = useMemo(() => filterTree(tree, searchQuery), [tree, searchQuery]);
+
+  const selectedNode = useMemo(
+    () => treeNodes.find((n) => n.pkid === selectedPkid),
+    [treeNodes, selectedPkid],
+  );
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
@@ -214,77 +387,132 @@ export default function Energy() {
       </TabsContent>
 
       <TabsContent value="config" className="space-y-6">
-        <Card className="border-border bg-card border shadow-sm">
-          <CardHeader className="border-border/50 flex flex-row items-center justify-between border-b px-6">
-            <div>
-              <CardTitle className="text-base font-bold">碳排放因子</CardTitle>
-              <CardDescription className="text-xs">
-                数据来源：国家温室气体排放因子库
-                {carbonFactors.length > 0 && carbonFactors[0]?.updatedAt && (
-                  <span className="ml-2 text-muted-foreground">
-                    （最后更新：{new Date(carbonFactors[0].updatedAt).toLocaleString()}）
-                  </span>
-                )}
-              </CardDescription>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={handleRefreshCarbonFactors}
-              disabled={carbonRefreshing}
-            >
-              <RefreshCw size={14} className={carbonRefreshing ? "animate-spin" : ""} />
-              {carbonRefreshing ? "刷新中..." : "刷新数据"}
-            </Button>
-          </CardHeader>
-          <CardContent className="p-0">
-            {carbonLoading ? (
-              <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
-                加载中...
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          {/* Tree panel */}
+          <Card className="border-border bg-card border shadow-sm lg:col-span-1">
+            <CardHeader className="border-border/50 border-b px-4 py-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base font-bold">因子分类</CardTitle>
+                  <CardDescription className="text-xs">
+                    数据来源：国家温室气体排放因子库
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={handleRefreshTree}
+                  disabled={treeRefreshing}
+                >
+                  <RefreshCw size={14} className={treeRefreshing ? "animate-spin" : ""} />
+                  {treeRefreshing ? "刷新中..." : "刷新"}
+                </Button>
               </div>
-            ) : carbonError ? (
-              <div className="flex h-64 items-center justify-center text-sm text-red-400">
-                数据加载失败，请稍后重试
+              <div className="relative mt-3">
+                <Search
+                  size={14}
+                  className="absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
+                />
+                <Input
+                  placeholder="搜索分类名称..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8 text-sm"
+                />
               </div>
-            ) : carbonFactors.length === 0 ? (
-              <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
-                暂无碳排放因子数据，请点击右上角刷新获取
-              </div>
-            ) : (
-              <Table>
-                <TableHeader className="bg-muted/50">
-                  <TableRow>
-                    <TableHead className="px-6">过程名称</TableHead>
-                    <TableHead>单位类别</TableHead>
-                    <TableHead>ISIC分类</TableHead>
-                    <TableHead className="text-right">因子值</TableHead>
-                    <TableHead>单位</TableHead>
-                    <TableHead>地理位置</TableHead>
-                    <TableHead className="px-6">来源</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {carbonFactors.map((factor) => (
-                    <TableRow key={factor.id}>
-                      <TableCell className="px-6 font-medium">{factor.name}</TableCell>
-                      <TableCell>{factor.unitGroup ?? "-"}</TableCell>
-                      <TableCell>{factor.category ?? "-"}</TableCell>
-                      <TableCell className="text-right font-mono">
-                        {factor.value?.toLocaleString() ?? "-"}
-                      </TableCell>
-                      <TableCell>{factor.unit ?? "-"}</TableCell>
-                      <TableCell>{factor.location ?? "-"}</TableCell>
-                      <TableCell className="px-6 text-muted-foreground text-xs">
-                        {factor.source ?? "-"}
-                      </TableCell>
-                    </TableRow>
+            </CardHeader>
+            <CardContent className="p-2">
+              {treeLoading ? (
+                <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+                  <Loader2 size={16} className="mr-2 animate-spin" />
+                  加载中...
+                </div>
+              ) : treeError ? (
+                <div className="flex h-64 items-center justify-center text-sm text-red-400">
+                  数据加载失败，请稍后重试
+                </div>
+              ) : filteredTree.length === 0 ? (
+                <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+                  {treeNodes.length === 0
+                    ? "暂无分类数据，请点击右上角刷新获取"
+                    : "无匹配的搜索结果"}
+                </div>
+              ) : (
+                <div className="max-h-[600px] overflow-y-auto py-1">
+                  {filteredTree.map((node) => (
+                    <TreeNodeItem
+                      key={node.pkid}
+                      node={node}
+                      level={0}
+                      expandedPkids={expandedPkids}
+                      selectedPkid={selectedPkid}
+                      onToggleExpand={handleToggleExpand}
+                      onSelect={handleSelectNode}
+                    />
                   ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Detail panel */}
+          <Card className="border-border bg-card border shadow-sm lg:col-span-2">
+            <CardHeader className="border-border/50 border-b px-6">
+              <CardTitle className="text-base font-bold">
+                {selectedNode ? selectedNode.fullName || selectedNode.name : "因子详情"}
+              </CardTitle>
+              <CardDescription className="text-xs">
+                {selectedNode
+                  ? "点击左侧分类节点可查看对应的碳排放因子数据"
+                  : "请在左侧选择一个分类节点查看详情"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              {!selectedPkid ? (
+                <div className="flex h-96 items-center justify-center text-sm text-muted-foreground">
+                  请从左侧选择一个节点查看因子数据
+                </div>
+              ) : fetchingPkid === selectedPkid ? (
+                <div className="flex h-96 items-center justify-center text-sm text-muted-foreground">
+                  <Loader2 size={16} className="mr-2 animate-spin" />
+                  获取因子数据中...
+                </div>
+              ) : fetchedFactors.length === 0 ? (
+                <div className="flex h-96 items-center justify-center text-sm text-muted-foreground">
+                  该节点暂无因子数据
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader className="bg-muted/50">
+                    <TableRow>
+                      <TableHead className="px-6">名称</TableHead>
+                      <TableHead>分类</TableHead>
+                      <TableHead className="text-right">因子值</TableHead>
+                      <TableHead>单位</TableHead>
+                      <TableHead className="px-6">来源</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {fetchedFactors.map((factor) => (
+                      <TableRow key={factor.id}>
+                        <TableCell className="px-6 font-medium">{factor.name}</TableCell>
+                        <TableCell>{factor.category ?? "-"}</TableCell>
+                        <TableCell className="text-right font-mono">
+                          {factor.value?.toLocaleString() ?? "-"}
+                        </TableCell>
+                        <TableCell>{factor.unit ?? "-"}</TableCell>
+                        <TableCell className="px-6 text-muted-foreground text-xs">
+                          {factor.source ?? "-"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </TabsContent>
     </Tabs>
   );
