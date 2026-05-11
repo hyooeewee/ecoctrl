@@ -22,5 +22,14 @@ export default defineConfig(({ mode }) => {
       apiPrefix: env.API_PREFIX,
       staticPrefix: env.STATIC_PREFIX,
     }),
+    test: {
+      environment: "jsdom",
+      include: ["__tests__/**/*.test.{ts,tsx}"],
+      setupFiles: ["./__tests__/setup.ts"],
+      coverage: {
+        reporter: ["text", "json", "html"],
+        exclude: ["node_modules/", "__tests__/"],
+      },
+    },
   });
 });

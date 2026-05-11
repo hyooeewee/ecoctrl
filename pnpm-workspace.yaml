@@ -29,7 +29,6 @@ catalog:
   vitest: npm:@voidzero-dev/vite-plus-test@latest
 overrides:
   vite: "catalog:"
-  vitest: "catalog:"
 peerDependencyRules:
   allowAny:
     - vite

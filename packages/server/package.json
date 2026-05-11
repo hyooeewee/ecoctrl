@@ -21,7 +21,10 @@
     "db:refresh": "pnpm db:drop:db && pnpm db:push && pnpm db:seed && pnpm db:studio",
     "db:drop": "drizzle-kit drop",
     "env:sync": "node ../../packages/shared/scripts/gen-env-example.mjs",
-    "env:check": "node ../../packages/shared/scripts/gen-env-example.mjs --check"
+    "env:check": "node ../../packages/shared/scripts/gen-env-example.mjs --check",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.0",
@@ -56,6 +59,9 @@
     "pm2": "^6.0.14",
     "rimraf": "^6.1.3",
     "tsx": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "@vitest/ui": "4.1.5",
+    "@vitest/coverage-v8": "4.1.5"
   }
 }

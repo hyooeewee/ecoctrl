@@ -23,13 +23,17 @@
     "release": "changeset tag",
     "prepare": "husky",
     "sync:env": "pnpm -r --if-present env:sync",
-    "sync:env:check": "pnpm -r --if-present env:check"
+    "sync:env:check": "pnpm -r --if-present env:check",
+    "test": "pnpm -r --if-present test",
+    "test:watch": "pnpm -r --parallel --if-present test:watch",
+    "test:coverage": "pnpm -r --if-present test:coverage"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
-    "vite-plus": "catalog:"
+    "vite-plus": "catalog:",
+    "vitest": "^4.1.5"
   },
   "packageManager": "pnpm@11.0.9"
 }
