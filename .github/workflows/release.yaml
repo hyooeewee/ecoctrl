@@ -139,18 +139,36 @@ jobs:
 
       - name: Build & Push Web
         run: |
-          docker build -f apps/web/Dockerfile -t ghcr.io/${{ github.repository }}/web:${{ steps.tag.outputs.tag }} .
-          docker push ghcr.io/${{ github.repository }}/web:${{ steps.tag.outputs.tag }}
+          docker build \
+          -f apps/web/Dockerfile \
+          -t ghcr.io/${{ github.repository }}/web:${{ steps.tag.outputs.tag }} .
+          docker push \
+          ghcr.io/${{ github.repository }}/web:${{ steps.tag.outputs.tag }}
+          docker tag ghcr.io/${{ github.repository }}/web:${{ steps.tag.outputs.tag }} \
+          ghcr.io/${{ github.repository }}/web:latest && \
+          docker push ghcr.io/${{ github.repository }}/web:latest
 
       - name: Build & Push Admin
         run: |
-          docker build -f apps/admin/Dockerfile -t ghcr.io/${{ github.repository }}/admin:${{ steps.tag.outputs.tag }} .
-          docker push ghcr.io/${{ github.repository }}/admin:${{ steps.tag.outputs.tag }}
+          docker build \
+          -f apps/admin/Dockerfile \
+          -t ghcr.io/${{ github.repository }}/admin:${{ steps.tag.outputs.tag }} .
+          docker push \
+          ghcr.io/${{ github.repository }}/admin:${{ steps.tag.outputs.tag }}
+          docker tag ghcr.io/${{ github.repository }}/admin:${{ steps.tag.outputs.tag }} \
+          ghcr.io/${{ github.repository }}/admin:latest && \
+          docker push ghcr.io/${{ github.repository }}/admin:latest
 
       - name: Build & Push Server
         run: |
-          docker build -f packages/server/Dockerfile -t ghcr.io/${{ github.repository }}/server:${{ steps.tag.outputs.tag }} .
-          docker push ghcr.io/${{ github.repository }}/server:${{ steps.tag.outputs.tag }}
+          docker build \
+          -f packages/server/Dockerfile \
+          -t ghcr.io/${{ github.repository }}/server:${{ steps.tag.outputs.tag }} .
+          docker push \
+          ghcr.io/${{ github.repository }}/server:${{ steps.tag.outputs.tag }}
+          docker tag ghcr.io/${{ github.repository }}/server:${{ steps.tag.outputs.tag }} \
+          ghcr.io/${{ github.repository }}/server:latest && \
+          docker push ghcr.io/${{ github.repository }}/server:latest
 
   # =========================
   # 3. GitHub Release (only versioned release)
