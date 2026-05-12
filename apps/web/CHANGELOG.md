@@ -1,5 +1,11 @@
 # @ecoctrl/web
 
+## 0.3.0
+
+### Minor Changes
+
+- 8e9c718: add workflows
+
 ## 0.2.1
 
 ### Patch Changes
