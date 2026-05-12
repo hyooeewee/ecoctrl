@@ -1,23 +1,25 @@
-name: Release to GitHub
+name: CI/CD
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
 
 permissions:
   contents: write
+  packages: write
   pull-requests: write
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-cd-${{ github.ref }}
   cancel-in-progress: false
 
+# =========================
+# 1. Changeset Control
+# =========================
 jobs:
   changeset:
     name: Changeset Check
     runs-on: ubuntu-latest
-    timeout-minutes: 10
 
     outputs:
       is_release: ${{ steps.check.outputs.is_release }}
@@ -25,29 +27,18 @@ jobs:
       tag: ${{ steps.check.outputs.tag }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          persist-credentials: true
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Get original commit message
-        id: commit
-        run: |
-          MSG=$(git log -1 --pretty=%s)
-          echo "message=$MSG" >> $GITHUB_OUTPUT
+      - run: pnpm install --frozen-lockfile
 
       - name: Create Release PR
         uses: changesets/action@v1
@@ -58,137 +49,76 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Check if version commit
+      - name: Compute Release State
         id: check
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
-
-          MSG="${{ steps.commit.outputs.message }}"
-          echo "Original commit message: $MSG"
-
-          IS_RELEASE=false
-          REASON=""
-
-          # Merge commit
-          if echo "$MSG" | grep -q "^Merge pull request" && echo "$MSG" | grep -q "changeset-release"; then
-            IS_RELEASE=true
-            REASON="merge commit from changeset-release PR"
-          fi
-
-          # Squash / Rebase merge
-          if [ "$IS_RELEASE" = "false" ]; then
-            API_URL="https://api.github.com/repos/${{ github.repository }}/commits/${{ github.sha }}/pulls"
-
-            HTTP_CODE=$(curl -sSL -o /tmp/prs.json -w "%{http_code}" \
-              -H "Authorization: Bearer $GITHUB_TOKEN" \
-              "$API_URL" || true)
-
-            if [ "$HTTP_CODE" != "200" ]; then
-              echo "GitHub API returned HTTP $HTTP_CODE"
-              cat /tmp/prs.json 2>/dev/null || echo "(no response body)"
-              exit 1
-            fi
-
-            PRS=$(cat /tmp/prs.json)
-
-            if echo "$PRS" | jq -e 'any(.[]; .head.ref | contains("changeset-release"))' >/dev/null 2>&1; then
-              IS_RELEASE=true
-              REASON="commit linked to changeset-release PR"
-            fi
-          fi
-
           VERSION=$(node -p "require('./apps/admin/package.json').version")
           TAG="v$VERSION"
 
-          echo "Package version: $VERSION"
-          echo "Tag: $TAG"
+          MSG=$(git log -1 --pretty=%s)
 
-          if [ "$IS_RELEASE" = "true" ] && git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "Tag $TAG already exists, skipping release."
-            IS_RELEASE=false
-            REASON="tag already exists"
+          if echo "$MSG" | grep -qE "changeset|Version Packages"; then
+            echo "is_release=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_release=false" >> $GITHUB_OUTPUT
           fi
 
-          echo "is_release=$IS_RELEASE" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
-          echo "Release decision:"
-          echo "IS_RELEASE=$IS_RELEASE"
-          echo "Reason=${REASON:-not a changeset-release merge}"
-
-  release:
-    name: Build Release & Deploy
+  # =========================
+  # 2. Build + Deploy + GHCR
+  # =========================
+  deploy:
+    name: Build + Deploy + GHCR
     runs-on: ubuntu-latest
     needs: changeset
-    if: needs.changeset.outputs.is_release == 'true'
-    timeout-minutes: 45
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          persist-credentials: true
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
+
+      # =========================
+      # Tag Strategy
+      # =========================
+      - name: Compute Image Tag
+        id: tag
+        run: |
+          if [ "${{ needs.changeset.outputs.is_release }}" = "true" ]; then
+            echo "tag=v${{ needs.changeset.outputs.version }}" >> $GITHUB_OUTPUT
+          else
+            SHA=$(git rev-parse --short HEAD)
+            echo "tag=sha-$SHA" >> $GITHUB_OUTPUT
+          fi
 
       # =========================
       # Build
       # =========================
-
       - name: Build Web
         run: pnpm --filter @ecoctrl/web build
 
       - name: Build Admin
         run: pnpm --filter @ecoctrl/admin build
 
-      - name: Build Docs
-        run: pnpm --filter @ecoctrl/docs build
-
       - name: Build Server
         run: pnpm --filter @ecoctrl/server build
 
-      # =========================
-      # Deploy Web (Pages)
-      # =========================
-
-      - name: Deploy Web
-        run: |
-          pnpm wrangler pages deploy ./apps/web/build/client \
-            --project-name ecoctrl-web
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Build Docs
+        run: pnpm --filter @ecoctrl/docs build
 
       # =========================
-      # Deploy Admin (Pages)
+      # Deploy Docs (Cloudflare Pages)
       # =========================
-
-      - name: Deploy Admin
-        run: |
-          pnpm wrangler pages deploy ./apps/admin/dist \
-            --project-name ecoctrl-admin
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      # =========================
-      # Deploy Docs (Pages)
-      # =========================
-
       - name: Deploy Docs
         run: |
           pnpm wrangler pages deploy ./apps/docs/.vitepress/dist \
@@ -198,21 +128,41 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       # =========================
-      # Deploy Server Worker
+      # GHCR Login
+      # =========================
+      - name: Login GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      # =========================
+      # Docker Build & Push
       # =========================
 
-      - name: Deploy Server
+      - name: Build & Push Web
         run: |
-          pnpm wrangler deploy ./packages/server/dist/index.mjs \
-            --name ecoctrl-server \
-            --compatibility-date=2026-05-12
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          docker build -f apps/web/Dockerfile -t ghcr.io/${{ github.repository }}/web:${{ steps.tag.outputs.tag }} .
+          docker push ghcr.io/${{ github.repository }}/web:${{ steps.tag.outputs.tag }}
 
-      # =========================
-      # Package Release Artifacts
-      # =========================
+      - name: Build & Push Admin
+        run: |
+          docker build -f apps/admin/Dockerfile -t ghcr.io/${{ github.repository }}/admin:${{ steps.tag.outputs.tag }} .
+          docker push ghcr.io/${{ github.repository }}/admin:${{ steps.tag.outputs.tag }}
+
+      - name: Build & Push Server
+        run: |
+          docker build -f packages/server/Dockerfile -t ghcr.io/${{ github.repository }}/server:${{ steps.tag.outputs.tag }} .
+          docker push ghcr.io/${{ github.repository }}/server:${{ steps.tag.outputs.tag }}
+
+  # =========================
+  # 3. GitHub Release (only versioned release)
+  # =========================
+  release:
+    name: GitHub Release
+    runs-on: ubuntu-latest
+    needs: changeset
+    if: needs.changeset.outputs.is_release == 'true'
+
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Package artifacts
         run: |
@@ -222,7 +172,6 @@ jobs:
           zip -r "release-assets/web-v${VERSION}.zip" apps/web/build/client
           zip -r "release-assets/admin-v${VERSION}.zip" apps/admin/dist
           zip -r "release-assets/docs-v${VERSION}.zip" apps/docs/.vitepress/dist
-          zip -r "release-assets/server-v${VERSION}.zip" packages/server/dist
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
