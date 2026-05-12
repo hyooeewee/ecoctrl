@@ -1,8 +1,9 @@
 pnpm sync:env
 git add apps/*/.env.example packages/*/.env.example
 
-# Skip in CI — changesets/action commits don't need formatting.
-[ -n "$CI" ] && exit 0
+if [ "$HUSKY" = "0" ] || [ -n "$CI" ]; then
+  exit 0
+fi
 
 STAGED=$(git diff --cached --name-only --diff-filter=ACM | paste -sd " " -)
 [ -z "$STAGED" ] && exit 0

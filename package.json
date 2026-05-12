@@ -21,7 +21,7 @@
     "changeset": "changeset",
     "version": "changeset version",
     "release": "changeset tag",
-    "prepare": "husky",
+    "prepare": "[ -n \"$CI\" ] || husky",
     "sync:env": "pnpm -r --if-present env:sync",
     "sync:env:check": "pnpm -r --if-present env:check",
     "test": "pnpm -r --if-present test",
