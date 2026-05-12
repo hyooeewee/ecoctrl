@@ -33,7 +33,8 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "vite-plus": "catalog:",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.5",
+    "wrangler": "^4.90.0"
   },
-  "packageManager": "pnpm@11.0.9"
+  "packageManager": "pnpm@11.1.0"
 }

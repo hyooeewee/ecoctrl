@@ -1,9 +1,6 @@
 packages:
   - "apps/*"
   - "packages/*"
-allowBuilds:
-  esbuild: true
-  msw: set this to true or false
 catalog:
   "@base-ui/react": ^1.4.0
   "@fontsource-variable/inter": ^5.2.8
@@ -36,3 +33,8 @@ peerDependencyRules:
   allowedVersions:
     vite: "*"
     vitest: "*"
+allowBuilds:
+  esbuild: true
+  msw: true
+  sharp: true
+  workerd: true
