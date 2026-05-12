@@ -52,7 +52,7 @@ COPY packages/server/package.json packages/server/
 COPY packages/shared/package.json packages/shared/
 
 # Install production dependencies only
-RUN pnpm install --prod --frozen-lockfile --ignore-scripts
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # Copy built assets from builder and keep the original directory structure
 # This ensures node_modules resolution works correctly for ESM imports

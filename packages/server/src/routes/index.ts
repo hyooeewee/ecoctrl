@@ -25,6 +25,12 @@ import oauthRoutes from "@/routes/oauth";
 import workflowRoutes, { registerWebhookRoute } from "@/routes/workflows";
 
 export default async function apiRoutes(fastify: FastifyInstance) {
+  fastify.get(
+    "/health",
+    { schema: { tags: ["Public"], summary: "Health check", security: [] } },
+    async (_request, reply) => reply.send({ status: "ok" }),
+  );
+
   fastify.addHook("onRequest", async (request: FastifyRequest, reply: FastifyReply) => {
     const publicPaths = [
       "/api/auth/login",
