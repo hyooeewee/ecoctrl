@@ -52,7 +52,7 @@ COPY packages/server/package.json packages/server/
 COPY packages/shared/package.json packages/shared/
 
 # Install production dependencies only
-RUN pnpm install --prod --frozen-lockfile
+RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 
 # Copy built assets from builder (flatten dist to /app/dist for shorter CMD)
 COPY --from=builder /app/packages/server/dist ./dist
