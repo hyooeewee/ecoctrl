@@ -54,8 +54,9 @@ COPY packages/shared/package.json packages/shared/
 # Install production dependencies only
 RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 
-# Copy built assets from builder (flatten dist to /app/dist for shorter CMD)
-COPY --from=builder /app/packages/server/dist ./dist
+# Copy built assets from builder and keep the original directory structure
+# This ensures node_modules resolution works correctly for ESM imports
+COPY --from=builder /app/packages/server/dist /app/packages/server/dist
 
 # Ensure uploads directory exists and is writable
 RUN mkdir -p /app/uploads && chmod 755 /app/uploads
@@ -64,4 +65,6 @@ RUN mkdir -p /app/uploads && chmod 755 /app/uploads
 
 EXPOSE 3000
 
+# Run from packages/server to match the node_modules resolution path
+WORKDIR /app/packages/server
 CMD ["node", "dist/index.mjs"]
