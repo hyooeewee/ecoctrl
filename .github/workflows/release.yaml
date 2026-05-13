@@ -17,11 +17,6 @@ jobs:
     name: Version Management
     runs-on: ubuntu-latest
 
-    outputs:
-      is_release: ${{ steps.check.outputs.is_release }}
-      version: ${{ steps.check.outputs.version }}
-      tag: ${{ steps.check.outputs.tag }}
-
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,34 +31,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Create Release PR
-        uses: changesets/action@v1
+      - uses: changesets/action@v1
         with:
           version: pnpm run version
+          publish: pnpm run release
           createGithubReleases: false
           setupGitUser: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Compute Release State
-        id: check
-        run: |
-          VERSION=$(node -p "require('./apps/admin/package.json').version")
-          TAG="v$VERSION"
-
-          MSG=$(git log -1 --pretty=%s)
-
-          if echo "$MSG" | grep -qE "changeset|Version Packages"; then
-            echo "is_release=true" >> $GITHUB_OUTPUT
-          else
-            echo "is_release=false" >> $GITHUB_OUTPUT
-          fi
-
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-
-      - name: Push Git Tag
-        if: steps.check.outputs.is_release == 'true'
-        run: |
-          git tag ${{ steps.check.outputs.tag }}
-          git push origin ${{ steps.check.outputs.tag }}
