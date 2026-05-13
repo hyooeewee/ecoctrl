@@ -119,7 +119,12 @@ export default function SettingsPage({ sections, loading, header, actions }: Set
           {sections.map((s) => {
             const Icon = s.icon;
             return (
-              <div key={s.id} ref={(el) => (sectionRefs.current[s.id] = el)}>
+              <div
+                key={s.id}
+                ref={(el) => {
+                  sectionRefs.current[s.id] = el;
+                }}
+              >
                 <Card className="border-border bg-card overflow-hidden border shadow-sm">
                   <CardHeader className="border-border/50 border-b px-6">
                     <div className="flex items-center gap-2">

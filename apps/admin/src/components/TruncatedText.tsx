@@ -19,9 +19,9 @@ export default function TruncatedText({ text, className, showTooltip = true }: T
   if (!showTooltip) return content;
 
   return (
-    <TooltipProvider delayDuration={300}>
+    <TooltipProvider {...({ delayDuration: 300 } as any)}>
       <Tooltip>
-        <TooltipTrigger asChild>{content}</TooltipTrigger>
+        <TooltipTrigger {...({ asChild: true } as any)}>{content}</TooltipTrigger>
         <TooltipContent side="bottom" align="start">
           {text}
         </TooltipContent>
