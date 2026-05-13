@@ -1,5 +1,11 @@
 # @ecoctrl/admin
 
+## 0.4.3
+
+### Patch Changes
+
+- 99ff9d2: fix ci/cd workflows
+
 ## 0.4.2
 
 ### Patch Changes
