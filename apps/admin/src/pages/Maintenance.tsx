@@ -761,7 +761,7 @@ export default function Maintenance() {
                     onValueChange={(v) =>
                       setEditForm((f) => ({
                         ...f,
-                        priority: v as MaintenanceReminder["priority"],
+                        priority: (v ?? "medium") as MaintenanceReminderDetail["priority"],
                       }))
                     }
                     items={{ high: "高", medium: "中", low: "低" }}
@@ -780,7 +780,12 @@ export default function Maintenance() {
                   <Label className="text-sm font-semibold">状态</Label>
                   <Select
                     value={editForm.status || ""}
-                    onValueChange={(v) => setEditForm((f) => ({ ...f, status: v }))}
+                    onValueChange={(v) =>
+                      setEditForm((f) => ({
+                        ...f,
+                        status: (v ?? "pending") as MaintenanceReminderDetail["status"],
+                      }))
+                    }
                     items={{ pending: "待处理", in_progress: "进行中", completed: "已完成" }}
                   >
                     <SelectTrigger className="h-9 w-full">

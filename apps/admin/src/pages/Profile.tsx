@@ -327,7 +327,7 @@ export default function Profile() {
       await usersApi.update(userDetail.id, {
         oldPassword,
         password: newPassword,
-      });
+      } as Parameters<typeof usersApi.update>[1]);
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -355,7 +355,7 @@ export default function Profile() {
           title="点击更换头像"
         >
           <Avatar className="ring-muted h-20 w-20 ring-2 ring-offset-2 transition-opacity hover:opacity-80">
-            <AvatarImage src={avatarSrc} />
+            <AvatarImage src={avatarSrc ?? undefined} />
             <AvatarFallback className="text-lg">
               {(currentUser?.username ?? "Admin").slice(0, 2).toUpperCase()}
             </AvatarFallback>

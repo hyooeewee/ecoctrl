@@ -2329,7 +2329,10 @@ export default function Models() {
           <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-6">
             <div>
               <label className="text-sm font-medium text-foreground mb-1.5 block">目标模型</label>
-              <Select value={importTargetModelId} onValueChange={(v) => setImportTargetModelId(v)}>
+              <Select
+                value={importTargetModelId}
+                onValueChange={(v) => setImportTargetModelId(v ?? "")}
+              >
                 <SelectTrigger className="w-full h-10">
                   <SelectValue placeholder="请选择要导入点位的模型">
                     {importTargetModelId

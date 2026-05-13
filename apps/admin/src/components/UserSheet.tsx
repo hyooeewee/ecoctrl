@@ -130,7 +130,7 @@ export default function UserSheet({ mode, user, trigger, onSave }: UserSheetProp
           </div>
           <div className="grid space-y-2">
             <Label htmlFor={`${mode}-role`}>角色</Label>
-            <Select value={role} onValueChange={(v) => setRole(v)}>
+            <Select value={role} onValueChange={(v) => setRole(v ?? "")}>
               <SelectTrigger id={`${mode}-role`}>
                 <SelectValue placeholder="选择角色">
                   {role ? ROLE_LABELS[role as UserRole] : ""}
