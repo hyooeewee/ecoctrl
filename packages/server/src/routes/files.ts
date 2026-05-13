@@ -12,6 +12,7 @@ import {
   updateFile,
   deleteFile,
 } from "@/repositories/files";
+import { errors } from "@/lib/schemas";
 
 const FILES_DIR = path.join(BASE_UPLOAD_DIR, "files");
 
@@ -30,8 +31,6 @@ const fileItemSchema = z.object({
   fileUrl: z.string().nullable(),
   createdAt: z.string().nullable(),
 });
-
-const errorResponseSchema = z.object({ error: z.string() });
 
 export default async function fileRoutes(fastify: FastifyInstance) {
   fastify.get(
@@ -58,7 +57,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
         consumes: ["multipart/form-data"],
         response: {
           201: fileItemSchema,
-          400: errorResponseSchema,
+          ...errors,
         },
       },
     },
@@ -121,7 +120,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
         tags: ["Files"],
         summary: "Download raw file",
         params: z.object({ id: z.string().describe("File ID") }),
-        response: { 404: errorResponseSchema },
+        response: { ...errors },
       },
     },
     async (request, reply) => {
@@ -149,7 +148,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
         tags: ["Files"],
         summary: "Preview a file",
         params: z.object({ id: z.string().describe("File ID") }),
-        response: { 404: errorResponseSchema },
+        response: { ...errors },
       },
     },
     async (request, reply) => {
@@ -178,7 +177,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
         body: z.object({ name: z.string().min(1) }),
         response: {
           200: fileItemSchema,
-          404: errorResponseSchema,
+          ...errors,
         },
       },
     },
@@ -202,7 +201,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
         params: z.object({ id: z.string().describe("File ID") }),
         response: {
           200: z.object({ success: z.boolean() }),
-          404: errorResponseSchema,
+          ...errors,
         },
       },
     },

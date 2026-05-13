@@ -18,6 +18,7 @@ import {
 } from "@/repositories/refreshTokens";
 import { sendMail } from "@/lib/mailer";
 import { findPlatformConfig } from "@/repositories/platformConfig";
+import { errors } from "@/lib/schemas";
 
 const hashRefreshToken = (token: string) => crypto.createHash("sha256").update(token).digest("hex");
 
@@ -79,7 +80,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
         body: z.object({ email: z.string().email() }),
         response: {
           200: z.object({ ok: z.literal(true) }),
-          409: z.object({ error: z.string() }),
+          ...errors,
         },
       },
     },
@@ -163,8 +164,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
         body: registerBodySchema,
         response: {
           201: tokenResponseSchema,
-          400: z.object({ error: z.string() }),
-          409: z.object({ error: z.string() }),
+          ...errors,
         },
       },
     },
@@ -203,7 +203,6 @@ export default async function authRoutes(fastify: FastifyInstance) {
       const hashedPassword = await bcrypt.hash(password, 10);
 
       const newUser = await createUser({
-        id: crypto.randomUUID(),
         username,
         email,
         role: "viewer",
@@ -249,7 +248,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
         body: loginBodySchema,
         response: {
           200: tokenResponseSchema,
-          401: z.object({ error: z.string() }),
+          ...errors,
         },
       },
     },
@@ -303,7 +302,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
         body: refreshBodySchema,
         response: {
           200: z.object({ accessToken: z.string(), refreshToken: z.string() }),
-          401: z.object({ error: z.string() }),
+          ...errors,
         },
       },
     },
@@ -343,7 +342,10 @@ export default async function authRoutes(fastify: FastifyInstance) {
         summary: "Logout and invalidate refresh token",
         security: [{ bearerAuth: [] }],
         body: z.object({ refreshToken: z.string() }),
-        response: { 200: z.object({ ok: z.literal(true) }) },
+        response: {
+          200: z.object({ ok: z.literal(true) }),
+          ...errors,
+        },
       },
     },
     async (request, reply) => {
@@ -373,7 +375,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
         body: z.object({ email: z.string().email() }),
         response: {
           200: z.object({ ok: z.literal(true) }),
-          404: z.object({ error: z.string() }),
+          ...errors,
         },
       },
     },
@@ -481,8 +483,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
         }),
         response: {
           200: z.object({ ok: z.literal(true) }),
-          400: z.object({ error: z.string() }),
-          404: z.object({ error: z.string() }),
+          ...errors,
         },
       },
     },
@@ -533,7 +534,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
             role: z.string(),
             avatarUrl: z.string().nullable(),
           }),
-          401: z.object({ error: z.string() }),
+          ...errors,
         },
       },
     },

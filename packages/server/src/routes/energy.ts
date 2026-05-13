@@ -8,6 +8,7 @@ import {
   findManyCarbonFactorNodes,
   refreshCarbonFactorNodes,
 } from "@/repositories/carbonFactorNodes";
+import { errors } from "@/lib/schemas";
 
 const areaBodySchema = z.array(
   z.object({
@@ -255,7 +256,10 @@ export default async function energyRoutes(fastify: FastifyInstance) {
       schema: {
         tags: ["Energy"],
         summary: "Refresh carbon emission factor category tree from external API",
-        response: { 200: z.object({ count: z.number() }) },
+        response: {
+          200: z.object({ count: z.number() }),
+          ...errors,
+        },
       },
     },
     async (_request, reply) => {
@@ -286,6 +290,7 @@ export default async function energyRoutes(fastify: FastifyInstance) {
             count: z.number(),
             data: z.array(CarbonFactorSchema),
           }),
+          ...errors,
         },
       },
     },

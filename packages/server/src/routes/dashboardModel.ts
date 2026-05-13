@@ -10,6 +10,7 @@ import {
 } from "@ecoctrl/shared";
 import { findDashboardModel, updateDashboardModel } from "@/repositories/dashboardModel";
 import { UPLOAD_DIR } from "@/lib/paths";
+import { errors } from "@/lib/schemas";
 
 const MODELS_DIR = path.join(UPLOAD_DIR, "models");
 
@@ -60,7 +61,7 @@ export default async function dashboardModelRoutes(fastify: FastifyInstance) {
         consumes: ["multipart/form-data"],
         response: {
           200: DashboardModelConfigSchema,
-          400: z.object({ error: z.string() }),
+          ...errors,
         },
       },
     },

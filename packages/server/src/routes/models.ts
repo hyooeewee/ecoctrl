@@ -16,6 +16,7 @@ import {
   updateModel,
   deleteModel,
 } from "@/repositories/models";
+import { errors } from "@/lib/schemas";
 
 // Temporary directory for immediate stream consumption during multipart parsing
 const TMP_DIR = path.join(BASE_UPLOAD_DIR, ".tmp");
@@ -80,7 +81,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         summary: "Upload a 3D model",
         response: {
           201: Model3DSchema,
-          400: z.object({ error: z.string() }),
+          ...errors,
         },
       },
     },
@@ -197,7 +198,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         }),
         response: {
           200: Model3DSchema,
-          404: z.object({ error: z.string() }),
+          ...errors,
         },
       },
     },
@@ -238,8 +239,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         params: z.object({ id: z.string().describe("Model ID") }),
         response: {
           200: Model3DSchema,
-          400: z.object({ error: z.string() }),
-          404: z.object({ error: z.string() }),
+          ...errors,
         },
       },
     },
@@ -347,7 +347,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         params: z.object({ id: z.string().describe("Model ID") }),
         response: {
           200: z.object({ success: z.boolean() }),
-          404: z.object({ error: z.string() }),
+          ...errors,
         },
       },
     },
@@ -377,8 +377,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         params: z.object({ id: z.string().describe("Model ID") }),
         response: {
           200: z.unknown(),
-          401: z.object({ error: z.string() }),
-          404: z.object({ error: z.string() }),
+          ...errors,
         },
       },
     },

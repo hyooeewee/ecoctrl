@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { BusinessObjectSchema } from "@ecoctrl/shared";
+import { BusinessObjectSchema, type BusinessObject } from "@ecoctrl/shared";
+import { errors } from "@/lib/schemas";
 import {
   findManyObjects,
   findObjectByUuid,
@@ -67,7 +68,7 @@ export default async function objectRoutes(fastify: FastifyInstance) {
         body: BusinessObjectSchema.omit({ uuid: true }).partial(),
         response: {
           200: BusinessObjectSchema,
-          404: z.object({ error: z.string() }),
+          ...errors,
         },
       },
     },
@@ -114,7 +115,7 @@ export default async function objectRoutes(fastify: FastifyInstance) {
         params: z.object({ uuid: z.string() }),
         response: {
           200: z.object({ success: z.boolean() }),
-          404: z.object({ error: z.string() }),
+          ...errors,
         },
       },
     },
