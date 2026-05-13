@@ -46,12 +46,23 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Debug changeset outputs
+        run: |
+          echo "changeset.published=${{ steps.changeset.outputs.published }}"
+          echo "changeset.publishedPackages=${{ steps.changeset.outputs.publishedPackages }}"
+          echo "changeset.hasChangesets=${{ steps.changeset.outputs.hasChangesets }}"
+
       - name: Get version
         id: version
         if: steps.changeset.outputs.published == 'true'
         run: |
           VERSION=$(node -p "require('./apps/admin/package.json').version")
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Debug version output
+        if: always()
+        run: |
+          echo "version.tag=${{ steps.version.outputs.tag }}"
 
   deploy:
     name: Build + Deploy + GHCR
@@ -60,6 +71,11 @@ jobs:
     if: needs.changeset.outputs.published == 'true'
 
     steps:
+      - name: Debug deploy inputs
+        run: |
+          echo "needs.changeset.published=${{ needs.changeset.outputs.published }}"
+          echo "needs.changeset.tag=${{ needs.changeset.outputs.tag }}"
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
