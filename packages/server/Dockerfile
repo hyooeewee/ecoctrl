@@ -18,16 +18,23 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Enable pnpm via corepack
-RUN corepack enable && corepack prepare pnpm@10.33.1 --activate
+# Use domestic npm mirror for stable downloads inside China
+ENV COREPACK_NPM_REGISTRY=https://registry.npmmirror.com
+ENV NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
+
+# Enable pnpm via corepack, reading version dynamically from package.json
+RUN corepack enable
 
 # Copy workspace manifests for optimal layer caching
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+RUN PNPM_VERSION=$(node -p "require('./package.json').packageManager.replace('pnpm@','')") && \
+    corepack prepare pnpm@${PNPM_VERSION} --activate
 COPY packages/server/package.json packages/server/
 COPY packages/shared/package.json packages/shared/
 
-# Install dependencies (resolves workspace:* protocol)
-RUN pnpm install --frozen-lockfile
+# Install dependencies with shared pnpm cache to avoid concurrent download conflicts
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
 
 # Copy source code
 COPY packages/server/ packages/server/
@@ -43,24 +50,34 @@ FROM node:22-alpine AS production
 
 WORKDIR /app
 
-# Enable pnpm via corepack
-RUN corepack enable && corepack prepare pnpm@10.33.1 --activate
+# Use domestic npm mirror for stable downloads inside China
+ENV COREPACK_NPM_REGISTRY=https://registry.npmmirror.com
+ENV NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
+
+# Enable pnpm via corepack, reading version dynamically from package.json
+RUN corepack enable
 
 # Copy workspace manifests to resolve workspace:* deps at runtime
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+RUN PNPM_VERSION=$(node -p "require('./package.json').packageManager.replace('pnpm@','')") && \
+    corepack prepare pnpm@${PNPM_VERSION} --activate
 COPY packages/server/package.json packages/server/
 COPY packages/shared/package.json packages/shared/
 
-# Install production dependencies only
-RUN pnpm install --frozen-lockfile --ignore-scripts
+# Install production dependencies only with shared pnpm cache
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --ignore-scripts
 
 # Copy built assets from builder and keep the original directory structure
 # This ensures node_modules resolution works correctly for ESM imports
 COPY --from=builder /app/packages/server/dist /app/packages/server/dist
 
-# Copy drizzle migrations and config for runtime migration capability
+# Copy shared package source (required for workspace:* resolution at runtime)
+COPY packages/shared packages/shared
+
+# Copy schema and drizzle config for runtime push capability
 COPY packages/server/drizzle.config.ts packages/server/
-COPY packages/server/drizzle packages/server/drizzle
+COPY packages/server/src/schemas packages/server/src/schemas
 
 # Install drizzle-kit globally for migration capability
 RUN npm install -g drizzle-kit@0.31.10
