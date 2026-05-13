@@ -36,6 +36,9 @@
     "[markdown]": {
       "editor.defaultFormatter": "oxc.oxc-vscode",
     },
+    "[typescript]": {
+      "editor.defaultFormatter": "oxc.oxc-vscode",
+    },
   },
   "extensions": {
     "recommendations": ["oxc.oxc-vscode"],
