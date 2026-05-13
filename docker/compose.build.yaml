@@ -41,7 +41,7 @@ services:
       context: ..
       dockerfile: packages/server/Dockerfile
     container_name: ecoctrl-migrate
-    command: sh -c "cd /app/packages/server && npx drizzle-kit migrate"
+    command: sh -c "cd /app/packages/server && npx drizzle-kit push --force"
     environment:
       - DATABASE_URL=postgresql://ecoctrl:ecoctrl_secret@postgres:5432/ecoctrl
     depends_on:
