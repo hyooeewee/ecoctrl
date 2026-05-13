@@ -1,0 +1,74 @@
+name: ecoctrl
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ecoctrl-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ecoctrl
+      POSTGRES_PASSWORD: ecoctrl_secret
+      POSTGRES_DB: ecoctrl
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ecoctrl -d ecoctrl"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  server:
+    image: ghcr.io/hyooeewee/ecoctrl/server:latest
+    container_name: ecoctrl-server
+    restart: always
+    env_file:
+      - .env.local
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOST=0.0.0.0
+      - DATABASE_URL=postgresql://ecoctrl:ecoctrl_secret@postgres:5432/ecoctrl
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./uploads:/app/packages/server/dist/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  web:
+    image: ghcr.io/hyooeewee/ecoctrl/web:latest
+    container_name: ecoctrl-web
+    restart: always
+    environment:
+      - API_BASE_URL=http://server:3000
+      - API_PREFIX=/api
+      - STATIC_PREFIX=/static
+    ports:
+      - "8081:80"
+    depends_on:
+      - server
+
+  admin:
+    image: ghcr.io/hyooeewee/ecoctrl/admin:latest
+    container_name: ecoctrl-admin
+    restart: always
+    environment:
+      - API_BASE_URL=http://server:3000
+      - API_PREFIX=/api
+      - STATIC_PREFIX=/static
+    ports:
+      - "4173:80"
+    depends_on:
+      - server
+
+volumes:
+  postgres_data:
