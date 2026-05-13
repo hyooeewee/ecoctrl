@@ -29,11 +29,22 @@ docker compose up -d
 
 从本地 Dockerfile 构建完整服务，适合需要自定义代码或二次开发的用户。
 
+> 注意：并发构建多个 Node 镜像可能因内存/网络资源不足导致失败。推荐使用串行构建脚本：
+
 ```bash
 cd docker
 cp .env.example .env.local
 # 编辑 .env.local 填入必要配置（JWT_SECRET、数据库密码等）
-docker compose -f compose.build.yaml up --build
+
+# 串行构建并启动（推荐）
+./build.sh
+
+# 或手动逐个构建
+# docker compose -f compose.build.yaml build postgres
+# docker compose -f compose.build.yaml build server
+# docker compose -f compose.build.yaml build web
+# docker compose -f compose.build.yaml build admin
+# docker compose -f compose.build.yaml up -d
 ```
 
 访问：
