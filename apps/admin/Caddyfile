@@ -1,10 +1,4 @@
 :80 {
-    root * /usr/share/caddy
-    file_server
-
-    # Client bundles always emit fixed /api and /static prefixes; we strip them
-    # here and re-prefix with the env-defined real backend prefix, so changing
-    # API_PREFIX / STATIC_PREFIX in apps/<x>/.env.local does NOT require rebuild.
     handle_path /api/* {
         rewrite * {$API_PREFIX:/api}{uri}
         reverse_proxy {$API_BASE_URL:http://localhost:3000}
@@ -15,19 +9,19 @@
         reverse_proxy {$API_BASE_URL:http://localhost:3000}
     }
 
-    # SPA fallback: all routes -> index.html
-    try_files {path} /index.html
+    handle {
+        root * /usr/share/caddy
+        try_files {path} /index.html
+        file_server
+    }
 
-    # Gzip compression
     encode gzip zstd
 
-    # Cache static assets with hash in filename
     @static {
         path *.js *.css *.png *.jpg *.jpeg *.gif *.ico *.svg *.woff *.woff2 *.ttf *.eot *.otf *.webp
     }
     header @static Cache-Control "public, max-age=31536000, immutable"
 
-    # Security headers
     header X-Frame-Options "SAMEORIGIN"
     header X-Content-Type-Options "nosniff"
     header Referrer-Policy "strict-origin-when-cross-origin"
