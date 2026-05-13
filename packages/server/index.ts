@@ -25,9 +25,11 @@ import apiRoutes from "@/routes";
 import { initQueue } from "@/queue/pgboss";
 import { triggerEngine } from "@/engine/trigger";
 import { syncSmtpFromEnv } from "@/repositories/platformConfig";
+import { initAdmin } from "@/lib/initAdmin";
 
 await ensureDatabase();
 await syncSmtpFromEnv();
+await initAdmin();
 
 const fastify = Fastify({ logger: true }).withTypeProvider<ZodTypeProvider>();
 

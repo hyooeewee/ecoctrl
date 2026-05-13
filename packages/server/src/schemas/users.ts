@@ -1,8 +1,11 @@
 import { pgTable, uuid, varchar, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { USER_ROLE_LIST } from "@ecoctrl/shared";
 
 export const users = pgTable("users", {
-  id: uuid("id").primaryKey(),
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
   username: varchar("username", { length: 255 }).notNull().default(""),
   password: varchar("password", { length: 255 }),
   email: varchar("email", { length: 255 }).notNull(),
