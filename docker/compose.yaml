@@ -22,7 +22,7 @@ services:
   migrate:
     image: ghcr.io/hyooeewee/ecoctrl/server:latest
     container_name: ecoctrl-migrate
-    command: sh -c "cd /app/packages/server && npx drizzle-kit migrate"
+    command: sh -c "cd /app/packages/server && npx drizzle-kit push --force"
     environment:
       - DATABASE_URL=postgresql://ecoctrl:ecoctrl_secret@postgres:5432/ecoctrl
     depends_on:
