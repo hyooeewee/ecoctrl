@@ -14,7 +14,7 @@ import {
   SheetFooter,
 } from "@ecoctrl/ui";
 
-import { ReportPlan } from "../types";
+import type { ReportPlan } from "@ecoctrl/shared";
 
 interface ReportPlanSheetProps {
   trigger: React.ReactElement;

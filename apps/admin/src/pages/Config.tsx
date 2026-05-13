@@ -92,10 +92,13 @@ export default function SystemConfig({ user }: { user: AuthUser | null }) {
     }
   };
 
-  const currentConfig: SystemConfig & { allowOAuthLogin?: boolean } = config ?? {
+  const currentConfig: SystemConfig = config ?? {
     platformName: "",
     refreshInterval: 30,
+    realtimeAlertEnabled: true,
+    theme: "system" as const,
     timezone: "Asia/Shanghai",
+    alertSound: true,
     smtpHost: "",
     smtpPort: 587,
     smtpUser: "",
@@ -335,7 +338,9 @@ export default function SystemConfig({ user }: { user: AuthUser | null }) {
                 value={currentConfig.smtpPass}
                 onChange={(e) => updateField("smtpPass", e.target.value)}
                 className="bg-muted/30 border-border pr-10"
-                style={{ WebkitTextSecurity: showSmtpPass ? "none" : "disc" }}
+                style={
+                  { WebkitTextSecurity: showSmtpPass ? "none" : "disc" } as React.CSSProperties
+                }
               />
               <button
                 type="button"

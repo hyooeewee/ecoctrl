@@ -43,7 +43,7 @@ import { Button } from "@ecoctrl/ui/button";
 import { Input } from "@ecoctrl/ui/input";
 import { Label } from "@ecoctrl/ui/label";
 import { Badge } from "@ecoctrl/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ecoctrl/ui/tabs";
+import { Tabs, TabsContent } from "@ecoctrl/ui/tabs";
 import { Separator } from "@ecoctrl/ui/separator";
 import { ScrollArea } from "@ecoctrl/ui/scroll-area";
 import { Textarea } from "@ecoctrl/ui/textarea";
@@ -807,7 +807,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                           onChange={(e) =>
                             updateNodeData(selectedNode.id, {
                               config: {
-                                ...((selectedNode.data.config as Record<string, unknown>) ?? {}),
+                                ...(selectedNode.data.config as Record<string, unknown>),
                                 expression: e.target.value,
                               },
                             })
@@ -828,7 +828,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                             onChange={(e) =>
                               updateNodeData(selectedNode.id, {
                                 config: {
-                                  ...((selectedNode.data.config as Record<string, unknown>) ?? {}),
+                                  ...(selectedNode.data.config as Record<string, unknown>),
                                   method: e.target.value,
                                 },
                               })
@@ -847,7 +847,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                             onChange={(e) =>
                               updateNodeData(selectedNode.id, {
                                 config: {
-                                  ...((selectedNode.data.config as Record<string, unknown>) ?? {}),
+                                  ...(selectedNode.data.config as Record<string, unknown>),
                                   url: e.target.value,
                                 },
                               })
@@ -871,7 +871,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                           onChange={(e) =>
                             updateNodeData(selectedNode.id, {
                               config: {
-                                ...((selectedNode.data.config as Record<string, unknown>) ?? {}),
+                                ...(selectedNode.data.config as Record<string, unknown>),
                                 durationMs: Number(e.target.value),
                               },
                             })
@@ -892,7 +892,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                             onChange={(e) =>
                               updateNodeData(selectedNode.id, {
                                 config: {
-                                  ...((selectedNode.data.config as Record<string, unknown>) ?? {}),
+                                  ...(selectedNode.data.config as Record<string, unknown>),
                                   name: e.target.value,
                                 },
                               })
@@ -910,7 +910,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                             onChange={(e) =>
                               updateNodeData(selectedNode.id, {
                                 config: {
-                                  ...((selectedNode.data.config as Record<string, unknown>) ?? {}),
+                                  ...(selectedNode.data.config as Record<string, unknown>),
                                   value: e.target.value,
                                 },
                               })
@@ -933,7 +933,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                             onChange={(e) =>
                               updateNodeData(selectedNode.id, {
                                 config: {
-                                  ...((selectedNode.data.config as Record<string, unknown>) ?? {}),
+                                  ...(selectedNode.data.config as Record<string, unknown>),
                                   template: e.target.value,
                                 },
                               })
@@ -952,7 +952,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                             onChange={(e) =>
                               updateNodeData(selectedNode.id, {
                                 config: {
-                                  ...((selectedNode.data.config as Record<string, unknown>) ?? {}),
+                                  ...(selectedNode.data.config as Record<string, unknown>),
                                   to: e.target.value,
                                 },
                               })
@@ -971,7 +971,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                             onChange={(e) =>
                               updateNodeData(selectedNode.id, {
                                 config: {
-                                  ...((selectedNode.data.config as Record<string, unknown>) ?? {}),
+                                  ...(selectedNode.data.config as Record<string, unknown>),
                                   subject: e.target.value,
                                 },
                               })

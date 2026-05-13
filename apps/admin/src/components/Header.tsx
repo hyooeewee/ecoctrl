@@ -1,4 +1,4 @@
-import { Bell, Monitor, Moon, Search, Sun, ChevronDown, ChevronRight, Home, X } from "lucide-react";
+import { Bell, Monitor, Moon, Search, Sun, ChevronDown, ChevronRight, Home } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@ecoctrl/ui";

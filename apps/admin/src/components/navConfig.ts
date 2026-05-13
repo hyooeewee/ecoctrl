@@ -100,7 +100,7 @@ export function findNode(id: string): NavNode | undefined {
 /** Get breadcrumb segments for the current page (excluding the virtual root). */
 export function getBreadcrumbPath(
   activeTab: string,
-  subTabId?: string,
+  _subTabId?: string,
 ): { id: string; label: string }[] {
   const result: { id: string; label: string }[] = [];
   const node = findNode(activeTab);
