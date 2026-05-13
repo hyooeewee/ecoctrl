@@ -1,5 +1,11 @@
 # @ecoctrl/web
 
+## 0.4.5
+
+### Patch Changes
+
+- 4682e71: fix release workflow
+
 ## 0.4.4
 
 ### Patch Changes
