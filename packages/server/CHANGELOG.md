@@ -1,5 +1,11 @@
 # @ecoctrl/server
 
+## 0.4.4
+
+### Patch Changes
+
+- 3f9e894: fix tag generate script
+
 ## 0.4.3
 
 ### Patch Changes
