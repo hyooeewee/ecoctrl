@@ -1,5 +1,11 @@
 # @ecoctrl/admin
 
+## 0.4.1
+
+### Patch Changes
+
+- 81b0aa4: fix release workflow tag logic and tidy templates
+
 ## 0.4.0
 
 ### Minor Changes
