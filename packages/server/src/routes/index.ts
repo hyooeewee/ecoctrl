@@ -33,7 +33,7 @@ export default async function apiRoutes(fastify: FastifyInstance) {
 
   fastify.addHook("onRequest", async (request: FastifyRequest, reply: FastifyReply) => {
     const publicPaths = [
-      "/api/health",
+      "/health",
       "/api/auth/login",
       "/api/auth/register",
       "/api/auth/register/send-code",
