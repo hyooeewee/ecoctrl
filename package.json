@@ -20,7 +20,7 @@
     "check:fix": "pnpm format && pnpm lint:fix",
     "changeset": "changeset",
     "version": "changeset version",
-    "release": "changeset tag",
+    "release": "node scripts/release-tag.js",
     "prepare": "[ -n \"$CI\" ] || husky",
     "sync:env": "pnpm -r --if-present env:sync",
     "sync:env:check": "pnpm -r --if-present env:check",
