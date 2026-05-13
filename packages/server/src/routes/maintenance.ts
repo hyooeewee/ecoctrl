@@ -4,8 +4,7 @@ import { z } from "zod";
 import { MaintenanceReminderSchema, MaintenanceReminderDetailSchema } from "@ecoctrl/shared";
 import type { MaintenanceReminder, MaintenanceReminderDetail } from "@ecoctrl/shared";
 import { findManyReminders, updateReminder, deleteReminder } from "@/repositories/maintenance";
-
-const errorResponseSchema = z.object({ error: z.string() });
+import { errors } from "@/lib/schemas";
 
 const createBodySchema = z.object({
   task: z.string(),
@@ -62,7 +61,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
         params: z.object({ id: z.string().describe("Reminder ID") }),
         response: {
           200: MaintenanceReminderDetailSchema,
-          404: errorResponseSchema,
+          ...errors,
         },
       },
     },
@@ -120,7 +119,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
         body: replaceBodySchema,
         response: {
           200: MaintenanceReminderDetailSchema,
-          404: errorResponseSchema,
+          ...errors,
         },
       },
     },
@@ -153,7 +152,7 @@ export default async function maintenanceRoutes(fastify: FastifyInstance) {
         params: z.object({ id: z.string().describe("Reminder ID") }),
         response: {
           200: z.object({ success: z.boolean() }),
-          404: errorResponseSchema,
+          ...errors,
         },
       },
     },

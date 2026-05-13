@@ -16,11 +16,13 @@ export async function findManyUsers(): Promise<User[]> {
   }));
 }
 
-export async function createUser(user: User & { password?: string | null }): Promise<User> {
+export async function createUser(
+  user: Omit<User, "id"> & { id?: string; password?: string | null },
+): Promise<User> {
   const result = await db
     .insert(users)
     .values({
-      id: user.id,
+      id: user.id ?? undefined,
       username: user.username,
       email: user.email,
       role: user.role,

@@ -144,7 +144,7 @@ export async function findDashboardData(userId?: string): Promise<{
   for (const r of rows) {
     let data = r.dataJson as WidgetConfig["data"];
 
-    if (r.dataType === "weather") {
+    if (r.dataType === "weather" && weatherData) {
       data = weatherData;
     }
 

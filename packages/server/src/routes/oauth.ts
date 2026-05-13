@@ -8,6 +8,7 @@ import {
   findUserOAuthAccounts,
 } from "@/repositories/oauthAccounts";
 import { findPlatformConfig } from "@/repositories/platformConfig";
+import { errors } from "@/lib/schemas";
 import {
   findUserByIdentifier,
   findUserByEmail,
@@ -438,9 +439,7 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
               avatarUrl: z.string().nullable(),
             }),
           }),
-          400: z.object({ error: z.string() }),
-          401: z.object({ error: z.string() }),
-          403: z.object({ error: z.string() }),
+          ...errors,
         },
       },
     },
@@ -519,9 +518,7 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
               avatarUrl: z.string().nullable(),
             }),
           }),
-          400: z.object({ error: z.string() }),
-          403: z.object({ error: z.string() }),
-          409: z.object({ error: z.string() }),
+          ...errors,
         },
       },
     },
@@ -552,17 +549,15 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
         return reply.status(409).send({ error: "Email already taken" });
       }
 
-      const newUser = {
-        id: crypto.randomUUID(),
+      const newUser = await createUser({
         username,
         email,
-        role: "viewer" as const,
-        status: "offline" as const,
+        role: "viewer",
+        status: "offline",
         lastLogin: null,
         avatarUrl: temp.avatarUrl,
-      };
-
-      await createUser({ ...newUser, password: null });
+        password: null,
+      });
       tempBindStore.delete(tempToken);
 
       await createOAuthAccount({
@@ -597,7 +592,7 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
         params: z.object({ provider: z.string() }),
         response: {
           200: z.object({ ok: z.literal(true) }),
-          404: z.object({ error: z.string() }),
+          ...errors,
         },
       },
     },

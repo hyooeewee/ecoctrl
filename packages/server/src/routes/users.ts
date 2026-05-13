@@ -23,6 +23,7 @@ import {
   updateUserPreferences,
 } from "@/repositories/users";
 import { UPLOAD_DIR } from "@/lib/paths";
+import { errors } from "@/lib/schemas";
 import type { UserPreferences } from "@ecoctrl/shared";
 
 const AVATAR_DIR = path.join(UPLOAD_DIR, "avatar");
@@ -52,7 +53,6 @@ function deleteOldAvatar(avatarValue: string | null) {
 }
 
 const successSchema = z.object({ success: z.boolean() });
-const errorResponseSchema = z.object({ error: z.string() });
 
 export default async function accountRoutes(fastify: FastifyInstance) {
   fastify.get(
@@ -83,16 +83,15 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       const body = request.body as UserCreateBody;
       const hashedPassword = await bcrypt.hash(body.password, 10);
-      const newUser: User = {
-        id: crypto.randomUUID(),
+      const newUser = await createUser({
         username: body.username ?? "",
         email: body.email,
         role: body.role ?? USER_ROLE_LIST[USER_ROLE_LIST.length - 1],
         status: "offline",
         lastLogin: null,
         avatarUrl: null,
-      };
-      await createUser({ ...newUser, password: hashedPassword });
+        password: hashedPassword,
+      });
       return reply.status(201).send(newUser);
     },
   );
@@ -107,8 +106,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
         body: UserUpdateBodySchema,
         response: {
           200: successSchema,
-          403: errorResponseSchema,
-          404: errorResponseSchema,
+          ...errors,
         },
       },
     },
@@ -156,7 +154,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
         params: z.object({ id: z.string().describe("User ID") }),
         response: {
           200: successSchema,
-          404: errorResponseSchema,
+          ...errors,
         },
       },
     },
@@ -185,8 +183,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
         params: z.object({ id: z.string().describe("User ID") }),
         response: {
           200: z.object({ url: z.string() }),
-          400: errorResponseSchema,
-          404: errorResponseSchema,
+          ...errors,
         },
       },
     },
@@ -252,7 +249,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
         tags: ["Users"],
         summary: "Get user avatar",
         params: z.object({ id: z.string().describe("User ID") }),
-        response: { 404: errorResponseSchema },
+        response: { ...errors },
       },
     },
     async (request, reply) => {
@@ -309,7 +306,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
         body: z.record(z.string(), z.unknown()),
         response: {
           200: successSchema,
-          404: errorResponseSchema,
+          ...errors,
         },
       },
     },
@@ -335,7 +332,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
         body: z.record(z.string(), z.unknown()),
         response: {
           200: successSchema,
-          404: errorResponseSchema,
+          ...errors,
         },
       },
     },
@@ -362,7 +359,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
         params: z.object({ id: z.string().describe("User ID") }),
         response: {
           200: successSchema,
-          404: errorResponseSchema,
+          ...errors,
         },
       },
     },

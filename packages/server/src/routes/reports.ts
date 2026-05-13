@@ -9,8 +9,7 @@ import {
   updateReportPlan,
   findManyReportTemplates,
 } from "@/repositories/reports";
-
-const errorResponseSchema = z.object({ error: z.string() });
+import { errors } from "@/lib/schemas";
 
 const planBodySchema = z.object({
   name: z.string(),
@@ -70,7 +69,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
         body: planUpdateBodySchema,
         response: {
           200: ReportPlanSchema,
-          404: errorResponseSchema,
+          ...errors,
         },
       },
     },

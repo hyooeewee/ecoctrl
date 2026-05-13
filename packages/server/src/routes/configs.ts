@@ -3,6 +3,7 @@ import { z } from "zod";
 import { findPlatformConfig, updatePlatformConfig } from "@/repositories/platformConfig";
 import { findUserById } from "@/repositories/users";
 import { sendMail } from "@/lib/mailer";
+import { errors } from "@/lib/schemas";
 
 const configSchema = z.object({
   platformName: z.string(),
@@ -70,7 +71,10 @@ export default async function configRoutes(fastify: FastifyInstance) {
         tags: ["Configs"],
         summary: "Update platform config",
         body: configBodySchema,
-        response: { 200: configSchema },
+        response: {
+          200: configSchema,
+          ...errors,
+        },
       },
     },
     async (request, reply) => {
@@ -131,7 +135,10 @@ export default async function configRoutes(fastify: FastifyInstance) {
         tags: ["Configs"],
         summary: "Send test email",
         body: testEmailBodySchema,
-        response: { 200: z.object({ success: z.boolean() }) },
+        response: {
+          200: z.object({ success: z.boolean() }),
+          ...errors,
+        },
       },
     },
     async (request, reply) => {
