@@ -70,7 +70,14 @@ jobs:
     needs: changeset
     if: needs.changeset.outputs.published == 'true'
 
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+
     steps:
+      - name: Pass through tag
+        id: tag
+        run: echo "tag=${{ needs.changeset.outputs.tag }}" >> $GITHUB_OUTPUT
+
       - name: Debug deploy inputs
         run: |
           echo "needs.changeset.published=${{ needs.changeset.outputs.published }}"
@@ -152,7 +159,7 @@ jobs:
 
       - name: Package artifacts
         run: |
-          VERSION="${{ needs.changeset.outputs.tag }}"
+          VERSION="${{ needs.deploy.outputs.tag }}"
           VERSION=${VERSION#v}
           mkdir -p release-assets
 
@@ -163,8 +170,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ needs.changeset.outputs.tag }}
-          name: Release ${{ needs.changeset.outputs.tag }}
+          tag_name: ${{ needs.deploy.outputs.tag }}
+          name: Release ${{ needs.deploy.outputs.tag }}
           generate_release_notes: true
           files: release-assets/*.zip
         env:
