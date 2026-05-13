@@ -11,9 +11,11 @@ const existing = execSync(`git ls-remote --tags origin "refs/tags/${tag}" || tru
 
 if (existing.includes(tag)) {
   console.log(`Tag ${tag} already exists on remote, skipping`);
+  console.log(JSON.stringify({ packages: [], releases: [] }));
   process.exit(0);
 }
 
 execSync(`git tag ${tag}`);
 execSync(`git push origin ${tag}`);
 console.log(`Created and pushed tag ${tag}`);
+console.log(JSON.stringify({ packages: [], releases: [] }));
