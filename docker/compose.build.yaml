@@ -55,6 +55,12 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   web:
     build:
@@ -68,7 +74,8 @@ services:
     ports:
       - "8081:80"
     depends_on:
-      - server
+      server:
+        condition: service_healthy
 
   admin:
     build:
@@ -82,7 +89,8 @@ services:
     ports:
       - "4173:80"
     depends_on:
-      - server
+      server:
+        condition: service_healthy
 
 volumes:
   postgres_data:

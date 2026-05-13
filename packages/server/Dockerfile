@@ -58,6 +58,13 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 # This ensures node_modules resolution works correctly for ESM imports
 COPY --from=builder /app/packages/server/dist /app/packages/server/dist
 
+# Copy drizzle migrations and config for runtime migration capability
+COPY packages/server/drizzle.config.ts packages/server/
+COPY packages/server/drizzle packages/server/drizzle
+
+# Install drizzle-kit globally for migration capability
+RUN pnpm add -g drizzle-kit@0.31.10
+
 # Ensure uploads directory exists and is writable
 RUN mkdir -p /app/uploads && chmod 755 /app/uploads
 

@@ -19,6 +19,17 @@ services:
       timeout: 5s
       retries: 5
 
+  migrate:
+    image: ghcr.io/hyooeewee/ecoctrl/server:latest
+    container_name: ecoctrl-migrate
+    command: sh -c "cd /app/packages/server && npx drizzle-kit migrate"
+    environment:
+      - DATABASE_URL=postgresql://ecoctrl:ecoctrl_secret@postgres:5432/ecoctrl
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: no
+
   server:
     image: ghcr.io/hyooeewee/ecoctrl/server:latest
     container_name: ecoctrl-server
@@ -35,10 +46,12 @@ services:
     volumes:
       - ./uploads:/app/packages/server/dist/uploads
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -55,7 +68,8 @@ services:
     ports:
       - "8081:80"
     depends_on:
-      - server
+      server:
+        condition: service_healthy
 
   admin:
     image: ghcr.io/hyooeewee/ecoctrl/admin:latest
@@ -68,7 +82,8 @@ services:
     ports:
       - "4173:80"
     depends_on:
-      - server
+      server:
+        condition: service_healthy
 
 volumes:
   postgres_data:
