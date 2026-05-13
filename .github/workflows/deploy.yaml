@@ -1,0 +1,120 @@
+name: Deploy
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build + Deploy + GHCR
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build Web
+        run: pnpm --filter @ecoctrl/web build
+
+      - name: Build Admin
+        run: pnpm --filter @ecoctrl/admin build
+
+      - name: Build Server
+        run: pnpm --filter @ecoctrl/server build
+
+      - name: Build Docs
+        run: pnpm --filter @ecoctrl/docs build
+
+      - name: Deploy Docs
+        run: |
+          pnpm wrangler pages deploy ./apps/docs/.vitepress/dist \
+            --project-name ecoctrl-docs
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Login GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & Push Web
+        run: |
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            -f apps/web/Dockerfile \
+            -t ghcr.io/${{ github.repository }}/web:${{ github.ref_name }} \
+            -t ghcr.io/${{ github.repository }}/web:latest \
+            --push .
+
+      - name: Build & Push Admin
+        run: |
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            -f apps/admin/Dockerfile \
+            -t ghcr.io/${{ github.repository }}/admin:${{ github.ref_name }} \
+            -t ghcr.io/${{ github.repository }}/admin:latest \
+            --push .
+
+      - name: Build & Push Server
+        run: |
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            -f packages/server/Dockerfile \
+            -t ghcr.io/${{ github.repository }}/server:${{ github.ref_name }} \
+            -t ghcr.io/${{ github.repository }}/server:latest \
+            --push .
+
+  release:
+    name: GitHub Release
+    runs-on: ubuntu-latest
+    needs: deploy
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute Version
+        id: version
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Package artifacts
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          mkdir -p release-assets
+
+          zip -r "release-assets/web-v${VERSION}.zip" apps/web/build/client
+          zip -r "release-assets/admin-v${VERSION}.zip" apps/admin/dist
+          zip -r "release-assets/docs-v${VERSION}.zip" apps/docs/.vitepress/dist
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
+          generate_release_notes: true
+          files: release-assets/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
