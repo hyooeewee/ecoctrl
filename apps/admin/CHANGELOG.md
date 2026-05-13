@@ -1,5 +1,11 @@
 # @ecoctrl/admin
 
+## 0.4.2
+
+### Patch Changes
+
+- 985d510: fix deploy action
+
 ## 0.4.1
 
 ### Patch Changes
