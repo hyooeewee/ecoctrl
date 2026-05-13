@@ -14,7 +14,7 @@
     "start": "pnpm -r --parallel --if-present start",
     "lint": "vp lint",
     "lint:fix": "vp lint --fix",
-    "format": "vp fmt -c $(pwd)/.oxfmtrc.json --write",
+    "format": "vp fmt -c $(pwd)/.oxfmtrc.json",
     "format:check": "vp fmt -c $(pwd)/.oxfmtrc.json --check",
     "check": "pnpm format:check && pnpm lint",
     "check:fix": "pnpm format && pnpm lint:fix",
