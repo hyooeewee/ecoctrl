@@ -289,7 +289,7 @@ export default function Accounts() {
               <p className="mb-1 text-xs text-muted-foreground">角色</p>
               <Select
                 value={newUser.role}
-                onValueChange={(v) => setNewUser((u) => ({ ...u, role: v }))}
+                onValueChange={(v) => setNewUser((u) => ({ ...u, role: v ?? "" }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="选择角色">

@@ -107,7 +107,7 @@ export default function Reports() {
               setTemplates((prev) =>
                 names.map(
                   (name) =>
-                    prev.find((t) => t.name === name) ?? { name, count: "0 份", icon: "📄" },
+                    prev.find((t) => t.name === name) ?? { id: 0, name, count: "0 份", icon: "📄" },
                 ),
               )
             }

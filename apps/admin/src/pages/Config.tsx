@@ -234,7 +234,7 @@ export default function SystemConfig({ user }: { user: AuthUser | null }) {
             <div className="w-full sm:w-48">
               <Select
                 value={currentConfig.timezone}
-                onValueChange={(v) => updateField("timezone", v)}
+                onValueChange={(v) => updateField("timezone", v ?? "")}
                 items={{
                   "Asia/Shanghai": "北京时间",
                   "Asia/Hong_Kong": "香港时间",

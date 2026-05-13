@@ -369,7 +369,7 @@ export default function Energy() {
               <CardDescription className="text-xs">能耗趋势分析与报表导出</CardDescription>
             </CardHeader>
             <CardContent className="flex-1 overflow-auto p-6">
-              <div class="flex h-full min-h-[200px] items-center justify-center rounded-lg">
+              <div className="flex h-full min-h-[200px] items-center justify-center rounded-lg">
                 <p className="text-muted-foreground text-sm">统计报表内容待补充</p>
               </div>
             </CardContent>
