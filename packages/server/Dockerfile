@@ -63,7 +63,7 @@ COPY packages/server/drizzle.config.ts packages/server/
 COPY packages/server/drizzle packages/server/drizzle
 
 # Install drizzle-kit globally for migration capability
-RUN pnpm add -g drizzle-kit@0.31.10
+RUN npm install -g drizzle-kit@0.31.10
 
 # Ensure uploads directory exists and is writable
 RUN mkdir -p /app/uploads && chmod 755 /app/uploads
