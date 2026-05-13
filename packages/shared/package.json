@@ -2,6 +2,7 @@
   "name": "@ecoctrl/shared",
   "private": true,
   "type": "module",
+  "main": "index.ts",
   "exports": {
     ".": "./index.ts",
     "./vite": "./config/vite.config.base.ts"
