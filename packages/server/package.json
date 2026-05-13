@@ -19,6 +19,7 @@
     "db:reset": "dotenv -e .env.local -- tsx scripts/reset.ts",
     "db:drop:db": "dotenv -e .env.local -- tsx scripts/drop.ts",
     "db:refresh": "pnpm db:drop:db && pnpm db:push && pnpm db:seed && pnpm db:studio",
+    "db:squash": "dotenv -e .env.local -- tsx scripts/squash.ts",
     "db:drop": "drizzle-kit drop",
     "env:sync": "node ../../packages/shared/scripts/gen-env-example.mjs",
     "env:check": "node ../../packages/shared/scripts/gen-env-example.mjs --check",
@@ -49,19 +50,21 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@clack/prompts": "^1.3.0",
     "@ecoctrl/shared": "workspace:*",
     "@types/bcryptjs": "^3.0.0",
     "@types/node": "catalog:",
     "@types/unzipper": "^0.10.11",
+    "@vitest/coverage-v8": "4.1.5",
+    "@vitest/ui": "4.1.5",
     "dotenv-cli": "^11.0.0",
     "drizzle-kit": "^0.31.10",
     "drizzle-seed": "^0.3.1",
+    "picocolors": "^1.1.1",
     "pm2": "^6.0.14",
     "rimraf": "^6.1.3",
     "tsx": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
-    "@vitest/ui": "4.1.5",
-    "@vitest/coverage-v8": "4.1.5"
+    "vitest": "catalog:"
   }
 }
