@@ -50,8 +50,3 @@ COPY --from=builder /app/apps/web/Caddyfile /etc/caddy/Caddyfile
 COPY --from=builder /app/apps/web/build/client /usr/share/caddy
 
 EXPOSE 80
-
-# Caddy reads API_BASE_URL / API_PREFIX / STATIC_PREFIX from the container env
-# at runtime (override via --env-file or compose env_file). See apps/web/.env.local.
-
-CMD ["caddy", "run"]
