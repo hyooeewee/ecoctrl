@@ -18,7 +18,7 @@ import {
 } from "fastify-type-provider-zod";
 
 import { ensureDatabase } from "@/lib/ensureDatabase";
-import { migrateDatabase } from "@/lib/migrateDatabase";
+// import { migrateDatabase } from "@/lib/migrateDatabase";
 import { UPLOAD_DIR } from "@/lib/paths";
 import databasePlugin from "@/plugins/database";
 import rateLimitPlugin from "@/plugins/rateLimit";
@@ -29,7 +29,7 @@ import { syncSmtpFromEnv } from "@/repositories/platformConfig";
 import { initAdmin } from "@/lib/initAdmin";
 
 await ensureDatabase();
-await migrateDatabase();
+// await migrateDatabase();
 await syncSmtpFromEnv();
 await initAdmin();
 
@@ -187,6 +187,14 @@ await fastify.register(swaggerUi, {
   },
 });
 
+await fastify.register(
+  async (fastify) => {
+    fastify.get("/", async (_request, _reply) => {
+      return { status: "ok", timestamp: new Date().toISOString() };
+    });
+  },
+  { prefix: "/health" },
+);
 await fastify.register(apiRoutes, { prefix: "/api" });
 
 // Initialize pg-boss queue and sync schedule triggers
