@@ -197,12 +197,30 @@ jobs:
           zip -r "release-assets/ecoctrl-all-v${VERSION}.zip" ecoctrl
           rm -rf ecoctrl
 
+      - name: Generate release body
+        id: changelog
+        run: |
+          VERSION="${{ needs.changeset.outputs.tag }}"
+          VERSION=${VERSION#v}
+
+          awk '/^## '"$VERSION"'$/{found=1; next} found && /^## /{exit} found' apps/admin/CHANGELOG.md > /tmp/changelog_body.md
+
+          if [ ! -s /tmp/changelog_body.md ]; then
+            echo "See the full changelog at https://github.com/hyooeewee/ecoctrl/compare/${VERSION}" > /tmp/changelog_body.md
+          fi
+
+          {
+            echo "content<<CHANGELOG_EOF"
+            cat /tmp/changelog_body.md
+            echo "CHANGELOG_EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.changeset.outputs.tag }}
           name: Release ${{ needs.changeset.outputs.tag }}
-          generate_release_notes: true
+          body: ${{ steps.changelog.outputs.content }}
           files: release-assets/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
