@@ -1,5 +1,14 @@
 # @ecoctrl/server
 
+## 0.4.7
+
+### Patch Changes
+
+- [`b041061`](https://github.com/hyooeewee/ecoctrl/commit/b041061a15e1dd01f0b177975352705a0b396b16) Thanks [@hyooeewee](https://github.com/hyooeewee)! - - Docker compose volumes switched to local bind mounts; added migrate-images.sh for offline deployment
+  - Rewrote gen-env-example in TypeScript with @clack/prompts; auto-emits .env.example during build
+  - Removed legacy Drizzle migrations (0000-0004); fixed ecoctrl-worker script path in PM2 config
+  - Added @changesets/changelog-github; release notes now extracted from CHANGELOG instead of auto-generated
+
 ## 0.4.6
 
 ### Patch Changes
