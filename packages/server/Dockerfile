@@ -87,6 +87,9 @@ RUN rm -rf /app/packages/server/node_modules/@ecoctrl/shared && \
 # Install drizzle-kit globally for migration capability
 RUN npm install -g drizzle-kit@0.31.10
 
+# Install curl for healthcheck
+RUN apk add --no-cache curl
+
 # Ensure uploads directory exists and is writable
 RUN mkdir -p /app/uploads && chmod 755 /app/uploads
 
