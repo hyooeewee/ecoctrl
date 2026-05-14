@@ -1,5 +1,13 @@
 # @ecoctrl/web
 
+## 0.4.8
+
+### Patch Changes
+
+- [`92cbdfe`](https://github.com/hyooeewee/ecoctrl/commit/92cbdfef00950031cf0ff9a301d3a611e795dbcd) Thanks [@hyooeewee](https://github.com/hyooeewee)! - - add upload step to Cloudflare R2 for release assets
+  - add offline deploy bundle packaging and upload to Cloudflare R2
+  - add offline deployment instructions and Cloudflare R2 mirror links to documentation
+
 ## 0.4.7
 
 ### Patch Changes
