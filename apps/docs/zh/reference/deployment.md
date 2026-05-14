@@ -23,6 +23,20 @@ cp .env.example .env.local
 $EDITOR .env.local        # 设置 JWT_SECRET（必填）以及 IoT 凭据（可选）
 ```
 
+::: tip 离线部署（目标主机无外网）
+如果目标机器无法访问 GHCR 或 Docker Hub，可下载离线部署包：
+
+```bash
+curl -O https://bucket.godot.qzz.io/images/latest/ecoctrl.zip
+unzip ecoctrl.zip
+cd ecoctrl-docker
+sh migrate-images.sh compose.yaml --load ecoctrl-images.tar
+docker compose up -d
+```
+
+包内已包含预拉取的镜像（含 PostgreSQL）、`compose.yaml` 与加载脚本，无需连接外部仓库。
+:::
+
 ### 运行
 
 ```bash
@@ -64,8 +78,20 @@ GitHub Releases 为每个 tag 发布预构建 zip。其中包含 SPA bundle 与 
 
 打开 [GitHub Releases](https://github.com/hyooeewee/ecoctrl/releases)：
 
-- **`ecoctrl-all-vX.Y.Z.zip`** — 推荐，包含全部组件，可直接配合 `start.sh` 使用。
+- **`ecoctrl-vX.Y.Z.zip`** — 推荐，包含全部组件，可直接配合 `start.sh` 使用。
 - 单包：`admin-vX.Y.Z.zip`、`web-vX.Y.Z.zip`、`server-vX.Y.Z.zip`，并排解压到同一目录即可。
+
+::: tip 国内用户镜像
+如果 GitHub Releases 访问较慢，可从 Cloudflare R2 镜像下载（每次 release 自动同步）：
+
+| 文件   | 镜像地址                                                  |
+| ------ | --------------------------------------------------------- |
+| 完整包 | `https://bucket.godot.qzz.io/releases/latest/ecoctrl.zip` |
+| Admin  | `https://bucket.godot.qzz.io/releases/latest/admin.zip`   |
+| Web    | `https://bucket.godot.qzz.io/releases/latest/web.zip`     |
+| Server | `https://bucket.godot.qzz.io/releases/latest/server.zip`  |
+
+:::
 
 ### 解压结构
 
