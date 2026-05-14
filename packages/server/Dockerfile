@@ -79,6 +79,11 @@ COPY packages/shared packages/shared
 COPY packages/server/drizzle.config.ts packages/server/
 COPY packages/server/src/schemas packages/server/src/schemas
 
+# Replace workspace symlink with actual files — esm-loader's resolveTsPaths
+# cannot follow symlinks, so we copy the real source into node_modules.
+RUN rm -rf /app/packages/server/node_modules/@ecoctrl/shared && \
+    cp -a /app/packages/shared /app/packages/server/node_modules/@ecoctrl/shared
+
 # Install drizzle-kit globally for migration capability
 RUN npm install -g drizzle-kit@0.31.10
 
@@ -91,4 +96,32 @@ EXPOSE 3000
 
 # Run from packages/server to match the node_modules resolution path
 WORKDIR /app/packages/server
-CMD ["node", "dist/index.mjs"]
+
+# Entrypoint: generate migrations against live DB, then start server
+COPY <<'ENTRYPOINT' /entrypoint.sh
+#!/bin/sh
+set -e
+
+if [ ! -f /app/.migrated ]; then
+  echo "Generating drizzle migrations..."
+  npx drizzle-kit generate
+  echo "Running migrations..."
+  npx drizzle-kit migrate
+
+  # Copy generated drizzle to the path that the compiled code expects
+  mkdir -p /app/packages
+  cp -a /app/packages/server/drizzle /app/packages/drizzle
+
+  touch /app/.migrated
+  echo "Migration complete."
+else
+  echo "Already migrated, skipping."
+fi
+
+echo "Starting server..."
+exec node dist/index.mjs
+ENTRYPOINT
+
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
