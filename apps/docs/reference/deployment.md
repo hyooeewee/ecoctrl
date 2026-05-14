@@ -23,6 +23,20 @@ cp .env.example .env.local
 $EDITOR .env.local        # set JWT_SECRET (required) and IoT credentials (optional)
 ```
 
+::: tip Offline deployment (no internet on target host)
+If the target machine cannot reach GHCR or Docker Hub, download the offline bundle:
+
+```bash
+curl -O https://bucket.godot.qzz.io/images/latest/ecoctrl.zip
+unzip ecoctrl.zip
+cd ecoctrl-docker
+sh migrate-images.sh compose.yaml --load ecoctrl-images.tar
+docker compose up -d
+```
+
+The bundle contains pre-pulled images (including PostgreSQL), `compose.yaml`, and the load script. No external registry access is required.
+:::
+
 ### Run
 
 ```bash
@@ -64,8 +78,20 @@ GitHub Releases publishes pre-staged zips for every tagged version. They contain
 
 From [GitHub Releases](https://github.com/hyooeewee/ecoctrl/releases):
 
-- **`ecoctrl-all-vX.Y.Z.zip`** — recommended. Contains everything, ready for `start.sh`.
+- **`ecoctrl-vX.Y.Z.zip`** — recommended. Contains everything, ready for `start.sh`.
 - Component zips: `admin-vX.Y.Z.zip`, `web-vX.Y.Z.zip`, `server-vX.Y.Z.zip`. Extract them next to each other.
+
+::: tip For users in mainland China
+If GitHub Releases is slow or unreachable, download from our Cloudflare R2 mirror (same files, synced on every release):
+
+| File        | Mirror link                                               |
+| ----------- | --------------------------------------------------------- |
+| Full bundle | `https://bucket.godot.qzz.io/releases/latest/ecoctrl.zip` |
+| Admin only  | `https://bucket.godot.qzz.io/releases/latest/admin.zip`   |
+| Web only    | `https://bucket.godot.qzz.io/releases/latest/web.zip`     |
+| Server only | `https://bucket.godot.qzz.io/releases/latest/server.zip`  |
+
+:::
 
 ### Layout after unpacking
 
