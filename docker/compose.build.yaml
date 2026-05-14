@@ -51,7 +51,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./uploads:/app/uploads
+      - ./uploads:/app/packages/server/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -73,9 +73,9 @@ services:
       - STATIC_PREFIX=/static
     ports:
       - "8081:80"
-    # depends_on:
-    #   server:
-    #     condition: service_healthy
+    depends_on:
+      server:
+        condition: service_healthy
 
   admin:
     build:
@@ -88,9 +88,9 @@ services:
       - STATIC_PREFIX=/static
     ports:
       - "4173:80"
-    # depends_on:
-    #   server:
-    #     condition: service_healthy
+    depends_on:
+      server:
+        condition: service_healthy
 
 volumes:
   postgres_data:
