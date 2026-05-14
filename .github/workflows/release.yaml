@@ -197,6 +197,32 @@ jobs:
           zip -r "release-assets/ecoctrl-all-v${VERSION}.zip" ecoctrl
           rm -rf ecoctrl
 
+      - name: Upload to Cloudflare R2
+        run: |
+          BUCKET="ecoctrl"
+          VERSION="${{ needs.changeset.outputs.tag }}"
+          VERSION=${VERSION#v}
+
+          for file in release-assets/*.zip; do
+            filename=$(basename "$file")
+
+            # Versioned path
+            pnpm wrangler r2 object put "$BUCKET/releases/v$VERSION/$filename" \
+              --file="$file" \
+              --content-type="application/zip"
+
+            # Latest path (overwrite)
+            latest_name="${filename/-v${VERSION}/}"
+            pnpm wrangler r2 object put "$BUCKET/releases/latest/$latest_name" \
+              --file="$file" \
+              --content-type="application/zip"
+
+            echo "Uploaded: $filename -> v$VERSION + latest"
+          done
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
       - name: Generate release body
         id: changelog
         run: |
