@@ -75,9 +75,10 @@ COPY --from=builder /app/packages/server/dist /app/packages/server/dist
 # Copy shared package source (required for workspace:* resolution at runtime)
 COPY packages/shared packages/shared
 
-# Copy schema and drizzle config for runtime push capability
+# Copy schema, drizzle config, and migration files for runtime
 COPY packages/server/drizzle.config.ts packages/server/
 COPY packages/server/src/schemas packages/server/src/schemas
+COPY packages/server/drizzle packages/server/
 
 # Replace workspace symlink with actual files — esm-loader's resolveTsPaths
 # cannot follow symlinks, so we copy the real source into node_modules.
@@ -100,26 +101,16 @@ EXPOSE 3000
 # Run from packages/server to match the node_modules resolution path
 WORKDIR /app/packages/server
 
-# Entrypoint: generate migrations against live DB, then start server
+# Entrypoint: generate migrations if schema changed, then apply and start server
 COPY <<'ENTRYPOINT' /entrypoint.sh
 #!/bin/sh
 set -e
 
-if [ ! -f /app/.migrated ]; then
-  echo "Generating drizzle migrations..."
-  npx drizzle-kit generate
-  echo "Running migrations..."
-  npx drizzle-kit migrate
+echo "Generating drizzle migrations..."
+npx drizzle-kit generate
 
-  # Copy generated drizzle to the path that the compiled code expects
-  mkdir -p /app/packages
-  cp -a /app/packages/server/drizzle /app/packages/drizzle
-
-  touch /app/.migrated
-  echo "Migration complete."
-else
-  echo "Already migrated, skipping."
-fi
+echo "Running migrations..."
+npx drizzle-kit migrate || echo "No migrations to apply or migration failed, continuing to start server..."
 
 echo "Starting server..."
 exec node dist/index.mjs
