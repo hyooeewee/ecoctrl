@@ -27,7 +27,7 @@ services:
       POSTGRES_PASSWORD: ecoctrl_secret
       POSTGRES_DB: ecoctrl
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./ecoctrl/postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
@@ -51,7 +51,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./uploads:/app/packages/server/uploads
+      - ./ecoctrl/server_uploads:/app/packages/server/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -91,6 +91,3 @@ services:
     depends_on:
       server:
         condition: service_healthy
-
-volumes:
-  postgres_data:

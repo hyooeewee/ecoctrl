@@ -15,6 +15,17 @@ cp .env.example .env.local
 docker compose up -d
 ```
 
+### 升级
+
+升级前请备份数据目录（包含数据库和上传文件）：
+
+```bash
+cd docker
+tar czf ecoctrl.$(date +%y%m%d%H%M%S).bak ecoctrl/
+docker compose pull
+docker compose up -d
+```
+
 访问：
 
 - Web: http://localhost:8081
@@ -71,7 +82,7 @@ docker compose -f compose.build.yaml -f compose.dev.yaml up --build
 访问：
 
 - Web: http://localhost:8080
-- Admin: http://localhost:5173（Vite 默认开发端口）
+- Admin: http://localhost:5173
 - API: http://localhost:3000
 - DB: localhost:5432
 
