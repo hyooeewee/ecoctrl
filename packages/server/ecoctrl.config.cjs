@@ -35,7 +35,7 @@ module.exports = {
     },
     {
       name: "ecoctrl-worker",
-      script: "queue/worker.mjs",
+      script: "worker.mjs",
       interpreter: "node",
       exec_mode: "cluster",
       instances: 2,
