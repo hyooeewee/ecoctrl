@@ -1,9 +1,23 @@
+# Dependencies
 node_modules/
+
+# Build outputs
 **/build/
 **/dist/
 coverage/
-.DS_Store
-*.log
+
+# Environment
 .env*
 !.env.example
+
+# Logs
+*.log
+
+# System files
+.DS_Store
+
+# Backups
 **/*.bak
+
+# Project-specific
+docker/ecoctrl/

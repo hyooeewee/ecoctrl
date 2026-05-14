@@ -1,1 +1,0 @@
-ALTER TABLE "fault_stats" ALTER COLUMN "mttr" SET DATA TYPE real;
