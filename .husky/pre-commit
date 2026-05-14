@@ -1,9 +1,15 @@
-pnpm sync:env
-git add apps/*/.env.example packages/*/.env.example
-
+# Skip in CI or when HUSKY is disabled
 if [ "$HUSKY" = "0" ] || [ -n "$CI" ]; then
   exit 0
 fi
+
+# Non-interactively sync .env.example files (avoid confirm prompts blocking pre-commit)
+for dir in packages/server apps/web apps/admin; do
+  if [ -f "$dir/.env.local" ]; then
+    pnpm exec tsx packages/shared/scripts/gen-env-example.ts "$dir/.env.local" -y
+  fi
+done
+git add apps/*/.env.example packages/*/.env.example
 
 STAGED=$(git diff --cached --name-only --diff-filter=ACM | paste -sd " " -)
 [ -z "$STAGED" ] && exit 0
