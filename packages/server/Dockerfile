@@ -14,7 +14,7 @@
 # ────────────────────────────
 # Stage 1: Builder
 # ────────────────────────────
-FROM node:22-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 
@@ -46,7 +46,7 @@ RUN pnpm --filter @ecoctrl/server build
 # ────────────────────────────
 # Stage 2: Production
 # ────────────────────────────
-FROM node:22-alpine AS production
+FROM node:24-alpine AS production
 
 WORKDIR /app
 
