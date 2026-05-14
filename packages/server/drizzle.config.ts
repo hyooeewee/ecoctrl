@@ -3,6 +3,8 @@ import { defineConfig, type Config } from "drizzle-kit";
 
 config({ path: ".env.local", override: false });
 
+console.log("Using database URL:", process.env.DATABASE_URL);
+
 export default defineConfig({
   schema: "./src/schemas/*",
   out: "./drizzle",
