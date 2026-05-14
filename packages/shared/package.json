@@ -11,6 +11,8 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@clack/prompts": "catalog:",
+    "tsx": "catalog:",
     "typescript": "catalog:",
     "vite-plus": "catalog:"
   }
