@@ -41,17 +41,11 @@ jobs:
                 if (tags ~ /(^|,)latest(,|$)/) next
                 # Collect v* versions
                 if (tags ~ /(^|,)v[0-9]/) v[++v_count] = id
-                # Collect sha-* versions
-                else if (tags ~ /sha-/) sha[++sha_count] = id
               }
               END {
                 # Delete old v* versions (keep 5 newest)
                 if (v_count > 5) {
                   for (i = 6; i <= v_count; i++) print v[i]
-                }
-                # Delete old sha versions (keep 5 newest)
-                if (sha_count > 5) {
-                  for (i = 6; i <= sha_count; i++) print sha[i]
                 }
               }
             ')
