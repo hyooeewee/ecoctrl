@@ -21,7 +21,7 @@ docker compose up -d
 
 ```bash
 cd docker
-tar czf ecoctrl.$(date +%y%m%d%H%M%S).bak ecoctrl/
+tar czf ecoctrl.$(date +%Y%m%d%H%M%S).bak ecoctrl/
 docker compose pull
 docker compose up -d
 ```
