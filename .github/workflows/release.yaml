@@ -186,6 +186,7 @@ jobs:
           cp -r apps/admin/dist/. ecoctrl/admin/
           cp -r apps/web/build/client/. ecoctrl/web/
           cp -r packages/server/dist/. ecoctrl/server/
+          cp scripts/start.sh ecoctrl/
 
           cd ecoctrl
           zip -r "../release-assets/admin-v${VERSION}.zip" admin
