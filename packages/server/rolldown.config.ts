@@ -1,5 +1,7 @@
 import { defineConfig } from "rolldown";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
 import { writeFile, readFile } from "node:fs/promises";
 import pkg from "./package.json" with { type: "json" };
 
@@ -33,6 +35,19 @@ export default defineConfig({
   },
 
   plugins: [
+    {
+      name: "emit-env-example",
+      buildStart() {
+        const scriptPath = path.resolve(
+          path.dirname(fileURLToPath(import.meta.url)),
+          "../shared/scripts/gen-env-example.ts",
+        );
+        const result = spawnSync("tsx", [scriptPath, "-y"], { stdio: "inherit" });
+        if (result.status !== 0) {
+          this.warn(`gen-env-example exited with code ${result.status ?? result.signal}`);
+        }
+      },
+    },
     {
       name: "emit-static-assets",
       async generateBundle() {
