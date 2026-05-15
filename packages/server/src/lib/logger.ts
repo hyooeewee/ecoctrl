@@ -1,3 +1,6 @@
+import { config } from "dotenv";
+config({ path: ".env.local" });
+
 import pino from "pino";
 import type { Logger, LoggerOptions } from "pino";
 import pinoPretty from "pino-pretty";
