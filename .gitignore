@@ -23,3 +23,7 @@ coverage/
 docker/ecoctrl/
 
 .worktrees/
+
+**/superpowers/
+**/CLAUDE.md
+*.csv
