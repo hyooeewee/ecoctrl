@@ -6,12 +6,13 @@ export function createAIClient(
   provider: "anthropic" | "openai",
   apiKey: string,
   baseURL?: string,
+  model?: string,
 ): AIClient {
   switch (provider) {
     case "anthropic":
-      return new AnthropicClient(apiKey, baseURL);
+      return new AnthropicClient(apiKey, baseURL, model);
     case "openai":
-      return new OpenAIClient(apiKey, baseURL);
+      return new OpenAIClient(apiKey, baseURL, model);
     default:
       throw new Error(`Unsupported AI provider: ${provider}`);
   }
