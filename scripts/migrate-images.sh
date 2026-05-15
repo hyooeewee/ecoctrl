@@ -15,7 +15,7 @@ usage() {
   cat <<EOF
 Migrate Docker images for offline deployment.
 
-Usage: sh $(basename "$0") [compose-file] [OPTIONS]
+Usage: bash $(basename "$0") [compose-file] [OPTIONS]
 
 Arguments:
   compose-file           Path to compose.yaml (default: ../docker/compose.yaml)
@@ -28,13 +28,13 @@ Options:
 
 Examples:
   # Load from default tar
-  sh $(basename "$0")
+  bash $(basename "$0")
 
   # Export with default tar path
-  sh $(basename "$0") --export
+  bash $(basename "$0") --export
 
   # Export with custom platform
-  sh $(basename "$0") ../docker/compose.yaml --export ./ecoctrl-images.bak --platform linux/arm64
+  bash $(basename "$0") ../docker/compose.yaml --export ./ecoctrl-images.bak --platform linux/arm64
 EOF
 }
 
@@ -150,7 +150,7 @@ if [[ "$MODE" == "export" ]]; then
   echo
   echo "Done. Package size: $(du -h "$TAR_FILE" | cut -f1)"
   echo "Transfer this file to the offline machine and run:"
-  echo "  sh $(basename "$0") --load \"$TAR_FILE\""
+  echo "  bash $(basename "$0") --load \"$TAR_FILE\""
 
 else
   echo "Mode: LOAD"
