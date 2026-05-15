@@ -9,29 +9,31 @@ export function usePetPosition(initialX?: number, initialY?: number) {
     x: initialX ?? (typeof window !== "undefined" ? window.innerWidth - PET_SIZE - MARGIN : 400),
     y: initialY ?? (typeof window !== "undefined" ? window.innerHeight - PET_SIZE - MARGIN : 500),
   });
+  const positionRef = useRef(position);
+  // Keep ref in sync with state for event handlers
+  positionRef.current = position;
+
   const [isDragging, setIsDragging] = useState(false);
   const [dragDirection, setDragDirection] = useState<"left" | "right" | null>(null);
   const isDraggingRef = useRef(false);
   const hasDraggedRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0, posX: 0, posY: 0 });
 
-  const handlePointerDown = useCallback(
-    (e: React.PointerEvent) => {
-      const target = e.currentTarget as HTMLElement;
-      target.setPointerCapture(e.pointerId);
-      isDraggingRef.current = true;
-      hasDraggedRef.current = false;
-      setIsDragging(true);
-      setDragDirection(null);
-      dragStartRef.current = {
-        x: e.clientX,
-        y: e.clientY,
-        posX: position.x,
-        posY: position.y,
-      };
-    },
-    [position],
-  );
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    const target = e.currentTarget as HTMLElement;
+    target.setPointerCapture(e.pointerId);
+    isDraggingRef.current = true;
+    hasDraggedRef.current = false;
+    setIsDragging(true);
+    setDragDirection(null);
+    // Read latest position from ref to avoid stale closure
+    dragStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      posX: positionRef.current.x,
+      posY: positionRef.current.y,
+    };
+  }, []);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (!isDraggingRef.current) return;
