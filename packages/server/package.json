@@ -28,6 +28,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.96.0",
     "@fastify/cors": "^10.0.0",
     "@fastify/jwt": "^9.1.0",
     "@fastify/multipart": "^9.0.0",
@@ -43,6 +44,7 @@
     "fastify-type-provider-zod": "^6.1.0",
     "jsep": "^1.4.0",
     "nodemailer": "^8.0.5",
+    "openai": "^6.37.0",
     "pg-boss": "^12.18.2",
     "postgres": "^3.4.9",
     "rolldown": "1.0.0-rc.16",
