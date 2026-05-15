@@ -4,8 +4,8 @@ import type { AIClient, ChatMessage, Tool, AIStreamChunk } from "../types";
 export class AnthropicClient implements AIClient {
   private client: Anthropic;
 
-  constructor(apiKey: string) {
-    this.client = new Anthropic({ apiKey });
+  constructor(apiKey: string, baseURL?: string) {
+    this.client = new Anthropic({ apiKey, baseURL });
   }
 
   async chat(
