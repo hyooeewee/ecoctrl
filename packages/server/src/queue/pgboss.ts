@@ -1,4 +1,7 @@
 import { PgBoss } from "pg-boss";
+import { getLogger } from "@/lib/logger";
+
+const logger = getLogger("queue");
 
 const JOB_NAME = "workflow.execute";
 
@@ -25,7 +28,7 @@ export async function initQueue(): Promise<PgBoss> {
   } as ConstructorParameters<typeof PgBoss>[0]);
   await boss.start();
   await boss.createQueue(JOB_NAME);
-  console.log("[pg-boss] Queue initialized");
+  logger.info("[pg-boss] Queue initialized");
   return boss;
 }
 
