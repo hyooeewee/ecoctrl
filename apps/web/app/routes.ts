@@ -6,4 +6,6 @@ export default [
   route("systems", "routes/systems.tsx"),
   route("analysis", "routes/analysis.tsx"),
   route("settings", "routes/settings.tsx"),
+  // Silences Chrome DevTools self-detection probe in development
+  route(".well-known/*", "routes/well-known.tsx"),
 ] satisfies RouteConfig;
