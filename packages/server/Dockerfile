@@ -11,30 +11,14 @@
 #     -v ecoctrl-uploads:/app/uploads \
 #     ecoctrl-server
 
+ARG BUILDER_IMAGE=ghcr.io/hyooeewee/ecoctrl/builder:cache
+
 # ────────────────────────────
-# Stage 1: Builder
+# Stage 1: Builder (from shared base)
 # ────────────────────────────
-FROM node:24-alpine AS builder
+FROM ${BUILDER_IMAGE} AS builder
 
 WORKDIR /app
-
-# Use domestic npm mirror for stable downloads inside China
-ENV COREPACK_NPM_REGISTRY=https://registry.npmmirror.com
-ENV NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
-
-# Enable pnpm via corepack, reading version dynamically from package.json
-RUN corepack enable
-
-# Copy workspace manifests for optimal layer caching
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
-RUN PNPM_VERSION=$(node -p "require('./package.json').packageManager.replace('pnpm@','')") && \
-    corepack prepare pnpm@${PNPM_VERSION} --activate
-COPY packages/server/package.json packages/server/
-COPY packages/shared/package.json packages/shared/
-
-# Install dependencies with shared pnpm cache to avoid concurrent download conflicts
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile
 
 # Copy source code
 COPY packages/server/ packages/server/
@@ -114,7 +98,6 @@ npx drizzle-kit migrate || echo "No migrations to apply or migration failed, con
 echo "Starting server..."
 exec node dist/index.mjs
 ENTRYPOINT
-
 RUN chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]

@@ -6,31 +6,14 @@
 # Run (pass .env.local for Caddy to read API_BASE_URL / API_PREFIX / STATIC_PREFIX):
 #   docker run -d -p 4173:80 --env-file apps/admin/.env.local --name ecoctrl-admin ecoctrl-admin
 
+ARG BUILDER_IMAGE=ghcr.io/hyooeewee/ecoctrl/builder:cache
+
 # ────────────────────────────
-# Stage 1: Builder
+# Stage 1: Builder (from shared base)
 # ────────────────────────────
-FROM node:24-alpine AS builder
+FROM ${BUILDER_IMAGE} AS builder
 
 WORKDIR /app
-
-# Use domestic npm mirror for stable downloads inside China
-ENV COREPACK_NPM_REGISTRY=https://registry.npmmirror.com
-ENV NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
-
-# Enable pnpm via corepack, reading version dynamically from package.json
-RUN corepack enable
-
-# Copy workspace manifests for optimal layer caching
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
-RUN PNPM_VERSION=$(node -p "require('./package.json').packageManager.replace('pnpm@','')") && \
-    corepack prepare pnpm@${PNPM_VERSION} --activate
-COPY apps/admin/package.json apps/admin/
-COPY packages/shared/package.json packages/shared/
-COPY packages/ui/package.json packages/ui/
-
-# Install dependencies with shared pnpm cache to avoid concurrent download conflicts
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile
 
 # Copy source code
 COPY . .
