@@ -106,6 +106,34 @@ vp lint     # lint only
 
 The `vp check` command is the single source of truth for code quality — it runs the formatter, linter and the type checker in one shot.
 
+## Running tests
+
+Every package ships with [Vitest](https://vitest.dev/) tests:
+
+```bash
+pnpm test              # run all tests once
+pnpm test:watch        # watch mode
+pnpm test:coverage     # with coverage report
+pnpm test:ui           # open the Vitest UI in your browser
+```
+
+Run from the monorepo root to execute every package's suite, or `cd` into a specific package to run its tests only.
+
+## Queue worker in development
+
+`packages/server` uses [pg-boss](https://github.com/timgit/pg-boss) for background jobs (report generation, workflow execution, scheduled backups). In development the worker starts automatically alongside the API — no extra process is needed. Job progress is logged to stdout with the same pino JSON format as HTTP requests.
+
+## i18n workflow
+
+Both `apps/web` and `apps/admin` support internationalization. Locale files live under `apps/web/app/locales/` and `apps/admin/src/locales/` respectively. When you add or remove a user-facing string:
+
+1. Add the key to **both** locale files (e.g. `en-US.ts` and `zh-CN.ts`).
+2. Remove dead keys promptly — run the dead-code checker after any locale change:
+
+   ```bash
+   uv run scripts/check-locale-dead-code.py
+   ```
+
 ## Project conventions at a glance
 
 - **Comments and docstrings**: English only.

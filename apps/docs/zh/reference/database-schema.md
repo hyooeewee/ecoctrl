@@ -106,17 +106,9 @@ EcoCtrl 把所有数据保存在一个 PostgreSQL 数据库中。Schema 使用 [
 
 ### 仪表盘配置
 
-#### `dashboard_stats`
-
-管理后台仪表盘的 KPI 卡片。字段：`id`、`key`、`value`、`unit`、`trend`、`trendType`、`snapshotAt`。
-
 #### `dashboard_widgets`
 
 可拖拽布局的挂件网格。包含布局尺寸（`layoutX/Y/W/H`）、`dataType`、自由格式的 `dataJson`、`enabled`、`hidden`、`sortOrder`。
-
-#### `three_d_configs`
-
-被 `apps/web` Babylon 场景消费的 3D 场景配置。保存 `cameraPreset`、`ambientLightIntensity`、热点与标签的 JSON 数组。
 
 ### 报表与备份
 
@@ -141,6 +133,95 @@ EcoCtrl 把所有数据保存在一个 PostgreSQL 数据库中。Schema 使用 [
 #### `files`
 
 通用上传元数据：name、mime、size、fileUrl。
+
+### 工作流引擎
+
+#### `workflows`
+
+工作流定义以 JSON DSL 存储。
+
+| 字段          | 类型        | 说明                               |
+| ------------- | ----------- | ---------------------------------- |
+| `id`          | uuid PK     |                                    |
+| `name`        | varchar     | 可读名称                           |
+| `description` | text        | 可选                               |
+| `dsl`         | jsonb       | 完整工作流 DSL（节点、边、触发器） |
+| `enabled`     | boolean     | 是否激活                           |
+| `createdAt`   | timestamptz |                                    |
+| `updatedAt`   | timestamptz |                                    |
+
+#### `workflow_executions`
+
+每次工作流运行的执行日志。
+
+| 字段          | 类型        | 说明                               |
+| ------------- | ----------- | ---------------------------------- |
+| `id`          | uuid PK     |                                    |
+| `workflowId`  | uuid FK     | → workflows(id)                    |
+| `status`      | varchar     | `completed` / `failed` / `running` |
+| `triggerData` | jsonb       | 触发时的数据                       |
+| `result`      | jsonb       | 最终输出与节点日志                 |
+| `startedAt`   | timestamptz |                                    |
+| `completedAt` | timestamptz | 可为空                             |
+
+### IoT 集成
+
+#### `objects`
+
+IoT 对象元数据 — 上游网关中的物理设备或数据点。
+
+| 字段          | 类型        | 说明           |
+| ------------- | ----------- | -------------- |
+| `id`          | uuid PK     |                |
+| `code`        | varchar     | 上游唯一标识符 |
+| `name`        | varchar     | 可读名称       |
+| `type`        | varchar     | 对象类别       |
+| `description` | text        | 可选           |
+| `metadata`    | jsonb       | 上游属性       |
+| `createdAt`   | timestamptz |                |
+
+### 碳排放追踪
+
+#### `carbon_factors`
+
+碳计算排放因子。
+
+| 字段        | 类型        | 说明           |
+| ----------- | ----------- | -------------- |
+| `id`        | uuid PK     |                |
+| `name`      | varchar     | 因子名称       |
+| `value`     | real        | 每单位 kg CO₂e |
+| `unit`      | varchar     | 如 `kWh`、`m³` |
+| `category`  | varchar     | 分组类别       |
+| `createdAt` | timestamptz |                |
+
+#### `carbon_factor_nodes`
+
+排放因子的树形节点。
+
+| 字段        | 类型    | 说明                              |
+| ----------- | ------- | --------------------------------- |
+| `id`        | uuid PK |                                   |
+| `parentId`  | uuid FK | → carbon_factor_nodes(id)，可为空 |
+| `factorId`  | uuid FK | → carbon_factors(id)，可为空      |
+| `name`      | varchar | 节点标签                          |
+| `sortOrder` | integer | 显示顺序                          |
+
+### 3D 场景配置
+
+#### `dashboard_models`
+
+web 门户的单行 3D 场景配置。
+
+| 字段                    | 类型        | 说明                 |
+| ----------------------- | ----------- | -------------------- |
+| `id`                    | serial PK   |                      |
+| `modelFileUrl`          | varchar     | glTF/glB 模型路径    |
+| `cameraPreset`          | varchar     | 命名相机角度         |
+| `ambientLightIntensity` | real        | 0–1 环境光强度       |
+| `hotspots`              | jsonb       | {x,y,z,label} 数组   |
+| `labels`                | jsonb       | {position,text} 数组 |
+| `updatedAt`             | timestamptz |                      |
 
 ## 新增一张表
 

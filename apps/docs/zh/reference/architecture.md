@@ -136,12 +136,12 @@ ecoctrl-web   (Caddy)   :8081 → /api /static 重写到 http://server:3000
 
 每个 App 的 Dockerfile 产出小镜像：SPA bundle + 一份用于改写 API/static 前缀的 Caddyfile。Compose 文件挂载各 App 的 `.env.local`，因此后端主机与前缀都可以在不重新构建的前提下调整。
 
-### Release zip（`ecoctrl-all-vX.Y.Z.zip`）
+### Release zip（`ecoctrl-vX.Y.Z.zip`）
 
 ```
 ecoctrl/
 ├── start.sh          # 交互菜单 — 启动 / 重启 / 停止
-├── server/dist/...   # node bundle + 自动生成的 package.json
+├── server/...        # node bundle + 自动生成的 package.json
 ├── admin/...         # 静态资源
 └── web/...           # 静态资源
 ```
@@ -156,6 +156,37 @@ ecoctrl/
 - 服务端工具函数在每次外发请求前检查过期时间，需要时刷新并持久化新的 token。
 - 客户端永远只调用 EcoCtrl，不会接触上游凭据。
 
+## 工作流引擎
+
+工作流引擎（`packages/server/src/engine/`）执行 JSON DSL 定义的 DAG。每个工作流有一个触发器（状态变更、定时、手动、Webhook 或事件）和一个节点图。
+
+- **`validator.ts`** — 校验 DSL 结构（节点 ID、边连通性、必填字段）。
+- **`expr.ts`** — 轻量级表达式求值器，用于条件和变量插值。
+- **`trigger.ts`** — 根据传入数据判断触发器是否应该触发。
+- **`executor.ts`** — 顺序运行节点图，维护 `ExecutionContext`（变量、节点输出、环境）。
+- **`template.ts`** — 字符串模板，用于 HTTP 请求体、邮件主题等。
+
+节点分为**控制**节点（`start`、`end`、`condition`、`switch`、`loop`、`parallel`、`delay`）和**动作**节点（`http_request`、`database`、`email`、`variable`）。每个节点可以声明 `onError` 处理器，策略包括：`retry`、`skip`、`abort` 或 `goto` 到指定节点。
+
+admin 后台提供可视化编辑器（`WorkflowCanvas.tsx`，基于 XYFlow）。工作流持久化到 `workflows` 表，可通过手动、pg-boss 定时或公开 `POST /api/webhook/:slug` 端点执行。
+
+## 队列与 Worker 系统
+
+`packages/server` 使用 [pg-boss](https://github.com/timgit/pg-boss) 处理后台任务：
+
+- **`queue/pgboss.ts`** — 针对同一 PostgreSQL 数据库初始化 pg-boss 实例。
+- **`queue/worker.ts`** — 注册任务处理器（报表生成、备份任务、工作流执行）。
+
+任务通过 `boss.send('queue-name', payload, options)` 入队，由 Worker 在同一 Node 进程中处理。生产环境 Worker 与 API 服务器同进程运行；开发环境自动启动。失败任务以指数退避重试，直到达到可配置上限。
+
+## 仪表盘组件
+
+`apps/web` 在公共门户渲染可拖拽的组件网格。组件类型包括统计卡片、图表、列表、天气和能耗图表。布局指标（`layoutX`、`layoutY`、`layoutW`、`layoutH`）和数据绑定（`dataType`、`dataJson`）存储在 `dashboard_widgets` 表中。天气组件需要 `OPENWEATHER_API_KEY`；缺失时自动隐藏。
+
+## 3D 模型管道
+
+3D 模型通过 admin 后台上传（`ModelFileZone.tsx` + `ModelViewer.tsx`），保存在磁盘 `uploads/models/`。`models` 表跟踪元数据；`dashboard_models` 存储场景配置（相机预设、环境光强度、热点位置和标签）。web 门户通过 Babylon.js（`building-view.tsx`）和公开端点 `GET /api/public/model` 加载模型。
+
 ## 文档站点（`apps/docs`）
 
-VitePress 2，使用 [bilingual locales](https://vitepress.dev/guide/i18n)：英文位于根路径，简体中文位于 `/zh/`。内容存放在 `apps/docs/{guide,reference,zh}` 下，通过 Cloudflare Workers Static Assets 部署到 `ecoctrl.godot.run`。公共看板的只读访问通过把 `GET /api/dashboard` 加入公共白名单实现。
+VitePress 2，使用 [bilingual locales](https://vitepress.dev/guide/i18n)：英文位于根路径，简体中文位于 `/zh/`。内容存放在 `apps/docs/{guide,reference,zh}` 下，部署到 `ecoctrl.godot.run`。公共看板的只读访问通过把 `GET /api/public/dashboard` 加入公共白名单实现。

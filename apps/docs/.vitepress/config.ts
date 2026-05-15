@@ -1,4 +1,5 @@
 import { defineConfig } from "vitepress";
+import { tabsMarkdownPlugin } from "vitepress-plugin-tabs";
 
 export default defineConfig({
   title: "EcoCtrl",
@@ -8,6 +9,12 @@ export default defineConfig({
   ignoreDeadLinks: true,
 
   head: [["link", { rel: "icon", type: "image/svg+xml", href: "/logo.svg" }]],
+
+  markdown: {
+    config(md) {
+      md.use(tabsMarkdownPlugin);
+    },
+  },
 
   sitemap: {
     hostname: "https://ecoctrl.godot.run",
@@ -58,8 +65,7 @@ export default defineConfig({
           },
           {
             text: "API Docs",
-            link: "http://localhost:3000/documentation",
-            target: "_blank",
+            link: "/reference/api",
           },
         ],
 
@@ -71,6 +77,9 @@ export default defineConfig({
                 { text: "What is EcoCtrl", link: "/guide/introduction" },
                 { text: "Getting Started", link: "/guide/getting-started" },
                 { text: "Development", link: "/guide/development" },
+                { text: "Testing", link: "/guide/testing" },
+                { text: "Internationalization", link: "/guide/i18n" },
+                { text: "UI Library", link: "/guide/ui-library" },
               ],
             },
             {
@@ -86,6 +95,13 @@ export default defineConfig({
               text: "Reference",
               items: [
                 { text: "Architecture", link: "/reference/architecture" },
+                { text: "Workflow Engine", link: "/reference/workflows" },
+                { text: "Queue & Worker", link: "/reference/queue" },
+                { text: "IoT Integration", link: "/reference/iot" },
+                { text: "File Upload", link: "/reference/file-upload" },
+                { text: "Reports", link: "/reference/reports" },
+                { text: "Dashboard Widgets", link: "/reference/dashboard-widgets" },
+                { text: "3D Models", link: "/reference/3d-models" },
                 { text: "Environment Variables", link: "/reference/env-vars" },
                 { text: "Database Schema", link: "/reference/database-schema" },
                 { text: "API Routes", link: "/reference/api" },
@@ -139,8 +155,7 @@ export default defineConfig({
           },
           {
             text: "API 文档",
-            link: "http://localhost:3000/documentation",
-            target: "_blank",
+            link: "/zh/reference/api",
           },
         ],
 
@@ -152,6 +167,9 @@ export default defineConfig({
                 { text: "EcoCtrl 是什么", link: "/zh/guide/introduction" },
                 { text: "快速上手", link: "/zh/guide/getting-started" },
                 { text: "开发指南", link: "/zh/guide/development" },
+                { text: "测试", link: "/zh/guide/testing" },
+                { text: "国际化", link: "/zh/guide/i18n" },
+                { text: "UI 组件库", link: "/zh/guide/ui-library" },
               ],
             },
             {
@@ -167,6 +185,13 @@ export default defineConfig({
               text: "参考资料",
               items: [
                 { text: "架构总览", link: "/zh/reference/architecture" },
+                { text: "工作流引擎", link: "/zh/reference/workflows" },
+                { text: "队列与 Worker", link: "/zh/reference/queue" },
+                { text: "IoT 集成", link: "/zh/reference/iot" },
+                { text: "文件上传", link: "/zh/reference/file-upload" },
+                { text: "报表系统", link: "/zh/reference/reports" },
+                { text: "仪表盘组件", link: "/zh/reference/dashboard-widgets" },
+                { text: "3D 模型", link: "/zh/reference/3d-models" },
                 { text: "环境变量", link: "/zh/reference/env-vars" },
                 {
                   text: "数据库 Schema",

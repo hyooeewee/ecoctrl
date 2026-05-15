@@ -136,12 +136,12 @@ ecoctrl-web   (Caddy)   :8081 → /api /static rewritten to http://server:3000
 
 Per-app Dockerfiles produce small images: the SPA bundle plus a Caddyfile that rewrites the API/static prefixes. The compose file mounts each app's `.env.local` so backend host and prefix are configurable without rebuilding.
 
-### Release zip (`ecoctrl-all-vX.Y.Z.zip`)
+### Release zip (`ecoctrl-vX.Y.Z.zip`)
 
 ```
 ecoctrl/
 ├── start.sh          # interactive menu — start, restart, stop
-├── server/dist/...   # node bundle + auto-generated package.json
+├── server/...        # node bundle + auto-generated package.json
 ├── admin/...         # static files
 └── web/...           # static files
 ```
@@ -156,6 +156,37 @@ Routes under `/api/iot/*` proxy a third-party gateway. The token-refresh logic i
 - A service helper checks expiry on every outbound call, refreshes when needed, and persists the new pair.
 - Clients call EcoCtrl, never the upstream — credentials never reach the browser.
 
+## Workflow engine
+
+The workflow engine (`packages/server/src/engine/`) executes DAGs defined in a JSON DSL. Each workflow has a trigger (state-change, schedule, manual, webhook or event) and a node graph.
+
+- **`validator.ts`** — validates the DSL structure (node IDs, edge connectivity, required fields).
+- **`expr.ts`** — lightweight expression evaluator for conditions and variable interpolation.
+- **`trigger.ts`** — evaluates whether a trigger should fire given incoming data.
+- **`executor.ts`** — runs the node graph sequentially, maintaining an `ExecutionContext` (variables, node outputs, env).
+- **`template.ts`** — string templating for HTTP request bodies, email subjects, etc.
+
+Nodes are divided into **control** nodes (`start`, `end`, `condition`, `switch`, `loop`, `parallel`, `delay`) and **action** nodes (`http_request`, `database`, `email`, `variable`). Each node can declare an `onError` handler with strategies: `retry`, `skip`, `abort` or `goto` a specific node.
+
+The admin dashboard provides a visual editor (`WorkflowCanvas.tsx` powered by XYFlow). Workflows are persisted in the `workflows` table and executed either manually, on schedule via pg-boss, or via the public `POST /api/webhook/:slug` endpoint.
+
+## Queue & worker system
+
+`packages/server` uses [pg-boss](https://github.com/timgit/pg-boss) for background job processing:
+
+- **`queue/pgboss.ts`** — initializes the pg-boss instance against the same PostgreSQL database.
+- **`queue/worker.ts`** — registers job handlers (report generation, backup tasks, workflow execution).
+
+Jobs are enqueued with `boss.send('queue-name', payload, options)` and processed by the worker in the same Node process. In production the worker runs alongside the API server; in development it starts automatically. Failed jobs are retried with exponential backoff up to a configurable limit.
+
+## Dashboard widgets
+
+`apps/web` renders a drag-and-drop widget grid on the public portal. Widget types include stat cards, charts, lists, weather and energy charts. Layout metrics (`layoutX`, `layoutY`, `layoutW`, `layoutH`) and data binding (`dataType`, `dataJson`) are stored in the `dashboard_widgets` table. The weather widget requires `OPENWEATHER_API_KEY`; when absent it is hidden automatically.
+
+## 3D model pipeline
+
+3D models are uploaded through the admin dashboard (`ModelFileZone.tsx` + `ModelViewer.tsx`) and stored on disk under `uploads/models/`. The `models` table tracks metadata; `dashboard_models` stores scene configuration (camera preset, ambient light intensity, hotspot positions and labels). The web portal loads the model via Babylon.js (`building-view.tsx`) and the public endpoint `GET /api/public/model`.
+
 ## Documentation site (`apps/docs`)
 
-VitePress 2 with [bilingual locales](https://vitepress.dev/guide/i18n): English at root and 简体中文 at `/zh/`. Content lives under `apps/docs/{guide,reference,zh}` and the site is deployed to `ecoctrl.godot.run` via Cloudflare Workers Static Assets. Public read access to runtime stats is enabled by exposing only `GET /api/dashboard` on the public allowlist.
+VitePress 2 with [bilingual locales](https://vitepress.dev/guide/i18n): English at root and 简体中文 at `/zh/`. Content lives under `apps/docs/{guide,reference,zh}` and the site is deployed to `ecoctrl.godot.run`. Public read access to runtime stats is enabled by exposing only `GET /api/public/dashboard` on the public allowlist.

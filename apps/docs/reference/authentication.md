@@ -136,3 +136,7 @@ Refer to [API Routes — Public routes](/reference/api#public-routes-no-token) f
 - **Rotating `JWT_SECRET`**: invalidates every issued access token. Refresh tokens still work, so users can mint a new access token without a fresh login. Combine with a refresh-token wipe (`TRUNCATE refresh_tokens`) for a hard logout-everyone.
 - **Session length**: increase access-token lifetime by editing `expiresIn: "15m"` in `packages/server/index.ts`. Increase refresh-token lifetime by editing the `7 * 24 * 60 * 60 * 1000` constant in `routes/auth.ts`.
 - **Audit who is signed in**: `SELECT userId, COUNT(*) FROM refresh_tokens GROUP BY userId` shows live sessions (currently always 0 or 1 per user).
+
+## Role-based access
+
+Users have a `role` column drawn from `USER_ROLE_LIST`. The default role for new registrations is the lowest entry (currently `viewer`). Roles are checked in route handlers or via Fastify decorators — there is no middleware-level RBAC gate. The admin dashboard's user management page allows promoting or demoting users.

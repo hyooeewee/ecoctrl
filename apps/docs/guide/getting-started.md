@@ -37,7 +37,7 @@ When the build finishes, the stack is reachable at:
 | Swagger UI      | http://localhost:3000/documentation |
 
 ::: tip First-time login
-The seeded admin account is created on the very first run. Open the admin dashboard, register or sign in, and you are ready to explore.
+The seeded admin account is created on the very first run. The default credentials are `admin` / the password printed by `pnpm db:seed` (or set via `INITIAL_ADMIN_PASSWORD` in `.env.local`). Open the admin dashboard at http://localhost:4173 and sign in.
 :::
 
 ### Stop the stack
@@ -55,7 +55,7 @@ Each tagged version on GitHub publishes pre-built artifacts you can drop on any 
 
 Open [GitHub Releases](https://github.com/hyooeewee/ecoctrl/releases) and grab either:
 
-- **`ecoctrl-all-vX.Y.Z.zip`** — every component pre-staged, recommended.
+- **`ecoctrl-vX.Y.Z.zip`** — every component pre-staged, recommended.
 - Individual zips: `admin-vX.Y.Z.zip`, `web-vX.Y.Z.zip`, `server-vX.Y.Z.zip`. Extract them next to each other inside an `ecoctrl/` directory.
 
 ### Layout

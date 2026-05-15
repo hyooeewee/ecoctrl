@@ -109,6 +109,52 @@ pnpm changeset
 
 发布工作流（见 [部署指南](/zh/reference/deployment)）会自动完成版本号升级、changelog 生成与 release 发布。
 
+## `@ecoctrl/ui` — 共享组件库
+
+`packages/ui` 是一个**源码分发**的 UI 库，基于 [Base UI](https://base-ui.com/)（Radix v2）构建，使用 Tailwind CSS v4 + `class-variance-authority` 进行样式处理。
+
+### 添加 shadcn 组件
+
+```bash
+cd packages/ui
+pnpm dlx shadcn@latest add <component-name> -y
+pnpm generate-proxies
+```
+
+`generate-proxies` 会同步 `package.json` 的 `exports` 字段，使消费者可以使用子路径导入：
+
+```tsx
+import { Field } from "@ecoctrl/ui/field";
+import { buttonVariants } from "@ecoctrl/ui/button";
+```
+
+### 添加自定义组件
+
+在 `src/components/ui/`（shadcn 基础）或 `src/components/community/`（项目专属）中创建，然后运行 `pnpm generate-proxies`。
+
+### 约定
+
+- 使用 `cn()` 来自 `@/lib/utils` 进行类名合并。
+- 使用 `cva` 为带样式变体的组件。
+- 在根元素上添加 `data-slot="component-name"`。
+- 命名导出；复合组件导出所有子部分。
+- 图标使用 `lucide-react`。
+
+### UI Adapter 模式
+
+应用不应直接修改生成的 shadcn 基础组件。而是在应用自己的目录中创建包装器，保持库的清洁同时允许每个应用定制。
+
+## `@ecoctrl/shared` — 共享基础设施
+
+`packages/shared` 暴露：
+
+- **TypeScript 配置**（`tsconfig.base.json`、`tsconfig.app.json`、`tsconfig.node.json`）被每个应用使用。
+- **Vite 基础配置**（`vite.config.base.ts`）预装 Tailwind、import 排序、lint、format 和类型检查。
+- **Zod schema**（`types/api/`）— 服务端和前端共享的请求/响应类型。
+- **`createDevProxy()`** — 仅在 `localhost` 时把 `/api` 和 `/static` 转发到 API 的 Vite 代理块。
+- **`resolveUiAlias()`** — 将 `@ecoctrl/ui` 源码中的 `@/` 重写回 ui 包自身的 `src/`。
+- **`gen-env-example.ts`** — 从 `.env.local` 注释生成 `.env.example` 的脚本，每个包的 `env:sync` 和 `env:check` 都使用它。
+
 ## 路径别名速查
 
 | App               | 别名              | 解析到                                                     |
@@ -117,5 +163,6 @@ pnpm changeset
 | `apps/web`        | `~/`              | `apps/web/app/`                                            |
 | `apps/web`        | `~/components/ui` | `apps/web/app/components/ui`（web 项目本地的 shadcn 副本） |
 | `packages/server` | `@/`              | `packages/server/src/`                                     |
+| `packages/ui`     | `@/`              | `packages/ui/src/`（由 `resolveUiAlias()` 重写）           |
 
 如果你在 `@ecoctrl/ui` 源码里看到 `@/`，那正是 `resolveUiAlias()` 处理的场景，请保持原样。
