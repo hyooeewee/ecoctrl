@@ -125,8 +125,8 @@ jobs:
           file: docker/Dockerfile.builder
           tags: ghcr.io/${{ github.repository }}/builder:cache
           push: true
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}/builder:cache
-          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}/builder:cache,mode=max
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}/builder:cache-buildx
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}/builder:cache-buildx,mode=max
 
       - name: Build & Push all app images
         uses: docker/bake-action@v5
