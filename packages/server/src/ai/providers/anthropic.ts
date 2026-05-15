@@ -23,7 +23,10 @@ export class AnthropicClient implements AIClient {
       input_schema: { type: "object" as const, ...t.parameters },
     }));
 
-    const anthropicMessages: Anthropic.Messages.MessageParam[] = messages.map((m) => {
+    const systemMessage = messages.find((m) => m.role === "system");
+    const nonSystemMessages = messages.filter((m) => m.role !== "system");
+
+    const anthropicMessages: Anthropic.Messages.MessageParam[] = nonSystemMessages.map((m) => {
       if (m.role === "tool") {
         return {
           role: "user" as const,
@@ -56,6 +59,7 @@ export class AnthropicClient implements AIClient {
     const stream = this.client.messages.stream({
       model: this.model,
       max_tokens: 4096,
+      system: systemMessage?.content,
       messages: anthropicMessages,
       tools: anthropicTools.length > 0 ? anthropicTools : undefined,
     });
