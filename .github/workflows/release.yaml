@@ -136,7 +136,7 @@ jobs:
           VERSION="${{ needs.changeset.outputs.tag }}"
           VERSION=${VERSION#v}
 
-          sh scripts/migrate-images.sh docker/compose.yaml --export ./ecoctrl-images.tar --platform linux/amd64
+          bash scripts/migrate-images.sh docker/compose.yaml --export ./ecoctrl-images.tar --platform linux/amd64
 
           mkdir -p docker-bundle
           mv ecoctrl-images.tar docker-bundle/
@@ -147,7 +147,7 @@ jobs:
           EcoCtrl Docker Offline Bundle v${VERSION}
 
           1. Ensure docker and docker compose are installed
-          2. Run: sh migrate-images.sh compose.yaml --load ecoctrl-images.tar
+          2. Run: bash migrate-images.sh compose.yaml --load ecoctrl-images.tar
           3. Copy .env.local to this directory
           4. Run: docker compose up -d
           EOF
