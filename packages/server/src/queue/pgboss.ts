@@ -1,5 +1,6 @@
 import { PgBoss } from "pg-boss";
 import { getLogger } from "@/lib/logger";
+import { env } from "@/lib/env";
 
 const logger = getLogger("queue");
 
@@ -16,10 +17,7 @@ export interface ExecutionJobData {
 
 export async function initQueue(): Promise<PgBoss> {
   if (boss) return boss;
-  const dbUrl = process.env.DATABASE_URL;
-  if (!dbUrl) {
-    throw new Error("DATABASE_URL is not set");
-  }
+  const dbUrl = env.DATABASE_URL;
   boss = new PgBoss({
     connectionString: dbUrl,
     retryLimit: 3,

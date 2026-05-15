@@ -1,9 +1,10 @@
 import { withCache } from "@/services/base/withCache";
+import { env } from "@/lib/env";
 
-const API_KEY = process.env.OPENWEATHER_API_KEY;
-const LAT = process.env.WEATHER_LAT || "39.9042"; // default Beijing
-const LNG = process.env.WEATHER_LNG || "116.4074";
-const LOCATION = process.env.WEATHER_LOCATION || "Beijing";
+const API_KEY = env.OPENWEATHER_API_KEY;
+const LAT = env.WEATHER_LAT || "39.9042"; // default Beijing
+const LNG = env.WEATHER_LNG || "116.4074";
+const LOCATION = env.WEATHER_LOCATION || "Beijing";
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 export interface WeatherData {

@@ -28,6 +28,7 @@ import { initQueue } from "@/queue/pgboss";
 import { triggerEngine } from "@/engine/trigger";
 import { syncSmtpFromEnv } from "@/repositories/platformConfig";
 import { initAdmin } from "@/lib/initAdmin";
+import { env } from "@/lib/env";
 
 await ensureDatabase();
 // await migrateDatabase();
@@ -42,12 +43,12 @@ fastify.setSerializerCompiler(serializerCompiler);
 await fastify.register(databasePlugin);
 await fastify.register(rateLimitPlugin);
 await fastify.register(fastifyJwt, {
-  secret: process.env.JWT_SECRET!,
+  secret: env.JWT_SECRET!,
   sign: { expiresIn: "15m" },
 });
 
 await fastify.register(cors, {
-  origin: process.env.CORS_ORIGIN?.split(",") || true,
+  origin: env.CORS_ORIGIN?.split(",") || true,
 });
 await fastify.register(multipart, {
   limits: {
@@ -202,8 +203,8 @@ await fastify.register(apiRoutes, { prefix: "/api" });
 await initQueue();
 await triggerEngine.syncSchedules();
 
-const PORT = Number(process.env.PORT) || 3000;
-const HOST = process.env.HOST || "0.0.0.0";
+const PORT = Number(env.PORT) || 3000;
+const HOST = env.HOST || "0.0.0.0";
 
 try {
   await fastify.listen({ port: PORT, host: HOST });

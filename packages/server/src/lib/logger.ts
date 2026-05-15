@@ -1,14 +1,9 @@
-import { config } from "dotenv";
-config({ path: ".env.local" });
-
 import pino from "pino";
 import type { Logger, LoggerOptions } from "pino";
 import pinoPretty from "pino-pretty";
 import { createStream } from "rotating-file-stream";
 import { Writable } from "node:stream";
-
-const NODE_ENV = process.env.NODE_ENV || "development";
-const isDev = NODE_ENV === "development";
+import { env } from "@/lib/env";
 
 const redactPaths = [
   "req.headers.authorization",
@@ -57,12 +52,14 @@ class TeeStream extends Writable {
 }
 
 function buildRootLogger(): Logger {
-  const LOG_LEVEL = process.env.LOG_LEVEL || (isDev ? "debug" : "info");
-  const LOG_DESTINATION = process.env.LOG_DESTINATION || (isDev ? "stdout" : "both");
-  const LOG_DIR = process.env.LOG_DIR || "./logs";
-  const LOG_PRETTY = process.env.LOG_PRETTY !== "false";
-  const LOG_ROTATE_INTERVAL = process.env.LOG_ROTATE_INTERVAL || "1d";
-  const LOG_MAX_DAYS = parseInt(process.env.LOG_MAX_DAYS || "30", 10);
+  const NODE_ENV = env.NODE_ENV;
+  const isDev = NODE_ENV === "development";
+  const LOG_LEVEL = env.LOG_LEVEL;
+  const LOG_DESTINATION = env.LOG_DESTINATION;
+  const LOG_DIR = env.LOG_DIR;
+  const LOG_PRETTY = env.LOG_PRETTY;
+  const LOG_ROTATE_INTERVAL = env.LOG_ROTATE_INTERVAL;
+  const LOG_MAX_DAYS = env.LOG_MAX_DAYS;
 
   function createFileStream(filename: string) {
     return createStream(filename, {

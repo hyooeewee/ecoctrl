@@ -14,6 +14,7 @@ import {
 import { findPetPreferences, upsertPetPreferences } from "@/repositories/petPreferences";
 import { errors } from "@/lib/schemas";
 import type { ChatMessage, AIStreamChunk } from "@/ai/types";
+import { env } from "@/lib/env";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SYSTEM_PROMPT = fs.readFileSync(path.resolve(__dirname, "../ai/system-prompt.md"), "utf-8");
@@ -37,10 +38,10 @@ const preferencesBodySchema = z.object({
 });
 
 export default async function aiRoutes(fastify: FastifyInstance) {
-  const aiProvider = process.env.AI_PROVIDER as "anthropic" | "openai" | undefined;
-  const aiApiKey = process.env.AI_API_KEY;
-  const aiBaseURL = process.env.AI_BASE_URL;
-  const aiModel = process.env.AI_MODEL;
+  const aiProvider = env.AI_PROVIDER as "anthropic" | "openai" | undefined;
+  const aiApiKey = env.AI_API_KEY;
+  const aiBaseURL = env.AI_BASE_URL;
+  const aiModel = env.AI_MODEL;
 
   if (!aiProvider || !aiApiKey) {
     fastify.log.warn("AI provider not configured. AI chat will return errors.");

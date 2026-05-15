@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { env } from "@/lib/env";
 import { z } from "zod";
 import crypto from "node:crypto";
 import {
@@ -58,14 +59,14 @@ function cleanExpiredEntries() {
 // ─── WeChat ───────────────────────────────────────────────
 
 function getWechatAuthorizeUrl(state: string, redirectUri: string) {
-  const appId = process.env.WECHAT_APP_ID!;
+  const appId = env.WECHAT_APP_ID!;
   const encodedRedirect = encodeURIComponent(redirectUri);
   return `https://open.weixin.qq.com/connect/qrconnect?appid=${appId}&redirect_uri=${encodedRedirect}&response_type=code&scope=snsapi_login&state=${state}#wechat_redirect`;
 }
 
 async function wechatExchangeToken(code: string) {
-  const appId = process.env.WECHAT_APP_ID!;
-  const secret = process.env.WECHAT_APP_SECRET!;
+  const appId = env.WECHAT_APP_ID!;
+  const secret = env.WECHAT_APP_SECRET!;
   const url = `https://api.weixin.qq.com/sns/oauth2/access_token?appid=${appId}&secret=${secret}&code=${code}&grant_type=authorization_code`;
   const res = await fetch(url);
   const data = (await res.json()) as {
@@ -113,14 +114,14 @@ async function wechatGetUserInfo(accessToken: string, openid: string) {
 // ─── Feishu ───────────────────────────────────────────────
 
 function getFeishuAuthorizeUrl(state: string, redirectUri: string) {
-  const appId = process.env.FEISHU_APP_ID!;
+  const appId = env.FEISHU_APP_ID!;
   const encodedRedirect = encodeURIComponent(redirectUri);
   return `https://open.feishu.cn/open-apis/authen/v1/authorize?app_id=${appId}&redirect_uri=${encodedRedirect}&state=${state}`;
 }
 
 async function feishuExchangeToken(code: string) {
-  const appId = process.env.FEISHU_APP_ID!;
-  const secret = process.env.FEISHU_APP_SECRET!;
+  const appId = env.FEISHU_APP_ID!;
+  const secret = env.FEISHU_APP_SECRET!;
   const res = await fetch("https://open.feishu.cn/open-apis/authen/v2/oauth/token", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -228,10 +229,10 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
       }
 
       const providers = [] as { id: string; name: string; icon: string }[];
-      if (process.env.WECHAT_APP_ID && process.env.WECHAT_APP_SECRET) {
+      if (env.WECHAT_APP_ID && env.WECHAT_APP_SECRET) {
         providers.push({ id: "wechat", name: "微信", icon: "wechat" });
       }
-      if (process.env.FEISHU_APP_ID && process.env.FEISHU_APP_SECRET) {
+      if (env.FEISHU_APP_ID && env.FEISHU_APP_SECRET) {
         providers.push({ id: "feishu", name: "飞书", icon: "feishu" });
       }
       return reply.send(providers);
@@ -268,7 +269,7 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
         expiresAt: Date.now() + 10 * 60 * 1000,
       });
 
-      const callbackUrl = `${process.env.BASE_URL || `${request.protocol}://${request.hostname}`}/api/oauth/${provider}/callback`;
+      const callbackUrl = `${env.BASE_URL || `${request.protocol}://${request.hostname}`}/api/oauth/${provider}/callback`;
 
       if (provider === "wechat") {
         return reply.redirect(getWechatAuthorizeUrl(state, callbackUrl));

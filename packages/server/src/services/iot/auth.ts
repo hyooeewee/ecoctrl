@@ -2,9 +2,10 @@ import { eq } from "drizzle-orm";
 import { db } from "@/config/database";
 import { iotTokens } from "@/schemas/iotTokens";
 import type { TokenData } from "@/services/iot/types";
+import { env } from "@/lib/env";
 
-const BASE_URL = process.env.BASE_URL?.replace(/\/+$/, "") || "";
-const APP_ID = process.env.APP_ID || "";
+const BASE_URL = env.BASE_URL?.replace(/\/+$/, "") || "";
+const APP_ID = env.APP_ID || "";
 
 let tokenCache: TokenData | null = null;
 
