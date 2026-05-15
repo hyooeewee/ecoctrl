@@ -4,12 +4,12 @@ import { cancel, confirm, intro, isCancel, outro, spinner } from "@clack/prompts
 
 /**
  * Annotations recognized in .env.local line endings:
- *   # @secret          → clear the value
- *   # @example: VAL    → replace with VAL as the placeholder
- *   no annotation      → keep the original line (value + dotenv comments)
+ *   # @public[: VAL]   → keep value (or replace with VAL); preserve comment
+ *   # @secret          → clear the value; preserve comment (same as no annotation)
+ *   no annotation      → clear the value; preserve comment (safe default)
  */
-const ANNOTATION_SECRET = /\s+#\s*@secret\b/;
-const ANNOTATION_EXAMPLE = /\s+#\s*@example:\s*(.+)/;
+const ANNOTATION_PUBLIC = /#\s*@public(?::\s*([^#]+))?/;
+const ANNOTATION_SECRET = /#\s*@secret\b/;
 
 function help() {
   console.log(`
@@ -36,18 +36,27 @@ function processLine(line: string): string {
   const key = line.slice(0, eq);
   const raw = line.slice(eq + 1);
 
-  // Security-first: @secret takes precedence
-  if (ANNOTATION_SECRET.test(raw)) {
-    return `${key}=`;
+  const hashIdx = raw.indexOf("#");
+  const valuePart = hashIdx >= 0 ? raw.slice(0, hashIdx).trimEnd() : raw.trimEnd();
+  const commentPart = hashIdx >= 0 ? raw.slice(hashIdx) : "";
+
+  // @public: VAL → replace with VAL; @public → keep original value
+  const pubMatch = raw.match(ANNOTATION_PUBLIC);
+  if (pubMatch) {
+    const newValue = pubMatch[1] ? pubMatch[1].trim() : valuePart;
+    const remainingComment = commentPart.replace(ANNOTATION_PUBLIC, "").trim();
+    if (remainingComment && remainingComment !== "#") {
+      return `${key}=${newValue} ${remainingComment}`;
+    }
+    return `${key}=${newValue}`;
   }
 
-  const exMatch = raw.match(ANNOTATION_EXAMPLE);
-  if (exMatch) {
-    return `${key}=${exMatch[1].trim()}`;
+  // Default (including @secret): clear value, strip annotation from comment
+  const remainingComment = commentPart.replace(ANNOTATION_SECRET, "").trim();
+  if (remainingComment && remainingComment !== "#") {
+    return `${key}= ${remainingComment}`;
   }
-
-  // Default: preserve the entire line (value + standard dotenv comments)
-  return line;
+  return `${key}=`;
 }
 
 function findBackupName(destPath: string): string {
