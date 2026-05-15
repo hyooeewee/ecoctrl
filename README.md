@@ -6,6 +6,8 @@
 
 An energy & IoT control platform built as a pnpm monorepo, featuring 3D visualization, real-time monitoring, and a unified management dashboard.
 
+**📖 Documentation**: [ecoctrl.godot.run](https://ecoctrl.godot.run)
+
 <!-- Screenshots -->
 <!-- | Admin Dashboard | 3D Building View | -->
 <!-- |:---:|:---:| -->
@@ -21,14 +23,14 @@ An energy & IoT control platform built as a pnpm monorepo, featuring 3D visualiz
 | `packages/ui`     | React + TailwindCSS + Base UI                         | Shared component library                                   |
 | `packages/shared` | Zod + TypeScript + shared Vite configs                | Shared schemas, types, and build utilities                 |
 
-## Running with Docker (Recommended)
+## Quick Start
 
-The simplest way to run the entire stack:
+### Docker (Recommended)
 
 ```bash
 cd docker
 cp .env.example .env.local
-# Edit .env.local and fill in JWT_SECRET, BASE_URL, APP_ID
+# Edit .env.local: fill in JWT_SECRET, DATABASE_URL
 docker compose -f compose.yml up --build
 ```
 
@@ -39,67 +41,22 @@ docker compose -f compose.yml up --build
 | API      | http://localhost:3000               |
 | API Docs | http://localhost:3000/documentation |
 
-## Running from Release
+> **Offline/air-gapped?** Download the [offline bundle](https://bucket.godot.qzz.io/images/latest/ecoctrl.zip) — includes pre-pulled images, no registry access needed.
 
-Download the release artifacts from [GitHub Releases](https://github.com/hyooeewee/ecoctrl/releases):
+### Pre-built Release
 
-```bash
-# Option 1: Use the unified package
-unzip ecoctrl[all]-v1.0.0.zip
-cd ecoctrl
+Download from [GitHub Releases](https://github.com/hyooeewee/ecoctrl/releases) or the R2 mirror (for users in mainland China):
 
-# Option 2: Download individual packages and place them together
-mkdir ecoctrl
-unzip admin-v1.0.0.zip -d ecoctrl/
-unzip web-v1.0.0.zip -d ecoctrl/
-unzip server-v1.0.0.zip -d ecoctrl/
-cd ecoctrl
-```
-
-The extracted structure will be:
-
-```
-ecoctrl/
-├── start.sh      # One-click startup script
-├── admin/        # Static files
-├── web/          # Static files
-└── server/       # Node.js application
-```
-
-### Start
+| Source     | Full bundle                                                                                                                                                                                                      |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GitHub     | [`ecoctrl-vX.Y.Z.zip`](https://github.com/hyooeewee/ecoctrl/releases)                                                                                                                                            |
+| R2 Mirror  | [`ecoctrl.zip`](https://bucket.godot.qzz.io/releases/latest/ecoctrl.zip)                                                                                                                                         |
+| Components | [`admin.zip`](https://bucket.godot.qzz.io/releases/latest/admin.zip) · [`web.zip`](https://bucket.godot.qzz.io/releases/latest/web.zip) · [`server.zip`](https://bucket.godot.qzz.io/releases/latest/server.zip) |
 
 ```bash
+unzip ecoctrl-v1.0.0.zip
 cd ecoctrl
-
-# 1. Configure environment
-cp server/.env.example server/.env.local
-# Edit server/.env.local: fill in DATABASE_URL, JWT_SECRET, etc.
-
-# 2. Start all services
 ./start.sh
-```
-
-| Service | URL                   |
-| ------- | --------------------- |
-| Web     | http://localhost:8081 |
-| Admin   | http://localhost:4173 |
-| API     | http://localhost:3000 |
-
-To stop:
-
-```bash
-./start.sh   # interactive prompt: [s] stop
-```
-
-Or manually:
-
-```bash
-# Stop server
-npx pm2 delete ecoctrl-server
-
-# Stop admin & web
-kill $(cat logs/admin.pid)
-kill $(cat logs/web.pid)
 ```
 
 ## Local Development
@@ -110,40 +67,39 @@ kill $(cat logs/web.pid)
 - pnpm 10.33+
 - PostgreSQL 16+ (or Docker)
 
-### 1. Install Dependencies
+### Setup
 
 ```bash
+# 1. Install
 pnpm install
-```
 
-### 2. Start PostgreSQL
-
-```bash
+# 2. Start PostgreSQL
 cd docker
 docker compose -f compose.yml up postgres -d
-```
 
-### 3. Configure Environment
-
-```bash
-# Server
+# 3. Configure environment
 cp packages/server/.env.example packages/server/.env.local
-# Edit .env.local and fill in DATABASE_URL and JWT_SECRET
+# Edit .env.local: fill in DATABASE_URL and JWT_SECRET
 
-# Admin
-cp apps/admin/.env.example apps/admin/.env.local
-
-# Web — .env.local already exists with sensible defaults
-```
-
-### 4. Initialize Database
-
-```bash
+# 4. Initialize database
 cd packages/server
 pnpm db:push
 pnpm db:seed
+
+# 5. Build UI library
 cd ../..
+pnpm build:ui
+
+# 6. Start all services
+pnpm dev
 ```
+
+| Command           | Service                        |
+| ----------------- | ------------------------------ |
+| `pnpm dev`        | All services                   |
+| `pnpm dev:server` | API on http://localhost:3000   |
+| `pnpm dev:admin`  | Admin on http://localhost:5173 |
+| `pnpm dev:web`    | Web on http://localhost:8080   |
 
 Other useful commands:
 
@@ -153,52 +109,12 @@ pnpm db:migrate   # apply pending migrations
 pnpm db:studio    # open Drizzle Studio
 ```
 
-### 5. Build UI Library
+## Documentation
 
-```bash
-pnpm build:ui
-```
-
-### 6. Start Services
-
-```bash
-# Start all services
-pnpm dev
-
-# Or start individually:
-pnpm dev:server   # API on http://localhost:3000
-pnpm dev:admin    # Admin on http://localhost:5173
-pnpm dev:web      # Web on http://localhost:8080
-```
-
-## API Overview
-
-Base URL: `http://localhost:3000/api`
-
-Authentication: `Authorization: Bearer <accessToken>` (except public paths).
-
-> Full documentation available at `http://localhost:3000/documentation` when the server is running.
-
-## Environment Variables
-
-### Server (`packages/server/.env.example`)
-
-| Variable                                           | Description                                    |
-| -------------------------------------------------- | ---------------------------------------------- |
-| `DATABASE_URL`                                     | PostgreSQL connection string                   |
-| `JWT_SECRET`                                       | Secret key for JWT signing                     |
-| `BASE_URL` / `APP_ID`                              | External API credentials (optional)            |
-| `SMTP_*`                                           | SMTP configuration for email                   |
-| `OPENWEATHER_API_KEY`                              | OpenWeatherMap API key                         |
-| `WEATHER_LAT` / `WEATHER_LNG` / `WEATHER_LOCATION` | Default weather coordinates (default: Beijing) |
-| `WECHAT_*` / `FEISHU_*`                            | OAuth app credentials (optional)               |
-
-### Client (`apps/admin/.env.example`, `apps/web/.env.local`)
-
-| Variable            | Description                      |
-| ------------------- | -------------------------------- |
-| `VITE_API_BASE_URL` | Backend API base URL             |
-| `VITE_API_PREFIX`   | API route prefix (default: /api) |
+- [Deployment Guide](https://ecoctrl.godot.run/reference/deployment) — Docker, release zips, offline bundles
+- [Architecture](https://ecoctrl.godot.run/reference/architecture) — request flow, runtime topology
+- [Environment Variables](https://ecoctrl.godot.run/reference/env-vars) — full reference
+- [API Docs](http://localhost:3000/documentation) — Swagger UI (server must be running)
 
 ## License
 
