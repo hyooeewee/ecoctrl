@@ -5,6 +5,7 @@ import { workflowExecutions } from "@/schemas/workflows";
 import { findWorkflowById } from "@/repositories/workflows";
 import { executeWorkflow } from "@/engine/executor";
 import { getLogger } from "@/lib/logger";
+import { env } from "@/lib/env";
 import type { ExecutionJobData } from "./pgboss";
 
 const logger = getLogger("queue");
@@ -12,22 +13,16 @@ const logger = getLogger("queue");
 const JOB_NAME = "workflow.execute";
 
 function getEnvVars(): Record<string, string> {
-  const allowed = [
-    "SMTP_HOST",
-    "SMTP_PORT",
-    "SMTP_USER",
-    "SMTP_PASS",
-    "SMTP_SECURE",
-    "DATABASE_URL",
-    "JWT_SECRET",
-    "CORS_ORIGIN",
-  ];
-  const env: Record<string, string> = {};
-  for (const key of allowed) {
-    const value = process.env[key];
-    if (value) env[key] = value;
-  }
-  return env;
+  const vars: Record<string, string> = {};
+  if (env.SMTP_HOST) vars.SMTP_HOST = env.SMTP_HOST;
+  if (env.SMTP_PORT) vars.SMTP_PORT = String(env.SMTP_PORT);
+  if (env.SMTP_USER) vars.SMTP_USER = env.SMTP_USER;
+  if (env.SMTP_PASS) vars.SMTP_PASS = env.SMTP_PASS;
+  if (env.SMTP_SECURE) vars.SMTP_SECURE = String(env.SMTP_SECURE);
+  if (env.DATABASE_URL) vars.DATABASE_URL = env.DATABASE_URL;
+  if (env.JWT_SECRET) vars.JWT_SECRET = env.JWT_SECRET;
+  if (env.CORS_ORIGIN) vars.CORS_ORIGIN = env.CORS_ORIGIN;
+  return vars;
 }
 
 async function processJob(job: Job<ExecutionJobData>): Promise<void> {
@@ -95,7 +90,7 @@ async function processJob(job: Job<ExecutionJobData>): Promise<void> {
 }
 
 export async function startWorker(): Promise<void> {
-  const dbUrl = process.env.DATABASE_URL;
+  const dbUrl = env.DATABASE_URL;
   if (!dbUrl) {
     throw new Error("DATABASE_URL is not set");
   }
