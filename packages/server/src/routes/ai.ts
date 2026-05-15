@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { createAIClient } from "@/ai/client";
@@ -11,6 +14,9 @@ import {
 import { findPetPreferences, upsertPetPreferences } from "@/repositories/petPreferences";
 import { errors } from "@/lib/schemas";
 import type { ChatMessage, AIStreamChunk } from "@/ai/types";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const SYSTEM_PROMPT = fs.readFileSync(path.resolve(__dirname, "../ai/system-prompt.md"), "utf-8");
 
 const chatBodySchema = z.object({
   message: z.string().min(1).max(4000),
@@ -98,16 +104,20 @@ export default async function aiRoutes(fastify: FastifyInstance) {
       const toolCalls: { name: string; arguments: Record<string, unknown> }[] = [];
 
       try {
-        await client.chat(messages, tools, (chunk: AIStreamChunk) => {
-          reply.raw.write(`data: ${JSON.stringify(chunk)}\n\n`);
+        await client.chat(
+          [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
+          tools,
+          (chunk: AIStreamChunk) => {
+            reply.raw.write(`data: ${JSON.stringify(chunk)}\n\n`);
 
-          if (chunk.type === "text" && chunk.content) {
-            assistantContent += chunk.content;
-          }
-          if (chunk.type === "tool_call" && chunk.toolCall) {
-            toolCalls.push(chunk.toolCall);
-          }
-        });
+            if (chunk.type === "text" && chunk.content) {
+              assistantContent += chunk.content;
+            }
+            if (chunk.type === "tool_call" && chunk.toolCall) {
+              toolCalls.push(chunk.toolCall);
+            }
+          },
+        );
 
         // Execute tools
         for (const tc of toolCalls) {

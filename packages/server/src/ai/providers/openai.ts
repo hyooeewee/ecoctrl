@@ -47,7 +47,7 @@ export class OpenAIClient implements AIClient {
       function: {
         name: t.name,
         description: t.description,
-        parameters: t.parameters,
+        parameters: t.parameters as Record<string, unknown>,
       },
     }));
 
