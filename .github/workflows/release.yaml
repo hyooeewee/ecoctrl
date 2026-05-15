@@ -119,41 +119,24 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build & Push Web
+      - name: Build & Push builder image
         uses: docker/build-push-action@v6
         with:
-          platforms: linux/amd64,linux/arm64
-          file: apps/web/Dockerfile
-          tags: |
-            ghcr.io/${{ github.repository }}/web:${{ needs.changeset.outputs.tag }}
-            ghcr.io/${{ github.repository }}/web:latest
+          file: docker/Dockerfile.builder
+          tags: ghcr.io/${{ github.repository }}/builder:cache
           push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}/builder:cache
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}/builder:cache,mode=max
 
-      - name: Build & Push Admin
-        uses: docker/build-push-action@v6
+      - name: Build & Push all app images
+        uses: docker/bake-action@v5
         with:
-          platforms: linux/amd64,linux/arm64
-          file: apps/admin/Dockerfile
-          tags: |
-            ghcr.io/${{ github.repository }}/admin:${{ needs.changeset.outputs.tag }}
-            ghcr.io/${{ github.repository }}/admin:latest
+          files: ./docker/docker-bake.hcl
           push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build & Push Server
-        uses: docker/build-push-action@v6
-        with:
-          platforms: linux/amd64,linux/arm64
-          file: packages/server/Dockerfile
-          tags: |
-            ghcr.io/${{ github.repository }}/server:${{ needs.changeset.outputs.tag }}
-            ghcr.io/${{ github.repository }}/server:latest
-          push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          load: true
+        env:
+          TAG: ${{ needs.changeset.outputs.tag }}
+          REGISTRY: ghcr.io/${{ github.repository }}
 
       - name: Package offline deploy bundle
         run: |
