@@ -112,7 +112,8 @@ export default function Home() {
 
   const rightmostTopWidget = bentoLayout
     .filter((item) => !item.hidden && item.y <= 4)
-    .toSorted((a, b) => b.x + b.w - (a.x + a.w))[0];
+    .slice()
+    .sort((a, b) => b.x + b.w - (a.x + a.w))[0];
 
   const colsFromRight = rightmostTopWidget ? 16 - rightmostTopWidget.x + 1 : 0;
   const controlsRight =

@@ -165,7 +165,8 @@ export default function SettingsPage() {
 
         const best = entries
           .filter((e) => e.isIntersecting)
-          .toSorted((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+          .slice()
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
 
         if (best) {
           setActiveId(best.target.id as SectionId);
