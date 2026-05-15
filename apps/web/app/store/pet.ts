@@ -1,7 +1,10 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { spritePetRegistry } from "virtual:pets";
 
-export type PetTheme = "tech-robot" | "cute-animal" | "minimal-geo";
+export type PetTheme = string;
+
+const defaultPetId = spritePetRegistry.pets[0]?.id ?? "usagi";
 
 export interface Message {
   id: string;
@@ -51,7 +54,7 @@ const defaults = {
     x: typeof window !== "undefined" ? window.innerWidth - 100 : 400,
     y: typeof window !== "undefined" ? window.innerHeight - 150 : 500,
   },
-  theme: "tech-robot" as PetTheme,
+  theme: defaultPetId as PetTheme,
   voiceEnabled: true,
   voiceSpeed: 1.0,
   wakeWordEnabled: true,

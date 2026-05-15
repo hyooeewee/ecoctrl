@@ -74,6 +74,14 @@ export const zhCN = {
     editAutoExitDelay: "编辑模式自动退出",
     editAutoExitDelayDesc: "无操作一段时间后自动退出编辑模式",
     editAutoExitNever: "不自动退出",
+    // Pet
+    petTheme: "宠物形象",
+    petThemeDesc: "选择桌面宠物的外观",
+    voiceEnabled: "语音播报",
+    voiceEnabledDesc: "AI 回复时自动朗读",
+    voiceSpeed: "语速",
+    wakeWordEnabled: "唤醒词",
+    wakeWordEnabledDesc: "说「蓝宝」唤醒宠物",
     // Account / Login
     loginEmail: "邮箱地址",
     loginPassword: "密码",

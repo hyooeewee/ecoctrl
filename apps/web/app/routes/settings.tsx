@@ -25,6 +25,8 @@ import {
 import { locale, useLocale } from "~/locales";
 import { useAuthStore } from "~/store/auth";
 import { useSettingsStore } from "~/store/settings";
+import { usePetStore } from "~/store/pet";
+import { spritePetRegistry } from "virtual:pets";
 
 import type { Route } from "./+types/settings";
 
@@ -89,6 +91,17 @@ export default function SettingsPage() {
     syncSettings,
     setSyncDebounceMs,
   } = useSettingsStore();
+
+  const {
+    theme: petTheme,
+    voiceEnabled,
+    voiceSpeed,
+    wakeWordEnabled,
+    setTheme: setPetTheme,
+    setVoiceEnabled,
+    setVoiceSpeed,
+    setWakeWordEnabled,
+  } = usePetStore();
 
   const isLayoutModified = bentoLayout.length > 0;
 
@@ -330,6 +343,64 @@ export default function SettingsPage() {
                     checked={showLoadingAnimation}
                     onCheckedChange={setShowLoadingAnimation}
                   />
+                </div>
+
+                {/* Pet theme */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">{t.settings.petTheme}</Label>
+                  <p className="text-muted-foreground text-xs">{t.settings.petThemeDesc}</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {spritePetRegistry.pets.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setPetTheme(p.id)}
+                        className={[
+                          "rounded-lg px-2 py-2 text-xs transition-colors",
+                          petTheme === p.id
+                            ? "bg-cyber-cyan/20 text-cyber-cyan border border-cyber-cyan/30"
+                            : "border border-white/10 bg-white/[0.03] text-foreground/70 hover:bg-white/5",
+                        ].join(" ")}
+                      >
+                        {p.displayName}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Voice enabled */}
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm font-medium">{t.settings.voiceEnabled}</Label>
+                    <p className="text-muted-foreground text-xs">{t.settings.voiceEnabledDesc}</p>
+                  </div>
+                  <Switch checked={voiceEnabled} onCheckedChange={setVoiceEnabled} />
+                </div>
+
+                {/* Voice speed */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">{t.settings.voiceSpeed}</Label>
+                    <span className="text-muted-foreground text-xs">{voiceSpeed.toFixed(1)}x</span>
+                  </div>
+                  <Slider
+                    value={[voiceSpeed]}
+                    min={0.5}
+                    max={2.0}
+                    step={0.1}
+                    onValueChange={(v) => setVoiceSpeed(Array.isArray(v) ? v[0] : v)}
+                  />
+                </div>
+
+                {/* Wake word */}
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm font-medium">{t.settings.wakeWordEnabled}</Label>
+                    <p className="text-muted-foreground text-xs">
+                      {t.settings.wakeWordEnabledDesc}
+                    </p>
+                  </div>
+                  <Switch checked={wakeWordEnabled} onCheckedChange={setWakeWordEnabled} />
                 </div>
               </div>
             </section>

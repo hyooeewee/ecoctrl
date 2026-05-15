@@ -70,6 +70,14 @@ export const enUS = {
     editAutoExitDelay: "Edit Mode Auto-Exit",
     editAutoExitDelayDesc: "Automatically exit edit mode after a period of inactivity",
     editAutoExitNever: "Never",
+    // Pet
+    petTheme: "Pet Appearance",
+    petThemeDesc: "Choose your desktop pet look",
+    voiceEnabled: "Voice Announcement",
+    voiceEnabledDesc: "Auto-read AI replies aloud",
+    voiceSpeed: "Voice Speed",
+    wakeWordEnabled: "Wake Word",
+    wakeWordEnabledDesc: 'Say "Lambo" to wake the pet',
     // Account / Login
     loginEmail: "Email Address",
     loginPassword: "Password",

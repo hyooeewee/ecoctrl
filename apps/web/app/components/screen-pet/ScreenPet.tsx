@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useLocation } from "react-router";
 import { usePetStore } from "~/store/pet";
 import { chatStream } from "~/lib/ai-api";
@@ -21,11 +21,13 @@ export function ScreenPet() {
   const toggleOpen = usePetStore((s) => s.toggleOpen);
   const sessionId = usePetStore((s) => s.sessionId);
   const initSession = usePetStore((s) => s.initSession);
+  const isLoading = usePetStore((s) => s.isLoading);
 
   const {
     position,
     isDragging,
     hasDraggedRef,
+    dragDirection,
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
@@ -33,9 +35,27 @@ export function ScreenPet() {
 
   const { speak, isSpeaking, stop: stopSpeaking } = useVoiceOutput();
 
+  const [isHovered, setIsHovered] = useState(false);
+  const [isJumping, setIsJumping] = useState(false);
+  const [isFailed, setIsFailed] = useState(false);
+
   useWakeWord(wakeWordEnabled && !isOpen, () => {
     toggleOpen();
   });
+
+  const triggerJump = useCallback(() => {
+    setIsJumping(true);
+    setTimeout(() => {
+      setIsJumping(false);
+    }, 800);
+  }, []);
+
+  const triggerFailed = useCallback(() => {
+    setIsFailed(true);
+    setTimeout(() => {
+      setIsFailed(false);
+    }, 2000);
+  }, []);
 
   const handleSend = useCallback(
     (text: string) => {
@@ -110,6 +130,7 @@ export function ScreenPet() {
           }
           if (chunk.type === "error") {
             setLoading(false);
+            triggerFailed();
             addMessage({
               id: `${Date.now()}-error`,
               role: "assistant",
@@ -119,6 +140,7 @@ export function ScreenPet() {
         },
         (error) => {
           setLoading(false);
+          triggerFailed();
           addMessage({
             id: `${Date.now()}-error`,
             role: "assistant",
@@ -138,6 +160,7 @@ export function ScreenPet() {
       setLoading,
       initSession,
       speak,
+      triggerFailed,
     ],
   );
 
@@ -166,15 +189,24 @@ export function ScreenPet() {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onClick={() => {
-          if (!hasDraggedRef.current) toggleOpen();
+          if (!hasDraggedRef.current) {
+            triggerJump();
+            toggleOpen();
+          }
         }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         className="touch-none"
       >
         <PetAvatar
           theme={theme}
           isSpeaking={isSpeaking}
           isListening={isRecording}
-          isLoading={usePetStore.getState().isLoading}
+          isLoading={isLoading}
+          isJumping={isJumping}
+          isFailed={isFailed}
+          isHovered={isHovered}
+          dragDirection={dragDirection}
         />
       </div>
     </div>
