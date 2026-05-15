@@ -117,5 +117,47 @@ The release workflow (see [Deployment](/reference/deployment)) takes care of bum
 | `apps/web`        | `~/`              | `apps/web/app/`                                      |
 | `apps/web`        | `~/components/ui` | `apps/web/app/components/ui` (project shadcn copies) |
 | `packages/server` | `@/`              | `packages/server/src/`                               |
+| `packages/ui`     | `@/`              | `packages/ui/src/` (rewritten by `resolveUiAlias()`) |
 
 If you encounter `@/` inside a `@ecoctrl/ui` source file, that is the case `resolveUiAlias()` handles for you — do not change it.
+
+## `@ecoctrl/ui` — the shared component library
+
+`packages/ui` is a **source-distributed** UI library built on top of [Base UI](https://base-ui.com/) (Radix v2) and styled with Tailwind CSS v4 + `class-variance-authority`.
+
+### Adding a shadcn component
+
+```bash
+cd packages/ui
+pnpm dlx shadcn@latest add <component-name> -y
+pnpm generate-proxies
+```
+
+`generate-proxies` syncs the `package.json` `exports` field so consumers can import subpaths like `@ecoctrl/ui/button`.
+
+### Adding a custom component
+
+Create in `src/components/ui/` (shadcn base) or `src/components/community/` (project-specific). Then run `pnpm generate-proxies`.
+
+### Conventions
+
+- Use `cn()` from `@/lib/utils` for class merging.
+- Use `cva` for components with style variants.
+- Add `data-slot="component-name"` to root elements.
+- Export named exports; compound components export all sub-parts.
+- Icons come from `lucide-react`.
+
+### UI Adapter pattern
+
+Apps should not modify generated shadcn base components directly. Instead, create wrappers in the app's own `components/` directory. This keeps the library clean while allowing per-app customization.
+
+## `@ecoctrl/shared` — shared infrastructure
+
+`packages/shared` exposes:
+
+- **TypeScript configs** (`tsconfig.base.json`, `tsconfig.app.json`, `tsconfig.node.json`) used by every app.
+- **Vite base config** (`vite.config.base.ts`) wiring Tailwind, sort-imports, lint, format and type checks.
+- **Zod schemas** under `types/api/` — shared request/response types between server and frontends.
+- **`createDevProxy()`** — Vite proxy block that forwards `/api` and `/static` to the API only on `localhost`.
+- **`resolveUiAlias()`** — Vite plugin that rewrites `@/` inside `@ecoctrl/ui` source back to the ui package's own `src/`.
+- **`gen-env-example.ts`** — script that generates `.env.example` files from `.env.local` comments, used by `env:sync` and `env:check` scripts in every package.

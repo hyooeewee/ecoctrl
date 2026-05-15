@@ -1,16 +1,25 @@
 # Deployment
 
-EcoCtrl supports three production deployment shapes:
+EcoCtrl supports two production deployment shapes:
 
-| Shape                                          | Best for                     | What you need             |
-| ---------------------------------------------- | ---------------------------- | ------------------------- |
-| [Docker Compose](#docker-compose)              | Single-host deploys, on-prem | Docker 24+                |
-| [Pre-built release zip](#pre-built-release)    | Bare Linux hosts, no Docker  | Node 20+, PostgreSQL, pm2 |
-| [Cloudflare Workers Static Assets](#docs-site) | The docs site                | Cloudflare account        |
-
-For the documentation site specifically, we ship to Cloudflare Workers; the rest of this page covers the application stack.
+| Shape                                       | Best for                     | What you need             |
+| ------------------------------------------- | ---------------------------- | ------------------------- |
+| [Docker Compose](#docker-compose)           | Single-host deploys, on-prem | Docker 24+                |
+| [Pre-built release zip](#pre-built-release) | Bare Linux hosts, no Docker  | Node 20+, PostgreSQL, pm2 |
 
 ## Docker Compose
+
+Three compose files are provided for different scenarios:
+
+| File                 | Purpose                                               |
+| -------------------- | ----------------------------------------------------- |
+| `compose.yml`        | Pre-built images from GHCR (default)                  |
+| `compose.build.yaml` | Build all images from local Dockerfiles               |
+| `compose.dev.yaml`   | Development overlay with volume mounts and hot reload |
+
+### Pre-built deployment (default)
+
+This brings up PostgreSQL, the API server, the admin dashboard and the public web portal in one command.
 
 The simplest path. `docker/compose.yml` defines four services: PostgreSQL, the API server, the admin SPA bundle, and the web SPA bundle. The two SPA images bundle the static assets behind Caddy, which rewrites `/api/*` and `/static/*` to the API container.
 
@@ -23,11 +32,16 @@ cp .env.example .env.local
 $EDITOR .env.local        # set JWT_SECRET (required) and IoT credentials (optional)
 ```
 
-::: tip Offline deployment (no internet on target host)
-If the target machine cannot reach GHCR or Docker Hub, download the offline bundle:
+:::tabs
+== Online deployment (default)
+
+If the target host can reach GHCR and Docker Hub, run the `docker compose` command below directly.
+
+== Offline deployment (no internet)
+
+If the target machine cannot reach external registries, <a href="https://bucket.godot.qzz.io/images/latest/ecoctrl.zip" download>download the offline bundle</a> and run:
 
 ```bash
-curl -O https://bucket.godot.qzz.io/images/latest/ecoctrl.zip
 unzip ecoctrl.zip
 cd ecoctrl-docker
 sh migrate-images.sh compose.yaml --load ecoctrl-images.tar
@@ -76,20 +90,22 @@ GitHub Releases publishes pre-staged zips for every tagged version. They contain
 
 ### Download
 
+:::tabs
+== GitHub Releases
+
 From [GitHub Releases](https://github.com/hyooeewee/ecoctrl/releases):
 
 - **`ecoctrl-vX.Y.Z.zip`** — recommended. Contains everything, ready for `start.sh`.
 - Component zips: `admin-vX.Y.Z.zip`, `web-vX.Y.Z.zip`, `server-vX.Y.Z.zip`. Extract them next to each other.
 
-::: tip For users in mainland China
+== R2 Mirror (China)
+
 If GitHub Releases is slow or unreachable, download from our Cloudflare R2 mirror (same files, synced on every release):
 
-| File        | Mirror link                                               |
-| ----------- | --------------------------------------------------------- |
-| Full bundle | `https://bucket.godot.qzz.io/releases/latest/ecoctrl.zip` |
-| Admin only  | `https://bucket.godot.qzz.io/releases/latest/admin.zip`   |
-| Web only    | `https://bucket.godot.qzz.io/releases/latest/web.zip`     |
-| Server only | `https://bucket.godot.qzz.io/releases/latest/server.zip`  |
+- **Full bundle**: <a href="https://bucket.godot.qzz.io/releases/latest/ecoctrl.zip" download>ecoctrl.zip ↓</a>
+- **Admin only**: <a href="https://bucket.godot.qzz.io/releases/latest/admin.zip" download>admin.zip ↓</a>
+- **Web only**: <a href="https://bucket.godot.qzz.io/releases/latest/web.zip" download>web.zip ↓</a>
+- **Server only**: <a href="https://bucket.godot.qzz.io/releases/latest/server.zip" download>server.zip ↓</a>
 
 :::
 
@@ -98,13 +114,13 @@ If GitHub Releases is slow or unreachable, download from our Cloudflare R2 mirro
 ```
 ecoctrl/
 ├── start.sh
-├── ecoctrl.config.cjs   # pm2 config for the server
 ├── server/
-│   ├── dist/index.mjs
-│   ├── dist/package.json
-│   └── .env.example     # copy to .env.local
-├── admin/               # static build
-└── web/                 # static build
+│   ├── index.mjs
+│   ├── package.json
+│   ├── ecoctrl.config.cjs   # pm2 config for the server
+│   └── .env.example         # copy to .env.local
+├── admin/                   # static build
+└── web/                     # static build
 ```
 
 ### Configure
@@ -127,7 +143,7 @@ echo 'API_BASE_URL=https://api.example.com' > web/.env.local
 
 `start.sh` will:
 
-1. Run `pnpm install --prod` inside `server/dist/` on the first launch.
+1. Run `pnpm install --prod` inside `server/` on the first launch.
 2. Start the API under pm2 as `ecoctrl-server`.
 3. Serve `admin/` on `:4173` and `web/` on `:8081` via [`local-web-server`](https://github.com/lwsjs/local-web-server) with `--rewrite "/api/(.*) -> $API_BASE_URL$API_PREFIX/$1"`.
 
@@ -145,7 +161,7 @@ kill "$(cat logs/web.pid)"
 
 Both the SPA servers and the API listen on plain HTTP. A typical production frontend pairs them with a TLS-terminating proxy. For Caddy:
 
-```caddyfile
+```nginx
 app.example.com {
     reverse_proxy localhost:8081      # web portal
 }
@@ -172,69 +188,13 @@ pnpm build:web      # → apps/web/build/
 pnpm build:server   # → packages/server/dist/{index.mjs, package.json}
 ```
 
-The server build's auto-generated `dist/package.json` lists only the runtime dependencies pulled out of the bundle, so a copy of `server/dist/` plus `pnpm install --prod` is enough to run it.
-
-## Docs site {#docs-site}
-
-The documentation site you are reading is hosted on **Cloudflare Workers Static Assets** at `ecoctrl.godot.run`.
-
-### Build command
-
-From the monorepo root:
-
-```bash
-corepack enable
-pnpm install --frozen-lockfile
-pnpm --filter @ecoctrl/docs build
-```
-
-Output: `apps/docs/.vitepress/dist/`.
-
-### `wrangler.jsonc`
-
-```jsonc
-{
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "ecoctrl-docs",
-  "compatibility_date": "2026-04-26",
-  "assets": {
-    "directory": "./.vitepress/dist/",
-    "not_found_handling": "404-page",
-  },
-}
-```
-
-### Deploy
-
-Cloudflare's Workers Builds picks up pushes to `main` automatically when the project is connected to the GitHub repository. The configured build path is `apps/docs`; the build command runs from the repo root and filters down to the docs package so the workspace install is fully resolved.
-
-```
-GitHub push to main
-        │
-        ▼
-Cloudflare Workers Builds
-        │  (corepack enable && pnpm install && pnpm --filter @ecoctrl/docs build)
-        ▼
-Static assets uploaded
-        │
-        ▼
-ecoctrl.godot.run (CDN-cached)
-```
-
-### Manual deploy
-
-```bash
-cd apps/docs
-pnpm build
-pnpm dlx wrangler deploy
-```
-
-`wrangler` reads `apps/docs/wrangler.jsonc` automatically; no extra flags needed.
+The server build's auto-generated `dist/package.json` lists only the runtime dependencies pulled out of the bundle, so a copy of `server/` plus `pnpm install --prod` is enough to run it.
 
 ## Production checklist
 
 Before exposing EcoCtrl to the public internet:
 
+```markdown
 - [ ] Set a strong `JWT_SECRET` and rotate any defaults.
 - [ ] Restrict `CORS_ORIGIN` to your real domains.
 - [ ] Use a managed PostgreSQL (or harden your own — TLS, backup, monitoring).
@@ -244,3 +204,4 @@ Before exposing EcoCtrl to the public internet:
 - [ ] Schedule database backups (the platform's `backup_schedules` row only stores the _next_ timestamp; real backups are still your responsibility).
 - [ ] Limit database role privileges in production: revoke `CREATE DATABASE` so the bootstrap auto-create only runs in dev.
 - [ ] Forward server logs to an aggregator (Fastify uses pino — JSON-on-stdout works with everything).
+```

@@ -5,7 +5,7 @@ The full, authoritative API reference is the OpenAPI document Fastify generates 
 ## Conventions
 
 - **Prefix**: every route lives under `/api`. Inside the codebase, `routes/index.ts` registers `apiRoutes` with `prefix: "/api"`.
-- **JSON only.** Responses are JSON; the only exception is `GET /api/files/:id/raw`, which streams the underlying binary.
+- **JSON only.** Responses are JSON; the only exception is `GET /api/files/:id/preview`, which streams the underlying binary.
 - **Plural noun resources.** A typical resource exposes `GET /api/<resource>`, `POST /api/<resource>`, `GET /api/<resource>/:id`, `PUT /api/<resource>/:id`, `DELETE /api/<resource>/:id`.
 - **Validation via Zod.** Every body, querystring and response is validated. Invalid input returns `400` with a Zod error body; missing or expired auth returns `401`.
 - **Error shape**: `{ "error": "..." }` for client errors. Server errors come from Fastify's default formatter.
@@ -26,7 +26,8 @@ These are the only paths the global `onRequest` hook lets through:
 | GET      | `/api/auth/oauth/providers`                                 | List configured OAuth providers.                                               |
 | GET/POST | `/api/auth/oauth/wechat/...`, `/api/auth/oauth/feishu/...`  | OAuth start/callback.                                                          |
 | POST     | `/api/auth/oauth/bind`, `/api/auth/oauth/register-and-bind` | Link an OAuth identity to an account.                                          |
-| GET      | `/api/dashboard`                                            | Public read-only dashboard payload (used by `apps/web`).                       |
+| GET      | `/api/public/dashboard`                                     | Public read-only dashboard payload (used by `apps/web`).                       |
+| POST     | `/api/webhook`                                              | Workflow webhook trigger (public).                                             |
 
 Everything else is protected.
 
@@ -59,18 +60,9 @@ Everything else is protected.
 
 User CRUD, role and avatar management. All endpoints are protected.
 
-### `/api/dashboard/*`
-
-| Method | Path                  | Notes                                                          |
-| ------ | --------------------- | -------------------------------------------------------------- |
-| GET    | `/dashboard`          | **Public** — full dashboard payload for the public web portal. |
-| GET    | `/dashboard/alerts`   | Recent alerts.                                                 |
-| GET    | `/dashboard/settings` | Per-user dashboard configuration.                              |
-| PUT    | `/dashboard/settings` | Update per-user dashboard configuration.                       |
-
 ### `/api/overview/*`
 
-`GET /overview/stats` — KPI cards. `GET /overview/energy/weekly` — chart data.
+`GET /overview/stats` — KPI cards. `GET /overview/energy-chart` — chart data.
 
 ### `/api/energy/*`
 
@@ -82,45 +74,101 @@ CRUD endpoints over the matching tables. `/faults/stats` returns the snapshot ro
 
 ### `/api/reports/*`
 
-Report plans CRUD and report templates listing.
+Report plans CRUD and report templates listing. Note: there are no `/instances` endpoints; generated reports are retrieved through the queue worker output.
 
 ### `/api/configs`
 
 `GET` and `PUT` for the single-row platform configuration.
 
-### `/api/three-d-config`
-
-3D scene configuration (camera preset, ambient intensity, hotspots, labels). Backs the **3D Configuration** page in admin and the Babylon scene in web.
-
 ### `/api/files/*`
 
-| Method | Path             | Notes                                  |
-| ------ | ---------------- | -------------------------------------- |
-| GET    | `/files`         | List uploads.                          |
-| POST   | `/files`         | Multipart upload, max 100 MB per file. |
-| GET    | `/files/:id`     | Metadata only.                         |
-| GET    | `/files/:id/raw` | Stream the binary.                     |
-| DELETE | `/files/:id`     | Remove.                                |
+| Method | Path                 | Notes                                  |
+| ------ | -------------------- | -------------------------------------- |
+| GET    | `/files`             | List uploads.                          |
+| POST   | `/files`             | Multipart upload, max 100 MB per file. |
+| GET    | `/files/:id`         | Metadata only.                         |
+| GET    | `/files/:id/preview` | Stream the binary.                     |
+| DELETE | `/files/:id`         | Remove.                                |
 
 ### `/api/models/*`
 
-Equivalent to `/files` but specialized for 3D model uploads. Files land in `uploads/models/` and are exposed at `/static/models/<filename>`.
+Equivalent to `/files` but specialized for 3D model uploads. Files land in `uploads/models/` and are exposed at `/static/models/<filename>`. Note: there is no `GET /models/:id`; use `GET /models/:id/file` to stream the model binary.
 
 ### `/api/iot/*`
 
 Proxy layer for the upstream IoT gateway. Inputs and outputs match the upstream contract; EcoCtrl handles token refresh transparently using the `iot_tokens` row.
 
-| Path                                     | Description                      |
-| ---------------------------------------- | -------------------------------- |
-| `/iot/token`                             | Returns the cached access token. |
-| `/iot/codes/values`                      | Read current point values.       |
-| `/iot/codes/history`                     | Historical values for a point.   |
-| `/iot/codes/set`, `/iot/codes/force-set` | Write back.                      |
-| `/iot/alarms`, `/iot/alarm-configs`      | Alarm history and configuration. |
+| Method | Path                                     | Description                      |
+| ------ | ---------------------------------------- | -------------------------------- |
+| GET    | `/iot/token`                             | Returns the cached access token. |
+| POST   | `/iot/codes/values`                      | Read current point values.       |
+| POST   | `/iot/codes/history`                     | Historical values for a point.   |
+| POST   | `/iot/codes/set`, `/iot/codes/force-set` | Write back.                      |
+| POST   | `/iot/alarms`, `/iot/alarm-configs`      | Alarm history and configuration. |
 
 ### `/api/system/*`
 
 `GET /system/backup-schedule`, `PUT /system/backup-schedule`.
+
+### `/api/workflows/*`
+
+Workflow CRUD and execution. All endpoints are protected.
+
+| Method | Path                        | Summary                               |
+| ------ | --------------------------- | ------------------------------------- |
+| GET    | `/workflows`                | List all workflows                    |
+| POST   | `/workflows`                | Create a new workflow                 |
+| GET    | `/workflows/:id`            | Get a single workflow definition      |
+| PUT    | `/workflows/:id`            | Update workflow definition            |
+| DELETE | `/workflows/:id`            | Delete a workflow                     |
+| POST   | `/workflows/:id/trigger`    | Execute a workflow manually           |
+| GET    | `/workflows/:id/executions` | List execution history for a workflow |
+
+### `/api/objects/*`
+
+IoT object metadata CRUD. Objects represent physical devices or data points in the upstream IoT gateway.
+
+| Method | Path           | Summary            |
+| ------ | -------------- | ------------------ |
+| GET    | `/objects`     | List objects       |
+| POST   | `/objects`     | Create an object   |
+| GET    | `/objects/:id` | Get object details |
+| PUT    | `/objects/:id` | Update object      |
+| DELETE | `/objects/:id` | Delete object      |
+
+### `/api/settings/*`
+
+Per-user settings (protected).
+
+| Method | Path        | Summary              |
+| ------ | ----------- | -------------------- |
+| GET    | `/settings` | Get user settings    |
+| PUT    | `/settings` | Update user settings |
+
+### `/api/public/settings/*`
+
+Public platform configuration (no token).
+
+| Method | Path               | Summary                    |
+| ------ | ------------------ | -------------------------- |
+| GET    | `/public/settings` | Get public platform config |
+
+### `/api/dashboard-model/*`
+
+3D scene configuration.
+
+| Method | Path               | Summary                |
+| ------ | ------------------ | ---------------------- |
+| GET    | `/dashboard-model` | Get 3D scene config    |
+| PUT    | `/dashboard-model` | Update 3D scene config |
+
+### `/api/webhook`
+
+Public webhook endpoint for workflow triggers.
+
+| Method | Path             | Summary                                |
+| ------ | ---------------- | -------------------------------------- |
+| POST   | `/webhook/:slug` | Trigger a workflow by its webhook slug |
 
 ## Swagger auto-login
 

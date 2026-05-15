@@ -136,3 +136,7 @@ FEISHU_SECRET=...
 - **轮换 `JWT_SECRET`**：所有已签发的 Access Token 立即失效；但 Refresh Token 仍有效，用户可以无需重登就刷出新 Access Token。如果想强制全员下线，搭配清空 Refresh Token（`TRUNCATE refresh_tokens`）即可。
 - **延长会话**：编辑 `packages/server/index.ts` 中的 `expiresIn: "15m"` 调整 Access Token 寿命；编辑 `routes/auth.ts` 中的 `7 * 24 * 60 * 60 * 1000` 调整 Refresh Token 寿命。
 - **审计在线会话**：执行 `SELECT userId, COUNT(*) FROM refresh_tokens GROUP BY userId` 即可看到当前活跃会话（目前每个用户固定为 0 或 1）。
+
+## 基于角色的访问控制
+
+用户有一个 `role` 字段，取值来自 `USER_ROLE_LIST`。新注册用户的默认角色是列表中的最低项（当前为 `viewer`）。角色校验在路由处理器或 Fastify decorator 中完成，没有中间件层面的 RBAC 网关。admin 后台的用户管理页面支持升降级用户角色。

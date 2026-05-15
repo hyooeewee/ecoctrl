@@ -106,17 +106,9 @@ Per-area energy summary cards. Columns: `id`, `title`, `current`, `target`, `col
 
 ### Dashboard configuration
 
-#### `dashboard_stats`
-
-Numeric KPI cards on the admin dashboard. Columns: `id`, `key`, `value`, `unit`, `trend`, `trendType`, `snapshotAt`.
-
 #### `dashboard_widgets`
 
 Drag-and-drop widget grid. Columns include layout metrics (`layoutX/Y/W/H`), `dataType`, a freeform `dataJson` blob, `enabled`, `hidden`, `sortOrder`.
-
-#### `three_d_configs`
-
-3D scene configuration consumed by `apps/web`'s Babylon scene. Stores `cameraPreset`, `ambientLightIntensity`, and JSON arrays of hotspots and labels.
 
 ### Reports & backups
 
@@ -141,6 +133,95 @@ Uploaded 3D model metadata. `fileUrl` points at `/static/models/<filename>`.
 #### `files`
 
 Generic upload metadata: name, mime type, size, fileUrl.
+
+### Workflow engine
+
+#### `workflows`
+
+Workflow definitions stored as a JSON DSL.
+
+| Column        | Type        | Notes                                     |
+| ------------- | ----------- | ----------------------------------------- |
+| `id`          | uuid PK     |                                           |
+| `name`        | varchar     | Human-readable name                       |
+| `description` | text        | Optional                                  |
+| `dsl`         | jsonb       | Full workflow DSL (nodes, edges, trigger) |
+| `enabled`     | boolean     | Whether the workflow is active            |
+| `createdAt`   | timestamptz |                                           |
+| `updatedAt`   | timestamptz |                                           |
+
+#### `workflow_executions`
+
+Execution logs for each workflow run.
+
+| Column        | Type        | Notes                              |
+| ------------- | ----------- | ---------------------------------- |
+| `id`          | uuid PK     |                                    |
+| `workflowId`  | uuid FK     | → workflows(id)                    |
+| `status`      | varchar     | `completed` / `failed` / `running` |
+| `triggerData` | jsonb       | Data that fired the trigger        |
+| `result`      | jsonb       | Final output and node logs         |
+| `startedAt`   | timestamptz |                                    |
+| `completedAt` | timestamptz | Nullable                           |
+
+### IoT integration
+
+#### `objects`
+
+IoT object metadata — physical devices or data points from the upstream gateway.
+
+| Column        | Type        | Notes                          |
+| ------------- | ----------- | ------------------------------ |
+| `id`          | uuid PK     |                                |
+| `code`        | varchar     | Unique upstream identifier     |
+| `name`        | varchar     | Human-readable name            |
+| `type`        | varchar     | Object category                |
+| `description` | text        | Optional                       |
+| `metadata`    | jsonb       | Additional upstream properties |
+| `createdAt`   | timestamptz |                                |
+
+### Carbon tracking
+
+#### `carbon_factors`
+
+Emission factors for carbon calculations.
+
+| Column      | Type        | Notes             |
+| ----------- | ----------- | ----------------- |
+| `id`        | uuid PK     |                   |
+| `name`      | varchar     | Factor name       |
+| `value`     | real        | kg CO₂e per unit  |
+| `unit`      | varchar     | e.g. `kWh`, `m³`  |
+| `category`  | varchar     | Grouping category |
+| `createdAt` | timestamptz |                   |
+
+#### `carbon_factor_nodes`
+
+Tree-structured nodes for organizing carbon factors.
+
+| Column      | Type    | Notes                               |
+| ----------- | ------- | ----------------------------------- |
+| `id`        | uuid PK |                                     |
+| `parentId`  | uuid FK | → carbon_factor_nodes(id), nullable |
+| `factorId`  | uuid FK | → carbon_factors(id), nullable      |
+| `name`      | varchar | Node label                          |
+| `sortOrder` | integer | Display order                       |
+
+### 3D scene configuration
+
+#### `dashboard_models`
+
+Single-row 3D scene configuration for the web portal.
+
+| Column                  | Type        | Notes                      |
+| ----------------------- | ----------- | -------------------------- |
+| `id`                    | serial PK   |                            |
+| `modelFileUrl`          | varchar     | Path to the glTF/glB model |
+| `cameraPreset`          | varchar     | Named camera angle         |
+| `ambientLightIntensity` | real        | 0–1 ambient light level    |
+| `hotspots`              | jsonb       | Array of {x,y,z,label}     |
+| `labels`                | jsonb       | Array of {position,text}   |
+| `updatedAt`             | timestamptz |                            |
 
 ## Adding a new table
 

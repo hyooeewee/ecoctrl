@@ -5,7 +5,7 @@
 ## 通用约定
 
 - **前缀**：所有路由都在 `/api` 之下。`routes/index.ts` 把 `apiRoutes` 注册时使用了 `prefix: "/api"`。
-- **仅 JSON**。响应都是 JSON；唯一例外是 `GET /api/files/:id/raw`，会以二进制流形式返回原始文件。
+- **仅 JSON**。响应都是 JSON；唯一例外是 `GET /api/files/:id/preview`，会以二进制流形式返回原始文件。
 - **复数名词资源**。典型资源暴露 `GET /api/<resource>`、`POST /api/<resource>`、`GET /api/<resource>/:id`、`PUT /api/<resource>/:id`、`DELETE /api/<resource>/:id`。
 - **使用 Zod 校验**。每个 body、querystring、response 都会被校验。非法输入返回 `400`，缺失或过期的认证返回 `401`。
 - **错误结构**：`{ "error": "..." }` 用于客户端错误；服务端错误使用 Fastify 默认格式。
@@ -26,7 +26,7 @@
 | GET      | `/api/auth/oauth/providers`                                 | 列出已配置的 OAuth Provider。                     |
 | GET/POST | `/api/auth/oauth/wechat/...`、`/api/auth/oauth/feishu/...`  | OAuth 授权与回调。                                |
 | POST     | `/api/auth/oauth/bind`、`/api/auth/oauth/register-and-bind` | 把 OAuth 身份绑定到账号。                         |
-| GET      | `/api/dashboard`                                            | 公开只读看板数据（供 `apps/web` 使用）。          |
+| GET      | `/api/public/dashboard`                                     | 公开只读看板数据（供 `apps/web` 使用）。          |
 
 其他路由全部需要认证。
 
@@ -59,18 +59,9 @@
 
 用户 CRUD、角色、头像管理。所有端点需要认证。
 
-### `/api/dashboard/*`
-
-| Method | 路径                  | 备注                                      |
-| ------ | --------------------- | ----------------------------------------- |
-| GET    | `/dashboard`          | **公开** — 供公共门户使用的完整看板数据。 |
-| GET    | `/dashboard/alerts`   | 最近告警。                                |
-| GET    | `/dashboard/settings` | 当前用户的看板配置。                      |
-| PUT    | `/dashboard/settings` | 更新当前用户的看板配置。                  |
-
 ### `/api/overview/*`
 
-`GET /overview/stats` — KPI 卡片。`GET /overview/energy/weekly` — 周能耗图表数据。
+`GET /overview/stats` — KPI 卡片。`GET /overview/energy-chart` — 能耗图表数据。
 
 ### `/api/energy/*`
 
@@ -82,45 +73,101 @@
 
 ### `/api/reports/*`
 
-报表计划 CRUD 与报表模板列表。
+报表计划 CRUD 与报表模板列表。注意：没有 `/instances` 端点；生成的报表通过队列 Worker 输出获取。
 
 ### `/api/configs`
 
 平台配置单行的 `GET` 与 `PUT`。
 
-### `/api/three-d-config`
-
-3D 场景配置（相机预设、环境光强度、热点、标签）。同时支撑 admin 的 **3D 配置** 页与 web 的 Babylon 场景。
-
 ### `/api/files/*`
 
-| Method | 路径             | 说明                                |
-| ------ | ---------------- | ----------------------------------- |
-| GET    | `/files`         | 列出上传文件。                      |
-| POST   | `/files`         | multipart 上传，单文件最大 100 MB。 |
-| GET    | `/files/:id`     | 仅元数据。                          |
-| GET    | `/files/:id/raw` | 流式返回二进制。                    |
-| DELETE | `/files/:id`     | 删除。                              |
+| Method | 路径                 | 说明                                |
+| ------ | -------------------- | ----------------------------------- |
+| GET    | `/files`             | 列出上传文件。                      |
+| POST   | `/files`             | multipart 上传，单文件最大 100 MB。 |
+| GET    | `/files/:id`         | 仅元数据。                          |
+| GET    | `/files/:id/preview` | 流式返回二进制。                    |
+| DELETE | `/files/:id`         | 删除。                              |
 
 ### `/api/models/*`
 
-与 `/files` 类似，但专门用于 3D 模型上传。文件落到 `uploads/models/`，对外通过 `/static/models/<filename>` 访问。
+与 `/files` 类似，但专门用于 3D 模型上传。文件落到 `uploads/models/`，对外通过 `/static/models/<filename>` 访问。注意：没有 `GET /models/:id`；使用 `GET /models/:id/file` 流式获取模型文件。
 
 ### `/api/iot/*`
 
 代理上游 IoT 网关。请求/响应保持上游契约，EcoCtrl 透明处理 token 刷新（依赖 `iot_tokens` 表）。
 
-| 路径                                     | 说明                      |
-| ---------------------------------------- | ------------------------- |
-| `/iot/token`                             | 返回缓存的 Access Token。 |
-| `/iot/codes/values`                      | 读取当前点位值。          |
-| `/iot/codes/history`                     | 点位历史值。              |
-| `/iot/codes/set`、`/iot/codes/force-set` | 点位写值。                |
-| `/iot/alarms`、`/iot/alarm-configs`      | 报警历史与报警配置。      |
+| 方法 | 路径                                     | 说明                      |
+| ---- | ---------------------------------------- | ------------------------- |
+| GET  | `/iot/token`                             | 返回缓存的 Access Token。 |
+| POST | `/iot/codes/values`                      | 读取当前点位值。          |
+| POST | `/iot/codes/history`                     | 点位历史值。              |
+| POST | `/iot/codes/set`、`/iot/codes/force-set` | 点位写值。                |
+| POST | `/iot/alarms`、`/iot/alarm-configs`      | 报警历史与报警配置。      |
 
 ### `/api/system/*`
 
 `GET /system/backup-schedule`、`PUT /system/backup-schedule`。
+
+### `/api/workflows/*`
+
+工作流 CRUD 与执行。所有端点需要认证。
+
+| 方法   | 路径                        | 说明               |
+| ------ | --------------------------- | ------------------ |
+| GET    | `/workflows`                | 列出所有工作流     |
+| POST   | `/workflows`                | 创建工作流         |
+| GET    | `/workflows/:id`            | 获取单个工作流定义 |
+| PUT    | `/workflows/:id`            | 更新工作流定义     |
+| DELETE | `/workflows/:id`            | 删除工作流         |
+| POST   | `/workflows/:id/trigger`    | 手动执行工作流     |
+| GET    | `/workflows/:id/executions` | 列出工作流执行历史 |
+
+### `/api/objects/*`
+
+IoT 对象元数据 CRUD。对象代表上游 IoT 网关中的物理设备或数据点。
+
+| 方法   | 路径           | 说明         |
+| ------ | -------------- | ------------ |
+| GET    | `/objects`     | 列出对象     |
+| POST   | `/objects`     | 创建对象     |
+| GET    | `/objects/:id` | 获取对象详情 |
+| PUT    | `/objects/:id` | 更新对象     |
+| DELETE | `/objects/:id` | 删除对象     |
+
+### `/api/settings/*`
+
+每用户设置（需认证）。
+
+| 方法 | 路径        | 说明         |
+| ---- | ----------- | ------------ |
+| GET  | `/settings` | 获取用户设置 |
+| PUT  | `/settings` | 更新用户设置 |
+
+### `/api/public/settings/*`
+
+公开平台配置（无需 token）。
+
+| 方法 | 路径               | 说明             |
+| ---- | ------------------ | ---------------- |
+| GET  | `/public/settings` | 获取公开平台配置 |
+
+### `/api/dashboard-model/*`
+
+3D 场景配置。
+
+| 方法 | 路径               | 说明             |
+| ---- | ------------------ | ---------------- |
+| GET  | `/dashboard-model` | 获取 3D 场景配置 |
+| PUT  | `/dashboard-model` | 更新 3D 场景配置 |
+
+### `/api/webhook`
+
+工作流触发器的公开 Webhook 端点。
+
+| 方法 | 路径             | 说明                        |
+| ---- | ---------------- | --------------------------- |
+| POST | `/webhook/:slug` | 通过 Webhook 标识触发工作流 |
 
 ## Swagger 自动登录
 

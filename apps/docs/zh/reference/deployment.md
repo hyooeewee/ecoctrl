@@ -1,18 +1,25 @@
 # 部署指南
 
-EcoCtrl 支持三种生产部署形态：
+EcoCtrl 支持两种生产部署形态：
 
-| 形态                                           | 适用场景                    | 依赖                      |
-| ---------------------------------------------- | --------------------------- | ------------------------- |
-| [Docker Compose](#docker-compose)              | 单机部署、私有部署          | Docker 24+                |
-| [预构建 release zip](#预构建-release)          | 不使用 Docker 的 Linux 主机 | Node 20+、PostgreSQL、pm2 |
-| [Cloudflare Workers Static Assets](#docs-站点) | 文档站点                    | Cloudflare 账号           |
-
-文档站点已固定使用 Cloudflare Workers 部署；本页其余部分聚焦于业务应用栈。
+| 形态                                  | 适用场景                    | 依赖                      |
+| ------------------------------------- | --------------------------- | ------------------------- |
+| [Docker Compose](#docker-compose)     | 单机部署、私有部署          | Docker 24+                |
+| [预构建 release zip](#预构建-release) | 不使用 Docker 的 Linux 主机 | Node 20+、PostgreSQL、pm2 |
 
 ## Docker Compose
 
-最简单的路径。`docker/compose.yml` 定义 4 个服务：PostgreSQL、API 服务、admin SPA bundle、web SPA bundle。两个 SPA 镜像内置 Caddy，把 `/api/*` 与 `/static/*` 转发到 API 容器。
+提供了三份 Compose 文件，分别对应不同场景：
+
+| 文件                 | 用途                                 |
+| -------------------- | ------------------------------------ |
+| `compose.yml`        | 从 GHCR 拉取预构建镜像（默认）       |
+| `compose.build.yaml` | 从本地 Dockerfile 构建所有镜像       |
+| `compose.dev.yaml`   | 开发叠加层，挂载本地源码并启用热更新 |
+
+### 预构建镜像部署（默认）
+
+一条命令把 PostgreSQL、API 服务、admin 后台、web 公共门户全部拉起来。
 
 ### 一次性配置
 
@@ -23,11 +30,16 @@ cp .env.example .env.local
 $EDITOR .env.local        # 设置 JWT_SECRET（必填）以及 IoT 凭据（可选）
 ```
 
-::: tip 离线部署（目标主机无外网）
-如果目标机器无法访问 GHCR 或 Docker Hub，可下载离线部署包：
+:::tabs
+== 在线部署（默认）
+
+目标机器可以访问 GHCR 和 Docker Hub，直接执行下方的 `docker compose` 命令即可。
+
+== 离线部署（无外网）
+
+如果目标机器无法访问外部仓库，可 <a href="https://bucket.godot.qzz.io/images/latest/ecoctrl.zip" download>下载离线部署包</a> 后执行：
 
 ```bash
-curl -O https://bucket.godot.qzz.io/images/latest/ecoctrl.zip
 unzip ecoctrl.zip
 cd ecoctrl-docker
 sh migrate-images.sh compose.yaml --load ecoctrl-images.tar
@@ -76,20 +88,22 @@ GitHub Releases 为每个 tag 发布预构建 zip。其中包含 SPA bundle 与 
 
 ### 下载
 
+:::tabs
+== GitHub Releases
+
 打开 [GitHub Releases](https://github.com/hyooeewee/ecoctrl/releases)：
 
 - **`ecoctrl-vX.Y.Z.zip`** — 推荐，包含全部组件，可直接配合 `start.sh` 使用。
 - 单包：`admin-vX.Y.Z.zip`、`web-vX.Y.Z.zip`、`server-vX.Y.Z.zip`，并排解压到同一目录即可。
 
-::: tip 国内用户镜像
+== 国内镜像
+
 如果 GitHub Releases 访问较慢，可从 Cloudflare R2 镜像下载（每次 release 自动同步）：
 
-| 文件   | 镜像地址                                                  |
-| ------ | --------------------------------------------------------- |
-| 完整包 | `https://bucket.godot.qzz.io/releases/latest/ecoctrl.zip` |
-| Admin  | `https://bucket.godot.qzz.io/releases/latest/admin.zip`   |
-| Web    | `https://bucket.godot.qzz.io/releases/latest/web.zip`     |
-| Server | `https://bucket.godot.qzz.io/releases/latest/server.zip`  |
+- **完整包**：<a href="https://bucket.godot.qzz.io/releases/latest/ecoctrl.zip" download>ecoctrl.zip ↓</a>
+- **Admin**：<a href="https://bucket.godot.qzz.io/releases/latest/admin.zip" download>admin.zip ↓</a>
+- **Web**：<a href="https://bucket.godot.qzz.io/releases/latest/web.zip" download>web.zip ↓</a>
+- **Server**：<a href="https://bucket.godot.qzz.io/releases/latest/server.zip" download>server.zip ↓</a>
 
 :::
 
@@ -98,13 +112,13 @@ GitHub Releases 为每个 tag 发布预构建 zip。其中包含 SPA bundle 与 
 ```
 ecoctrl/
 ├── start.sh
-├── ecoctrl.config.cjs   # 服务端的 pm2 配置
 ├── server/
-│   ├── dist/index.mjs
-│   ├── dist/package.json
-│   └── .env.example     # 复制为 .env.local
-├── admin/               # 静态产物
-└── web/                 # 静态产物
+│   ├── index.mjs
+│   ├── package.json
+│   ├── ecoctrl.config.cjs   # 服务端的 pm2 配置
+│   └── .env.example         # 复制为 .env.local
+├── admin/                   # 静态产物
+└── web/                     # 静态产物
 ```
 
 ### 配置
@@ -127,7 +141,7 @@ echo 'API_BASE_URL=https://api.example.com' > web/.env.local
 
 `start.sh` 会执行：
 
-1. 第一次启动时在 `server/dist/` 中运行 `pnpm install --prod`。
+1. 第一次启动时在 `server/` 中运行 `pnpm install --prod`。
 2. 通过 pm2 启动 API（进程名 `ecoctrl-server`）。
 3. 用 [`local-web-server`](https://github.com/lwsjs/local-web-server) 把 `admin/` 起在 `:4173`、`web/` 起在 `:8081`，附带 `--rewrite "/api/(.*) -> $API_BASE_URL$API_PREFIX/$1"`。
 
@@ -145,7 +159,7 @@ kill "$(cat logs/web.pid)"
 
 SPA 服务与 API 都监听明文 HTTP。生产环境通常配合一个负责 TLS 终结的反向代理。Caddy 示例：
 
-```caddyfile
+```nginx
 app.example.com {
     reverse_proxy localhost:8081      # web 门户
 }
@@ -172,69 +186,13 @@ pnpm build:web      # → apps/web/build/
 pnpm build:server   # → packages/server/dist/{index.mjs, package.json}
 ```
 
-服务端构建产物的 `dist/package.json` 仅列出 bundle 实际用到的依赖，所以 `server/dist/` 加上 `pnpm install --prod` 就能跑。
-
-## 文档站点 {#docs-站点}
-
-你正在阅读的文档站点托管在 **Cloudflare Workers Static Assets** 上，域名为 `ecoctrl.godot.run`。
-
-### 构建命令
-
-在 monorepo 根目录执行：
-
-```bash
-corepack enable
-pnpm install --frozen-lockfile
-pnpm --filter @ecoctrl/docs build
-```
-
-输出目录：`apps/docs/.vitepress/dist/`。
-
-### `wrangler.jsonc`
-
-```jsonc
-{
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "ecoctrl-docs",
-  "compatibility_date": "2026-04-26",
-  "assets": {
-    "directory": "./.vitepress/dist/",
-    "not_found_handling": "404-page",
-  },
-}
-```
-
-### 部署
-
-把项目接入 Cloudflare Workers Builds 后，每次推送到 `main` 都会自动触发构建。配置中 build 路径设为 `apps/docs`；构建命令在 monorepo 根目录运行，通过 `--filter` 限制到 docs 包，从而保证工作区依赖完整解析。
-
-```
-推送到 main
-        │
-        ▼
-Cloudflare Workers Builds
-        │  (corepack enable && pnpm install && pnpm --filter @ecoctrl/docs build)
-        ▼
-上传静态资源
-        │
-        ▼
-ecoctrl.godot.run（CDN 缓存）
-```
-
-### 手动部署
-
-```bash
-cd apps/docs
-pnpm build
-pnpm dlx wrangler deploy
-```
-
-`wrangler` 会自动读取 `apps/docs/wrangler.jsonc`，无需额外参数。
+服务端构建产物的 `dist/package.json` 仅列出 bundle 实际用到的依赖，所以 `server/` 加上 `pnpm install --prod` 就能跑。
 
 ## 上线 Checklist
 
 把 EcoCtrl 暴露到公网之前，请确认：
 
+```markdown
 - [ ] 设置一个强随机的 `JWT_SECRET`，并替换掉所有默认值。
 - [ ] 将 `CORS_ORIGIN` 限制到真实域名。
 - [ ] 使用托管 PostgreSQL（或自建并加固 — TLS、备份、监控）。
@@ -244,3 +202,4 @@ pnpm dlx wrangler deploy
 - [ ] 安排数据库备份（平台中的 `backup_schedules` 仅记录下一次时间，真正的备份执行仍需自行实现）。
 - [ ] 在生产中收紧数据库角色权限：撤销 `CREATE DATABASE`，让自动建库逻辑只在开发环境生效。
 - [ ] 把服务端日志接入聚合系统（Fastify 使用 pino 生成 JSON-on-stdout，可与各种日志方案对接）。
+```

@@ -38,4 +38,13 @@ features:
   - icon: 🐳
     title: One-command Deploy
     details: Ship the full stack with a single docker compose up, or grab a pre-built release zip and run start.sh — your choice.
+  - icon: ⚙️
+    title: Workflow Engine
+    details: Visual workflow builder with a DSL-based execution engine. Support state-change, schedule, webhook and manual triggers with retry and error handling.
+  - icon: 📬
+    title: Queue & Worker
+    details: Background job processing via pg-boss. Report generation, backups and workflow executions run asynchronously without blocking the API.
+  - icon: 🔗
+    title: IoT Gateway Proxy
+    details: Transparent proxy to upstream IoT platforms with automatic token refresh. Object metadata and point values flow into the dashboard in real time.
 ---

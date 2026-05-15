@@ -106,6 +106,34 @@ vp lint     # 仅静态检查
 
 `vp check` 是项目代码质量的唯一入口 — 它把格式化、Linter 与类型检查一起跑。
 
+## 运行测试
+
+每个包都配备了 [Vitest](https://vitest.dev/) 测试：
+
+```bash
+pnpm test              # 一次性运行全部测试
+pnpm test:watch        # 监听模式
+pnpm test:coverage     # 带覆盖率报告
+pnpm test:ui           # 在浏览器中打开 Vitest UI
+```
+
+在 monorepo 根目录运行会执行所有包的测试套件，或进入特定包只运行该包的测试。
+
+## 开发环境中的队列 Worker
+
+`packages/server` 使用 [pg-boss](https://github.com/timgit/pg-boss) 处理后台任务（报表生成、工作流执行、定时备份）。开发时 Worker 随 API 服务自动启动，无需额外进程。任务进度以 pino JSON 格式输出到 stdout，与 HTTP 请求日志格式一致。
+
+## i18n 工作流
+
+`apps/web` 和 `apps/admin` 都支持国际化。Locale 文件分别位于 `apps/web/app/locales/` 和 `apps/admin/src/locales/`。当你添加或删除面向用户的文案时：
+
+1. 把键添加到**两个** locale 文件中。
+2. 修改后及时运行死码检查：
+
+   ```bash
+   uv run scripts/check-locale-dead-code.py
+   ```
+
 ## 项目通用约定
 
 - **代码注释与文档字符串**：仅使用英文。
