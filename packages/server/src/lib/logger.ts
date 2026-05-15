@@ -5,14 +5,6 @@ import { createStream } from "rotating-file-stream";
 import { Writable } from "node:stream";
 
 const NODE_ENV = process.env.NODE_ENV || "development";
-const LOG_LEVEL = process.env.LOG_LEVEL || (NODE_ENV === "development" ? "debug" : "info");
-const LOG_DESTINATION =
-  process.env.LOG_DESTINATION || (NODE_ENV === "production" ? "both" : "stdout");
-const LOG_DIR = process.env.LOG_DIR || "./logs";
-const LOG_PRETTY = process.env.LOG_PRETTY !== "false";
-const LOG_ROTATE_INTERVAL = process.env.LOG_ROTATE_INTERVAL || "1d";
-const LOG_MAX_DAYS = parseInt(process.env.LOG_MAX_DAYS || "30", 10);
-
 const isDev = NODE_ENV === "development";
 
 const redactPaths = [
@@ -61,15 +53,22 @@ class TeeStream extends Writable {
   }
 }
 
-function createFileStream(filename: string) {
-  return createStream(filename, {
-    interval: LOG_ROTATE_INTERVAL,
-    path: LOG_DIR,
-    maxFiles: LOG_MAX_DAYS,
-  });
-}
-
 function buildRootLogger(): Logger {
+  const LOG_LEVEL = process.env.LOG_LEVEL || (isDev ? "debug" : "info");
+  const LOG_DESTINATION = process.env.LOG_DESTINATION || (isDev ? "stdout" : "both");
+  const LOG_DIR = process.env.LOG_DIR || "./logs";
+  const LOG_PRETTY = process.env.LOG_PRETTY !== "false";
+  const LOG_ROTATE_INTERVAL = process.env.LOG_ROTATE_INTERVAL || "1d";
+  const LOG_MAX_DAYS = parseInt(process.env.LOG_MAX_DAYS || "30", 10);
+
+  function createFileStream(filename: string) {
+    return createStream(filename, {
+      interval: LOG_ROTATE_INTERVAL,
+      path: LOG_DIR,
+      maxFiles: LOG_MAX_DAYS,
+    });
+  }
+
   const baseOptions: LoggerOptions = {
     level: LOG_LEVEL,
     redact: {
