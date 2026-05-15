@@ -1,5 +1,11 @@
 # @ecoctrl/server
 
+## 0.4.9
+
+### Patch Changes
+
+- [`2484cc8`](https://github.com/hyooeewee/ecoctrl/commit/2484cc80bb8b902d261d016234d5bea4c40752ae) Thanks [@hyooeewee](https://github.com/hyooeewee)! - add pets system
+
 ## 0.4.8
 
 ### Patch Changes
