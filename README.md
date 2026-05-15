@@ -4,14 +4,11 @@
 [![Version](https://img.shields.io/github/v/tag/hyooeewee/ecoctrl?label=version)](https://github.com/hyooeewee/ecoctrl/releases)
 [![Node](https://img.shields.io/badge/node-%3E%3D20.0.0-339933?logo=nodedotjs)](https://nodejs.org/)
 
+![Admin](docs/screenshots/admin.png)
+
 An energy & IoT control platform built as a pnpm monorepo, featuring 3D visualization, real-time monitoring, and a unified management dashboard.
 
-**📖 Documentation**: [ecoctrl.godot.run](https://ecoctrl.godot.run)
-
-<!-- Screenshots -->
-<!-- | Admin Dashboard | 3D Building View | -->
-<!-- |:---:|:---:| -->
-<!-- | ![Admin](docs/screenshots/admin.png) | ![3D](docs/screenshots/web-3d.png) | -->
+**📖 Documentation**: [docs.godot.qzz.io](https://docs.godot.qzz.io)
 
 ## Architecture
 
