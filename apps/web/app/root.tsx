@@ -13,6 +13,7 @@ import { Toaster } from "@ecoctrl/ui";
 
 import { TooltipProvider } from "~/components/ui-adapter/tooltip";
 import { useLocale } from "~/locales";
+import { ScreenPet } from "~/components/screen-pet";
 
 import "./app.css";
 import type { Route } from "./+types/root";
@@ -47,6 +48,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </TooltipProvider>
         <ScrollRestoration />
         <Scripts />
+        <ScreenPet />
       </body>
     </html>
   );
