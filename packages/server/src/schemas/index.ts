@@ -18,3 +18,5 @@ export * from "./platformConfig";
 export * from "./dashboardWidgets";
 export * from "./refreshTokens";
 export * from "./userSettings";
+export * from "./aiConversations";
+export * from "./petPreferences";
