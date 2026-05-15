@@ -16,7 +16,7 @@ export class AnthropicClient implements AIClient {
     const anthropicTools = tools.map((t) => ({
       name: t.name,
       description: t.description,
-      input_schema: t.parameters,
+      input_schema: { type: "object" as const, ...t.parameters },
     }));
 
     const anthropicMessages: Anthropic.Messages.MessageParam[] = messages.map((m) => {
@@ -60,7 +60,7 @@ export class AnthropicClient implements AIClient {
       if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
         onChunk({ type: "text", content: event.delta.text });
       }
-      if (event.type === "content_block_stop" && event.content_block.type === "tool_use") {
+      if (event.type === "content_block_start" && event.content_block.type === "tool_use") {
         onChunk({
           type: "tool_call",
           toolCall: {
