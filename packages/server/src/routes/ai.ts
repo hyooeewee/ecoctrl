@@ -33,6 +33,7 @@ const preferencesBodySchema = z.object({
 export default async function aiRoutes(fastify: FastifyInstance) {
   const aiProvider = process.env.AI_PROVIDER as "anthropic" | "openai" | undefined;
   const aiApiKey = process.env.AI_API_KEY;
+  const aiBaseURL = process.env.AI_BASE_URL;
 
   if (!aiProvider || !aiApiKey) {
     fastify.log.warn("AI provider not configured. AI chat will return errors.");
@@ -91,7 +92,7 @@ export default async function aiRoutes(fastify: FastifyInstance) {
         return;
       }
 
-      const client = createAIClient(aiProvider, aiApiKey);
+      const client = createAIClient(aiProvider, aiApiKey, aiBaseURL);
       let assistantContent = "";
       const toolCalls: { name: string; arguments: Record<string, unknown> }[] = [];
 

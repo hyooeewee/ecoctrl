@@ -2,8 +2,10 @@ import type { AIClient, ChatMessage, Tool, AIStreamChunk } from "../types";
 
 export class OpenAIClient implements AIClient {
   private apiKey: string;
-  constructor(apiKey: string) {
+  private baseURL?: string;
+  constructor(apiKey: string, baseURL?: string) {
     this.apiKey = apiKey;
+    this.baseURL = baseURL;
   }
   async chat(
     _messages: ChatMessage[],
