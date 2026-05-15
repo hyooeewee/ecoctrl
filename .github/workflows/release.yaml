@@ -164,23 +164,25 @@ jobs:
 
       - name: Upload Docker bundle to R2
         run: |
-          BUCKET="ecoctrl"
           VERSION="${{ needs.changeset.outputs.tag }}"
           VERSION=${VERSION#v}
 
-          pnpm wrangler r2 object put "$BUCKET/images/v$VERSION/ecoctrl.zip" \
-            --file="ecoctrl-docker-v${VERSION}.zip" \
-            --content-type="application/zip" \
-            --remote
+          ENDPOINT="https://${CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com"
 
-          pnpm wrangler r2 object put "$BUCKET/images/latest/ecoctrl.zip" \
-            --file="ecoctrl-docker-v${VERSION}.zip" \
-            --content-type="application/zip" \
-            --remote
+          # Versioned path
+          aws s3 cp "ecoctrl-docker-v${VERSION}.zip" \
+            "s3://ecoctrl/images/v${VERSION}/ecoctrl.zip" \
+            --endpoint-url "$ENDPOINT"
+
+          # Latest path (overwrite)
+          aws s3 cp "ecoctrl-docker-v${VERSION}.zip" \
+            "s3://ecoctrl/images/latest/ecoctrl.zip" \
+            --endpoint-url "$ENDPOINT"
 
           rm "ecoctrl-docker-v${VERSION}.zip"
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
   release-assets:
