@@ -1,6 +1,9 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/config/database";
 import { platformConfigs } from "@/schemas/platformConfig";
+import { getLogger } from "@/lib/logger";
+
+const logger = getLogger("platformConfig");
 
 export interface PlatformConfig {
   platformName: string;
@@ -150,6 +153,6 @@ export async function syncSmtpFromEnv(): Promise<void> {
       smtpPass: envPass,
       smtpSecure: process.env.SMTP_SECURE === "true",
     });
-    console.log("[SMTP] Synced SMTP config from env to database (empty fields filled)");
+    logger.info("[SMTP] Synced SMTP config from env to database (empty fields filled)");
   }
 }
