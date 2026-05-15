@@ -23,6 +23,7 @@ import backupScheduleRoutes from "@/routes/backupSchedule";
 import authRoutes from "@/routes/auth";
 import oauthRoutes from "@/routes/oauth";
 import workflowRoutes, { registerWebhookRoute } from "@/routes/workflows";
+import aiRoutes from "@/routes/ai";
 
 export default async function apiRoutes(fastify: FastifyInstance) {
   fastify.addHook("onRequest", async (request: FastifyRequest, reply: FastifyReply) => {
@@ -125,5 +126,6 @@ export default async function apiRoutes(fastify: FastifyInstance) {
   await fastify.register(authRoutes, { prefix: "/auth" });
   await fastify.register(oauthRoutes, { prefix: "/auth/oauth" });
   await fastify.register(workflowRoutes, { prefix: "/workflows" });
+  await fastify.register(aiRoutes, { prefix: "/ai" });
   await registerWebhookRoute(fastify);
 }
