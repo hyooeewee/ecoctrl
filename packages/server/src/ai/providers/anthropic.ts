@@ -1,11 +1,15 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { AIClient, ChatMessage, Tool, AIStreamChunk } from "../types";
 
+const DEFAULT_ANTHROPIC_MODEL = "claude-3-5-sonnet-20241022";
+
 export class AnthropicClient implements AIClient {
   private client: Anthropic;
+  private model: string;
 
-  constructor(apiKey: string, baseURL?: string) {
+  constructor(apiKey: string, baseURL?: string, model?: string) {
     this.client = new Anthropic({ apiKey, baseURL });
+    this.model = model || DEFAULT_ANTHROPIC_MODEL;
   }
 
   async chat(
@@ -50,7 +54,7 @@ export class AnthropicClient implements AIClient {
     });
 
     const stream = this.client.messages.stream({
-      model: "claude-3-5-sonnet-20241022",
+      model: this.model,
       max_tokens: 4096,
       messages: anthropicMessages,
       tools: anthropicTools.length > 0 ? anthropicTools : undefined,
