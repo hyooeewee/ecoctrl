@@ -22,8 +22,14 @@ export function ScreenPet() {
   const sessionId = usePetStore((s) => s.sessionId);
   const initSession = usePetStore((s) => s.initSession);
 
-  const { position, isDragging, handlePointerDown, handlePointerMove, handlePointerUp } =
-    usePetPosition();
+  const {
+    position,
+    isDragging,
+    hasDraggedRef,
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerUp,
+  } = usePetPosition();
 
   const { speak, isSpeaking, stop: stopSpeaking } = useVoiceOutput();
 
@@ -160,7 +166,7 @@ export function ScreenPet() {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onClick={() => {
-          if (!isDragging) toggleOpen();
+          if (!hasDraggedRef.current) toggleOpen();
         }}
         className="touch-none"
       >
