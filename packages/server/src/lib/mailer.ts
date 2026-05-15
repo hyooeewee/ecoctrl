@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
 import { getLogger } from "@/lib/logger";
 import { findPlatformConfig } from "@/repositories/platformConfig";
+import { env } from "@/lib/env";
 
 const logger = getLogger("mailer");
 
@@ -21,17 +22,17 @@ function hashConfig(c: SmtpConfig): string {
 }
 
 async function resolveSmtpConfig(): Promise<SmtpConfig | null> {
-  const envHost = process.env.SMTP_HOST || "";
-  const envUser = process.env.SMTP_USER || "";
-  const envPass = process.env.SMTP_PASS || "";
+  const envHost = env.SMTP_HOST;
+  const envUser = env.SMTP_USER ?? "";
+  const envPass = env.SMTP_PASS ?? "";
 
   if (envHost && envUser && envPass) {
     return {
       smtpHost: envHost,
-      smtpPort: Number(process.env.SMTP_PORT) || 587,
+      smtpPort: env.SMTP_PORT,
       smtpUser: envUser,
       smtpPass: envPass,
-      smtpSecure: process.env.SMTP_SECURE === "true",
+      smtpSecure: env.SMTP_SECURE,
     };
   }
 

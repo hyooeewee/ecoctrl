@@ -5,6 +5,7 @@ import { users } from "@/schemas/users";
 import { findPlatformConfig } from "@/repositories/platformConfig";
 import { createUser } from "@/repositories/users";
 import { getLogger } from "@/lib/logger";
+import { env } from "@/lib/env";
 
 const logger = getLogger("initAdmin");
 
@@ -21,7 +22,7 @@ export async function initAdmin(): Promise<void> {
     return; // Users already exist, skip initialization
   }
 
-  const rawPassword = process.env.INITIAL_ADMIN_PASSWORD?.trim() || generateRandomPassword();
+  const rawPassword = env.INITIAL_ADMIN_PASSWORD?.trim() || generateRandomPassword();
   const hashedPassword = await bcrypt.hash(rawPassword, 10);
 
   await createUser({
@@ -34,7 +35,7 @@ export async function initAdmin(): Promise<void> {
     avatarUrl: null,
   });
 
-  if (process.env.INITIAL_ADMIN_PASSWORD) {
+  if (env.INITIAL_ADMIN_PASSWORD) {
     logger.info("[INIT] Default admin created: admin / (from ADMIN_PASSWORD env)");
   } else {
     logger.info(`[INIT] Default admin created: admin / ${rawPassword}`);

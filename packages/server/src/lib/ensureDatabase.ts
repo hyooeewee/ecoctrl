@@ -1,10 +1,11 @@
 import postgres from "postgres";
 import { getLogger } from "@/lib/logger";
+import { env } from "@/lib/env";
 
 const logger = getLogger("database");
 
 export async function ensureDatabase(): Promise<void> {
-  const databaseUrl = process.env.DATABASE_URL!;
+  const databaseUrl = env.DATABASE_URL;
   // Connect to the postgres system database to check/create target DB
   const adminUrl = databaseUrl.replace(/\/[^/]+$/, "/postgres");
   const sql = postgres(adminUrl, { prepare: false });

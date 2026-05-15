@@ -1,8 +1,9 @@
 import { ensureToken, authorize } from "@/services/iot/auth";
 import type { IotResponse } from "@/services/iot/types";
+import { env } from "@/lib/env";
 
-const BASE_URL = process.env.BASE_URL?.replace(/\/+$/, "") || "";
-const APP_ID = process.env.APP_ID || "";
+const BASE_URL = env.BASE_URL?.replace(/\/+$/, "") || "";
+const APP_ID = env.APP_ID || "";
 
 export async function iotRequest(
   path: string,

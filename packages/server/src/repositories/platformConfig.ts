@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/config/database";
 import { platformConfigs } from "@/schemas/platformConfig";
 import { getLogger } from "@/lib/logger";
+import { env } from "@/lib/env";
 
 const logger = getLogger("platformConfig");
 
@@ -135,9 +136,9 @@ export async function updatePlatformConfig(config: PlatformConfig): Promise<Plat
 }
 
 export async function syncSmtpFromEnv(): Promise<void> {
-  const envHost = process.env.SMTP_HOST?.trim() || "";
-  const envUser = process.env.SMTP_USER?.trim() || "";
-  const envPass = process.env.SMTP_PASS?.trim() || "";
+  const envHost = env.SMTP_HOST?.trim() || "";
+  const envUser = env.SMTP_USER?.trim() || "";
+  const envPass = env.SMTP_PASS?.trim() || "";
 
   if (!envHost || !envUser || !envPass) return;
 
@@ -148,10 +149,10 @@ export async function syncSmtpFromEnv(): Promise<void> {
     await updatePlatformConfig({
       ...existing,
       smtpHost: envHost,
-      smtpPort: Number(process.env.SMTP_PORT) || 587,
+      smtpPort: Number(env.SMTP_PORT) || 587,
       smtpUser: envUser,
       smtpPass: envPass,
-      smtpSecure: process.env.SMTP_SECURE === "true",
+      smtpSecure: env.SMTP_SECURE,
     });
     logger.info("[SMTP] Synced SMTP config from env to database (empty fields filled)");
   }
