@@ -44,6 +44,7 @@ export default async function apiRoutes(fastify: FastifyInstance) {
       "/api/auth/oauth/register-and-bind",
       "/api/public",
       "/api/webhook",
+      "/api/ai/chat",
     ];
     if (publicPaths.some((p) => request.url.startsWith(p))) return;
     try {
