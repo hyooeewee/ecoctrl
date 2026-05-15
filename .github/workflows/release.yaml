@@ -163,11 +163,13 @@ jobs:
 
           pnpm wrangler r2 object put "$BUCKET/images/v$VERSION/ecoctrl.zip" \
             --file="ecoctrl-docker-v${VERSION}.zip" \
-            --content-type="application/zip"
+            --content-type="application/zip" \
+            --remote
 
           pnpm wrangler r2 object put "$BUCKET/images/latest/ecoctrl.zip" \
             --file="ecoctrl-docker-v${VERSION}.zip" \
-            --content-type="application/zip"
+            --content-type="application/zip" \
+            --remote
 
           rm "ecoctrl-docker-v${VERSION}.zip"
         env:
@@ -237,17 +239,19 @@ jobs:
 
           for file in release-assets/*.zip; do
             filename=$(basename "$file")
+            latest_name="${filename/-v${VERSION}/}"
 
             # Versioned path
             pnpm wrangler r2 object put "$BUCKET/releases/v$VERSION/$latest_name" \
               --file="$file" \
-              --content-type="application/zip"
+              --content-type="application/zip" \
+              --remote
 
             # Latest path (overwrite)
-            latest_name="${filename/-v${VERSION}/}"
             pnpm wrangler r2 object put "$BUCKET/releases/latest/$latest_name" \
               --file="$file" \
-              --content-type="application/zip"
+              --content-type="application/zip" \
+              --remote
 
             echo "Uploaded: $filename -> v$VERSION + latest"
           done
