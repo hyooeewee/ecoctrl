@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Settings, X } from "lucide-react";
 import { usePetStore, type PetTheme } from "~/store/pet";
+import { spritePetRegistry } from "virtual:pets";
 
 export function PetSettings() {
   const [isOpen, setIsOpen] = useState(false);
@@ -13,11 +14,10 @@ export function PetSettings() {
   const setVoiceSpeed = usePetStore((s) => s.setVoiceSpeed);
   const setWakeWordEnabled = usePetStore((s) => s.setWakeWordEnabled);
 
-  const themes: { id: PetTheme; label: string }[] = [
-    { id: "tech-robot", label: "科技机器人" },
-    { id: "cute-animal", label: "可爱动物" },
-    { id: "minimal-geo", label: "极简几何" },
-  ];
+  const themes = spritePetRegistry.pets.map((p) => ({
+    id: p.id as PetTheme,
+    label: p.displayName,
+  }));
 
   return (
     <>
@@ -44,12 +44,12 @@ export function PetSettings() {
 
             <div className="mb-4">
               <label className="mb-2 block text-sm text-slate-400">形象主题</label>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {themes.map((t) => (
                   <button
                     key={t.id}
                     onClick={() => setTheme(t.id)}
-                    className={`flex-1 rounded-lg px-3 py-2 text-xs transition-colors ${
+                    className={`rounded-lg px-2 py-2 text-xs transition-colors ${
                       theme === t.id
                         ? "bg-cyan-600 text-white"
                         : "bg-slate-800 text-slate-400 hover:bg-slate-700"
@@ -93,7 +93,7 @@ export function PetSettings() {
             </div>
 
             <div className="flex items-center justify-between">
-              <label className="text-sm text-slate-400">唤醒词 "小狼"</label>
+              <label className="text-sm text-slate-400">唤醒词 &quot;蓝宝&quot;</label>
               <button
                 onClick={() => setWakeWordEnabled(!wakeWordEnabled)}
                 className={`relative h-6 w-11 rounded-full transition-colors ${

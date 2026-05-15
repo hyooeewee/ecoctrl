@@ -10,6 +10,7 @@ export function usePetPosition(initialX?: number, initialY?: number) {
     y: initialY ?? (typeof window !== "undefined" ? window.innerHeight - PET_SIZE - MARGIN : 500),
   });
   const [isDragging, setIsDragging] = useState(false);
+  const [dragDirection, setDragDirection] = useState<"left" | "right" | null>(null);
   const isDraggingRef = useRef(false);
   const hasDraggedRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0, posX: 0, posY: 0 });
@@ -21,6 +22,7 @@ export function usePetPosition(initialX?: number, initialY?: number) {
       isDraggingRef.current = true;
       hasDraggedRef.current = false;
       setIsDragging(true);
+      setDragDirection(null);
       dragStartRef.current = {
         x: e.clientX,
         y: e.clientY,
@@ -43,6 +45,10 @@ export function usePetPosition(initialX?: number, initialY?: number) {
       hasDraggedRef.current = true;
     }
 
+    if (dx !== 0) {
+      setDragDirection(dx > 0 ? "right" : "left");
+    }
+
     const maxX = (typeof window !== "undefined" ? window.innerWidth : 800) - PET_SIZE - MARGIN;
     const maxY = (typeof window !== "undefined" ? window.innerHeight : 600) - PET_SIZE - MARGIN;
 
@@ -55,6 +61,7 @@ export function usePetPosition(initialX?: number, initialY?: number) {
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
     isDraggingRef.current = false;
     setIsDragging(false);
+    setDragDirection(null);
     const target = e.currentTarget as HTMLElement;
     if (target.hasPointerCapture(e.pointerId)) {
       target.releasePointerCapture(e.pointerId);
@@ -65,6 +72,7 @@ export function usePetPosition(initialX?: number, initialY?: number) {
     position,
     isDragging,
     hasDraggedRef,
+    dragDirection,
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,

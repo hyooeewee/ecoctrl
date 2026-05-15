@@ -195,7 +195,7 @@ describe("pet preferences API", () => {
       ok: true,
       data: {
         userId: 1,
-        theme: "tech-robot",
+        theme: "usagi",
         voiceEnabled: true,
         voiceSpeed: 1,
         petPositionX: 100,
@@ -206,19 +206,19 @@ describe("pet preferences API", () => {
 
     const result = await fetchPetPreferences();
     expect(apiGet).toHaveBeenCalledWith("/api/ai/preferences");
-    expect(result.data?.theme).toBe("tech-robot");
+    expect(result.data?.theme).toBe("usagi");
     expect(result.data?.voiceEnabled).toBe(true);
   });
 
   it("updatePetPreferences sends correct body", async () => {
     vi.mocked(apiPost).mockResolvedValue({
       ok: true,
-      data: { theme: "cute-animal" },
+      data: { theme: "violet" },
     });
 
-    const result = await updatePetPreferences({ theme: "cute-animal" });
-    expect(apiPost).toHaveBeenCalledWith("/api/ai/preferences", { theme: "cute-animal" });
-    expect(result.data?.theme).toBe("cute-animal");
+    const result = await updatePetPreferences({ theme: "violet" });
+    expect(apiPost).toHaveBeenCalledWith("/api/ai/preferences", { theme: "violet" });
+    expect(result.data?.theme).toBe("violet");
   });
 
   it("clearConversations calls correct endpoint", async () => {

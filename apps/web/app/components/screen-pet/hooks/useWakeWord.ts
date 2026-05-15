@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-const WAKE_WORD = "小狼";
+const WAKE_WORD = "蓝宝";
 
 export function useWakeWord(enabled: boolean, onWake: () => void) {
   const recognitionRef = useRef<SpeechRecognition | null>(null);

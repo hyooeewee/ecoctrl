@@ -7,7 +7,7 @@ describe("pet store", () => {
       isOpen: false,
       isDragging: false,
       position: { x: 400, y: 500 },
-      theme: "tech-robot",
+      theme: "usagi",
       voiceEnabled: true,
       voiceSpeed: 1.0,
       wakeWordEnabled: true,
@@ -64,8 +64,8 @@ describe("pet store", () => {
   });
 
   it("sets theme", () => {
-    usePetStore.getState().setTheme("cute-animal");
-    expect(usePetStore.getState().theme).toBe("cute-animal");
+    usePetStore.getState().setTheme("violet");
+    expect(usePetStore.getState().theme).toBe("violet");
   });
 
   it("sets voice settings", () => {
