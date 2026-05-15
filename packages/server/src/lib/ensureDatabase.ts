@@ -1,4 +1,7 @@
 import postgres from "postgres";
+import { getLogger } from "@/lib/logger";
+
+const logger = getLogger("database");
 
 export async function ensureDatabase(): Promise<void> {
   const databaseUrl = process.env.DATABASE_URL!;
@@ -12,7 +15,7 @@ export async function ensureDatabase(): Promise<void> {
   const dbs = await sql`SELECT datname FROM pg_database WHERE datname = ${dbName}`;
   if (dbs.length === 0) {
     await sql.unsafe(`CREATE DATABASE "${dbName}"`);
-    console.log(`Database ${dbName} created.`);
+    logger.info(`Database ${dbName} created.`);
   }
 
   await sql.end();

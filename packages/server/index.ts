@@ -19,6 +19,7 @@ import {
 
 import { ensureDatabase } from "@/lib/ensureDatabase";
 // import { migrateDatabase } from "@/lib/migrateDatabase";
+import { getRootLogger } from "@/lib/logger";
 import { UPLOAD_DIR } from "@/lib/paths";
 import databasePlugin from "@/plugins/database";
 import rateLimitPlugin from "@/plugins/rateLimit";
@@ -33,7 +34,7 @@ await ensureDatabase();
 await syncSmtpFromEnv();
 await initAdmin();
 
-const fastify = Fastify({ logger: true }).withTypeProvider<ZodTypeProvider>();
+const fastify = Fastify({ loggerInstance: getRootLogger() }).withTypeProvider<ZodTypeProvider>();
 
 fastify.setValidatorCompiler(validatorCompiler);
 fastify.setSerializerCompiler(serializerCompiler);
@@ -206,7 +207,7 @@ const HOST = process.env.HOST || "0.0.0.0";
 
 try {
   await fastify.listen({ port: PORT, host: HOST });
-  console.log(`Server listening on http://${HOST === "0.0.0.0" ? "localhost" : HOST}:${PORT}`);
+  fastify.log.info(`Server listening on http://${HOST === "0.0.0.0" ? "localhost" : HOST}:${PORT}`);
 } catch (err) {
   fastify.log.error(err);
   process.exit(1);

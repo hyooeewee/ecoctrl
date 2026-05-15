@@ -4,7 +4,10 @@ import { db } from "@/config/database";
 import { workflowExecutions } from "@/schemas/workflows";
 import { findWorkflowById } from "@/repositories/workflows";
 import { executeWorkflow } from "@/engine/executor";
+import { getLogger } from "@/lib/logger";
 import type { ExecutionJobData } from "./pgboss";
+
+const logger = getLogger("queue");
 
 const JOB_NAME = "workflow.execute";
 
@@ -114,5 +117,5 @@ export async function startWorker(): Promise<void> {
     },
   );
 
-  console.log("[worker] Started listening for workflow.execute jobs");
+  logger.info("[worker] Started listening for workflow.execute jobs");
 }

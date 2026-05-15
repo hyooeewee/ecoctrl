@@ -1,6 +1,9 @@
 import nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
+import { getLogger } from "@/lib/logger";
 import { findPlatformConfig } from "@/repositories/platformConfig";
+
+const logger = getLogger("mailer");
 
 let transporter: Transporter | null = null;
 let cachedConfigHash = "";
@@ -81,7 +84,7 @@ async function buildTransporter(): Promise<Transporter | null> {
     debug: false,
   };
 
-  console.log(
+  logger.info(
     `[SMTP] Connecting to ${config.smtpHost}:${config.smtpPort} (secure=${useSecure}, requireTLS=${requireTLS})`,
   );
 
@@ -89,10 +92,10 @@ async function buildTransporter(): Promise<Transporter | null> {
 
   try {
     await t.verify();
-    console.log(`[SMTP] Connection verified OK`);
+    logger.info(`[SMTP] Connection verified OK`);
   } catch (verifyErr) {
     const err = verifyErr as Error & { code?: string; command?: string };
-    console.error(
+    logger.error(
       `[SMTP] Connection verify failed: ${err.message} (code=${err.code}, command=${err.command})`,
     );
 
@@ -138,5 +141,5 @@ export async function sendMail(options: {
     text: options.text,
     html: options.html,
   });
-  console.log(`[SMTP] Message sent: ${info.messageId}`);
+  logger.info(`[SMTP] Message sent: ${info.messageId}`);
 }

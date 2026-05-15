@@ -4,6 +4,9 @@ import { db } from "@/config/database";
 import { users } from "@/schemas/users";
 import { findPlatformConfig } from "@/repositories/platformConfig";
 import { createUser } from "@/repositories/users";
+import { getLogger } from "@/lib/logger";
+
+const logger = getLogger("initAdmin");
 
 function generateRandomPassword(length = 12): string {
   return crypto.randomBytes(length).toString("base64url").slice(0, length);
@@ -32,9 +35,9 @@ export async function initAdmin(): Promise<void> {
   });
 
   if (process.env.INITIAL_ADMIN_PASSWORD) {
-    console.log("[INIT] Default admin created: admin / (from ADMIN_PASSWORD env)");
+    logger.info("[INIT] Default admin created: admin / (from ADMIN_PASSWORD env)");
   } else {
-    console.log(`[INIT] Default admin created: admin / ${rawPassword}`);
-    console.log("[INIT] Set ADMIN_PASSWORD env var to specify a custom initial password.");
+    logger.info(`[INIT] Default admin created: admin / ${rawPassword}`);
+    logger.info("[INIT] Set ADMIN_PASSWORD env var to specify a custom initial password.");
   }
 }
