@@ -55,7 +55,9 @@ export function createDevProxy(
   apiBaseUrl: string | undefined,
   options: DevProxyOptions = {},
 ): UserConfig["server"] | undefined {
-  if (!apiBaseUrl || !/^(https?:\/\/)?(localhost|127\.0\.0\.1)/.test(apiBaseUrl)) {
+  // Work around Node.js internalConnectMultiple error by using IPv4 directly
+  const targetUrl = apiBaseUrl?.replace("localhost", "127.0.0.1");
+  if (!targetUrl || !/^(https?:\/\/)?(localhost|127\.0\.0\.1)/.test(targetUrl)) {
     return undefined;
   }
 
@@ -67,19 +69,19 @@ export function createDevProxy(
     { target: string; changeOrigin: true; rewrite?: (p: string) => string }
   > = {
     "/api": {
-      target: apiBaseUrl,
+      target: targetUrl,
       changeOrigin: true,
       rewrite: (p) => p.replace(/^\/api/, apiPrefix),
     },
     "/static": {
-      target: apiBaseUrl,
+      target: targetUrl,
       changeOrigin: true,
       rewrite: (p) => p.replace(/^\/static/, staticPrefix),
     },
   };
 
   for (const extraPath of options.extraPaths ?? []) {
-    proxy[extraPath] = { target: apiBaseUrl, changeOrigin: true };
+    proxy[extraPath] = { target: targetUrl, changeOrigin: true };
   }
 
   return { proxy };
