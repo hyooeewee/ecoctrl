@@ -6,7 +6,7 @@ import { count } from "drizzle-orm";
 import * as schema from "@/schemas/index";
 import { ensureDatabase } from "@/lib/ensureDatabase";
 import { migrateDatabase } from "@/lib/migrateDatabase";
-import { S3Adapter } from "@/storage/s3-adapter";
+import { ensureS3Buckets } from "@/storage";
 
 const client = postgres(process.env.DATABASE_URL!, { prepare: false });
 const db = drizzle(client, { schema });
@@ -21,37 +21,8 @@ async function initS3Buckets() {
     return;
   }
 
-  const endpoint = process.env.S3_ENDPOINT!;
-  const accessKeyId = process.env.S3_ACCESS_KEY!;
-  const secretAccessKey = process.env.S3_SECRET_KEY!;
-  const region = process.env.S3_REGION || "us-east-1";
-
-  const filesBucket = process.env.S3_BUCKET_FILES || "ecoctrl-files";
-  const modelsBucket = process.env.S3_BUCKET_MODELS || "ecoctrl-models";
-
-  const filesAdapter = new S3Adapter({
-    endpoint,
-    region,
-    accessKeyId,
-    secretAccessKey,
-    bucket: filesBucket,
-    forcePathStyle: true,
-  });
-
-  const modelsAdapter = new S3Adapter({
-    endpoint,
-    region,
-    accessKeyId,
-    secretAccessKey,
-    bucket: modelsBucket,
-    forcePathStyle: true,
-  });
-
-  await filesAdapter.ensureBucket();
-  console.log(`[init] ensured S3 bucket: ${filesBucket}`);
-
-  await modelsAdapter.ensureBucket();
-  console.log(`[init] ensured S3 bucket: ${modelsBucket}`);
+  await ensureS3Buckets();
+  console.log(`[init] ensured S3 buckets`);
 }
 
 async function initUsers() {

@@ -3,7 +3,7 @@ import { z } from "zod";
 import JSZip from "jszip";
 import { Model3DSchema, PointItemSchema } from "@ecoctrl/shared";
 import type { PointItem } from "@ecoctrl/shared";
-import { getStorage } from "@/storage";
+import { getModelStorage } from "@/storage";
 import {
   findManyModels,
   findModelById,
@@ -13,7 +13,7 @@ import {
 } from "@/repositories/models";
 import { errors } from "@/lib/schemas";
 
-const storage = getStorage();
+const storage = getModelStorage();
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes}B`;
