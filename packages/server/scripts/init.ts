@@ -4,6 +4,7 @@ import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { count } from "drizzle-orm";
 import * as schema from "@/schemas/index";
+import { ensureDatabase } from "@/lib/ensureDatabase";
 import { migrateDatabase } from "@/lib/migrateDatabase";
 
 const client = postgres(process.env.DATABASE_URL!, { prepare: false });
@@ -484,6 +485,8 @@ async function initIotTokens() {
 }
 
 async function main() {
+  console.log("[init] ensuring database exists...");
+  await ensureDatabase();
   console.log("[init] running migrations...");
   await migrateDatabase();
   console.log("[init] migrations done");
