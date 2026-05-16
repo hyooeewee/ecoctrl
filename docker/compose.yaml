@@ -35,6 +35,8 @@ services:
       - S3_ACCESS_KEY=ecoctrl
       - S3_SECRET_KEY=ecoctrl_secret
       - S3_FORCE_PATH_STYLE=true
+      - INIT_ADMIN_USERNAME=admin
+      - INIT_ADMIN_PASSWORD=admin_secret
     ports:
       - "3000:3000"
     depends_on:
