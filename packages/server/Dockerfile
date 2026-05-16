@@ -62,7 +62,6 @@ COPY packages/shared packages/shared
 # Copy schema, drizzle config, and migration files for runtime
 COPY packages/server/drizzle.config.ts packages/server/
 COPY packages/server/src/schemas packages/server/src/schemas
-COPY packages/server/src/ai/system-prompt.md packages/server/ai/
 
 # Replace workspace symlink with actual files — esm-loader's resolveTsPaths
 # cannot follow symlinks, so we copy the real source into node_modules.
@@ -95,6 +94,9 @@ npx drizzle-kit generate
 
 echo "Running migrations..."
 npx drizzle-kit migrate || echo "No migrations to apply or migration failed, continuing to start server..."
+
+echo "Running production init..."
+node dist/init.mjs
 
 echo "Starting server..."
 exec node dist/index.mjs

@@ -21,6 +21,7 @@ const configSchema = z.object({
   allowRegistration: z.boolean(),
   allowPasswordReset: z.boolean(),
   allowOAuthLogin: z.boolean(),
+  systemPrompt: z.string(),
 });
 
 const configBodySchema = z.object({
@@ -39,6 +40,7 @@ const configBodySchema = z.object({
   allowRegistration: z.boolean().optional(),
   allowPasswordReset: z.boolean().optional(),
   allowOAuthLogin: z.boolean().optional(),
+  systemPrompt: z.string().optional(),
 });
 
 const testEmailBodySchema = z.object({
@@ -100,6 +102,7 @@ export default async function configRoutes(fastify: FastifyInstance) {
         allowRegistration?: boolean;
         allowPasswordReset?: boolean;
         allowOAuthLogin?: boolean;
+        systemPrompt?: string;
       };
       const existing = await findPlatformConfig();
 
@@ -119,6 +122,7 @@ export default async function configRoutes(fastify: FastifyInstance) {
         allowRegistration: body.allowRegistration ?? existing.allowRegistration,
         allowPasswordReset: body.allowPasswordReset ?? existing.allowPasswordReset,
         allowOAuthLogin: body.allowOAuthLogin ?? existing.allowOAuthLogin,
+        systemPrompt: body.systemPrompt ?? existing.systemPrompt,
       };
       await updatePlatformConfig(updated);
       return reply.send({

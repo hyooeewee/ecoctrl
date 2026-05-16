@@ -273,7 +273,7 @@ export default async function energyRoutes(fastify: FastifyInstance) {
         return reply.send({ count: nodes.length });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        logger.error("[CarbonFactors] Refresh tree failed:", message);
+        logger.error(`[CarbonFactors] Refresh tree failed: ${message}`);
         return reply.status(500).send({ error: message });
       }
     },
@@ -317,7 +317,7 @@ export default async function energyRoutes(fastify: FastifyInstance) {
         return reply.send({ count: filtered.length, data: filtered });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        logger.error(`[CarbonFactors] Fetch failed for ${pkid}:`, message);
+        logger.error(`[CarbonFactors] Fetch failed for ${pkid}: ${message}`);
         return reply.status(500).send({ error: message });
       }
     },

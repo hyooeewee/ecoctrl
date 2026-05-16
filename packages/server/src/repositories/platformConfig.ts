@@ -22,6 +22,7 @@ export interface PlatformConfig {
   allowRegistration: boolean;
   allowPasswordReset: boolean;
   allowOAuthLogin: boolean;
+  systemPrompt: string;
 }
 
 const DEFAULT_CONFIG: PlatformConfig = {
@@ -37,36 +38,16 @@ const DEFAULT_CONFIG: PlatformConfig = {
   smtpUser: "",
   smtpPass: "",
   smtpSecure: false,
-  allowRegistration: true,
-  allowPasswordReset: true,
-  allowOAuthLogin: true,
+  allowRegistration: false,
+  allowPasswordReset: false,
+  allowOAuthLogin: false,
+  systemPrompt:
+    "你是蓝宝，EcoCtrl 能源管理平台的智能助手。\n\n平台能力：\n\n- 三维建筑能耗可视化（BabylonJS）\n- 实时监控暖通空调、照明、电梯、服务器等设备状态\n- 能耗数据分析与 AI 优化建议\n- 实时告警管理\n\n回复风格：\n\n- 使用中文回复\n- 简洁、专业、友好\n- 需要调用工具时直接调用，不要告知用户你在调用工具\n- 对于不确定的问题，坦诚说明不要编造",
 };
 
 export async function findPlatformConfig(): Promise<PlatformConfig> {
   const rows = await db.select().from(platformConfigs).limit(1);
-  if (rows.length === 0) {
-    // Auto-insert default config on first read
-    const result = await db.insert(platformConfigs).values(DEFAULT_CONFIG).returning();
-    const r = result[0];
-    return {
-      platformName: r.platformName,
-      refreshInterval: r.refreshInterval,
-      realtimeAlertEnabled: r.realtimeAlertEnabled,
-      timezone: r.timezone,
-      autoBackup: r.autoBackup,
-      backupRetentionDays: r.backupRetentionDays,
-      sessionTimeout: r.sessionTimeout,
-      smtpHost: r.smtpHost,
-      smtpPort: r.smtpPort,
-      smtpUser: r.smtpUser,
-      smtpPass: r.smtpPass,
-      smtpSecure: r.smtpSecure,
-      allowRegistration: r.allowRegistration,
-      allowPasswordReset: r.allowPasswordReset,
-      allowOAuthLogin: r.allowOAuthLogin,
-    };
-  }
-  const r = rows[0];
+  const r = rows[0] ?? DEFAULT_CONFIG;
   return {
     platformName: r.platformName,
     refreshInterval: r.refreshInterval,
@@ -83,6 +64,7 @@ export async function findPlatformConfig(): Promise<PlatformConfig> {
     allowRegistration: r.allowRegistration,
     allowPasswordReset: r.allowPasswordReset,
     allowOAuthLogin: r.allowOAuthLogin,
+    systemPrompt: r.systemPrompt,
   };
 }
 
@@ -107,6 +89,7 @@ export async function updatePlatformConfig(config: PlatformConfig): Promise<Plat
       allowRegistration: r.allowRegistration,
       allowPasswordReset: r.allowPasswordReset,
       allowOAuthLogin: r.allowOAuthLogin,
+      systemPrompt: r.systemPrompt,
     };
   } else {
     const result = await db
@@ -131,6 +114,7 @@ export async function updatePlatformConfig(config: PlatformConfig): Promise<Plat
       allowRegistration: r.allowRegistration,
       allowPasswordReset: r.allowPasswordReset,
       allowOAuthLogin: r.allowOAuthLogin,
+      systemPrompt: r.systemPrompt,
     };
   }
 }
@@ -143,6 +127,7 @@ export async function syncSmtpFromEnv(): Promise<void> {
   if (!envHost || !envUser || !envPass) return;
 
   const existing = await findPlatformConfig();
+  if (!existing) return;
 
   // Only overwrite if DB SMTP fields are empty (protect user-managed DB values)
   if (!existing.smtpHost && !existing.smtpUser && !existing.smtpPass) {
