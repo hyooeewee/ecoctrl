@@ -23,7 +23,13 @@ export async function initQueue(): Promise<PgBoss> {
     retryLimit: 3,
     retryDelay: 60,
     retryBackoff: true,
+    poolSize: 5,
   } as ConstructorParameters<typeof PgBoss>[0]);
+
+  boss.on("error", (err) => {
+    logger.error({ err: err.message }, "[pg-boss] connection error");
+  });
+
   await boss.start();
   await boss.createQueue(JOB_NAME);
   logger.info("[pg-boss] Queue initialized");

@@ -22,7 +22,7 @@ import { getRootLogger } from "@/lib/logger";
 import databasePlugin from "@/plugins/database";
 import rateLimitPlugin from "@/plugins/rateLimit";
 import apiRoutes from "@/routes";
-import { initQueue } from "@/queue/pgboss";
+import { initQueue, stopQueue } from "@/queue/pgboss";
 import { triggerEngine } from "@/engine/trigger";
 import { syncSmtpFromEnv } from "@/repositories/platformConfig";
 import { env } from "@/lib/env";
@@ -207,3 +207,13 @@ try {
   fastify.log.error(err);
   process.exit(1);
 }
+
+const shutdown = async (signal: string) => {
+  fastify.log.info(`Received ${signal}, shutting down gracefully...`);
+  await stopQueue();
+  await fastify.close();
+  process.exit(0);
+};
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
