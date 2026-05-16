@@ -1,6 +1,6 @@
 import path from "path";
 import fs from "fs";
-import { createRequire } from "module";
+import { fileURLToPath } from "url";
 import type { UserConfig, Plugin } from "vite-plus";
 
 export interface DevProxyOptions {
@@ -13,8 +13,10 @@ export interface DevProxyOptions {
 }
 
 export function resolveUiAlias(): Plugin {
-  const require = createRequire(import.meta.url);
-  const uiPkgPath = require.resolve("@ecoctrl/ui/package.json");
+  const uiPkgPath = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../../ui/package.json",
+  );
   const uiSrc = path.resolve(path.dirname(uiPkgPath), "src");
   // rolldown's prod build won't probe extensions for absolute paths returned
   // by a plugin, so we resolve them ourselves.
