@@ -36,7 +36,32 @@ function loadEnv(...files) {
       const eq = trimmed.indexOf("=");
       if (eq === -1) continue;
       const key = trimmed.slice(0, eq).trim();
-      let value = trimmed.slice(eq + 1).trim();
+
+      // Parse value, respecting quotes and stripping inline comments
+      let raw = trimmed.slice(eq + 1).trim();
+      let value = "";
+      let inQuote = false;
+      let quoteChar = "";
+      for (let i = 0; i < raw.length; i++) {
+        const ch = raw[i];
+        if (!inQuote && (ch === '"' || ch === "'")) {
+          inQuote = true;
+          quoteChar = ch;
+          value += ch;
+        } else if (inQuote && ch === quoteChar) {
+          inQuote = false;
+          value += ch;
+        } else if (!inQuote && ch === "#") {
+          // Only treat # as comment start if preceded by whitespace or at value start
+          if (value.length === 0 || /\s$/.test(value)) {
+            break;
+          }
+          value += ch;
+        } else {
+          value += ch;
+        }
+      }
+      value = value.trim();
       if (
         (value.startsWith('"') && value.endsWith('"')) ||
         (value.startsWith("'") && value.endsWith("'"))
@@ -90,14 +115,39 @@ function isAlive(name) {
 // ------------------------------------------------------------------
 // PM2 helper
 // ------------------------------------------------------------------
+async function waitForExit(name, timeoutMs = 3000) {
+  const start = Date.now();
+  while (isAlive(name) && Date.now() - start < timeoutMs) {
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  if (isAlive(name)) {
+    const pid = readPid(name);
+    console.log(`[${name}] SIGTERM timeout, forcing SIGKILL (pid ${pid}) ...`);
+    try {
+      process.kill(pid, "SIGKILL");
+    } catch {}
+    // Wait briefly for SIGKILL to take effect
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  removePid(name);
+}
+
+function resolvePm2Cmd() {
+  const serverDir = resolve(ROOT, "server");
+  const pm2Bin = join(serverDir, "node_modules", ".bin", "pm2");
+  return existsSync(pm2Bin) ? pm2Bin : "npx --yes pm2";
+}
+
 function isPm2Online() {
+  const pm2Cmd = resolvePm2Cmd();
+  const serverDir = resolve(ROOT, "server");
   try {
-    const output = execSync("npx --yes pm2 jlist", {
+    const output = execSync(`${pm2Cmd} jlist`, {
       encoding: "utf-8",
-      cwd: ROOT,
+      cwd: serverDir,
       stdio: ["ignore", "pipe", "ignore"],
     });
-    return output.includes(`"name":"${PM2_APP}"`);
+    return output.includes(`"name":"${PM2_APP}"`) || output.includes(`"name":"ecoctrl-worker"`);
   } catch {
     return false;
   }
@@ -194,17 +244,25 @@ function startServer() {
     process.exit(1);
   }
 
-  console.log("Installing server dependencies ...");
-  execSync("npm install --omit=dev", { cwd: serverDir, stdio: "inherit" });
+  const nodeModules = join(serverDir, "node_modules");
+  if (!existsSync(nodeModules)) {
+    console.log("Installing server dependencies ...");
+    execSync("npm install --omit=dev", { cwd: serverDir, stdio: "inherit" });
+  }
 
+  const pm2Cmd = resolvePm2Cmd();
   console.log(`Starting server via pm2 (${PM2_CONFIG}) ...`);
-  execSync(`npx --yes pm2 startOrRestart ${PM2_CONFIG}`, {
+  execSync(`${pm2Cmd} startOrRestart ${PM2_CONFIG}`, {
     cwd: serverDir,
     stdio: "inherit",
   });
 }
 
 function startAll() {
+  console.error(
+    "\n  ⚠️  DEPRECATION WARNING: Asset deployment is deprecated and will be removed soon.\n" +
+      "     Use Docker Compose instead: https://docs.godot.qzz.io\n",
+  );
   startAdmin();
   startWeb();
   startServer();
@@ -214,43 +272,53 @@ function startAll() {
   console.log("server: npx pm2 status");
 }
 
-function stopAdmin() {
+async function stopAdmin() {
   if (isAlive("admin")) {
     const pid = readPid("admin");
     console.log(`Stopping admin (pid ${pid}) ...`);
     try {
       process.kill(pid, "SIGTERM");
     } catch {}
+    await waitForExit("admin");
+  } else {
+    removePid("admin");
   }
-  removePid("admin");
 }
 
-function stopWeb() {
+async function stopWeb() {
   if (isAlive("web")) {
     const pid = readPid("web");
     console.log(`Stopping web (pid ${pid}) ...`);
     try {
       process.kill(pid, "SIGTERM");
     } catch {}
+    await waitForExit("web");
+  } else {
+    removePid("web");
   }
-  removePid("web");
 }
 
 function stopServer() {
-  if (isPm2Online()) {
-    console.log(`Stopping server (pm2 delete ${PM2_APP}) ...`);
+  const pm2Cmd = resolvePm2Cmd();
+  const serverDir = resolve(ROOT, "server");
+  for (const app of [PM2_APP, "ecoctrl-worker"]) {
     try {
-      execSync(`npx --yes pm2 delete ${PM2_APP}`, {
-        cwd: ROOT,
-        stdio: "inherit",
+      const output = execSync(`${pm2Cmd} jlist`, {
+        encoding: "utf-8",
+        cwd: serverDir,
+        stdio: ["ignore", "pipe", "ignore"],
       });
+      if (output.includes(`"name":"${app}"`)) {
+        console.log(`Stopping server (pm2 delete ${app}) ...`);
+        execSync(`${pm2Cmd} delete ${app}`, { cwd: serverDir, stdio: "inherit" });
+      }
     } catch {}
   }
 }
 
-function stopAll() {
-  stopAdmin();
-  stopWeb();
+async function stopAll() {
+  await stopAdmin();
+  await stopWeb();
   stopServer();
 }
 
@@ -289,12 +357,12 @@ async function main() {
 
   switch (choice || "q") {
     case "r":
-      stopAll();
+      await stopAll();
       console.log("");
       startAll();
       break;
     case "s":
-      stopAll();
+      await stopAll();
       break;
     case "q":
       console.log("Canceled.");
@@ -303,6 +371,8 @@ async function main() {
       console.log(`Unknown choice: ${choice}`);
       process.exit(1);
   }
+
+  process.stdin.pause();
 }
 
 main().catch((err) => {
