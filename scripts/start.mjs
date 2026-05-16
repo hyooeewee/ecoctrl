@@ -345,7 +345,7 @@ async function main() {
 
   if (running.length === 0) {
     startAll();
-    return;
+    process.exit(0);
   }
 
   console.log(`Already running: ${running.join(" ")}`);
@@ -360,7 +360,7 @@ async function main() {
       await stopAll();
       console.log("");
       startAll();
-      break;
+      process.exit(0);
     case "s":
       await stopAll();
       break;
