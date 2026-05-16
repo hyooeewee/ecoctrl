@@ -44,3 +44,29 @@ jobs:
 
       - name: Build Docs
         run: pnpm --filter @ecoctrl/docs build
+
+      - name: Start temporary Postgres
+        run: |
+          docker run -d --name ci-postgres \
+            -e POSTGRES_USER=ecoctrl \
+            -e POSTGRES_PASSWORD=ecoctrl_secret \
+            -e POSTGRES_DB=ecoctrl \
+            -p 5432:5432 postgres:16-alpine
+          until docker exec ci-postgres pg_isready -U ecoctrl -d ecoctrl; do sleep 1; done
+
+      - name: Verify migrations are up-to-date
+        env:
+          DATABASE_URL: postgresql://ecoctrl:ecoctrl_secret@localhost:5432/ecoctrl
+        run: |
+          cd packages/server
+          npx drizzle-kit generate
+          if [ -n "$(git status --porcelain drizzle/)" ]; then
+            echo "ERROR: Uncommitted drizzle migrations detected."
+            echo "Run 'cd packages/server && pnpm db:generate' locally and commit the changes."
+            git diff --stat drizzle/
+            exit 1
+          fi
+
+      - name: Stop temporary Postgres
+        if: always()
+        run: docker rm -f ci-postgres

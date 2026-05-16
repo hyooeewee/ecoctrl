@@ -16,7 +16,7 @@ export async function migrateDatabase(): Promise<void> {
   try {
     const db = drizzle(client);
     await migrate(db, {
-      migrationsFolder: path.resolve(__dirname, "../../drizzle"),
+      migrationsFolder: path.resolve(process.cwd(), "drizzle"),
     });
   } finally {
     await client.end();

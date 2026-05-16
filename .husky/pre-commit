@@ -26,3 +26,15 @@ fi
 [ $LINT_EC -eq 0 ] || { echo "$LINT_OUT"; exit $LINT_EC; }
 
 git add $STAGED
+
+# --- Schema drift guard ---
+# If schemas changed but no migration was generated, block the commit.
+SCHEMA_CHANGED=$(git diff --cached --name-only --diff-filter=ACM | grep -c "^packages/server/src/schemas/" || true)
+MIGRATION_CHANGED=$(git diff --cached --name-only --diff-filter=ACM | grep -c "^packages/server/drizzle/" || true)
+if [ "$SCHEMA_CHANGED" -gt 0 ] && [ "$MIGRATION_CHANGED" -eq 0 ]; then
+  echo ""
+  echo "ERROR: packages/server/src/schemas/ has changes but no migration was generated."
+  echo "Run 'cd packages/server && pnpm db:generate' and stage the new drizzle/ files."
+  echo ""
+  exit 1
+fi

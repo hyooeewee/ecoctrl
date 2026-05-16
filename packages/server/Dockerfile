@@ -85,13 +85,10 @@ EXPOSE 3000
 # Run from packages/server to match the node_modules resolution path
 WORKDIR /app/packages/server
 
-# Entrypoint: apply pending migrations, run init, then start server
+# Entrypoint: run init (includes migrations), then start server
 COPY <<'ENTRYPOINT' /entrypoint.sh
 #!/bin/sh
 set -e
-
-echo "Running migrations..."
-npx drizzle-kit migrate
 
 echo "Running production init..."
 node dist/init.mjs
