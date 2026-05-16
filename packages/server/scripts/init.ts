@@ -4,6 +4,7 @@ import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { count } from "drizzle-orm";
 import * as schema from "@/schemas/index";
+import { S3Adapter } from "@/storage/s3-adapter";
 
 const client = postgres(process.env.DATABASE_URL!, { prepare: false });
 const db = drizzle(client, { schema });
@@ -11,6 +12,45 @@ const db = drizzle(client, { schema });
 const ADMIN_USER = process.env.INIT_ADMIN_USERNAME?.trim() || "admin";
 const ADMIN_PASS = process.env.INIT_ADMIN_PASSWORD?.trim() || crypto.randomUUID();
 const ADMIN_EMAIL = process.env.INIT_ADMIN_EMAIL?.trim() || "admin@example.com";
+
+async function initS3Buckets() {
+  if (process.env.STORAGE_PROVIDER !== "minio") {
+    console.log("[init] storage provider is not minio, skipping S3 bucket init");
+    return;
+  }
+
+  const endpoint = process.env.S3_ENDPOINT!;
+  const accessKeyId = process.env.S3_ACCESS_KEY!;
+  const secretAccessKey = process.env.S3_SECRET_KEY!;
+  const region = process.env.S3_REGION || "us-east-1";
+
+  const filesBucket = process.env.S3_BUCKET_FILES || "ecoctrl-files";
+  const modelsBucket = process.env.S3_BUCKET_MODELS || "ecoctrl-models";
+
+  const filesAdapter = new S3Adapter({
+    endpoint,
+    region,
+    accessKeyId,
+    secretAccessKey,
+    bucket: filesBucket,
+    forcePathStyle: true,
+  });
+
+  const modelsAdapter = new S3Adapter({
+    endpoint,
+    region,
+    accessKeyId,
+    secretAccessKey,
+    bucket: modelsBucket,
+    forcePathStyle: true,
+  });
+
+  await filesAdapter.ensureBucket();
+  console.log(`[init] ensured S3 bucket: ${filesBucket}`);
+
+  await modelsAdapter.ensureBucket();
+  console.log(`[init] ensured S3 bucket: ${modelsBucket}`);
+}
 
 async function initUsers() {
   const [{ value }] = await db.select({ value: count() }).from(schema.users);
@@ -484,6 +524,7 @@ async function initIotTokens() {
 
 async function main() {
   console.log("[init] checking database state...");
+  await initS3Buckets();
   await initUsers();
   await initPlatformConfig();
   await initDashboardData();
