@@ -29,13 +29,19 @@ services:
       # Preserve container's installed node_modules (do not overwrite with host)
       - /app/node_modules
       - /app/packages/server/node_modules
-      # Persist uploads across restarts (dev mode writes to src/../uploads, not dist/)
-      - ./uploads:/app/packages/server/uploads
     environment:
       - NODE_ENV=development
       - DATABASE_URL=postgresql://ecoctrl:ecoctrl_secret@postgres:5432/ecoctrl
       - JWT_SECRET=${JWT_SECRET:-dev-secret}
       - INITIAL_ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - STORAGE_PROVIDER=minio
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=ecoctrl
+      - S3_SECRET_KEY=ecoctrl_secret
+      - S3_FORCE_PATH_STYLE=true
+    depends_on:
+      minio:
+        condition: service_healthy
 
   web:
     command: pnpm --filter @ecoctrl/web dev
@@ -63,3 +69,22 @@ services:
     ports:
       # Default Vite dev port. Change if your vp/vite config uses another port.
       - "5173:5173"
+
+  minio:
+    image: minio/minio:latest
+    container_name: ecoctrl-minio
+    restart: always
+    environment:
+      MINIO_ROOT_USER: ecoctrl
+      MINIO_ROOT_PASSWORD: ecoctrl_secret
+    volumes:
+      - ./ecoctrl/minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5

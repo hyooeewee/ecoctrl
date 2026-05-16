@@ -1,14 +1,9 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import fs from "node:fs";
-import path from "node:path";
-import { pipeline } from "node:stream/promises";
-import { createReadStream } from "node:fs";
-import { mkdir, readdir, rm } from "node:fs/promises";
-import unzipper from "unzipper";
+import JSZip from "jszip";
 import { Model3DSchema, PointItemSchema } from "@ecoctrl/shared";
 import type { PointItem } from "@ecoctrl/shared";
-import { UPLOAD_DIR as BASE_UPLOAD_DIR } from "@/lib/paths";
+import { getStorage } from "@/storage";
 import {
   findManyModels,
   findModelById,
@@ -18,32 +13,7 @@ import {
 } from "@/repositories/models";
 import { errors } from "@/lib/schemas";
 
-// Temporary directory for immediate stream consumption during multipart parsing
-const TMP_DIR = path.join(BASE_UPLOAD_DIR, ".tmp");
-
-const UPLOAD_DIR = path.join(BASE_UPLOAD_DIR, "models");
-
-function ensureUploadDir() {
-  if (!fs.existsSync(UPLOAD_DIR)) {
-    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-  }
-}
-
-function deleteModelFile(fileUrl: string) {
-  const relativePath = fileUrl.replace("/static/", "");
-  const filePath = path.join(BASE_UPLOAD_DIR, relativePath);
-  if (fs.existsSync(filePath)) {
-    const parts = relativePath.split(path.sep);
-    if (parts.length >= 2) {
-      const modelDir = path.join(UPLOAD_DIR, parts[1]);
-      if (fs.existsSync(modelDir)) {
-        fs.rmSync(modelDir, { recursive: true, force: true });
-      }
-    } else {
-      fs.unlinkSync(filePath);
-    }
-  }
-}
+const storage = getStorage();
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes}B`;
@@ -56,6 +26,14 @@ const FORMAT_MAP: Record<string, string> = {
   gltf: "GLTF",
   zip: "ZIP",
 };
+
+async function collectStream(stream: NodeJS.ReadableStream): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
 
 export default async function modelRoutes(fastify: FastifyInstance) {
   fastify.get(
@@ -86,84 +64,71 @@ export default async function modelRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      if (!fs.existsSync(TMP_DIR)) {
-        fs.mkdirSync(TMP_DIR, { recursive: true });
-      }
-      ensureUploadDir();
-
       const parts = request.parts();
-      let fileInfo: { filename: string; tempPath: string } | undefined;
+      let fileBuffer: Buffer | undefined;
+      let filename = "";
       let name = "";
       let version = "";
       let deviceType = "";
       let pointsRaw = "";
 
-      try {
-        for await (const part of parts) {
-          if (part.type === "file") {
-            // Immediately consume stream to avoid order-dependent issues
-            const tempPath = path.join(TMP_DIR, `upload-${crypto.randomUUID()}`);
-            await pipeline(part.file, fs.createWriteStream(tempPath));
-            fileInfo = { filename: part.filename, tempPath };
-          } else {
-            if (part.fieldname === "name") name = part.value as string;
-            if (part.fieldname === "version") version = part.value as string;
-            if (part.fieldname === "deviceType") deviceType = part.value as string;
-            if (part.fieldname === "points") pointsRaw = part.value as string;
-          }
+      for await (const part of parts) {
+        if (part.type === "file") {
+          fileBuffer = await collectStream(part.file);
+          filename = part.filename;
+        } else {
+          if (part.fieldname === "name") name = part.value as string;
+          if (part.fieldname === "version") version = part.value as string;
+          if (part.fieldname === "deviceType") deviceType = part.value as string;
+          if (part.fieldname === "points") pointsRaw = part.value as string;
         }
-      } catch (_err) {
-        if (fileInfo?.tempPath && fs.existsSync(fileInfo.tempPath)) {
-          fs.unlinkSync(fileInfo.tempPath);
-        }
-        throw _err;
       }
 
-      if (!fileInfo) {
+      if (!fileBuffer) {
         return reply.status(400).send({ error: "No file uploaded" });
       }
 
-      const finalName = name || fileInfo.filename.replace(/\.[^/.]+$/, "");
+      const finalName = name || filename.replace(/\.[^/.]+$/, "");
       const finalVersion = version || "v1.0";
       const points = pointsRaw ? JSON.parse(pointsRaw) : [];
 
-      const ext = path.extname(fileInfo.filename).toLowerCase();
+      const ext = filename.slice(filename.lastIndexOf(".")).toLowerCase();
       const modelId = crypto.randomUUID();
       let fileUrl: string;
       let format: string;
       let sizeBytes: number;
 
       if (ext === ".zip") {
-        const modelDir = path.join(UPLOAD_DIR, modelId);
-        await mkdir(modelDir, { recursive: true });
-        const tempZip = path.join(modelDir, "temp.zip");
-        fs.renameSync(fileInfo.tempPath, tempZip);
+        sizeBytes = fileBuffer.length;
+        const zip = await JSZip.loadAsync(fileBuffer);
+        const uploadedKeys: string[] = [];
+        let gltfEntryName: string | undefined;
 
-        const zipStats = fs.statSync(tempZip);
-        sizeBytes = zipStats.size;
+        for (const [entryName, entry] of Object.entries(zip.files)) {
+          if (entry.dir) continue;
+          const content = await entry.async("nodebuffer");
+          const key = `models/${modelId}/${entryName}`;
+          await storage.put(key, content);
+          uploadedKeys.push(key);
+          if (!gltfEntryName && entryName.toLowerCase().endsWith(".gltf")) {
+            gltfEntryName = entryName;
+          }
+        }
 
-        await createReadStream(tempZip)
-          .pipe(unzipper.Extract({ path: modelDir }))
-          .promise();
-        await rm(tempZip);
-
-        const allFiles = await readdir(modelDir, { recursive: true });
-        const gltfFile = allFiles.find((f) => f.toLowerCase().endsWith(".gltf"));
-        if (!gltfFile) {
-          await rm(modelDir, { recursive: true });
+        if (!gltfEntryName) {
+          for (const key of uploadedKeys) {
+            await storage.delete(key);
+          }
           return reply.status(400).send({ error: "ZIP must contain a .gltf file" });
         }
 
-        fileUrl = `/static/models/${modelId}/${gltfFile}`;
+        fileUrl = `models/${modelId}/${gltfEntryName}`;
         format = "GLTF";
       } else {
-        const filename = `${modelId}${ext}`;
-        const dest = path.join(UPLOAD_DIR, filename);
-        fs.renameSync(fileInfo.tempPath, dest);
-
-        const stats = fs.statSync(dest);
-        sizeBytes = stats.size;
-        fileUrl = `/static/models/${filename}`;
+        sizeBytes = fileBuffer.length;
+        const key = `models/${modelId}${ext}`;
+        await storage.put(key, fileBuffer);
+        fileUrl = key;
         format = FORMAT_MAP[ext.slice(1)] || ext.slice(1).toUpperCase();
       }
 
@@ -217,9 +182,12 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         return reply.status(404).send({ error: "Model not found" });
       }
 
-      // Delete physical file when fileUrl is explicitly set to null
+      // Delete old files when fileUrl is explicitly set to null
       if (fileUrl === null && existing.fileUrl) {
-        deleteModelFile(existing.fileUrl);
+        const keys = await storage.list(`models/${id}/`);
+        for (const key of keys) {
+          await storage.delete(key);
+        }
       }
 
       const updated = await updateModel(id, { name, version, deviceType, points, fileUrl });
@@ -244,11 +212,6 @@ export default async function modelRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      if (!fs.existsSync(TMP_DIR)) {
-        fs.mkdirSync(TMP_DIR, { recursive: true });
-      }
-      ensureUploadDir();
-
       const { id } = request.params as { id: string };
       const existing = await findModelById(id);
       if (!existing) {
@@ -256,76 +219,65 @@ export default async function modelRoutes(fastify: FastifyInstance) {
       }
 
       const parts = request.parts();
-      let fileInfo: { filename: string; tempPath: string } | undefined;
+      let fileBuffer: Buffer | undefined;
+      let filename = "";
 
-      try {
-        for await (const part of parts) {
-          if (part.type === "file") {
-            const tempPath = path.join(TMP_DIR, `upload-${crypto.randomUUID()}`);
-            await pipeline(part.file, fs.createWriteStream(tempPath));
-            fileInfo = { filename: part.filename, tempPath };
-          }
+      for await (const part of parts) {
+        if (part.type === "file") {
+          fileBuffer = await collectStream(part.file);
+          filename = part.filename;
         }
-      } catch (_err) {
-        if (fileInfo?.tempPath && fs.existsSync(fileInfo.tempPath)) {
-          fs.unlinkSync(fileInfo.tempPath);
-        }
-        throw _err;
       }
 
-      if (!fileInfo) {
+      if (!fileBuffer) {
         return reply.status(400).send({ error: "No file uploaded" });
       }
 
-      // Delete old file/directory
+      // Delete old files
       if (existing.fileUrl) {
-        const relativePath = existing.fileUrl.replace("/static/", "");
-        const oldPath = path.join(BASE_UPLOAD_DIR, relativePath);
-        if (fs.existsSync(oldPath)) {
-          const pathParts = relativePath.split(path.sep);
-          if (pathParts.length >= 2) {
-            const modelDir = path.join(UPLOAD_DIR, pathParts[1]);
-            if (fs.existsSync(modelDir)) {
-              fs.rmSync(modelDir, { recursive: true, force: true });
-            }
-          } else {
-            fs.unlinkSync(oldPath);
-          }
+        const keys = await storage.list(`models/${id}/`);
+        for (const key of keys) {
+          await storage.delete(key);
         }
       }
 
       // Save new file (same logic as POST)
-      const ext = path.extname(fileInfo.filename).toLowerCase();
+      const ext = filename.slice(filename.lastIndexOf(".")).toLowerCase();
       let fileUrl: string;
       let format: string;
       let sizeBytes: number;
 
       if (ext === ".zip") {
-        const modelDir = path.join(UPLOAD_DIR, id);
-        await mkdir(modelDir, { recursive: true });
-        const tempZip = path.join(modelDir, "temp.zip");
-        fs.renameSync(fileInfo.tempPath, tempZip);
-        sizeBytes = fs.statSync(tempZip).size;
+        sizeBytes = fileBuffer.length;
+        const zip = await JSZip.loadAsync(fileBuffer);
+        const uploadedKeys: string[] = [];
+        let gltfEntryName: string | undefined;
 
-        await createReadStream(tempZip)
-          .pipe(unzipper.Extract({ path: modelDir }))
-          .promise();
-        await rm(tempZip);
+        for (const [entryName, entry] of Object.entries(zip.files)) {
+          if (entry.dir) continue;
+          const content = await entry.async("nodebuffer");
+          const key = `models/${id}/${entryName}`;
+          await storage.put(key, content);
+          uploadedKeys.push(key);
+          if (!gltfEntryName && entryName.toLowerCase().endsWith(".gltf")) {
+            gltfEntryName = entryName;
+          }
+        }
 
-        const allFiles = await readdir(modelDir, { recursive: true });
-        const gltfFile = allFiles.find((f) => f.toLowerCase().endsWith(".gltf"));
-        if (!gltfFile) {
-          await rm(modelDir, { recursive: true });
+        if (!gltfEntryName) {
+          for (const key of uploadedKeys) {
+            await storage.delete(key);
+          }
           return reply.status(400).send({ error: "ZIP must contain a .gltf file" });
         }
-        fileUrl = `/static/models/${id}/${gltfFile}`;
+
+        fileUrl = `models/${id}/${gltfEntryName}`;
         format = "GLTF";
       } else {
-        const filename = `${id}${ext}`;
-        const dest = path.join(UPLOAD_DIR, filename);
-        fs.renameSync(fileInfo.tempPath, dest);
-        sizeBytes = fs.statSync(dest).size;
-        fileUrl = `/static/models/${filename}`;
+        sizeBytes = fileBuffer.length;
+        const key = `models/${id}${ext}`;
+        await storage.put(key, fileBuffer);
+        fileUrl = key;
         format = FORMAT_MAP[ext.slice(1)] || ext.slice(1).toUpperCase();
       }
 
@@ -358,9 +310,9 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         return reply.status(404).send({ error: "Model not found" });
       }
 
-      // Delete physical file or directory
-      if (model.fileUrl) {
-        deleteModelFile(model.fileUrl);
+      const keys = await storage.list(`models/${id}/`);
+      for (const key of keys) {
+        await storage.delete(key);
       }
 
       await deleteModel(id);
@@ -388,21 +340,8 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         return reply.status(404).send({ error: "Model or file not found" });
       }
 
-      const relativePath = model.fileUrl.replace("/static/", "");
-      const filePath = path.join(BASE_UPLOAD_DIR, relativePath);
-      if (!fs.existsSync(filePath)) {
-        return reply.status(404).send({ error: "File not found" });
-      }
-
-      const ext = path.extname(filePath).toLowerCase();
-      const contentTypeMap: Record<string, string> = {
-        ".glb": "model/gltf-binary",
-        ".gltf": "model/gltf+json",
-      };
-      const contentType = contentTypeMap[ext] || "application/octet-stream";
-
-      const stream = createReadStream(filePath);
-      return reply.type(contentType).send(stream);
+      const url = await storage.getUrl(model.fileUrl);
+      return reply.redirect(url);
     },
   );
 }
