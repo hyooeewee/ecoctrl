@@ -61,6 +61,7 @@ COPY packages/shared packages/shared
 
 # Copy schema, drizzle config, and migration files for runtime
 COPY packages/server/drizzle.config.ts packages/server/
+COPY packages/server/drizzle/ packages/server/drizzle/
 COPY packages/server/src/schemas packages/server/src/schemas
 
 # Replace workspace symlink with actual files — esm-loader's resolveTsPaths
@@ -84,16 +85,13 @@ EXPOSE 3000
 # Run from packages/server to match the node_modules resolution path
 WORKDIR /app/packages/server
 
-# Entrypoint: generate migrations if schema changed, then apply and start server
+# Entrypoint: apply pending migrations, run init, then start server
 COPY <<'ENTRYPOINT' /entrypoint.sh
 #!/bin/sh
 set -e
 
-echo "Generating drizzle migrations..."
-npx drizzle-kit generate
-
 echo "Running migrations..."
-npx drizzle-kit migrate || echo "No migrations to apply or migration failed, continuing to start server..."
+npx drizzle-kit migrate
 
 echo "Running production init..."
 node dist/init.mjs
