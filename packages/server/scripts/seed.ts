@@ -307,6 +307,8 @@ async function seedPlatformConfig() {
     smtpUser: "",
     smtpPass: "",
     smtpSecure: false,
+    systemPrompt:
+      "你是蓝宝，EcoCtrl 能源管理平台的智能助手。\n\n平台能力：\n\n- 三维建筑能耗可视化（BabylonJS）\n- 实时监控暖通空调、照明、电梯、服务器等设备状态\n- 能耗数据分析与 AI 优化建议\n- 实时告警管理\n\n回复风格：\n\n- 使用中文回复\n- 简洁、专业、友好\n- 需要调用工具时直接调用，不要告知用户你在调用工具\n- 对于不确定的问题，坦诚说明不要编造",
   });
   console.log("Seeded platform config");
 }

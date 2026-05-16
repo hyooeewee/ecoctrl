@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, integer, boolean } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, integer, boolean, text } from "drizzle-orm/pg-core";
 
 export const platformConfigs = pgTable("platform_configs", {
   id: serial("id").primaryKey(),
@@ -17,4 +17,5 @@ export const platformConfigs = pgTable("platform_configs", {
   allowRegistration: boolean("allow_registration").notNull().default(false),
   allowPasswordReset: boolean("allow_password_reset").notNull().default(false),
   allowOAuthLogin: boolean("allow_oauth_login").notNull().default(false),
+  systemPrompt: text("system_prompt").notNull(),
 });

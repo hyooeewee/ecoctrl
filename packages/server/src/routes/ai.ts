@@ -1,6 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { createAIClient } from "@/ai/client";
@@ -12,12 +9,10 @@ import {
   findConversationsBySession,
 } from "@/repositories/aiConversations";
 import { findPetPreferences, upsertPetPreferences } from "@/repositories/petPreferences";
+import { findPlatformConfig } from "@/repositories/platformConfig";
 import { errors } from "@/lib/schemas";
 import type { ChatMessage, AIStreamChunk } from "@/ai/types";
 import { env } from "@/lib/env";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SYSTEM_PROMPT = fs.readFileSync(path.resolve(__dirname, "../ai/system-prompt.md"), "utf-8");
 
 const chatBodySchema = z.object({
   message: z.string().min(1).max(4000),
@@ -105,8 +100,9 @@ export default async function aiRoutes(fastify: FastifyInstance) {
       const toolCalls: { name: string; arguments: Record<string, unknown> }[] = [];
 
       try {
+        const { systemPrompt } = await findPlatformConfig();
         await client.chat(
-          [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
+          [{ role: "system", content: systemPrompt }, ...messages],
           tools,
           (chunk: AIStreamChunk) => {
             reply.raw.write(`data: ${JSON.stringify(chunk)}\n\n`);

@@ -15,6 +15,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
+    "db:init": "dotenv -e .env.local -- tsx scripts/init.ts",
     "db:seed": "dotenv -e .env.local -- tsx scripts/seed.ts",
     "db:reset": "dotenv -e .env.local -- tsx scripts/reset.ts",
     "db:drop:db": "dotenv -e .env.local -- tsx scripts/drop.ts",
