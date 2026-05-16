@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { getStorage } from "@/storage";
+import { getFileStorage } from "@/storage";
 import {
   findManyFiles,
   findFileById,
@@ -21,7 +21,7 @@ const fileItemSchema = z.object({
 });
 
 export default async function fileRoutes(fastify: FastifyInstance) {
-  const storage = getStorage();
+  const storage = getFileStorage();
 
   fastify.get(
     "/",

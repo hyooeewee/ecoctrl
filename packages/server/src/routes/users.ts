@@ -19,11 +19,11 @@ import {
   findUserPreferences,
   updateUserPreferences,
 } from "@/repositories/users";
-import { getStorage } from "@/storage";
+import { getFileStorage } from "@/storage";
 import { errors } from "@/lib/schemas";
 import type { UserPreferences } from "@ecoctrl/shared";
 
-const storage = getStorage();
+const storage = getFileStorage();
 
 const ALLOWED_EXTS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif"]);
 const MIME_MAP: Record<string, string> = {
@@ -118,7 +118,11 @@ export default async function accountRoutes(fastify: FastifyInstance) {
       // Delete old avatar from storage if avatarUrl is being updated to a different value
       if (body.avatarUrl !== undefined) {
         const oldUser = await findUserById(id);
-        if (oldUser?.avatarUrl && oldUser.avatarUrl !== body.avatarUrl && !isExternalUrl(oldUser.avatarUrl)) {
+        if (
+          oldUser?.avatarUrl &&
+          oldUser.avatarUrl !== body.avatarUrl &&
+          !isExternalUrl(oldUser.avatarUrl)
+        ) {
           await storage.delete(oldUser.avatarUrl).catch(() => {});
         }
       }

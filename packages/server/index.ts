@@ -26,8 +26,10 @@ import { initQueue } from "@/queue/pgboss";
 import { triggerEngine } from "@/engine/trigger";
 import { syncSmtpFromEnv } from "@/repositories/platformConfig";
 import { env } from "@/lib/env";
+import { ensureS3Buckets } from "@/storage";
 
 await ensureDatabase();
+await ensureS3Buckets();
 // await migrateDatabase();
 await syncSmtpFromEnv();
 

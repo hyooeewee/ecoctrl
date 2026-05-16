@@ -6,10 +6,10 @@ import {
   DashboardModelLabelSchema,
 } from "@ecoctrl/shared";
 import { findDashboardModel, updateDashboardModel } from "@/repositories/dashboardModel";
-import { getStorage } from "@/storage";
+import { getModelStorage } from "@/storage";
 import { errors } from "@/lib/schemas";
 
-const storage = getStorage();
+const storage = getModelStorage();
 
 const configBodySchema = z.object({
   modelFileUrl: z.string().nullable().optional(),
@@ -77,7 +77,9 @@ export default async function dashboardModelRoutes(fastify: FastifyInstance) {
       }
 
       const fileId = crypto.randomUUID();
-      const ext = originalName.includes(".") ? originalName.slice(originalName.lastIndexOf(".")) : "";
+      const ext = originalName.includes(".")
+        ? originalName.slice(originalName.lastIndexOf("."))
+        : "";
       const key = `dashboard/${fileId}${ext}`;
 
       await storage.put(key, fileBuffer);
