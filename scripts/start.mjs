@@ -8,7 +8,7 @@ import { platform } from "node:os";
 import { createWriteStream } from "node:fs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = resolve(__dirname, "..");
+const ROOT = __dirname;
 const LOG_DIR = join(ROOT, "logs");
 mkdirSync(LOG_DIR, { recursive: true });
 
@@ -141,8 +141,8 @@ function startLws(dir, port, logFile, name) {
   });
 
   const logStream = createWriteStream(logPath, { flags: "a" });
-  child.stdout.pipe(logStream);
-  child.stderr.pipe(logStream);
+  child.stdout.pipe(logStream, { end: false });
+  child.stderr.pipe(logStream, { end: false });
 
   child.on("error", (err) => {
     console.error(`[${name}] Failed to start:`, err.message);
@@ -153,6 +153,8 @@ function startLws(dir, port, logFile, name) {
       console.error(`[${name}] Exited with code ${code}`);
     }
     removePid(name);
+    child.stdout.unpipe(logStream);
+    child.stderr.unpipe(logStream);
     logStream.end();
   });
 
