@@ -125,6 +125,7 @@ jobs:
           file: docker/Dockerfile.builder
           tags: ghcr.io/${{ github.repository }}/builder:cache
           push: true
+          platforms: linux/amd64,linux/arm64
           cache-from: type=registry,ref=ghcr.io/${{ github.repository }}/builder:cache-buildx
           cache-to: type=registry,ref=ghcr.io/${{ github.repository }}/builder:cache-buildx,mode=max
 
