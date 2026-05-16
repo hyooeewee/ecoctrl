@@ -1,10 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import fs from "node:fs";
-import path from "node:path";
-import { pipeline } from "node:stream/promises";
-import { createReadStream } from "node:fs";
-import { UPLOAD_DIR as BASE_UPLOAD_DIR } from "@/lib/paths";
+import { getStorage } from "@/storage";
 import {
   findManyFiles,
   findFileById,
@@ -13,14 +9,6 @@ import {
   deleteFile,
 } from "@/repositories/files";
 import { errors } from "@/lib/schemas";
-
-const FILES_DIR = path.join(BASE_UPLOAD_DIR, "files");
-
-function ensureFilesDir() {
-  if (!fs.existsSync(FILES_DIR)) {
-    fs.mkdirSync(FILES_DIR, { recursive: true });
-  }
-}
 
 const fileItemSchema = z.object({
   id: z.string(),
@@ -33,6 +21,8 @@ const fileItemSchema = z.object({
 });
 
 export default async function fileRoutes(fastify: FastifyInstance) {
+  const storage = getStorage();
+
   fastify.get(
     "/",
     {
@@ -62,52 +52,44 @@ export default async function fileRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      ensureFilesDir();
-
       const parts = request.parts();
-      let fileInfo: { filename: string; tempPath: string } | undefined;
+      let fileBuffer: Buffer | undefined;
+      let fileName = "";
+      let mimeType = "application/octet-stream";
       let name = "";
 
       for await (const part of parts) {
         if (part.type === "file") {
-          const tempPath = path.join(FILES_DIR, `upload-${crypto.randomUUID()}`);
-          await pipeline(part.file, fs.createWriteStream(tempPath));
-          fileInfo = { filename: part.filename, tempPath };
+          const chunks: Buffer[] = [];
+          for await (const chunk of part.file) {
+            chunks.push(chunk);
+          }
+          fileBuffer = Buffer.concat(chunks);
+          fileName = part.filename;
+          mimeType = part.mimetype || "application/octet-stream";
         } else {
           if (part.fieldname === "name") name = part.value as string;
         }
       }
 
-      if (!fileInfo) {
+      if (!fileBuffer) {
         return reply.status(400).send({ error: "No file uploaded" });
       }
 
       const fileId = crypto.randomUUID();
-      const ext = path.extname(fileInfo.filename);
-      const safeName = `${fileId}${ext}`;
-      const dest = path.join(FILES_DIR, safeName);
-      fs.renameSync(fileInfo.tempPath, dest);
+      const ext = fileName.includes(".") ? fileName.slice(fileName.lastIndexOf(".")) : "";
+      const key = `files/${fileId}${ext}`;
 
-      const stats = fs.statSync(dest);
-      const mimeTypeMap: Record<string, string> = {
-        ".pdf": "application/pdf",
-        ".glb": "model/gltf-binary",
-        ".gltf": "model/gltf+json",
-        ".jpg": "image/jpeg",
-        ".jpeg": "image/jpeg",
-        ".png": "image/png",
-        ".webp": "image/webp",
-        ".gif": "image/gif",
-      };
-      const mimeType = mimeTypeMap[ext.toLowerCase()] || "application/octet-stream";
-      const finalName = name || fileInfo.filename.replace(/\.[^/.]+$/, "");
+      await storage.put(key, fileBuffer, { contentType: mimeType });
+
+      const finalName = name || fileName.replace(/\.[^/.]+$/, "");
 
       const created = await createFile({
         name: finalName,
-        filename: safeName,
+        filename: key,
         mimeType,
-        size: stats.size,
-        fileUrl: `/api/files/${fileId}/preview`,
+        size: fileBuffer.length,
+        fileUrl: key,
       });
       return reply.status(201).send(created);
     },
@@ -130,14 +112,8 @@ export default async function fileRoutes(fastify: FastifyInstance) {
         return reply.status(404).send({ error: "File not found" });
       }
 
-      const filePath = path.join(FILES_DIR, file.filename);
-      if (!fs.existsSync(filePath)) {
-        return reply.status(404).send({ error: "File not found" });
-      }
-
-      const contentType = file.mimeType || "application/octet-stream";
-      const stream = createReadStream(filePath);
-      return reply.type(contentType).send(stream);
+      const url = await storage.getUrl(file.filename);
+      return reply.redirect(url);
     },
   );
 
@@ -157,13 +133,9 @@ export default async function fileRoutes(fastify: FastifyInstance) {
       if (!file) {
         return reply.status(404).send({ error: "File not found" });
       }
-      const filePath = path.join(FILES_DIR, file.filename);
-      if (!fs.existsSync(filePath)) {
-        return reply.status(404).send({ error: "File not found" });
-      }
-      const contentType = file.mimeType || "application/octet-stream";
-      const stream = createReadStream(filePath);
-      return reply.type(contentType).send(stream);
+
+      const url = await storage.getUrl(file.filename);
+      return reply.redirect(url);
     },
   );
 
@@ -212,11 +184,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
         return reply.status(404).send({ error: "File not found" });
       }
 
-      const filePath = path.join(FILES_DIR, file.filename);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-
+      await storage.delete(file.filename);
       await deleteFile(id);
       return reply.send({ success: true });
     },

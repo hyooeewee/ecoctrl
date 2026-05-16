@@ -42,6 +42,17 @@ const envSchema = z.object({
   APP_ID: z.string().optional(),
   INITIAL_ADMIN_PASSWORD: z.string().optional(),
   CORS_ORIGIN: z.string().optional(),
+  STORAGE_PROVIDER: z.enum(["minio", "local"]).default("local"),
+  S3_ENDPOINT: z.string().optional(),
+  S3_REGION: z.string().default("us-east-1"),
+  S3_ACCESS_KEY: z.string().optional(),
+  S3_SECRET_KEY: z.string().optional(),
+  S3_BUCKET_FILES: z.string().default("ecoctrl-files"),
+  S3_BUCKET_MODELS: z.string().default("ecoctrl-models"),
+  S3_FORCE_PATH_STYLE: z
+    .string()
+    .default("false")
+    .transform((v) => v === "true"),
 });
 
 let _parsed: z.infer<typeof envSchema> | null = null;
