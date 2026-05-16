@@ -132,7 +132,7 @@ DROP TABLE "three_d_configs" CASCADE;--> statement-breakpoint
 ALTER TABLE "users" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();--> statement-breakpoint
 ALTER TABLE "users" ALTER COLUMN "role" SET DEFAULT 'viewer';--> statement-breakpoint
 ALTER TABLE "users" ALTER COLUMN "status" SET DEFAULT 'offline';--> statement-breakpoint
-ALTER TABLE "models" ALTER COLUMN "id" SET DATA TYPE uuid;--> statement-breakpoint
+ALTER TABLE "models" ALTER COLUMN "id" SET DATA TYPE uuid USING "id"::uuid;--> statement-breakpoint
 ALTER TABLE "models" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();--> statement-breakpoint
 ALTER TABLE "users" ADD COLUMN "username" varchar(255) DEFAULT '' NOT NULL;--> statement-breakpoint
 ALTER TABLE "users" ADD COLUMN "password" varchar(255);--> statement-breakpoint
