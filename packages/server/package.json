@@ -22,7 +22,7 @@
     "db:refresh": "pnpm db:drop:db && pnpm db:push && pnpm db:seed && pnpm db:studio",
     "db:squash": "dotenv -e .env.local -- tsx scripts/squash.ts",
     "db:drop": "drizzle-kit drop",
-    "env:sync": "tsx ../../packages/shared/scripts/gen-env-example.ts",
+    "env:overwrite": "tsx ../../packages/shared/scripts/gen-env-example.ts -y",
     "env:check": "tsx ../../packages/shared/scripts/gen-env-example.ts --check",
     "test": "vitest run",
     "test:watch": "vitest",
