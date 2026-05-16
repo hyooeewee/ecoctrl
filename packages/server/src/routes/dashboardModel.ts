@@ -1,24 +1,15 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import fs from "node:fs";
-import path from "node:path";
-import { pipeline } from "node:stream/promises";
 import {
   DashboardModelConfigSchema,
   DashboardModelHotspotSchema,
   DashboardModelLabelSchema,
 } from "@ecoctrl/shared";
 import { findDashboardModel, updateDashboardModel } from "@/repositories/dashboardModel";
-import { UPLOAD_DIR } from "@/lib/paths";
+import { getStorage } from "@/storage";
 import { errors } from "@/lib/schemas";
 
-const MODELS_DIR = path.join(UPLOAD_DIR, "models");
-
-function ensureModelsDir() {
-  if (!fs.existsSync(MODELS_DIR)) {
-    fs.mkdirSync(MODELS_DIR, { recursive: true });
-  }
-}
+const storage = getStorage();
 
 const configBodySchema = z.object({
   modelFileUrl: z.string().nullable().optional(),
@@ -66,34 +57,34 @@ export default async function dashboardModelRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      ensureModelsDir();
-
       const parts = request.parts();
-      let fileInfo: { filename: string; tempPath: string } | undefined;
+      let fileBuffer: Buffer | undefined;
+      let originalName = "";
 
       for await (const part of parts) {
         if (part.type === "file") {
-          const tempPath = path.join(MODELS_DIR, `upload-${crypto.randomUUID()}`);
-          await pipeline(part.file, fs.createWriteStream(tempPath));
-          fileInfo = { filename: part.filename, tempPath };
+          const chunks: Buffer[] = [];
+          for await (const chunk of part.file) {
+            chunks.push(chunk);
+          }
+          fileBuffer = Buffer.concat(chunks);
+          originalName = part.filename;
         }
       }
 
-      if (!fileInfo) {
+      if (!fileBuffer) {
         return reply.status(400).send({ error: "No file uploaded" });
       }
 
       const fileId = crypto.randomUUID();
-      const ext = path.extname(fileInfo.filename);
-      const safeName = `${fileId}${ext}`;
-      const dest = path.join(MODELS_DIR, safeName);
-      fs.renameSync(fileInfo.tempPath, dest);
+      const ext = originalName.includes(".") ? originalName.slice(originalName.lastIndexOf(".")) : "";
+      const key = `dashboard/${fileId}${ext}`;
 
-      const modelFileUrl = `/static/models/${safeName}`;
+      await storage.put(key, fileBuffer);
 
       const existing = await findDashboardModel();
       const updated = await updateDashboardModel({
-        modelFileUrl,
+        modelFileUrl: key,
         cameraPreset: existing?.cameraPreset ?? "Default_View_01",
         ambientLightIntensity: existing?.ambientLightIntensity ?? 0.85,
         hotspots: existing?.hotspots ?? [],

@@ -9,7 +9,6 @@ import cors from "@fastify/cors";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import fastifyJwt from "@fastify/jwt";
-import fastifyStatic from "@fastify/static";
 import {
   validatorCompiler,
   serializerCompiler,
@@ -20,7 +19,6 @@ import {
 import { ensureDatabase } from "@/lib/ensureDatabase";
 // import { migrateDatabase } from "@/lib/migrateDatabase";
 import { getRootLogger } from "@/lib/logger";
-import { UPLOAD_DIR } from "@/lib/paths";
 import databasePlugin from "@/plugins/database";
 import rateLimitPlugin from "@/plugins/rateLimit";
 import apiRoutes from "@/routes";
@@ -53,10 +51,6 @@ await fastify.register(multipart, {
     fileSize: 100 * 1024 * 1024, // 100MB
     files: 1,
   },
-});
-await fastify.register(fastifyStatic, {
-  root: path.join(UPLOAD_DIR, "models"),
-  prefix: "/static/models/",
 });
 await fastify.register(swagger, {
   transform: jsonSchemaTransform,

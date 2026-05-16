@@ -1,8 +1,5 @@
 import type { FastifyInstance } from "fastify";
 import crypto from "node:crypto";
-import fs from "node:fs";
-import path from "node:path";
-import { pipeline } from "node:stream/promises";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import {
@@ -22,11 +19,12 @@ import {
   findUserPreferences,
   updateUserPreferences,
 } from "@/repositories/users";
-import { UPLOAD_DIR } from "@/lib/paths";
+import { getStorage } from "@/storage";
 import { errors } from "@/lib/schemas";
 import type { UserPreferences } from "@ecoctrl/shared";
 
-const AVATAR_DIR = path.join(UPLOAD_DIR, "avatar");
+const storage = getStorage();
+
 const ALLOWED_EXTS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif"]);
 const MIME_MAP: Record<string, string> = {
   ".jpg": "image/jpeg",
@@ -36,20 +34,8 @@ const MIME_MAP: Record<string, string> = {
   ".gif": "image/gif",
 };
 
-function ensureAvatarDir() {
-  if (!fs.existsSync(AVATAR_DIR)) {
-    fs.mkdirSync(AVATAR_DIR, { recursive: true });
-  }
-}
-
-function deleteOldAvatar(avatarValue: string | null) {
-  if (!avatarValue) return;
-  // External OAuth avatar URLs are not stored on disk
-  if (/^https?:/i.test(avatarValue)) return;
-  const filePath = path.join(AVATAR_DIR, avatarValue);
-  if (fs.existsSync(filePath)) {
-    fs.unlinkSync(filePath);
-  }
+function isExternalUrl(url: string | null): boolean {
+  return !!url && /^https?:/i.test(url);
 }
 
 const successSchema = z.object({ success: z.boolean() });
@@ -129,11 +115,11 @@ export default async function accountRoutes(fastify: FastifyInstance) {
         body.password = await bcrypt.hash(body.password, 10);
       }
 
-      // Delete old avatar file if avatarUrl is being updated to a different value
+      // Delete old avatar from storage if avatarUrl is being updated to a different value
       if (body.avatarUrl !== undefined) {
         const oldUser = await findUserById(id);
-        if (oldUser?.avatarUrl && oldUser.avatarUrl !== body.avatarUrl) {
-          deleteOldAvatar(oldUser.avatarUrl);
+        if (oldUser?.avatarUrl && oldUser.avatarUrl !== body.avatarUrl && !isExternalUrl(oldUser.avatarUrl)) {
+          await storage.delete(oldUser.avatarUrl).catch(() => {});
         }
       }
 
@@ -164,8 +150,8 @@ export default async function accountRoutes(fastify: FastifyInstance) {
       if (!deleted) {
         return reply.status(404).send({ error: "User not found" });
       }
-      if (deleted.avatarUrl) {
-        deleteOldAvatar(deleted.avatarUrl);
+      if (deleted.avatarUrl && !isExternalUrl(deleted.avatarUrl)) {
+        await storage.delete(deleted.avatarUrl).catch(() => {});
       }
       return reply.send({ success: true });
     },
@@ -188,7 +174,6 @@ export default async function accountRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      ensureAvatarDir();
       const { id } = request.params as { id: string };
 
       const user = await findUserById(id);
@@ -197,48 +182,43 @@ export default async function accountRoutes(fastify: FastifyInstance) {
       }
 
       const parts = request.parts();
-      let tempPath: string | undefined;
-      let originalName: string | undefined;
+      let fileBuffer: Buffer | undefined;
+      let originalName = "";
 
-      try {
-        for await (const part of parts) {
-          if (part.type === "file") {
-            tempPath = path.join(AVATAR_DIR, `tmp-${crypto.randomUUID()}`);
-            await pipeline(part.file, fs.createWriteStream(tempPath));
-            originalName = part.filename;
+      for await (const part of parts) {
+        if (part.type === "file") {
+          const chunks: Buffer[] = [];
+          for await (const chunk of part.file) {
+            chunks.push(chunk);
           }
+          fileBuffer = Buffer.concat(chunks);
+          originalName = part.filename;
         }
-      } catch (_err) {
-        if (tempPath && fs.existsSync(tempPath)) {
-          fs.unlinkSync(tempPath);
-        }
-        throw _err;
       }
 
-      if (!tempPath || !originalName) {
+      if (!fileBuffer) {
         return reply.status(400).send({ error: "No file uploaded" });
       }
 
-      const ext = path.extname(originalName).toLowerCase();
+      const ext = originalName.slice(originalName.lastIndexOf(".")).toLowerCase();
       if (!ALLOWED_EXTS.has(ext)) {
-        fs.unlinkSync(tempPath);
         return reply.status(400).send({
           error: `Invalid file type. Allowed: ${Array.from(ALLOWED_EXTS).join(", ")}`,
         });
       }
 
       const safeName = `${crypto.randomUUID()}${ext}`;
-      const dest = path.join(AVATAR_DIR, safeName);
-      fs.renameSync(tempPath, dest);
+      const key = `avatars/${id}/${safeName}`;
+      await storage.put(key, fileBuffer, { contentType: MIME_MAP[ext] || "image/jpeg" });
 
-      // Delete old avatar file
-      if (user.avatarUrl) {
-        deleteOldAvatar(user.avatarUrl);
+      // Delete old avatar from storage
+      if (user.avatarUrl && !isExternalUrl(user.avatarUrl)) {
+        await storage.delete(user.avatarUrl).catch(() => {});
       }
 
-      await updateUser(id, { avatarUrl: safeName });
+      await updateUser(id, { avatarUrl: key });
 
-      return reply.send({ url: safeName });
+      return reply.send({ url: key });
     },
   );
 
@@ -259,21 +239,13 @@ export default async function accountRoutes(fastify: FastifyInstance) {
         return reply.status(404).send({ error: "Avatar not found" });
       }
 
-      // External OAuth avatar — redirect
-      if (/^https?:/i.test(user.avatarUrl)) {
+      // External OAuth avatar — redirect directly
+      if (isExternalUrl(user.avatarUrl)) {
         return reply.redirect(user.avatarUrl);
       }
 
-      const filename = user.avatarUrl;
-      const filePath = path.join(AVATAR_DIR, filename);
-      if (!fs.existsSync(filePath)) {
-        return reply.status(404).send({ error: "Avatar file not found" });
-      }
-
-      const ext = path.extname(filename).toLowerCase();
-      const contentType = MIME_MAP[ext] || "image/jpeg";
-      const stream = fs.createReadStream(filePath);
-      return reply.type(contentType).send(stream);
+      const url = await storage.getUrl(user.avatarUrl);
+      return reply.redirect(url);
     },
   );
 
