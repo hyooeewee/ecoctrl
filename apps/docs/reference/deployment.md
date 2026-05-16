@@ -95,7 +95,7 @@ GitHub Releases publishes pre-staged zips for every tagged version. They contain
 
 From [GitHub Releases](https://github.com/hyooeewee/ecoctrl/releases):
 
-- **`ecoctrl-vX.Y.Z.zip`** — recommended. Contains everything, ready for `start.sh`.
+- **`ecoctrl-vX.Y.Z.zip`** — recommended. Contains everything, ready for `start.mjs`.
 - Component zips: `admin-vX.Y.Z.zip`, `web-vX.Y.Z.zip`, `server-vX.Y.Z.zip`. Extract them next to each other.
 
 == R2 Mirror (China)
@@ -113,7 +113,7 @@ If GitHub Releases is slow or unreachable, download from our Cloudflare R2 mirro
 
 ```
 ecoctrl/
-├── start.sh
+├── start.mjs
 ├── server/
 │   ├── index.mjs
 │   ├── package.json
@@ -138,10 +138,10 @@ echo 'API_BASE_URL=https://api.example.com' > web/.env.local
 ### Start
 
 ```bash
-./start.sh
+node start.mjs
 ```
 
-`start.sh` will:
+`start.mjs` will:
 
 1. Run `pnpm install --prod` inside `server/` on the first launch.
 2. Start the API under pm2 as `ecoctrl-server`.

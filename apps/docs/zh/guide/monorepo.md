@@ -15,7 +15,7 @@ ecoctrl/
 │   ├── ui/             # 共享组件库（shadcn/ui 风格、源码分发）
 │   └── shared/         # Zod schema、类型与 Vite 工具
 ├── docker/             # Compose 清单与各 App 的 Dockerfile
-├── scripts/            # release 包附带的 start.sh 与运行时脚本
+├── scripts/            # release 包附带的 start.mjs 与运行时脚本
 └── pnpm-workspace.yaml
 ```
 

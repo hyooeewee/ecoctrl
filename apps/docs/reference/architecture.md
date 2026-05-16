@@ -140,13 +140,13 @@ Per-app Dockerfiles produce small images: the SPA bundle plus a Caddyfile that r
 
 ```
 ecoctrl/
-├── start.sh          # interactive menu — start, restart, stop
+├── start.mjs          # interactive menu — start, restart, stop
 ├── server/...        # node bundle + auto-generated package.json
 ├── admin/...         # static files
 └── web/...           # static files
 ```
 
-`start.sh` runs the server under pm2 (`ecoctrl-server`) and serves `admin/` and `web/` with [`local-web-server`](https://github.com/lwsjs/local-web-server)'s `--rewrite` flag, replicating Caddy's behavior without requiring it. The same `.env.local` files drive the rewrites.
+`start.mjs` runs the server under pm2 (`ecoctrl-server`) and serves `admin/` and `web/` with [`local-web-server`](https://github.com/lwsjs/local-web-server)'s `--rewrite` flag, replicating Caddy's behavior without requiring it. The same `.env.local` files drive the rewrites.
 
 ## IoT proxy layer
 

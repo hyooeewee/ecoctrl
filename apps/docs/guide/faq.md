@@ -93,7 +93,7 @@ Frontend code addresses the API as `/api` literally — that prefix is rewritten
 
 - In dev: by Vite's proxy (`createDevProxy`).
 - In containers: by Caddy.
-- In release zips: by `start.sh` and `lws --rewrite`.
+- In release zips: by `start.mjs` and `lws --rewrite`.
 
 You **don't** need to rebuild the frontend after changing the host or prefix; just update the matching env variable on the runtime layer (see [Environment Variables](/reference/env-vars)).
 

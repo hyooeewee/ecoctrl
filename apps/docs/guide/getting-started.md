@@ -64,7 +64,7 @@ After unpacking you get:
 
 ```
 ecoctrl/
-├── start.sh        # one-click startup script
+├── start.mjs        # one-click startup script
 ├── admin/          # admin static files (served on port 4173)
 ├── web/            # web static files (served on port 8081)
 └── server/         # node API bundle (port 3000)
@@ -80,16 +80,16 @@ cp server/.env.example server/.env.local
 # Set DATABASE_URL, JWT_SECRET, and any optional integration credentials.
 
 # 2. Bring everything up.
-./start.sh
+node start.mjs
 ```
 
-`start.sh` will:
+`start.mjs` will:
 
 1. Install the server's runtime dependencies (`pnpm install --prod`) the first time it runs.
 2. Start the API under [pm2](https://pm2.keymetrics.io/) as `ecoctrl-server`.
 3. Serve the `admin/` and `web/` static bundles on `4173` and `8081`, automatically rewriting `/api/*` and `/static/*` to the API.
 
-You can re-run `./start.sh` at any time to get an interactive menu (`[r]` restart, `[s]` stop, `[q]` cancel).
+You can re-run `node start.mjs` at any time to get an interactive menu (`[r]` restart, `[s]` stop, `[q]` cancel).
 
 ### Manual stop
 

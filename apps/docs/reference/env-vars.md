@@ -83,9 +83,9 @@ Database credentials, ports and `DATABASE_URL` are hardcoded inside `compose.yml
 
 When the same variable is set in multiple places, EcoCtrl resolves it in this order (highest wins):
 
-1. **Shell environment** — `JWT_SECRET=... ./start.sh`.
+1. **Shell environment** — `JWT_SECRET=... node start.mjs`.
 2. **Per-app `.env.local`** — `apps/admin/.env.local`, `apps/web/.env.local`, `packages/server/.env.local`.
 3. **Per-app `.env.example`** — used by tests / fallbacks only.
-4. **Built-in defaults** in `start.sh` and inside the server.
+4. **Built-in defaults** in `start.mjs` and inside the server.
 
-The release zip's `start.sh` additionally honors `ROOT/.env.local` as a shared fallback for both admin and web, useful when both apps point to the same backend.
+The release zip's `start.mjs` additionally honors `ROOT/.env.local` as a shared fallback for both admin and web, useful when both apps point to the same backend.

@@ -140,13 +140,13 @@ ecoctrl-web   (Caddy)   :8081 → /api /static 重写到 http://server:3000
 
 ```
 ecoctrl/
-├── start.sh          # 交互菜单 — 启动 / 重启 / 停止
+├── start.mjs          # 交互菜单 — 启动 / 重启 / 停止
 ├── server/...        # node bundle + 自动生成的 package.json
 ├── admin/...         # 静态资源
 └── web/...           # 静态资源
 ```
 
-`start.sh` 使用 pm2 启动服务（进程名 `ecoctrl-server`），并通过 [`local-web-server`](https://github.com/lwsjs/local-web-server) 的 `--rewrite` 把 `admin/` 与 `web/` 起到端口 4173 与 8081，复刻 Caddy 的行为且无需安装 Caddy。重写规则同样从 `.env.local` 读取。
+`start.mjs` 使用 pm2 启动服务（进程名 `ecoctrl-server`），并通过 [`local-web-server`](https://github.com/lwsjs/local-web-server) 的 `--rewrite` 把 `admin/` 与 `web/` 起到端口 4173 与 8081，复刻 Caddy 的行为且无需安装 Caddy。重写规则同样从 `.env.local` 读取。
 
 ## IoT 代理层
 

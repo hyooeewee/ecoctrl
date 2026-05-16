@@ -31,13 +31,13 @@ pnpm --filter @ecoctrl/server dev
 
 ## Deployment
 
-| Mode         | Command                                                          | Notes                                             |
-| ------------ | ---------------------------------------------------------------- | ------------------------------------------------- |
-| **Docker**   | `docker build -f packages/server/Dockerfile -t ecoctrl-server .` | Or `cd docker && docker compose up --build`       |
-| **PM2**      | `pnpm --filter @ecoctrl/server start`                            | Production build + `pm2 start ecoctrl.config.cjs` |
-| **Preview**  | `pnpm --filter @ecoctrl/server preview`                          | Staging: build + `node` directly                  |
-| **start.sh** | `./scripts/start.sh`                                             | Root script: admin + web + server                 |
-| **Dev**      | `pnpm --filter @ecoctrl/server dev`                              | tsx watch                                         |
+| Mode          | Command                                                          | Notes                                             |
+| ------------- | ---------------------------------------------------------------- | ------------------------------------------------- |
+| **Docker**    | `docker build -f packages/server/Dockerfile -t ecoctrl-server .` | Or `cd docker && docker compose up --build`       |
+| **PM2**       | `pnpm --filter @ecoctrl/server start`                            | Production build + `pm2 start ecoctrl.config.cjs` |
+| **Preview**   | `pnpm --filter @ecoctrl/server preview`                          | Staging: build + `node` directly                  |
+| **start.mjs** | `./scripts/start.mjs`                                            | Root script: admin + web + server                 |
+| **Dev**       | `pnpm --filter @ecoctrl/server dev`                              | tsx watch                                         |
 
 ## Database
 
