@@ -93,7 +93,7 @@ GitHub Releases 为每个 tag 发布预构建 zip。其中包含 SPA bundle 与 
 
 打开 [GitHub Releases](https://github.com/hyooeewee/ecoctrl/releases)：
 
-- **`ecoctrl-vX.Y.Z.zip`** — 推荐，包含全部组件，可直接配合 `start.sh` 使用。
+- **`ecoctrl-vX.Y.Z.zip`** — 推荐，包含全部组件，可直接配合 `start.mjs` 使用。
 - 单包：`admin-vX.Y.Z.zip`、`web-vX.Y.Z.zip`、`server-vX.Y.Z.zip`，并排解压到同一目录即可。
 
 == 国内镜像
@@ -111,7 +111,7 @@ GitHub Releases 为每个 tag 发布预构建 zip。其中包含 SPA bundle 与 
 
 ```
 ecoctrl/
-├── start.sh
+├── start.mjs
 ├── server/
 │   ├── index.mjs
 │   ├── package.json
@@ -136,10 +136,10 @@ echo 'API_BASE_URL=https://api.example.com' > web/.env.local
 ### 启动
 
 ```bash
-./start.sh
+node start.mjs
 ```
 
-`start.sh` 会执行：
+`start.mjs` 会执行：
 
 1. 第一次启动时在 `server/` 中运行 `pnpm install --prod`。
 2. 通过 pm2 启动 API（进程名 `ecoctrl-server`）。

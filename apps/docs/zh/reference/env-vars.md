@@ -83,9 +83,9 @@
 
 同一变量在多个位置出现时，EcoCtrl 按以下顺序解析（高优先级在前）：
 
-1. **Shell 环境变量** — `JWT_SECRET=... ./start.sh`。
+1. **Shell 环境变量** — `JWT_SECRET=... node start.mjs`。
 2. **每个 App 的 `.env.local`** — `apps/admin/.env.local`、`apps/web/.env.local`、`packages/server/.env.local`。
 3. **每个 App 的 `.env.example`** — 仅作为兜底/测试用。
-4. **`start.sh` 与服务端中的内置默认值**。
+4. **`start.mjs` 与服务端中的内置默认值**。
 
-release zip 的 `start.sh` 还支持把 `ROOT/.env.local` 作为 admin 与 web 共享的兜底配置 — 当两个 App 指向同一后端时非常方便。
+release zip 的 `start.mjs` 还支持把 `ROOT/.env.local` 作为 admin 与 web 共享的兜底配置 — 当两个 App 指向同一后端时非常方便。

@@ -15,7 +15,7 @@ ecoctrl/
 │   ├── ui/             # Shared component library (shadcn/ui style, source-only)
 │   └── shared/         # Zod schemas, types, and Vite tooling
 ├── docker/             # Compose manifests and per-app Dockerfiles
-├── scripts/            # start.sh and runtime helpers shipped with releases
+├── scripts/            # start.mjs and runtime helpers shipped with releases
 └── pnpm-workspace.yaml
 ```
 

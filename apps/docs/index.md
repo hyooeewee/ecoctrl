@@ -37,7 +37,7 @@ features:
     details: Self-rotating JWT + refresh tokens, OAuth login, SMTP email verification and a role-based permission model out of the box.
   - icon: 🐳
     title: One-command Deploy
-    details: Ship the full stack with a single docker compose up, or grab a pre-built release zip and run start.sh — your choice.
+    details: Ship the full stack with a single docker compose up, or grab a pre-built release zip and run start.mjs — your choice.
   - icon: ⚙️
     title: Workflow Engine
     details: Visual workflow builder with a DSL-based execution engine. Support state-change, schedule, webhook and manual triggers with retry and error handling.

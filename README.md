@@ -53,7 +53,7 @@ Download from [GitHub Releases](https://github.com/hyooeewee/ecoctrl/releases) o
 ```bash
 unzip ecoctrl-v1.0.0.zip
 cd ecoctrl
-./start.sh
+node start.mjs
 ```
 
 ## Local Development
