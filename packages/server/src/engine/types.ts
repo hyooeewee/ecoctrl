@@ -49,7 +49,8 @@ export type NodeType =
   | "http_request"
   | "database"
   | "email"
-  | "variable";
+  | "variable"
+  | "point";
 
 export interface ErrorHandler {
   action: "retry" | "skip" | "abort" | "goto";
