@@ -33,7 +33,7 @@ export function ScreenPet() {
     handlePointerUp,
   } = usePetPosition();
 
-  const { speak, isSpeaking, stop: stopSpeaking } = useVoiceOutput();
+  const { speak, isSpeaking } = useVoiceOutput();
 
   const [isHovered, setIsHovered] = useState(false);
   const [isJumping, setIsJumping] = useState(false);
@@ -164,7 +164,7 @@ export function ScreenPet() {
     ],
   );
 
-  const { isRecording, startRecording, stopRecording } = useVoiceInput(
+  const { isRecording } = useVoiceInput(
     useCallback(
       (text: string) => {
         if (text.trim()) handleSend(text);

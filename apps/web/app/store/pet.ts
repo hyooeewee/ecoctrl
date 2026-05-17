@@ -65,7 +65,7 @@ const defaults = {
 
 export const usePetStore = create<PetState>()(
   persist(
-    (set, get) => ({
+    (set, _get) => ({
       ...defaults,
 
       toggleOpen: () => set((state) => ({ isOpen: !state.isOpen })),
