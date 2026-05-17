@@ -875,6 +875,16 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
     [setNodes],
   );
 
+  // Memoize nodes with callbacks to avoid re-creating objects on every render
+  const nodesWithCallbacks = useMemo(
+    () =>
+      nodes.map((n) => ({
+        ...n,
+        data: { ...n.data, onAddNodeFromHandle: handleAddNodeFromHandle },
+      })),
+    [nodes, handleAddNodeFromHandle],
+  );
+
   // Dynamic node types including plugin nodes
   const nodeTypes = useMemo(() => {
     const types: Record<string, React.ComponentType<any>> = { ...BUILT_IN_NODE_TYPES };
@@ -1274,6 +1284,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
               onDragEnd={onDragEnd}
               onInit={setRfInstance}
               nodeTypes={nodeTypes}
+              nodes={nodesWithCallbacks}
               fitView
               attributionPosition="bottom-right"
               deleteKeyCode={["Backspace", "Delete"]}

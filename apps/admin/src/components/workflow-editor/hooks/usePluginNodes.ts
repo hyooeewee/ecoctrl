@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { nodesApi, NodeDefinition } from "@/api/nodes";
 
 const BUILT_IN_NODE_TYPES = new Set([
@@ -39,13 +39,16 @@ export function usePluginNodes() {
     };
   }, []);
 
-  function isPluginNodeType(nodeType: string): boolean {
+  const isPluginNodeType = useCallback((nodeType: string): boolean => {
     return !BUILT_IN_NODE_TYPES.has(nodeType);
-  }
+  }, []);
 
-  function getPluginNodeDef(nodeType: string): NodeDefinition | null {
-    return pluginNodes.find((n) => n.id === nodeType) ?? null;
-  }
+  const getPluginNodeDef = useCallback(
+    (nodeType: string): NodeDefinition | null => {
+      return pluginNodes.find((n) => n.id === nodeType) ?? null;
+    },
+    [pluginNodes],
+  );
 
   return {
     pluginNodes,
