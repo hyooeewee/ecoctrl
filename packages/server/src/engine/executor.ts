@@ -168,7 +168,13 @@ async function executeNode(
             ctx.variables.set(itemVar, items[i]);
             ctx.variables.set("index", i);
             if (body?.nodes && body.edges) {
-              const subResult = await executeSubGraph(body.nodes, body.edges, ctx, registry, dryRun);
+              const subResult = await executeSubGraph(
+                body.nodes,
+                body.edges,
+                ctx,
+                registry,
+                dryRun,
+              );
               results.push(subResult);
             }
           }
@@ -183,7 +189,13 @@ async function executeNode(
             evaluateBoolean(String(config.condition ?? "false"), vars)
           ) {
             if (body?.nodes && body.edges) {
-              const subResult = await executeSubGraph(body.nodes, body.edges, ctx, registry, dryRun);
+              const subResult = await executeSubGraph(
+                body.nodes,
+                body.edges,
+                ctx,
+                registry,
+                dryRun,
+              );
               results.push(subResult);
             }
             iterations++;

@@ -31,7 +31,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
         norender: true,
       },
     }),
-    []
+    [],
   );
 
   return (

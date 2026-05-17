@@ -18,11 +18,13 @@ export type NodeType =
   | "email"
   | "variable"
   | "point_read"
-  | "point_write";
+  | "point_write"
+  // Plugin nodes (any string)
+  | string;
 
 export interface WorkflowNode {
   id: string;
-  type: NodeType;
+  type: NodeType | string;
   name: string;
   config: Record<string, unknown>;
   onError?: {

@@ -79,8 +79,13 @@ import ActionNode from "./nodes/ActionNode";
 import ConditionNode from "./nodes/ConditionNode";
 import LoopNode from "./nodes/LoopNode";
 import ParallelNode from "./nodes/ParallelNode";
+import { TriggerNodeShell } from "./nodes/TriggerNodeShell";
+import { ActionNodeShell } from "./nodes/ActionNodeShell";
+import { ConditionNodeShell } from "./nodes/ConditionNodeShell";
+import { NodeConfigPanel } from "./NodeConfigPanel";
+import { usePluginNodes } from "./hooks/usePluginNodes";
 
-const NODE_TYPES = {
+const BUILT_IN_NODE_TYPES: Record<string, React.ComponentType<any>> = {
   start: StartNode,
   end: EndNode,
   http_request: ActionNode,
@@ -246,6 +251,7 @@ interface WorkflowCanvasProps {
 export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasProps) {
   const [nodes, setNodes, _onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, _onEdgesChange] = useEdgesState<Edge>([]);
+  const { pluginNodes, isPluginNodeType, getPluginNodeDef } = usePluginNodes();
   const [dsl, setDsl] = useState<WorkflowDSL | null>(null);
   const [workflow, setWorkflow] = useState<WorkflowListItem | null>(null);
   const [loading, setLoading] = useState(false);
@@ -416,7 +422,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
         y: event.clientY,
       });
 
-      const item = ALL_COMPONENTS.find((c) => c.type === type);
+      const item = allComponents.find((c) => c.type === type);
       const newNode: Node = {
         id: `${type}-${Date.now()}`,
         type,
@@ -556,6 +562,51 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
     [setNodes],
   );
 
+  // Dynamic node types including plugin nodes
+  const nodeTypes = useMemo(() => {
+    const types: Record<string, React.ComponentType<any>> = { ...BUILT_IN_NODE_TYPES };
+    for (const plugin of pluginNodes) {
+      if (plugin.category === "trigger") types[plugin.id] = TriggerNodeShell;
+      else if (plugin.category === "action") types[plugin.id] = ActionNodeShell;
+      else if (plugin.category === "condition") types[plugin.id] = ConditionNodeShell;
+    }
+    return types;
+  }, [pluginNodes]);
+
+  // Combined component list (built-in + plugin)
+  const allComponents = useMemo(() => {
+    const builtins = ALL_COMPONENTS;
+    const plugins = pluginNodes.map((p) => ({
+      type: p.id,
+      label: p.name,
+      description: p.description || "",
+      icon: Zap,
+      colorClass:
+        "bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400",
+    }));
+    return [...builtins, ...plugins];
+  }, [pluginNodes]);
+
+  // Component categories with plugin section
+  const componentCategories = useMemo(() => {
+    const categories = [...COMPONENT_CATEGORIES];
+    if (pluginNodes.length > 0) {
+      categories.push({
+        id: "plugins",
+        label: "插件节点",
+        items: pluginNodes.map((p) => ({
+          type: p.id,
+          label: p.name,
+          description: p.description || "",
+          icon: Zap,
+          colorClass:
+            "bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400",
+        })),
+      });
+    }
+    return categories;
+  }, [pluginNodes]);
+
   // Warn before closing tab with unsaved changes
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
@@ -653,16 +704,16 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
   const canDelete = selectedNodeType !== "start" && selectedNodeType !== "end" && !!selectedNode;
 
   const filteredCategories = useMemo(() => {
-    if (!searchQuery.trim()) return COMPONENT_CATEGORIES;
+    if (!searchQuery.trim()) return componentCategories;
     const q = searchQuery.toLowerCase();
-    return COMPONENT_CATEGORIES.map((cat) => ({
+    return componentCategories.map((cat) => ({
       ...cat,
       items: cat.items.filter(
         (item) =>
           item.label.toLowerCase().includes(q) || item.description.toLowerCase().includes(q),
       ),
     })).filter((cat) => cat.items.length > 0);
-  }, [searchQuery]);
+  }, [searchQuery, componentCategories]);
 
   if (loading) {
     return (
@@ -889,7 +940,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
               onDragOver={onDragOver}
               onDrop={onDrop}
               onInit={setRfInstance}
-              nodeTypes={NODE_TYPES}
+              nodeTypes={nodeTypes}
               fitView
               attributionPosition="bottom-right"
               deleteKeyCode={["Backspace", "Delete"]}
@@ -1412,6 +1463,29 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                           />
                         </div>
                       </>
+                    )}
+                    {isPluginNodeType(selectedNodeType) && selectedNode && (
+                      <NodeConfigPanel
+                        nodeId={selectedNode.id}
+                        nodeName={(selectedNode.data.label as string) ?? selectedNode.id}
+                        nodeType={selectedNodeType}
+                        currentConfig={(selectedNode.data.config as Record<string, unknown>) ?? {}}
+                        schema={getPluginNodeDef(selectedNodeType)?.schema ?? {}}
+                        availableVersions={[]}
+                        currentVersion={
+                          ((selectedNode.data.config as Record<string, unknown>)?.__version as string) ??
+                          "latest"
+                        }
+                        onChange={(config) =>
+                          updateNodeData(selectedNode.id, {
+                            config: {
+                              ...(selectedNode.data.config as Record<string, unknown>),
+                              ...config,
+                            },
+                          })
+                        }
+                        onVersionChange={() => {}}
+                      />
                     )}
                     <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-800/50">
                       <p className="text-muted-foreground text-xs leading-relaxed">

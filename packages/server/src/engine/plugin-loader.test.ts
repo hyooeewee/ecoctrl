@@ -21,7 +21,17 @@ describe("validatePluginPackage", () => {
 
   it("throws for invalid manifest id", async () => {
     const files = new Map([
-      ["manifest.json", JSON.stringify({ id: "Bad Id!", name: "x", version: "1.0.0", category: "action", entry: "backend.js", schema: "schema.json" })],
+      [
+        "manifest.json",
+        JSON.stringify({
+          id: "Bad Id!",
+          name: "x",
+          version: "1.0.0",
+          category: "action",
+          entry: "backend.js",
+          schema: "schema.json",
+        }),
+      ],
       ["backend.js", "module.exports = async () => {}"],
       ["schema.json", JSON.stringify({ type: "object", properties: { x: { type: "string" } } })],
     ]);
@@ -30,7 +40,17 @@ describe("validatePluginPackage", () => {
 
   it("throws for missing backend.js", async () => {
     const files = new Map([
-      ["manifest.json", JSON.stringify({ id: "test-node", name: "Test", version: "1.0.0", category: "action", entry: "backend.js", schema: "schema.json" })],
+      [
+        "manifest.json",
+        JSON.stringify({
+          id: "test-node",
+          name: "Test",
+          version: "1.0.0",
+          category: "action",
+          entry: "backend.js",
+          schema: "schema.json",
+        }),
+      ],
       ["schema.json", JSON.stringify({ type: "object", properties: { x: { type: "string" } } })],
     ]);
     await expect(validatePluginPackage(files)).rejects.toThrow("Entry file 'backend.js' not found");
@@ -38,7 +58,17 @@ describe("validatePluginPackage", () => {
 
   it("throws for invalid schema type", async () => {
     const files = new Map([
-      ["manifest.json", JSON.stringify({ id: "test-node", name: "Test", version: "1.0.0", category: "action", entry: "backend.js", schema: "schema.json" })],
+      [
+        "manifest.json",
+        JSON.stringify({
+          id: "test-node",
+          name: "Test",
+          version: "1.0.0",
+          category: "action",
+          entry: "backend.js",
+          schema: "schema.json",
+        }),
+      ],
       ["backend.js", "module.exports = async () => {}"],
       ["schema.json", JSON.stringify({ type: "string" })],
     ]);
@@ -47,7 +77,17 @@ describe("validatePluginPackage", () => {
 
   it("throws for empty schema properties", async () => {
     const files = new Map([
-      ["manifest.json", JSON.stringify({ id: "test-node", name: "Test", version: "1.0.0", category: "action", entry: "backend.js", schema: "schema.json" })],
+      [
+        "manifest.json",
+        JSON.stringify({
+          id: "test-node",
+          name: "Test",
+          version: "1.0.0",
+          category: "action",
+          entry: "backend.js",
+          schema: "schema.json",
+        }),
+      ],
       ["backend.js", "module.exports = async () => {}"],
       ["schema.json", JSON.stringify({ type: "object", properties: {} })],
     ]);
@@ -56,16 +96,38 @@ describe("validatePluginPackage", () => {
 
   it("throws for missing module.exports", async () => {
     const files = new Map([
-      ["manifest.json", JSON.stringify({ id: "test-node", name: "Test", version: "1.0.0", category: "action", entry: "backend.js", schema: "schema.json" })],
+      [
+        "manifest.json",
+        JSON.stringify({
+          id: "test-node",
+          name: "Test",
+          version: "1.0.0",
+          category: "action",
+          entry: "backend.js",
+          schema: "schema.json",
+        }),
+      ],
       ["backend.js", "const x = 1;"],
       ["schema.json", JSON.stringify({ type: "object", properties: { x: { type: "string" } } })],
     ]);
-    await expect(validatePluginPackage(files)).rejects.toThrow("must export a function via module.exports");
+    await expect(validatePluginPackage(files)).rejects.toThrow(
+      "must export a function via module.exports",
+    );
   });
 
   it("returns manifest and code for valid package", async () => {
     const files = new Map([
-      ["manifest.json", JSON.stringify({ id: "test-node", name: "Test", version: "1.0.0", category: "action", entry: "backend.js", schema: "schema.json" })],
+      [
+        "manifest.json",
+        JSON.stringify({
+          id: "test-node",
+          name: "Test",
+          version: "1.0.0",
+          category: "action",
+          entry: "backend.js",
+          schema: "schema.json",
+        }),
+      ],
       ["backend.js", "module.exports = async () => {}"],
       ["schema.json", JSON.stringify({ type: "object", properties: { x: { type: "string" } } })],
     ]);
@@ -80,9 +142,17 @@ describe("extractPluginFromZip", () => {
   it("extracts files from a zip buffer", async () => {
     const AdmZip = (await import("adm-zip")).default;
     const zip = new AdmZip();
-    zip.addFile("manifest.json", Buffer.from(JSON.stringify({ id: "zip-test", name: "Zip Test", version: "1.0.0", category: "action" })));
+    zip.addFile(
+      "manifest.json",
+      Buffer.from(
+        JSON.stringify({ id: "zip-test", name: "Zip Test", version: "1.0.0", category: "action" }),
+      ),
+    );
     zip.addFile("backend.js", Buffer.from("module.exports = async () => {}"));
-    zip.addFile("schema.json", Buffer.from(JSON.stringify({ type: "object", properties: { x: { type: "string" } } })));
+    zip.addFile(
+      "schema.json",
+      Buffer.from(JSON.stringify({ type: "object", properties: { x: { type: "string" } } })),
+    );
 
     const buffer = zip.toBuffer();
     const { files, comment } = await extractPluginFromZip(buffer);

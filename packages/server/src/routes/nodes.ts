@@ -13,7 +13,10 @@ const nodeDetailSchema = z.object({
   schema: z.record(z.string(), z.unknown()),
 });
 
-export default async function nodeRoutes(fastify: FastifyInstance, options: { registry: PluginRegistry }) {
+export default async function nodeRoutes(
+  fastify: FastifyInstance,
+  options: { registry: PluginRegistry },
+) {
   const { registry } = options;
 
   fastify.get(

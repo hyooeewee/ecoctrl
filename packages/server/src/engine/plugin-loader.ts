@@ -27,7 +27,12 @@ export function computeContentHash(files: Map<string, string>): string {
 
 export async function validatePluginPackage(
   files: Map<string, string>,
-): Promise<{ manifest: PluginManifest; backendCode: string; schema: Record<string, unknown>; iconSvg?: string }> {
+): Promise<{
+  manifest: PluginManifest;
+  backendCode: string;
+  schema: Record<string, unknown>;
+  iconSvg?: string;
+}> {
   // Check required files
   const manifestRaw = files.get("manifest.json");
   if (!manifestRaw) {

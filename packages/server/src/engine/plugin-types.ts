@@ -52,11 +52,26 @@ export interface PluginApi {
     all(): Record<string, unknown>;
   };
   http: {
-    get(url: string, options?: { headers?: Record<string, string>; timeout?: number }): Promise<HttpResponse>;
-    post(url: string, options?: { headers?: Record<string, string>; body?: string | object; timeout?: number }): Promise<HttpResponse>;
-    put(url: string, options?: { headers?: Record<string, string>; body?: string | object; timeout?: number }): Promise<HttpResponse>;
-    patch(url: string, options?: { headers?: Record<string, string>; body?: string | object; timeout?: number }): Promise<HttpResponse>;
-    delete(url: string, options?: { headers?: Record<string, string>; timeout?: number }): Promise<HttpResponse>;
+    get(
+      url: string,
+      options?: { headers?: Record<string, string>; timeout?: number },
+    ): Promise<HttpResponse>;
+    post(
+      url: string,
+      options?: { headers?: Record<string, string>; body?: string | object; timeout?: number },
+    ): Promise<HttpResponse>;
+    put(
+      url: string,
+      options?: { headers?: Record<string, string>; body?: string | object; timeout?: number },
+    ): Promise<HttpResponse>;
+    patch(
+      url: string,
+      options?: { headers?: Record<string, string>; body?: string | object; timeout?: number },
+    ): Promise<HttpResponse>;
+    delete(
+      url: string,
+      options?: { headers?: Record<string, string>; timeout?: number },
+    ): Promise<HttpResponse>;
   };
   iot: {
     readPoint(name: string): Promise<unknown>;
@@ -64,7 +79,12 @@ export interface PluginApi {
     writePoint(name: string, values: Record<string, unknown>): Promise<void>;
   };
   notify: {
-    send(options: { title: string; content: string; level?: "info" | "warning" | "error"; to?: string[] }): Promise<void>;
+    send(options: {
+      title: string;
+      content: string;
+      level?: "info" | "warning" | "error";
+      to?: string[];
+    }): Promise<void>;
   };
   log: {
     info(msg: string, meta?: Record<string, unknown>): void;

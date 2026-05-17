@@ -17,7 +17,7 @@ export async function executePluginNode(
   registry: PluginRegistry,
   dryRun = false,
 ): Promise<Record<string, unknown>> {
-  const version = (node.config.__version as string | undefined);
+  const version = node.config.__version as string | undefined;
   const plugin = registry.get(node.type, version);
   if (!plugin) {
     throw new Error(`Plugin node type '${node.type}' (version: ${version ?? "latest"}) not found`);
