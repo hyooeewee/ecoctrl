@@ -79,12 +79,18 @@ import { pointsApi } from "@/api/points";
 import type { WorkflowDSL, NodeType, WorkflowListItem } from "./types";
 import { dslToReactFlow, reactFlowToDSL } from "./transform";
 import { autoLayout } from "./layout";
+import { usePluginNodes } from "./hooks/usePluginNodes";
 import StartNode from "./nodes/StartNode";
 import EndNode from "./nodes/EndNode";
 import ActionNode from "./nodes/ActionNode";
 import ConditionNode from "./nodes/ConditionNode";
 import LoopNode from "./nodes/LoopNode";
 import ParallelNode from "./nodes/ParallelNode";
+import { TriggerNodeShell } from "./nodes/TriggerNodeShell";
+import { ActionNodeShell } from "./nodes/ActionNodeShell";
+import { ConditionNodeShell } from "./nodes/ConditionNodeShell";
+import { NodeConfigPanel } from "./NodeConfigPanel";
+import { DragNodePreview } from "./nodes/DragNodePreview";
 
 const BUILT_IN_NODE_TYPES: Record<string, React.ComponentType<any>> = {
   start: StartNode,
@@ -711,7 +717,8 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
         y: event.clientY,
       });
 
-      const item = allComponents.find((c) => c.type === type);
+      const builtin = ALL_COMPONENTS.find((c) => c.type === type);
+      const plugin = pluginNodes.find((p) => p.id === type);
       const config: Record<string, unknown> = {};
 
       // Pin plugin version at drop time to avoid non-deterministic execution
@@ -726,13 +733,13 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
         id: `${type}-${Date.now()}`,
         type,
         position,
-        data: { label: item?.label ?? type, type, config },
+        data: { label: builtin?.label ?? plugin?.name ?? type, type, config },
       };
 
       setIsDirty(true);
       setNodes((nds) => [...nds, newNode]);
     },
-    [rfInstance, setNodes, allComponents, isPluginNodeType, getPluginNodeDef],
+    [rfInstance, setNodes, pluginNodes, isPluginNodeType, getPluginNodeDef],
   );
 
   const onDragEnd = useCallback(() => {
