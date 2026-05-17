@@ -38,8 +38,16 @@ import {
   MoreHorizontal,
   Pencil,
   Activity,
+  AlertTriangle,
   type LucideIcon,
 } from "lucide-react";
+import {
+  Combobox,
+  ComboboxInput,
+  ComboboxContent,
+  ComboboxList,
+  ComboboxItem,
+} from "@ecoctrl/ui/combobox";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@ecoctrl/ui/button";
@@ -60,6 +68,7 @@ import {
 } from "@ecoctrl/ui/dialog";
 
 import { workflowsApi } from "@/api/workflows";
+import { pointsApi } from "@/api/points";
 import type { WorkflowDSL, NodeType, WorkflowListItem } from "./types";
 import { dslToReactFlow, reactFlowToDSL } from "./transform";
 import { autoLayout } from "./layout";
@@ -78,7 +87,8 @@ const NODE_TYPES = {
   email: ActionNode,
   variable: ActionNode,
   delay: ActionNode,
-  point: ActionNode,
+  point_read: ActionNode,
+  point_write: ActionNode,
   condition: ConditionNode,
   switch: ConditionNode,
   loop: LoopNode,
@@ -159,11 +169,18 @@ const COMPONENT_CATEGORIES: ComponentCategory[] = [
     label: "点位操作",
     items: [
       {
-        type: "point",
-        label: "点位操作",
-        description: "按名称读写点位数据",
+        type: "point_read",
+        label: "点位读取",
+        description: "通过 IoT 网关读取点位值",
         icon: Activity,
         colorClass: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400",
+      },
+      {
+        type: "point_write",
+        label: "点位写入",
+        description: "通过 IoT 网关写入点位值",
+        icon: Pencil,
+        colorClass: "bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-400",
       },
     ],
   },
@@ -249,6 +266,15 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
   const [tagInput, setTagInput] = useState("");
   const [tagPopoverOpen, setTagPopoverOpen] = useState(false);
   const [editDescription, setEditDescription] = useState("");
+  const [pointNames, setPointNames] = useState<string[]>([]);
+  const [pointSearch, setPointSearch] = useState("");
+  const filteredPointNames = useMemo(
+    () =>
+      pointSearch
+        ? pointNames.filter((name) => name.toLowerCase().includes(pointSearch.toLowerCase()))
+        : pointNames,
+    [pointNames, pointSearch],
+  );
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const tagInputRef = useRef<HTMLDivElement>(null);
 
@@ -299,6 +325,18 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
       })
       .finally(() => setLoading(false));
   }, [workflowId, setNodes, setEdges]);
+
+  // Load point names for dropdown
+  useEffect(() => {
+    pointsApi
+      .list()
+      .then((points) => {
+        setPointNames(points.map((p) => p.name).filter(Boolean));
+      })
+      .catch(() => {
+        // silently fail
+      });
+  }, []);
 
   const onNodesChange = useCallback(
     (changes: Parameters<typeof _onNodesChange>[0]) => {
@@ -444,6 +482,9 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
       setIsDirty(true);
       setNodes((nds) =>
         nds.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, ...updates } } : n)),
+      );
+      setSelectedNode((prev) =>
+        prev && prev.id === nodeId ? { ...prev, data: { ...prev.data, ...updates } } : prev,
       );
     },
     [setNodes],
@@ -1039,45 +1080,133 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                         </div>
                       </>
                     )}
-                    {selectedNodeType === "point" && (
+                    {selectedNodeType === "point_read" && (
                       <>
                         <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">Operation</Label>
-                          <Input
+                          <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                            Point Name
+                            {(() => {
+                              const name =
+                                (((selectedNode.data.config as Record<string, unknown>) ?? {})
+                                  ?.pointName as string) ?? "";
+                              return name && !pointNames.includes(name) ? (
+                                <span className="text-amber-500 flex items-center gap-0.5 text-[10px]">
+                                  <AlertTriangle size={10} />
+                                  未找到
+                                </span>
+                              ) : null;
+                            })()}
+                          </Label>
+                          <Combobox
                             value={
                               (((selectedNode.data.config as Record<string, unknown>) ?? {})
-                                ?.operation as string) ?? "read"
+                                ?.pointName as string) || null
                             }
-                            placeholder="read / read_value / write"
-                            onChange={(e) =>
-                              updateNodeData(selectedNode.id, {
-                                config: {
-                                  ...(selectedNode.data.config as Record<string, unknown>),
-                                  operation: e.target.value,
-                                },
-                              })
+                            inputValue={
+                              (((selectedNode.data.config as Record<string, unknown>) ?? {})
+                                ?.pointName as string) || ""
                             }
-                            className="h-9 rounded-md border bg-white px-3 text-sm dark:bg-zinc-950"
-                          />
+                            onValueChange={(value, eventDetails) => {
+                              if (
+                                eventDetails.reason === "item-press" ||
+                                eventDetails.reason === "clear-press"
+                              ) {
+                                updateNodeData(selectedNode.id, {
+                                  config: {
+                                    ...(selectedNode.data.config as Record<string, unknown>),
+                                    pointName: value || "",
+                                  },
+                                });
+                              }
+                            }}
+                            onInputValueChange={(value, eventDetails) => {
+                              if (eventDetails.reason === "input-change") {
+                                setPointSearch(value);
+                                updateNodeData(selectedNode.id, {
+                                  config: {
+                                    ...(selectedNode.data.config as Record<string, unknown>),
+                                    pointName: value,
+                                  },
+                                });
+                              }
+                            }}
+                          >
+                            <ComboboxInput className="w-full" showTrigger showClear />
+                            <ComboboxContent>
+                              <ComboboxList>
+                                {filteredPointNames.map((name) => (
+                                  <ComboboxItem key={name} value={name}>
+                                    {name}
+                                  </ComboboxItem>
+                                ))}
+                              </ComboboxList>
+                            </ComboboxContent>
+                          </Combobox>
                         </div>
+                      </>
+                    )}
+                    {selectedNodeType === "point_write" && (
+                      <>
                         <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">Point Name</Label>
-                          <Input
+                          <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                            Point Name
+                            {(() => {
+                              const name =
+                                (((selectedNode.data.config as Record<string, unknown>) ?? {})
+                                  ?.pointName as string) ?? "";
+                              return name && !pointNames.includes(name) ? (
+                                <span className="text-amber-500 flex items-center gap-0.5 text-[10px]">
+                                  <AlertTriangle size={10} />
+                                  未找到
+                                </span>
+                              ) : null;
+                            })()}
+                          </Label>
+                          <Combobox
                             value={
                               (((selectedNode.data.config as Record<string, unknown>) ?? {})
-                                ?.pointName as string) ?? ""
+                                ?.pointName as string) || null
                             }
-                            placeholder="{{ trigger.pointName }}"
-                            onChange={(e) =>
-                              updateNodeData(selectedNode.id, {
-                                config: {
-                                  ...(selectedNode.data.config as Record<string, unknown>),
-                                  pointName: e.target.value,
-                                },
-                              })
+                            inputValue={
+                              (((selectedNode.data.config as Record<string, unknown>) ?? {})
+                                ?.pointName as string) || ""
                             }
-                            className="h-9 rounded-md border bg-white px-3 text-sm dark:bg-zinc-950"
-                          />
+                            onValueChange={(value, eventDetails) => {
+                              if (
+                                eventDetails.reason === "item-press" ||
+                                eventDetails.reason === "clear-press"
+                              ) {
+                                updateNodeData(selectedNode.id, {
+                                  config: {
+                                    ...(selectedNode.data.config as Record<string, unknown>),
+                                    pointName: value || "",
+                                  },
+                                });
+                              }
+                            }}
+                            onInputValueChange={(value, eventDetails) => {
+                              if (eventDetails.reason === "input-change") {
+                                setPointSearch(value);
+                                updateNodeData(selectedNode.id, {
+                                  config: {
+                                    ...(selectedNode.data.config as Record<string, unknown>),
+                                    pointName: value,
+                                  },
+                                });
+                              }
+                            }}
+                          >
+                            <ComboboxInput className="w-full" showTrigger showClear />
+                            <ComboboxContent>
+                              <ComboboxList>
+                                {filteredPointNames.map((name) => (
+                                  <ComboboxItem key={name} value={name}>
+                                    {name}
+                                  </ComboboxItem>
+                                ))}
+                              </ComboboxList>
+                            </ComboboxContent>
+                          </Combobox>
                         </div>
                         <div className="space-y-1.5">
                           <Label className="text-xs text-muted-foreground">Value Key</Label>
@@ -1086,7 +1215,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                               (((selectedNode.data.config as Record<string, unknown>) ?? {})
                                 ?.valueKey as string) ?? ""
                             }
-                            placeholder="values key (for read_value / write)"
+                            placeholder="values key"
                             onChange={(e) =>
                               updateNodeData(selectedNode.id, {
                                 config: {
@@ -1105,75 +1234,12 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                               (((selectedNode.data.config as Record<string, unknown>) ?? {})
                                 ?.value as string) ?? ""
                             }
-                            placeholder="value to write (for write operation)"
+                            placeholder="e.g. 0 or {{ readNode.value + 1 }}"
                             onChange={(e) =>
                               updateNodeData(selectedNode.id, {
                                 config: {
                                   ...(selectedNode.data.config as Record<string, unknown>),
                                   value: e.target.value,
-                                },
-                              })
-                            }
-                            className="h-9 rounded-md border bg-white px-3 text-sm dark:bg-zinc-950"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">
-                            Object ID (optional filter)
-                          </Label>
-                          <Input
-                            value={
-                              (((selectedNode.data.config as Record<string, unknown>) ?? {})
-                                ?.objectId as string) ?? ""
-                            }
-                            placeholder="filter by objectId"
-                            onChange={(e) =>
-                              updateNodeData(selectedNode.id, {
-                                config: {
-                                  ...(selectedNode.data.config as Record<string, unknown>),
-                                  objectId: e.target.value,
-                                },
-                              })
-                            }
-                            className="h-9 rounded-md border bg-white px-3 text-sm dark:bg-zinc-950"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">
-                            Model ID (optional filter)
-                          </Label>
-                          <Input
-                            value={
-                              (((selectedNode.data.config as Record<string, unknown>) ?? {})
-                                ?.modelId as string) ?? ""
-                            }
-                            placeholder="filter by modelId"
-                            onChange={(e) =>
-                              updateNodeData(selectedNode.id, {
-                                config: {
-                                  ...(selectedNode.data.config as Record<string, unknown>),
-                                  modelId: e.target.value,
-                                },
-                              })
-                            }
-                            className="h-9 rounded-md border bg-white px-3 text-sm dark:bg-zinc-950"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">
-                            Point No (optional filter)
-                          </Label>
-                          <Input
-                            value={
-                              (((selectedNode.data.config as Record<string, unknown>) ?? {})
-                                ?.pointNo as string) ?? ""
-                            }
-                            placeholder="filter by pointNo"
-                            onChange={(e) =>
-                              updateNodeData(selectedNode.id, {
-                                config: {
-                                  ...(selectedNode.data.config as Record<string, unknown>),
-                                  pointNo: e.target.value,
                                 },
                               })
                             }

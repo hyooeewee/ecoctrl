@@ -50,7 +50,8 @@ export type NodeType =
   | "database"
   | "email"
   | "variable"
-  | "point";
+  | "point_read"
+  | "point_write";
 
 export interface ErrorHandler {
   action: "retry" | "skip" | "abort" | "goto";
@@ -108,4 +109,5 @@ export interface ExecutionResult {
   output?: Record<string, unknown>;
   error?: string;
   nodeLogs: NodeLogEntry[];
+  dryRun?: boolean;
 }

@@ -1,5 +1,14 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { Globe, Database, Mail, Variable, Clock, Activity, type LucideIcon } from "lucide-react";
+import {
+  Globe,
+  Database,
+  Mail,
+  Variable,
+  Clock,
+  Activity,
+  Pencil,
+  type LucideIcon,
+} from "lucide-react";
 
 const ICON_MAP: Record<string, LucideIcon> = {
   http_request: Globe,
@@ -7,7 +16,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   email: Mail,
   variable: Variable,
   delay: Clock,
-  point: Activity,
+  point_read: Activity,
+  point_write: Pencil,
 };
 
 const COLOR_MAP: Record<string, string> = {
@@ -16,7 +26,8 @@ const COLOR_MAP: Record<string, string> = {
   email: "bg-sky-100 text-sky-600 dark:bg-sky-900/40 dark:text-sky-400",
   variable: "bg-violet-100 text-violet-600 dark:bg-violet-900/40 dark:text-violet-400",
   delay: "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400",
-  point: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400",
+  point_read: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400",
+  point_write: "bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-400",
 };
 
 const DESC_MAP: Record<string, string> = {
@@ -25,7 +36,8 @@ const DESC_MAP: Record<string, string> = {
   email: "发送邮件",
   variable: "设置变量",
   delay: "等待一段时间",
-  point: "点位读写操作",
+  point_read: "读取点位数据",
+  point_write: "写入点位数据",
 };
 
 export default function ActionNode({ data, selected }: NodeProps) {

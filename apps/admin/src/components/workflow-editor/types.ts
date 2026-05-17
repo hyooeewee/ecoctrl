@@ -17,7 +17,8 @@ export type NodeType =
   | "database"
   | "email"
   | "variable"
-  | "point";
+  | "point_read"
+  | "point_write";
 
 export interface WorkflowNode {
   id: string;
