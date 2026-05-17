@@ -1,9 +1,11 @@
+import path from "path";
 import { PgBoss, type Job } from "pg-boss";
 import { eq } from "drizzle-orm";
 import { db } from "@/config/database";
 import { workflowExecutions } from "@/schemas/workflows";
 import { findWorkflowById } from "@/repositories/workflows";
 import { executeWorkflow } from "@/engine/executor";
+import { PluginRegistry } from "@/engine/plugin-registry";
 import { getLogger } from "@/lib/logger";
 import { env } from "@/lib/env";
 import type { ExecutionJobData } from "./pgboss";
@@ -11,6 +13,10 @@ import type { ExecutionJobData } from "./pgboss";
 const logger = getLogger("queue");
 
 const JOB_NAME = "workflow.execute";
+
+// Plugin registry for worker process
+const pluginsDir = path.join(process.cwd(), "plugins");
+const pluginRegistry = new PluginRegistry(pluginsDir);
 
 function getEnvVars(): Record<string, string> {
   const vars: Record<string, string> = {};
@@ -58,6 +64,7 @@ async function processJob(job: Job<ExecutionJobData>): Promise<void> {
       },
       triggerData,
       getEnvVars(),
+      pluginRegistry,
     );
 
     const durationMs = Date.now() - startTime;
@@ -94,6 +101,10 @@ async function processJob(job: Job<ExecutionJobData>): Promise<void> {
 }
 
 export async function startWorker(): Promise<void> {
+  // Load plugin registry before starting worker
+  await pluginRegistry.loadAll();
+  logger.info(`[worker] Plugin registry loaded, ${pluginRegistry.getAll().length} plugins`);
+
   const dbUrl = env.DATABASE_URL;
   if (!dbUrl) {
     throw new Error("DATABASE_URL is not set");
