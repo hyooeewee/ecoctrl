@@ -48,6 +48,7 @@ import {
   ComboboxList,
   ComboboxItem,
 } from "@ecoctrl/ui/combobox";
+import { toast } from "sonner";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@ecoctrl/ui/button";
@@ -250,6 +251,23 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testLogOpen, setTestLogOpen] = useState(false);
+  const [testResult, setTestResult] = useState<{
+    status: string;
+    error?: string;
+    nodeLogs: Array<{
+      nodeId: string;
+      nodeName: string;
+      nodeType: string;
+      status: string;
+      startedAt: string;
+      completedAt?: string;
+      durationMs?: number;
+      output?: Record<string, unknown>;
+      error?: string;
+    }>;
+  } | null>(null);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -317,7 +335,8 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
         const loadedDsl = wf.dsl;
         setDsl(loadedDsl);
         const { nodes: n, edges: e } = dslToReactFlow(loadedDsl);
-        setNodes(n.length > 0 ? autoLayout(n, e) : n);
+        const needsLayout = n.some((node) => !node.position);
+        setNodes(needsLayout ? autoLayout(n, e) : n);
         setEdges(e);
       })
       .catch(() => {
@@ -435,26 +454,73 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
       }
       setDsl(newDsl);
       setIsDirty(false);
-    } catch {
-      // silently fail
+      toast.success("工作流已保存");
+    } catch (err) {
+      const msg =
+        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+        "保存失败，请检查节点连接是否正确";
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
   }, [dsl, nodes, edges, workflowId, workflow?.name]);
 
   const handlePublish = useCallback(async () => {
-    if (!workflowId) return;
+    if (!workflowId || !dsl) return;
     setPublishing(true);
     try {
-      await handleSave();
-      await workflowsApi.update(workflowId, { enabled: true });
+      const newDsl = reactFlowToDSL(nodes, edges, dsl.trigger);
+      await workflowsApi.update(workflowId, {
+        name: workflow?.name,
+        dsl: newDsl,
+        enabled: true,
+      });
+      setDsl(newDsl);
+      setIsDirty(false);
       setWorkflow((prev) => (prev ? { ...prev, enabled: true } : prev));
-    } catch {
-      // silently fail
+      toast.success("工作流已发布");
+    } catch (err) {
+      const msg =
+        (err as { response?: { data?: { error?: string; details?: Array<{ message: string }> } } })
+          ?.response?.data?.error || "发布失败";
+      const details = (err as { response?: { data?: { details?: Array<{ message: string }> } } })
+        ?.response?.data?.details;
+      if (details && details.length > 0) {
+        toast.error(`${msg}: ${details.map((d) => d.message).join("; ")}`);
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setPublishing(false);
     }
-  }, [workflowId, handleSave]);
+  }, [dsl, nodes, edges, workflowId, workflow?.name]);
+
+  const handleTestRun = useCallback(async () => {
+    if (!workflowId) {
+      toast.error("请先保存工作流");
+      return;
+    }
+    setTesting(true);
+    setTestLogOpen(true);
+    try {
+      const result = await workflowsApi.test(workflowId);
+      setTestResult(result);
+      const logCount = result.nodeLogs?.length ?? 0;
+      if (result.status === "completed") {
+        toast.success(`测试运行成功，共执行 ${logCount} 个节点`);
+      } else {
+        toast.error(`测试运行失败: ${result.error ?? "未知错误"}`);
+      }
+    } catch (err) {
+      const msg =
+        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
+        "测试运行失败";
+      toast.error(msg);
+      setTestResult(null);
+    } finally {
+      setTesting(false);
+    }
+  }, [workflowId]);
 
   const handleAutoLayout = useCallback(() => {
     setNodes((nds) => autoLayout(nds, edges));
@@ -657,9 +723,15 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
             <LayoutTemplate size={14} />
             自动布局
           </Button>
-          <Button variant="outline" size="sm" className="h-8 gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5"
+            onClick={handleTestRun}
+            disabled={testing}
+          >
             <Zap size={14} />
-            测试运行
+            {testing ? "测试中..." : "测试运行"}
           </Button>
           <Button
             variant="outline"
@@ -801,37 +873,130 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
         </div>
 
         {/* Canvas */}
-        <div ref={reactFlowWrapper} className="relative flex-1 bg-zinc-50 dark:bg-zinc-950">
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onNodeClick={onNodeClick}
-            onPaneClick={onPaneClick}
-            onDragOver={onDragOver}
-            onDrop={onDrop}
-            onInit={setRfInstance}
-            nodeTypes={NODE_TYPES}
-            fitView
-            attributionPosition="bottom-right"
-            deleteKeyCode={["Backspace", "Delete"]}
-          >
-            <Background
-              variant={BackgroundVariant.Dots}
-              gap={20}
-              size={1}
-              className="bg-zinc-50 dark:bg-zinc-950"
-            />
-            <Controls className="!bg-white !shadow-sm dark:!bg-zinc-900" />
-            <MiniMap
-              className="!bg-white/80 !shadow-sm dark:!bg-zinc-900/80"
-              nodeStrokeWidth={3}
-              zoomable
-              pannable
-            />
-          </ReactFlow>
+        <div
+          ref={reactFlowWrapper}
+          className="relative flex flex-1 flex-col overflow-hidden bg-zinc-50 dark:bg-zinc-950"
+        >
+          <div className="flex-1 overflow-hidden">
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onNodeClick={onNodeClick}
+              onPaneClick={onPaneClick}
+              onDragOver={onDragOver}
+              onDrop={onDrop}
+              onInit={setRfInstance}
+              nodeTypes={NODE_TYPES}
+              fitView
+              attributionPosition="bottom-right"
+              deleteKeyCode={["Backspace", "Delete"]}
+            >
+              <Background
+                variant={BackgroundVariant.Dots}
+                gap={20}
+                size={1}
+                className="bg-zinc-50 dark:bg-zinc-950"
+              />
+              <Controls className="!bg-white !shadow-sm dark:!bg-zinc-900" />
+              <MiniMap
+                className="!bg-white/80 !shadow-sm dark:!bg-zinc-900/80"
+                nodeStrokeWidth={3}
+                zoomable
+                pannable
+              />
+            </ReactFlow>
+          </div>
+
+          {/* Test Log Panel */}
+          {testResult && (
+            <div
+              className={`border-t bg-white transition-all duration-300 dark:bg-zinc-900 ${testLogOpen ? "h-[260px]" : "h-10"}`}
+            >
+              {/* Panel Header */}
+              <button
+                type="button"
+                onClick={() => setTestLogOpen((v) => !v)}
+                className="flex w-full items-center justify-between px-4 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">测试运行日志</span>
+                  <Badge
+                    variant={testResult.status === "completed" ? "default" : "destructive"}
+                    className="text-[10px]"
+                  >
+                    {testResult.status === "completed" ? "成功" : "失败"}
+                  </Badge>
+                  <span className="text-muted-foreground text-xs">
+                    {testResult.nodeLogs?.length ?? 0} 个节点
+                  </span>
+                </div>
+                {testLogOpen ? (
+                  <ChevronDown size={14} className="text-muted-foreground" />
+                ) : (
+                  <ChevronRight size={14} className="text-muted-foreground" />
+                )}
+              </button>
+
+              {/* Log Content */}
+              {testLogOpen && (
+                <ScrollArea className="h-[calc(260px-40px)]">
+                  <div className="space-y-1 p-3">
+                    {testResult.nodeLogs?.map((log, i) => (
+                      <div
+                        key={`${log.nodeId}-${i}`}
+                        className={`flex items-start gap-2 rounded-md border p-2 text-xs ${
+                          log.status === "completed"
+                            ? "border-emerald-100 bg-emerald-50/50 dark:border-emerald-900/30 dark:bg-emerald-900/10"
+                            : log.status === "failed"
+                              ? "border-rose-100 bg-rose-50/50 dark:border-rose-900/30 dark:bg-rose-900/10"
+                              : "border-zinc-100 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-800/30"
+                        }`}
+                      >
+                        <div className="mt-0.5 shrink-0">
+                          {log.status === "completed" && (
+                            <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+                          )}
+                          {log.status === "failed" && (
+                            <span className="inline-block h-2 w-2 rounded-full bg-rose-500" />
+                          )}
+                          {(log.status === "running" || log.status === "skipped") && (
+                            <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-medium">{log.nodeName}</span>
+                            <span className="text-muted-foreground">({log.nodeType})</span>
+                            {log.durationMs != null && (
+                              <span className="text-muted-foreground ml-auto">
+                                {log.durationMs}ms
+                              </span>
+                            )}
+                          </div>
+                          {log.error && (
+                            <div className="mt-1 text-rose-600 dark:text-rose-400">{log.error}</div>
+                          )}
+                          {log.output && (
+                            <pre className="mt-1 max-h-20 overflow-auto rounded bg-zinc-100 p-1.5 text-[10px] dark:bg-zinc-800">
+                              {JSON.stringify(log.output, null, 2)}
+                            </pre>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    {testResult.error && (
+                      <div className="rounded-md border border-rose-100 bg-rose-50 p-2 text-xs text-rose-700 dark:border-rose-900/30 dark:bg-rose-900/10 dark:text-rose-300">
+                        <strong>执行错误:</strong> {testResult.error}
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right Config Panel */}

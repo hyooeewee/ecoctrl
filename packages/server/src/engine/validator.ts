@@ -61,7 +61,7 @@ function detectCycle(
   return false;
 }
 
-export function validateDsl(dsl: WorkflowDSL): ValidationError[] {
+export function validateDsl(dsl: WorkflowDSL, strict = false): ValidationError[] {
   const errors: ValidationError[] = [];
   const { nodes, edges } = dsl;
 
@@ -114,7 +114,11 @@ export function validateDsl(dsl: WorkflowDSL): ValidationError[] {
     errors.push({ field: "nodes", message: "Workflow must have at least one 'end' node" });
   }
 
-  // 6. Connectivity
+  if (!strict) {
+    return errors;
+  }
+
+  // 6. Connectivity (strict only)
   for (const node of nodes) {
     if (node.type !== "start" && !hasEdgeTo(node.id, edges)) {
       errors.push({
@@ -130,7 +134,7 @@ export function validateDsl(dsl: WorkflowDSL): ValidationError[] {
     }
   }
 
-  // 7. Condition node labels
+  // 7. Condition node labels (strict only)
   for (const node of nodes.filter((n) => n.type === "condition")) {
     const outgoing = getOutgoingEdges(node.id, edges);
     const labels = new Set(outgoing.map((e) => e.label));
@@ -148,7 +152,7 @@ export function validateDsl(dsl: WorkflowDSL): ValidationError[] {
     }
   }
 
-  // 8. Switch node labels
+  // 8. Switch node labels (strict only)
   for (const node of nodes.filter((n) => n.type === "switch")) {
     const cases = (node.config.cases as Array<{ value: string }> | undefined) ?? [];
     const caseValues = new Set(cases.map((c) => String(c.value)));
@@ -170,16 +174,19 @@ export function validateDsl(dsl: WorkflowDSL): ValidationError[] {
     }
   }
 
-  // 9. Loop node body validation (recursive)
+  // 9. Loop node body validation (recursive, strict only)
   for (const node of nodes.filter((n) => n.type === "loop")) {
     const body = node.config.body as { nodes?: WorkflowNode[]; edges?: WorkflowEdge[] } | undefined;
     if (body?.nodes && body.edges) {
-      const bodyErrors = validateDsl({
-        version: "1.0",
-        trigger: dsl.trigger,
-        nodes: body.nodes,
-        edges: body.edges,
-      });
+      const bodyErrors = validateDsl(
+        {
+          version: "1.0",
+          trigger: dsl.trigger,
+          nodes: body.nodes,
+          edges: body.edges,
+        },
+        strict,
+      );
       for (const err of bodyErrors) {
         errors.push({ field: `nodes.${node.id}.body.${err.field}`, message: err.message });
       }
@@ -205,7 +212,7 @@ export function validateDsl(dsl: WorkflowDSL): ValidationError[] {
     }
   }
 
-  // 10. Parallel node branch validation
+  // 10. Parallel node branch validation (strict only)
   for (const node of nodes.filter((n) => n.type === "parallel")) {
     const branches = node.config.branches as
       | Array<{ nodes?: WorkflowNode[]; edges?: WorkflowEdge[] }>
@@ -214,12 +221,15 @@ export function validateDsl(dsl: WorkflowDSL): ValidationError[] {
       for (let i = 0; i < branches.length; i++) {
         const branch = branches[i]!;
         if (branch.nodes && branch.edges) {
-          const branchErrors = validateDsl({
-            version: "1.0",
-            trigger: dsl.trigger,
-            nodes: branch.nodes,
-            edges: branch.edges,
-          });
+          const branchErrors = validateDsl(
+            {
+              version: "1.0",
+              trigger: dsl.trigger,
+              nodes: branch.nodes,
+              edges: branch.edges,
+            },
+            strict,
+          );
           for (const err of branchErrors) {
             errors.push({
               field: `nodes.${node.id}.branches[${i}].${err.field}`,
@@ -231,7 +241,7 @@ export function validateDsl(dsl: WorkflowDSL): ValidationError[] {
     }
   }
 
-  // 11. Cycle detection (only on main graph, loop/parallel bodies validated separately)
+  // 11. Cycle detection (strict only)
   if (startNodes.length === 1) {
     const visited = new Set<string>();
     const recStack = new Set<string>();

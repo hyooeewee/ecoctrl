@@ -14,6 +14,7 @@ import {
 } from "@/repositories/workflows";
 import { triggerEngine } from "@/engine/trigger";
 import { validateDsl } from "@/engine/validator";
+import { executeWorkflow } from "@/engine/executor";
 import type { WorkflowDSL } from "@/engine/types";
 
 async function getUserRole(userId: string): Promise<string> {
@@ -167,16 +168,48 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
 
       if (body.dsl) {
         const dsl = body.dsl as unknown as WorkflowDSL;
-        const validationErrors = validateDsl(dsl);
+        const isPublishing = body.enabled === true;
+
+        // Publishing requires strict validation; saving is lenient
+        const validationErrors = validateDsl(dsl, isPublishing);
         if (validationErrors.length > 0) {
-          return reply
-            .status(400)
-            .send({ error: "Invalid workflow DSL", details: validationErrors });
+          return reply.status(400).send({
+            error: isPublishing ? "Cannot publish workflow with errors" : "Invalid workflow DSL",
+            details: validationErrors,
+          });
         }
-        await updateWorkflow(id, { ...body, dsl } as Parameters<typeof updateWorkflow>[1]);
+
+        if (isPublishing) {
+          // Publish: copy dsl to published_dsl and enable
+          await updateWorkflow(id, {
+            name: body.name,
+            dsl,
+            publishedDsl: dsl,
+            enabled: true,
+            bumpVersion: true,
+          });
+        } else {
+          // Save draft: only update dsl
+          await updateWorkflow(id, { ...body, dsl } as Parameters<typeof updateWorkflow>[1]);
+        }
       } else {
         await updateWorkflow(id, body as Parameters<typeof updateWorkflow>[1]);
       }
+
+      // Fallback: publish current draft when enabling without sending DSL
+      if (body.enabled === true && !body.dsl) {
+        const current = await findWorkflowById(id);
+        if (current?.dsl) {
+          const strictErrors = validateDsl(current.dsl, true);
+          if (strictErrors.length > 0) {
+            return reply
+              .status(400)
+              .send({ error: "Cannot publish workflow with errors", details: strictErrors });
+          }
+          await updateWorkflow(id, { publishedDsl: current.dsl, enabled: true, bumpVersion: true });
+        }
+      }
+
       return reply.send({ success: true });
     },
   );
@@ -202,6 +235,56 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
 
       await deleteWorkflow(id);
       return reply.status(204).send();
+    },
+  );
+
+  // Dry-run test (synchronous, no queue, no side effects)
+  fastify.post(
+    "/:id/test",
+    {
+      schema: {
+        tags: ["Workflows"],
+        summary: "Test workflow with dry run",
+        params: z.object({ id: z.string().uuid() }),
+        body: z.object({ data: z.record(z.string(), z.unknown()).optional() }),
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const payload = request.user as { userId: string };
+      const { id } = request.params as { id: string };
+      const role = await getUserRole(payload.userId);
+
+      if (!(await checkWorkflowAccess(id, payload.userId, role))) {
+        return reply.status(403).send({ error: "Forbidden" });
+      }
+
+      const workflow = await findWorkflowById(id);
+      if (!workflow) {
+        return reply.status(404).send({ error: "Workflow not found" });
+      }
+
+      const body = (request.body as { data?: Record<string, unknown> }) ?? {};
+      const dsl = workflow.publishedDsl ?? workflow.dsl;
+
+      const envVars: Record<string, string> = {};
+      const allowed = [
+        "SMTP_HOST",
+        "SMTP_PORT",
+        "SMTP_USER",
+        "SMTP_PASS",
+        "SMTP_SECURE",
+        "DATABASE_URL",
+        "JWT_SECRET",
+        "CORS_ORIGIN",
+      ];
+      for (const key of allowed) {
+        const value = process.env[key];
+        if (value) envVars[key] = value;
+      }
+
+      const result = await executeWorkflow(dsl, { ...body.data, source: "test" }, envVars, true);
+
+      return reply.send(result);
     },
   );
 

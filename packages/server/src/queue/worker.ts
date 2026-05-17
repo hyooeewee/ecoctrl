@@ -40,7 +40,11 @@ async function processJob(job: Job<ExecutionJobData>): Promise<void> {
       throw new Error(`Workflow not found: ${workflowId}`);
     }
 
-    const dsl = workflow.dsl as { nodes: unknown[]; edges: unknown[]; trigger: unknown };
+    const dsl = (workflow.publishedDsl ?? workflow.dsl) as {
+      nodes: unknown[];
+      edges: unknown[];
+      trigger: unknown;
+    };
     const startTime = Date.now();
     const result = await executeWorkflow(
       {
