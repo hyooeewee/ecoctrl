@@ -18,6 +18,9 @@ export default defineConfig(({ mode }) => {
         "@": path.resolve(__dirname, "src"),
       },
     },
+    optimizeDeps: {
+      include: ["@rjsf/core", "@rjsf/validator-ajv8"],
+    },
     server: createDevProxy(env.API_BASE_URL, {
       apiPrefix: env.API_PREFIX,
       staticPrefix: env.STATIC_PREFIX,
