@@ -50,6 +50,8 @@ import {
 } from "@ecoctrl/ui/combobox";
 import { toast } from "sonner";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createRoot } from "react-dom/client";
+import { flushSync } from "react-dom";
 
 import { Button } from "@ecoctrl/ui/button";
 import { Input } from "@ecoctrl/ui/input";
@@ -80,6 +82,45 @@ import ConditionNode from "./nodes/ConditionNode";
 import LoopNode from "./nodes/LoopNode";
 import ParallelNode from "./nodes/ParallelNode";
 
+// Simplified node preview for drag image (no Handle — avoids NodeIdContext warning)
+function DragNodePreview({ type, data }: { type: string; data: Record<string, unknown> }) {
+  const label = (data.label as string) ?? type;
+  const item = ALL_COMPONENTS.find((c) => c.type === type);
+  if (!item) return null;
+
+  const { icon: Icon, colorClass, description, handles } = item;
+  const h = handles ?? {};
+
+  return (
+    <div className="relative flex w-[280px] items-center gap-3 rounded-2xl border bg-white px-5 py-4 shadow-md">
+      {h.left && (
+        <div
+          className="absolute top-1/2 left-[7px] h-2.5 w-2.5 -translate-y-1/2 rounded-full border-2 border-white"
+          style={{ backgroundColor: h.left }}
+        />
+      )}
+      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${colorClass}`}>
+        <Icon size={16} />
+      </div>
+      <div className="flex min-w-0 flex-col">
+        <span className="truncate text-sm font-semibold">{label}</span>
+        <span className="text-muted-foreground truncate text-xs">{description}</span>
+      </div>
+      {h.condition ? (
+        <>
+          <div className="absolute top-[18px] right-[7px] h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500" />
+          <div className="absolute top-[38px] right-[7px] h-2.5 w-2.5 rounded-full border-2 border-white bg-rose-500" />
+        </>
+      ) : h.right ? (
+        <div
+          className="absolute top-1/2 right-[7px] h-2.5 w-2.5 -translate-y-1/2 rounded-full border-2 border-white"
+          style={{ backgroundColor: h.right }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
 const NODE_TYPES = {
   start: StartNode,
   end: EndNode,
@@ -102,6 +143,8 @@ interface ComponentItem {
   description: string;
   icon: LucideIcon;
   colorClass: string;
+  /** Handle colors for drag preview: left = target, right = source */
+  handles?: { left?: string; right?: string; condition?: boolean };
 }
 
 interface ComponentCategory {
@@ -121,6 +164,7 @@ const COMPONENT_CATEGORIES: ComponentCategory[] = [
         description: "流程入口节点",
         icon: Play,
         colorClass: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400",
+        handles: { right: "#10b981" },
       },
     ],
   },
@@ -134,6 +178,7 @@ const COMPONENT_CATEGORIES: ComponentCategory[] = [
         description: "发送 HTTP 请求",
         icon: Globe,
         colorClass: "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400",
+        handles: { left: "#94a3b8", right: "#94a3b8" },
       },
       {
         type: "database",
@@ -141,6 +186,7 @@ const COMPONENT_CATEGORIES: ComponentCategory[] = [
         description: "数据库读写操作",
         icon: Database,
         colorClass: "bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400",
+        handles: { left: "#94a3b8", right: "#94a3b8" },
       },
       {
         type: "email",
@@ -148,6 +194,7 @@ const COMPONENT_CATEGORIES: ComponentCategory[] = [
         description: "发送邮件通知",
         icon: Mail,
         colorClass: "bg-sky-100 text-sky-600 dark:bg-sky-900/40 dark:text-sky-400",
+        handles: { left: "#94a3b8", right: "#94a3b8" },
       },
       {
         type: "variable",
@@ -155,6 +202,7 @@ const COMPONENT_CATEGORIES: ComponentCategory[] = [
         description: "设置流程变量",
         icon: Variable,
         colorClass: "bg-violet-100 text-violet-600 dark:bg-violet-900/40 dark:text-violet-400",
+        handles: { left: "#94a3b8", right: "#94a3b8" },
       },
       {
         type: "delay",
@@ -162,6 +210,7 @@ const COMPONENT_CATEGORIES: ComponentCategory[] = [
         description: "等待指定时间",
         icon: Clock,
         colorClass: "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400",
+        handles: { left: "#94a3b8", right: "#94a3b8" },
       },
     ],
   },
@@ -175,6 +224,7 @@ const COMPONENT_CATEGORIES: ComponentCategory[] = [
         description: "通过 IoT 网关读取点位值",
         icon: Activity,
         colorClass: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400",
+        handles: { left: "#94a3b8", right: "#94a3b8" },
       },
       {
         type: "point_write",
@@ -182,6 +232,7 @@ const COMPONENT_CATEGORIES: ComponentCategory[] = [
         description: "通过 IoT 网关写入点位值",
         icon: Pencil,
         colorClass: "bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-400",
+        handles: { left: "#94a3b8", right: "#94a3b8" },
       },
     ],
   },
@@ -195,6 +246,7 @@ const COMPONENT_CATEGORIES: ComponentCategory[] = [
         description: "分支条件判断",
         icon: GitBranch,
         colorClass: "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400",
+        handles: { left: "#f59e0b", condition: true },
       },
       {
         type: "switch",
@@ -202,6 +254,7 @@ const COMPONENT_CATEGORIES: ComponentCategory[] = [
         description: "多路分支选择",
         icon: GitFork,
         colorClass: "bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-400",
+        handles: { left: "#f59e0b", condition: true },
       },
       {
         type: "loop",
@@ -209,6 +262,7 @@ const COMPONENT_CATEGORIES: ComponentCategory[] = [
         description: "循环执行子流程",
         icon: Repeat,
         colorClass: "bg-cyan-100 text-cyan-600 dark:bg-cyan-900/40 dark:text-cyan-400",
+        handles: { left: "#06b6d4", right: "#94a3b8" },
       },
       {
         type: "parallel",
@@ -216,6 +270,7 @@ const COMPONENT_CATEGORIES: ComponentCategory[] = [
         description: "并行执行多个分支",
         icon: Layers,
         colorClass: "bg-teal-100 text-teal-600 dark:bg-teal-900/40 dark:text-teal-400",
+        handles: { left: "#14b8a6", right: "#94a3b8" },
       },
     ],
   },
@@ -229,6 +284,7 @@ const COMPONENT_CATEGORIES: ComponentCategory[] = [
         description: "流程结束节点",
         icon: Square,
         colorClass: "bg-rose-100 text-rose-600 dark:bg-rose-900/40 dark:text-rose-400",
+        handles: { left: "#f43f5e" },
       },
     ],
   },
@@ -307,6 +363,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
     return () => document.removeEventListener("mousedown", handler);
   }, []);
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
+  const dragCleanupRef = useRef<(() => void) | null>(null);
 
   // Load workflow data
   useEffect(() => {
@@ -398,6 +455,50 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
     setRightPanelOpen(false);
   }, []);
 
+  const handleDragStart = useCallback(
+    (event: React.DragEvent, type: string) => {
+      event.dataTransfer.setData("application/reactflow", type);
+      event.dataTransfer.effectAllowed = "move";
+
+      const item = ALL_COMPONENTS.find((c) => c.type === type);
+      const nodeData = { label: item?.label ?? type, type, config: {} };
+
+      const container = document.createElement("div");
+      const existingNode = document.querySelector(".react-flow__node");
+      let scale = 1;
+      if (existingNode) {
+        scale = existingNode.getBoundingClientRect().width / 280;
+      } else if (rfInstance) {
+        scale = rfInstance.getViewport().zoom;
+      }
+      container.style.cssText = "position:fixed;top:-100px;left:0;pointer-events:none;";
+      // @ts-expect-error zoom is non-standard but works reliably in Chrome for setDragImage
+      container.style.zoom = scale;
+      document.body.appendChild(container);
+
+      try {
+        const root = createRoot(container);
+        flushSync(() => {
+          root.render(
+            <div className="react-flow__node" style={{ pointerEvents: "none" }}>
+              <DragNodePreview type={type} data={nodeData} />
+            </div>,
+          );
+        });
+
+        dragCleanupRef.current = () => {
+          root.unmount();
+          if (container.parentNode) document.body.removeChild(container);
+        };
+
+        event.dataTransfer.setDragImage(container, 140 * scale, 28 * scale);
+      } catch {
+        if (container.parentNode) document.body.removeChild(container);
+      }
+    },
+    [rfInstance],
+  );
+
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
@@ -429,6 +530,13 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
     },
     [rfInstance, setNodes],
   );
+
+  const onDragEnd = useCallback(() => {
+    if (dragCleanupRef.current) {
+      dragCleanupRef.current();
+      dragCleanupRef.current = null;
+    }
+  }, []);
 
   const handleDeleteNode = useCallback(
     (nodeId: string) => {
@@ -830,9 +938,8 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                             <div
                               key={item.type}
                               draggable
-                              onDragStart={(e) =>
-                                e.dataTransfer.setData("application/reactflow", item.type)
-                              }
+                              onDragStart={(e) => handleDragStart(e, item.type)}
+                              onDragEnd={onDragEnd}
                               className="flex cursor-grab items-center gap-2.5 rounded-md px-2 py-2 transition-colors hover:bg-zinc-200 dark:hover:bg-zinc-800 active:cursor-grabbing"
                             >
                               <div
@@ -888,6 +995,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
               onPaneClick={onPaneClick}
               onDragOver={onDragOver}
               onDrop={onDrop}
+              onDragEnd={onDragEnd}
               onInit={setRfInstance}
               nodeTypes={NODE_TYPES}
               fitView
