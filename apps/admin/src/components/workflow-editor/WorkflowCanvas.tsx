@@ -65,6 +65,7 @@ import EndNode from "./nodes/EndNode";
 import ActionNode from "./nodes/ActionNode";
 import ConditionNode from "./nodes/ConditionNode";
 import LoopNode from "./nodes/LoopNode";
+import ParallelNode from "./nodes/ParallelNode";
 
 const NODE_TYPES = {
   start: StartNode,
@@ -77,6 +78,7 @@ const NODE_TYPES = {
   condition: ConditionNode,
   switch: ConditionNode,
   loop: LoopNode,
+  parallel: ParallelNode,
 };
 
 interface ComponentItem {
