@@ -10,7 +10,7 @@ import {
 } from "react";
 
 import { cn } from "~/lib/utils";
-import { type BentoLayoutItem, useSettingsStore } from "~/store/settings";
+import { useSettingsStore } from "~/store/settings";
 
 export type { BentoLayoutItem } from "~/store/settings";
 export { defaultBentoLayout } from "~/store/settings";
