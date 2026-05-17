@@ -4,6 +4,8 @@ import { db } from "@/config/database";
 import { workflowExecutions } from "@/schemas/workflows";
 import { findWorkflowById } from "@/repositories/workflows";
 import { executeWorkflow } from "@/engine/executor";
+import { PluginRegistry } from "@/engine/plugin-registry";
+import { getPluginStorage } from "@/storage";
 import { getLogger } from "@/lib/logger";
 import { env } from "@/lib/env";
 import type { ExecutionJobData } from "./pgboss";
@@ -11,6 +13,10 @@ import type { ExecutionJobData } from "./pgboss";
 const logger = getLogger("queue");
 
 const JOB_NAME = "workflow.execute";
+
+// Plugin registry for worker process (uses same storage as API server)
+const pluginStorage = getPluginStorage();
+const pluginRegistry = new PluginRegistry(pluginStorage);
 
 function getEnvVars(): Record<string, string> {
   const vars: Record<string, string> = {};
@@ -58,6 +64,10 @@ async function processJob(job: Job<ExecutionJobData>): Promise<void> {
       },
       triggerData,
       getEnvVars(),
+      pluginRegistry,
+      false,
+      workflowId,
+      executionId,
     );
 
     const durationMs = Date.now() - startTime;
@@ -94,6 +104,10 @@ async function processJob(job: Job<ExecutionJobData>): Promise<void> {
 }
 
 export async function startWorker(): Promise<void> {
+  // Load plugin registry before starting worker
+  await pluginRegistry.loadAll();
+  logger.info(`[worker] Plugin registry loaded, ${pluginRegistry.getAll().length} plugins`);
+
   const dbUrl = env.DATABASE_URL;
   if (!dbUrl) {
     throw new Error("DATABASE_URL is not set");
@@ -117,4 +131,15 @@ export async function startWorker(): Promise<void> {
   );
 
   logger.info("[worker] Started listening for workflow.execute jobs");
+
+  // Periodically reload plugin registry to pick up changes from API server
+  const RELOAD_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+  setInterval(async () => {
+    try {
+      await pluginRegistry.reload();
+      logger.info(`[worker] Plugin registry reloaded, ${pluginRegistry.getAll().length} plugins`);
+    } catch (err) {
+      logger.error(`[worker] Failed to reload plugin registry: ${(err as Error).message}`);
+    }
+  }, RELOAD_INTERVAL_MS);
 }

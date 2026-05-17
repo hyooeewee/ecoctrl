@@ -5,6 +5,7 @@ import type { StorageAdapter } from "./types";
 
 let _fileStorage: StorageAdapter | null = null;
 let _modelStorage: StorageAdapter | null = null;
+let _pluginStorage: StorageAdapter | null = null;
 
 function createS3Adapter(bucket: string): StorageAdapter {
   return new S3Adapter({
@@ -45,6 +46,20 @@ export function getModelStorage(): StorageAdapter {
   return _modelStorage;
 }
 
+export function getPluginStorage(): StorageAdapter {
+  if (!_pluginStorage) {
+    const provider = env.STORAGE_PROVIDER;
+    if (provider === "minio") {
+      _pluginStorage = createS3Adapter(env.S3_BUCKET_PLUGINS);
+    } else if (provider === "local") {
+      _pluginStorage = new LocalAdapter({ baseDir: "./plugins" });
+    } else {
+      throw new Error(`Unknown storage provider: ${provider}`);
+    }
+  }
+  return _pluginStorage;
+}
+
 /** @deprecated Use getFileStorage() or getModelStorage() instead. */
 export function getStorage(): StorageAdapter {
   return getFileStorage();
@@ -80,8 +95,18 @@ export async function ensureS3Buckets(): Promise<void> {
     forcePathStyle: env.S3_FORCE_PATH_STYLE,
   });
 
+  const pluginsAdapter = new S3Adapter({
+    endpoint,
+    region,
+    accessKeyId,
+    secretAccessKey,
+    bucket: env.S3_BUCKET_PLUGINS,
+    forcePathStyle: env.S3_FORCE_PATH_STYLE,
+  });
+
   await filesAdapter.ensureBucket();
   await modelsAdapter.ensureBucket();
+  await pluginsAdapter.ensureBucket();
 }
 
 export * from "./types";

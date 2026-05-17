@@ -86,46 +86,7 @@ import ConditionNode from "./nodes/ConditionNode";
 import LoopNode from "./nodes/LoopNode";
 import ParallelNode from "./nodes/ParallelNode";
 
-// Simplified node preview for drag image (no Handle — avoids NodeIdContext warning)
-function DragNodePreview({ type, data }: { type: string; data: Record<string, unknown> }) {
-  const label = (data.label as string) ?? type;
-  const item = ALL_COMPONENTS.find((c) => c.type === type);
-  if (!item) return null;
-
-  const { icon: Icon, colorClass, description, handles } = item;
-  const h = handles ?? {};
-
-  return (
-    <div className="relative flex w-[280px] items-center gap-3 rounded-2xl border bg-white px-5 py-4 shadow-md">
-      {h.left && (
-        <div
-          className="absolute top-1/2 left-[7px] h-2.5 w-2.5 -translate-y-1/2 rounded-full border-2 border-white"
-          style={{ backgroundColor: h.left }}
-        />
-      )}
-      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${colorClass}`}>
-        <Icon size={16} />
-      </div>
-      <div className="flex min-w-0 flex-col">
-        <span className="truncate text-sm font-semibold">{label}</span>
-        <span className="text-muted-foreground truncate text-xs">{description}</span>
-      </div>
-      {h.condition ? (
-        <>
-          <div className="absolute top-[18px] right-[7px] h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500" />
-          <div className="absolute top-[38px] right-[7px] h-2.5 w-2.5 rounded-full border-2 border-white bg-rose-500" />
-        </>
-      ) : h.right ? (
-        <div
-          className="absolute top-1/2 right-[7px] h-2.5 w-2.5 -translate-y-1/2 rounded-full border-2 border-white"
-          style={{ backgroundColor: h.right }}
-        />
-      ) : null}
-    </div>
-  );
-}
-
-const NODE_TYPES = {
+const BUILT_IN_NODE_TYPES: Record<string, React.ComponentType<any>> = {
   start: StartNode,
   end: EndNode,
   http_request: ActionNode,
@@ -306,6 +267,7 @@ interface WorkflowCanvasProps {
 export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasProps) {
   const [nodes, setNodes, _onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, _onEdgesChange] = useEdgesState<Edge>([]);
+  const { pluginNodes, isPluginNodeType, getPluginNodeDef } = usePluginNodes();
   const [dsl, setDsl] = useState<WorkflowDSL | null>(null);
   const [workflow, setWorkflow] = useState<WorkflowListItem | null>(null);
   const [loading, setLoading] = useState(false);
@@ -749,18 +711,28 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
         y: event.clientY,
       });
 
-      const item = ALL_COMPONENTS.find((c) => c.type === type);
+      const item = allComponents.find((c) => c.type === type);
+      const config: Record<string, unknown> = {};
+
+      // Pin plugin version at drop time to avoid non-deterministic execution
+      if (isPluginNodeType(type)) {
+        const def = getPluginNodeDef(type);
+        if (def) {
+          config.__version = def.version;
+        }
+      }
+
       const newNode: Node = {
         id: `${type}-${Date.now()}`,
         type,
         position,
-        data: { label: item?.label ?? type, type, config: {} },
+        data: { label: item?.label ?? type, type, config },
       };
 
       setIsDirty(true);
       setNodes((nds) => [...nds, newNode]);
     },
-    [rfInstance, setNodes],
+    [rfInstance, setNodes, allComponents, isPluginNodeType, getPluginNodeDef],
   );
 
   const onDragEnd = useCallback(() => {
@@ -896,6 +868,49 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
     [setNodes],
   );
 
+  // Dynamic node types including plugin nodes
+  const nodeTypes = useMemo(() => {
+    const types: Record<string, React.ComponentType<any>> = { ...BUILT_IN_NODE_TYPES };
+    for (const plugin of pluginNodes) {
+      if (plugin.category === "trigger") types[plugin.id] = TriggerNodeShell;
+      else if (plugin.category === "action") types[plugin.id] = ActionNodeShell;
+      else if (plugin.category === "condition") types[plugin.id] = ConditionNodeShell;
+    }
+    return types;
+  }, [pluginNodes]);
+
+  // Combined component list (built-in + plugin)
+  const allComponents = useMemo(() => {
+    const builtins = ALL_COMPONENTS;
+    const plugins = pluginNodes.map((p) => ({
+      type: p.id,
+      label: p.name,
+      description: p.description || "",
+      icon: Zap,
+      colorClass: "bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400",
+    }));
+    return [...builtins, ...plugins];
+  }, [pluginNodes]);
+
+  // Component categories with plugin section
+  const componentCategories = useMemo(() => {
+    const categories = [...COMPONENT_CATEGORIES];
+    if (pluginNodes.length > 0) {
+      categories.push({
+        id: "plugins",
+        label: "插件节点",
+        items: pluginNodes.map((p) => ({
+          type: p.id,
+          label: p.name,
+          description: p.description || "",
+          icon: Zap,
+          colorClass: "bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400",
+        })),
+      });
+    }
+    return categories;
+  }, [pluginNodes]);
+
   // Warn before closing tab with unsaved changes
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
@@ -993,16 +1008,18 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
   const canDelete = selectedNodeType !== "start" && selectedNodeType !== "end" && !!selectedNode;
 
   const filteredCategories = useMemo(() => {
-    if (!searchQuery.trim()) return COMPONENT_CATEGORIES;
+    if (!searchQuery.trim()) return componentCategories;
     const q = searchQuery.toLowerCase();
-    return COMPONENT_CATEGORIES.map((cat) => ({
-      ...cat,
-      items: cat.items.filter(
-        (item) =>
-          item.label.toLowerCase().includes(q) || item.description.toLowerCase().includes(q),
-      ),
-    })).filter((cat) => cat.items.length > 0);
-  }, [searchQuery]);
+    return componentCategories
+      .map((cat) => ({
+        ...cat,
+        items: cat.items.filter(
+          (item) =>
+            item.label.toLowerCase().includes(q) || item.description.toLowerCase().includes(q),
+        ),
+      }))
+      .filter((cat) => cat.items.length > 0);
+  }, [searchQuery, componentCategories]);
 
   if (loading) {
     return (
@@ -1249,7 +1266,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
               onDrop={onDrop}
               onDragEnd={onDragEnd}
               onInit={setRfInstance}
-              nodeTypes={NODE_TYPES}
+              nodeTypes={nodeTypes}
               fitView
               attributionPosition="bottom-right"
               deleteKeyCode={["Backspace", "Delete"]}
@@ -1829,6 +1846,29 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                           />
                         </div>
                       </>
+                    )}
+                    {isPluginNodeType(selectedNodeType) && selectedNode && (
+                      <NodeConfigPanel
+                        nodeId={selectedNode.id}
+                        nodeName={(selectedNode.data.label as string) ?? selectedNode.id}
+                        nodeType={selectedNodeType}
+                        currentConfig={(selectedNode.data.config as Record<string, unknown>) ?? {}}
+                        schema={getPluginNodeDef(selectedNodeType)?.schema ?? {}}
+                        availableVersions={[]}
+                        currentVersion={
+                          ((selectedNode.data.config as Record<string, unknown>)
+                            ?.__version as string) ?? "latest"
+                        }
+                        onChange={(config) =>
+                          updateNodeData(selectedNode.id, {
+                            config: {
+                              ...(selectedNode.data.config as Record<string, unknown>),
+                              ...config,
+                            },
+                          })
+                        }
+                        onVersionChange={() => {}}
+                      />
                     )}
                     <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-800/50">
                       <p className="text-muted-foreground text-xs leading-relaxed">

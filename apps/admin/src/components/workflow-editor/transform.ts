@@ -35,7 +35,7 @@ export function reactFlowToDSL(
     trigger,
     nodes: nodes.map((n) => ({
       id: n.id,
-      type: n.type as WorkflowDSL["nodes"][number]["type"],
+      type: n.type as string,
       name: (n.data.label as string) ?? n.id,
       config: (n.data.config as Record<string, unknown>) ?? {},
       onError: n.data.onError as WorkflowNode["onError"],
