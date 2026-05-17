@@ -1,6 +1,6 @@
 import { db } from "@/config/database";
 import { findPlatformConfig } from "@/repositories/platformConfig";
-import { findPointByName, updatePoint } from "@/repositories/points";
+import { readPointValues, writePointValues } from "@/services/iot/points";
 import { createTransport, type Transporter } from "nodemailer";
 import { sql } from "drizzle-orm";
 import type {
@@ -73,6 +73,7 @@ async function executeNode(
   node: WorkflowNode,
   state: InternalExecutionState,
   dsl: WorkflowDSL,
+  dryRun = false,
 ): Promise<Record<string, unknown>> {
   // Reference dsl to avoid unused parameter warning (used in recursive calls)
   void dsl.nodes.length;
@@ -164,7 +165,7 @@ async function executeNode(
             ctx.variables.set(itemVar, items[i]);
             ctx.variables.set("index", i);
             if (body?.nodes && body.edges) {
-              const subResult = await executeSubGraph(body.nodes, body.edges, ctx);
+              const subResult = await executeSubGraph(body.nodes, body.edges, ctx, dryRun);
               results.push(subResult);
             }
           }
@@ -179,7 +180,7 @@ async function executeNode(
             evaluateBoolean(String(config.condition ?? "false"), vars)
           ) {
             if (body?.nodes && body.edges) {
-              const subResult = await executeSubGraph(body.nodes, body.edges, ctx);
+              const subResult = await executeSubGraph(body.nodes, body.edges, ctx, dryRun);
               results.push(subResult);
             }
             iterations++;
@@ -200,7 +201,7 @@ async function executeNode(
           const branchResults = await Promise.all(
             branches.map(async (branch) => {
               if (branch.nodes && branch.edges) {
-                return executeSubGraph(branch.nodes, branch.edges, ctx);
+                return executeSubGraph(branch.nodes, branch.edges, ctx, dryRun);
               }
               return {};
             }),
@@ -225,6 +226,16 @@ async function executeNode(
       case "http_request": {
         const method = String(config.method ?? "GET").toUpperCase();
         const url = String(config.url ?? "");
+        if (dryRun) {
+          outputs = {
+            statusCode: 200,
+            statusText: "OK (dry-run)",
+            headers: { "content-type": "application/json" },
+            body: { _dryRun: true, method, url },
+            responseBody: JSON.stringify({ _dryRun: true }),
+          };
+          break;
+        }
         const headers = (config.headers as Record<string, string> | undefined) ?? {};
         const body = config.body as Record<string, unknown> | string | undefined;
         const timeoutMs = Math.min(Number(config.timeoutMs ?? 10_000), 30_000);
@@ -275,6 +286,15 @@ async function executeNode(
       case "database": {
         const operation = String(config.operation ?? "select");
         const table = String(config.table ?? "");
+        if (dryRun) {
+          outputs = {
+            _dryRun: true,
+            operation,
+            table,
+            message: `Would execute ${operation} on '${table}'`,
+          };
+          break;
+        }
         const where = config.where as Record<string, unknown> | undefined;
         const data = config.data as Record<string, unknown> | undefined;
         const returning = config.returning as string[] | undefined;
@@ -365,12 +385,22 @@ async function executeNode(
       }
 
       case "email": {
+        const to = Array.isArray(config.to) ? config.to.map(String) : [String(config.to ?? "")];
+        const subject = String(config.subject ?? "");
+        if (dryRun) {
+          outputs = {
+            _dryRun: true,
+            messageId: "dry-run-msg-id",
+            sent: true,
+            to: to.filter(Boolean),
+            subject,
+          };
+          break;
+        }
         const transport = await getSmtpTransport();
         if (!transport) {
           throw new Error("SMTP not configured");
         }
-        const to = Array.isArray(config.to) ? config.to.map(String) : [String(config.to ?? "")];
-        const subject = String(config.subject ?? "");
         const bodyText = String(config.body ?? "");
         const bodyType = String(config.bodyType ?? "text");
         const result = await transport.sendMail({
@@ -395,59 +425,56 @@ async function executeNode(
         break;
       }
 
-      case "point": {
-        const operation = String(config.operation ?? "read");
+      case "point_read": {
+        const pointName = String(config.pointName ?? "");
+        if (!pointName) {
+          throw new Error("point_read node requires 'pointName'");
+        }
+        if (dryRun) {
+          outputs = {
+            _dryRun: true,
+            value: null,
+            pointName,
+            values: {},
+          };
+          break;
+        }
+        const values = await readPointValues([pointName]);
+        outputs = {
+          value: values[pointName],
+          pointName,
+          values,
+        };
+        break;
+      }
+
+      case "point_write": {
         const pointName = String(config.pointName ?? "");
         const valueKey = String(config.valueKey ?? "");
-        const filters: { objectId?: string; modelId?: string; pointNo?: string } = {};
-        if (config.objectId) filters.objectId = String(config.objectId);
-        if (config.modelId) filters.modelId = String(config.modelId);
-        if (config.pointNo) filters.pointNo = String(config.pointNo);
-
         if (!pointName) {
-          throw new Error("Point node requires 'pointName'");
+          throw new Error("point_write node requires 'pointName'");
         }
-
-        const point = await findPointByName(pointName, filters);
-        if (!point) {
-          throw new Error(`Point not found: ${pointName}`);
+        if (!valueKey) {
+          throw new Error("point_write node requires 'valueKey'");
         }
-
-        if (operation === "read") {
+        const rawValue = resolveTemplate(config.value, ctx);
+        if (dryRun) {
           outputs = {
-            id: point.id,
-            name: point.name,
-            pointNo: point.pointNo,
-            objectId: point.objectId,
-            modelId: point.modelId,
-            values: point.values,
-            props: point.props,
-          };
-        } else if (operation === "read_value") {
-          if (!valueKey) {
-            throw new Error("read_value operation requires 'valueKey'");
-          }
-          outputs = {
-            value: (point.values ?? {})[valueKey],
-            pointName: point.name,
+            _dryRun: true,
+            updated: true,
+            pointName,
             valueKey,
+            value: rawValue,
           };
-        } else if (operation === "write") {
-          if (!valueKey) {
-            throw new Error("write operation requires 'valueKey'");
-          }
-          const newValue = resolveTemplate(config.value, ctx);
-          const updatedValues = { ...point.values, [valueKey]: newValue };
-          const updated = await updatePoint(point.id, { values: updatedValues });
-          outputs = {
-            updated: !!updated,
-            pointName: point.name,
-            valueKey,
-            value: newValue,
-          };
-        } else {
-          throw new Error(`Unsupported point operation: ${operation}`);
+          break;
         }
+        await writePointValues([pointName], { [valueKey]: rawValue });
+        outputs = {
+          updated: true,
+          pointName,
+          valueKey,
+          value: rawValue,
+        };
         break;
       }
 
@@ -499,6 +526,7 @@ async function executeSubGraph(
   nodes: WorkflowNode[],
   edges: WorkflowEdge[],
   parentContext: ExecutionContext,
+  dryRun = false,
 ): Promise<Record<string, unknown>> {
   const startNode = nodes.find((n) => n.type === "start");
   if (!startNode) {
@@ -526,7 +554,7 @@ async function executeSubGraph(
     nodes,
     edges,
   };
-  await executeFromNode(startNode, state, dsl);
+  await executeFromNode(startNode, state, dsl, dryRun);
 
   // Collect end node outputs
   const endNodes = nodes.filter((n) => n.type === "end");
@@ -541,6 +569,7 @@ async function executeFromNode(
   startNode: WorkflowNode,
   state: InternalExecutionState,
   dsl: WorkflowDSL,
+  dryRun = false,
 ): Promise<void> {
   let currentNode: WorkflowNode | undefined = startNode;
   const visitedInPath = new Set<string>();
@@ -553,7 +582,7 @@ async function executeFromNode(
     visitedInPath.add(currentNode.id);
 
     try {
-      const outputs = await executeNode(currentNode, state, dsl);
+      const outputs = await executeNode(currentNode, state, dsl, dryRun);
 
       // Handle goto
       if (outputs.__goto && typeof outputs.__goto === "string") {
@@ -596,6 +625,7 @@ export async function executeWorkflow(
   dsl: WorkflowDSL,
   triggerData: Record<string, unknown>,
   envVars: Record<string, string>,
+  dryRun = false,
 ): Promise<ExecutionResult> {
   const ctx: ExecutionContext = {
     triggerData,
@@ -617,11 +647,12 @@ export async function executeWorkflow(
       status: "failed",
       error: "Workflow has no 'start' node",
       nodeLogs: [],
+      dryRun,
     };
   }
 
   try {
-    await executeFromNode(startNode, state, dsl);
+    await executeFromNode(startNode, state, dsl, dryRun);
 
     const endNodes = dsl.nodes.filter((n) => n.type === "end");
     const lastEnd = endNodes.find((n) => state.completed.has(n.id));
@@ -633,12 +664,14 @@ export async function executeWorkflow(
       status: "completed",
       output: lastEnd ? ctx.nodeOutputs.get(lastEnd.id) : undefined,
       nodeLogs: trimmedLogs,
+      dryRun,
     };
   } catch (error) {
     return {
       status: "failed",
       error: (error as Error).message,
       nodeLogs: state.nodeLogs.slice(-500),
+      dryRun,
     };
   }
 }
