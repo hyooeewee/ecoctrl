@@ -430,17 +430,9 @@ async function executeNode(
         if (!pointName) {
           throw new Error("point_read node requires 'pointName'");
         }
-        if (dryRun) {
-          outputs = {
-            _dryRun: true,
-            value: null,
-            pointName,
-            values: {},
-          };
-          break;
-        }
         const values = await readPointValues([pointName]);
         outputs = {
+          ...(dryRun ? { _dryRun: true } : {}),
           value: values[pointName],
           pointName,
           values,

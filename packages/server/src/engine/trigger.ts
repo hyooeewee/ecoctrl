@@ -65,7 +65,9 @@ export const triggerEngine = {
       .where(and(eq(workflows.enabled, true), eq(workflows.isLatest, true)));
 
     for (const workflow of rows) {
-      const dsl = workflow.dsl as { trigger?: { type: string; config?: Record<string, unknown> } };
+      const dsl = (workflow.publishedDsl ?? workflow.dsl) as {
+        trigger?: { type: string; config?: Record<string, unknown> };
+      };
       if (dsl.trigger?.type !== "state_change") continue;
 
       const config = dsl.trigger.config as { watch?: string[]; condition?: string } | undefined;
@@ -138,7 +140,9 @@ export const triggerEngine = {
       .where(and(eq(workflows.enabled, true), eq(workflows.isLatest, true)));
 
     for (const workflow of rows) {
-      const dsl = workflow.dsl as { trigger?: { type: string; config?: Record<string, unknown> } };
+      const dsl = (workflow.publishedDsl ?? workflow.dsl) as {
+        trigger?: { type: string; config?: Record<string, unknown> };
+      };
       if (dsl.trigger?.type !== "event") continue;
 
       const config = dsl.trigger.config as { event?: string; condition?: string } | undefined;
@@ -194,7 +198,9 @@ export const triggerEngine = {
     }
 
     const workflow = rows[0]!;
-    const dsl = workflow.dsl as { trigger?: { type: string; config?: Record<string, unknown> } };
+    const dsl = (workflow.publishedDsl ?? workflow.dsl) as {
+      trigger?: { type: string; config?: Record<string, unknown> };
+    };
     if (dsl.trigger?.type !== "webhook") {
       throw new Error("Workflow is not a webhook trigger");
     }
@@ -247,7 +253,9 @@ export const triggerEngine = {
     const activeScheduleIds = new Set<string>();
 
     for (const workflow of rows) {
-      const dsl = workflow.dsl as { trigger?: { type: string; config?: Record<string, unknown> } };
+      const dsl = (workflow.publishedDsl ?? workflow.dsl) as {
+        trigger?: { type: string; config?: Record<string, unknown> };
+      };
       if (dsl.trigger?.type !== "schedule") continue;
 
       const config = dsl.trigger.config as { cron?: string; timezone?: string } | undefined;

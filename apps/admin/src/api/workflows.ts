@@ -36,6 +36,21 @@ export const workflowsApi = {
   trigger: (id: string, data?: Record<string, unknown>) =>
     post<{ executionId: string }>(`/workflows/${id}/trigger`, { data }),
 
+  test: (id: string, data?: Record<string, unknown>) =>
+    post<{
+      status: string;
+      output?: Record<string, unknown>;
+      error?: string;
+      nodeLogs: Array<{
+        nodeId: string;
+        nodeName: string;
+        nodeType: string;
+        status: string;
+        error?: string;
+      }>;
+      dryRun?: boolean;
+    }>(`/workflows/${id}/test`, { data }),
+
   getExecutions: (id: string, page = 1, pageSize = 20) =>
     get<PaginatedResult<unknown>>(`/workflows/${id}/executions`, {
       params: { page: String(page), pageSize: String(pageSize) },

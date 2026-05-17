@@ -20,6 +20,7 @@ export const workflows = pgTable("workflows", {
   description: text("description"),
   enabled: boolean("enabled").notNull().default(true),
   dsl: jsonb("dsl").notNull(),
+  publishedDsl: jsonb("published_dsl"),
   version: integer("version").notNull().default(1),
   isLatest: boolean("is_latest").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),

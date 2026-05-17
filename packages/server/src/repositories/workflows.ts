@@ -24,6 +24,7 @@ export interface WorkflowDetail {
   description: string | null;
   enabled: boolean;
   dsl: WorkflowDSL;
+  publishedDsl: WorkflowDSL | null;
   version: number;
   isLatest: boolean;
   createdAt: Date | null;
@@ -80,6 +81,7 @@ export async function findWorkflowById(id: string): Promise<WorkflowDetail | nul
     description: r.description,
     enabled: r.enabled,
     dsl: r.dsl as WorkflowDSL,
+    publishedDsl: r.publishedDsl as WorkflowDSL | null,
     version: r.version,
     isLatest: r.isLatest,
     createdAt: r.createdAt,
@@ -108,6 +110,7 @@ export async function findWorkflowBySlug(
     description: r.description,
     enabled: r.enabled,
     dsl: r.dsl as WorkflowDSL,
+    publishedDsl: r.publishedDsl as WorkflowDSL | null,
     version: r.version,
     isLatest: r.isLatest,
     createdAt: r.createdAt,
@@ -148,6 +151,8 @@ export async function updateWorkflow(
     description?: string;
     enabled?: boolean;
     dsl?: WorkflowDSL;
+    publishedDsl?: WorkflowDSL | null;
+    bumpVersion?: boolean;
   },
 ): Promise<void> {
   const updateData: Record<string, unknown> = { updatedAt: new Date() };
@@ -156,11 +161,17 @@ export async function updateWorkflow(
   if (data.enabled !== undefined) updateData.enabled = data.enabled;
   if (data.dsl !== undefined) {
     updateData.dsl = data.dsl as unknown as Record<string, unknown>;
-    // Bump version when DSL changes
+  }
+  if (data.bumpVersion) {
     const current = await findWorkflowById(id);
     if (current) {
       updateData.version = current.version + 1;
     }
+  }
+  if (data.publishedDsl !== undefined) {
+    updateData.publishedDsl = data.publishedDsl
+      ? (data.publishedDsl as unknown as Record<string, unknown>)
+      : null;
   }
   await db.update(workflows).set(updateData).where(eq(workflows.id, id));
 }
