@@ -5,6 +5,7 @@ import React from "react";
 import { Button } from "@ecoctrl/ui";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@ecoctrl/ui";
 import { cn } from "@/lib/utils";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 import { BrandLogo } from "./BrandLogo";
 import { sidebarNavItems } from "./navConfig";
@@ -23,12 +24,19 @@ export default function Sidebar({
   onCollapsedChange,
 }: SidebarProps) {
   const [collapsed, setCollapsed] = React.useState(defaultCollapsed ?? false);
+  const isMobile = useMediaQuery("(max-width: 768px)");
 
   React.useEffect(() => {
     if (typeof defaultCollapsed === "boolean") {
       setCollapsed(defaultCollapsed);
     }
   }, [defaultCollapsed]);
+
+  // Auto-collapse/expand on breakpoint cross — does not override manual toggles
+  // when the viewport stays on the same side of the threshold.
+  React.useEffect(() => {
+    setCollapsed(isMobile);
+  }, [isMobile]);
 
   const toggleCollapsed = (next: boolean) => {
     setCollapsed(next);
