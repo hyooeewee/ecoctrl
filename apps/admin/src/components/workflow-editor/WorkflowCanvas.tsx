@@ -455,6 +455,12 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
     setRightPanelOpen(false);
   }, []);
 
+  const onNodeDragStop = useCallback(() => {
+    setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
+    setSelectedNode(null);
+    setRightPanelOpen(false);
+  }, [setNodes]);
+
   const handleDragStart = useCallback(
     (event: React.DragEvent, type: string) => {
       event.dataTransfer.setData("application/reactflow", type);
@@ -993,6 +999,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
               onConnect={onConnect}
               onNodeClick={onNodeClick}
               onPaneClick={onPaneClick}
+              onNodeDragStop={onNodeDragStop}
               onDragOver={onDragOver}
               onDrop={onDrop}
               onDragEnd={onDragEnd}
