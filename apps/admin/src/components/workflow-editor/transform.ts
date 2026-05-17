@@ -25,6 +25,12 @@ export function dslToReactFlow(dsl: WorkflowDSL): { nodes: Node[]; edges: Edge[]
   };
 }
 
+export function getDefaultSettings(): NonNullable<WorkflowDSL["settings"]> {
+  return {
+    autoSave: { enabled: false, intervalSeconds: 30 },
+  };
+}
+
 export function reactFlowToDSL(
   nodes: Node[],
   edges: Edge[],

@@ -45,11 +45,29 @@ export interface WorkflowEdge {
   label?: string;
 }
 
+export type EnvVarType = "string" | "number" | "secret" | "boolean";
+
+export interface EnvVar {
+  key: string;
+  value: unknown;
+  type: EnvVarType;
+  description?: string;
+}
+
+export interface WorkflowSettings {
+  autoSave?: {
+    enabled: boolean;
+    intervalSeconds: number;
+  };
+}
+
 export interface WorkflowDSL {
   version: "1.0";
   trigger: WorkflowTrigger;
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
+  envVars?: EnvVar[];
+  settings?: WorkflowSettings;
 }
 
 export interface WorkflowListItem {

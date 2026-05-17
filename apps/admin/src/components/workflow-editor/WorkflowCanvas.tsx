@@ -43,6 +43,10 @@ import {
   Activity,
   AlertTriangle,
   Braces,
+  Eye,
+  EyeOff,
+  Cloud,
+  CloudOff,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -65,6 +69,7 @@ import { Tabs, TabsContent } from "@ecoctrl/ui/tabs";
 import { Separator } from "@ecoctrl/ui/separator";
 import { ScrollArea } from "@ecoctrl/ui/scroll-area";
 import { Textarea } from "@ecoctrl/ui/textarea";
+import { Switch } from "@ecoctrl/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -76,8 +81,8 @@ import {
 
 import { workflowsApi } from "@/api/workflows";
 import { pointsApi } from "@/api/points";
-import type { WorkflowDSL, NodeType, WorkflowListItem } from "./types";
-import { dslToReactFlow, reactFlowToDSL } from "./transform";
+import type { WorkflowDSL, NodeType, WorkflowListItem, EnvVar, EnvVarType } from "./types";
+import { dslToReactFlow, reactFlowToDSL, getDefaultSettings } from "./transform";
 import { autoLayout } from "./layout";
 import { usePluginNodes } from "./hooks/usePluginNodes";
 import StartNode from "./nodes/StartNode";
@@ -323,6 +328,18 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
     flowX?: number; // Flow coordinate for node placement (when dragging connection)
     flowY?: number;
   } | null>(null);
+
+  // Env vars & settings
+  const [envVars, setEnvVars] = useState<EnvVar[]>([]);
+  const [showEnvVarsDialog, setShowEnvVarsDialog] = useState(false);
+  const [settings, setSettings] =
+    useState<NonNullable<WorkflowDSL["settings"]>>(getDefaultSettings());
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "success" | "error">(
+    "idle",
+  );
+  const [visibleSecrets, setVisibleSecrets] = useState<Set<string>>(new Set());
+
   const filteredPointNames = useMemo(
     () =>
       pointSearch
@@ -379,6 +396,8 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
         setWorkflow(wf);
         const loadedDsl = wf.dsl;
         setDsl(loadedDsl);
+        setEnvVars(loadedDsl.envVars ?? []);
+        setSettings(loadedDsl.settings ?? getDefaultSettings());
         const { nodes: n, edges: e } = dslToReactFlow(loadedDsl);
         const needsLayout = n.some((node) => !node.position);
         setNodes(needsLayout ? autoLayout(n, e) : n);
@@ -760,35 +779,59 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
     [setNodes, setEdges],
   );
 
-  const handleSave = useCallback(async () => {
-    if (!dsl) return;
-    setSaving(true);
-    try {
-      const newDsl = reactFlowToDSL(nodes, edges, dsl.trigger);
-      if (workflowId) {
-        await workflowsApi.update(workflowId, {
-          name: workflow?.name,
-          dsl: newDsl,
-        });
+  const handleSave = useCallback(
+    async (options?: { silent?: boolean; onSuccess?: () => void; onError?: () => void }) => {
+      if (!dsl) return;
+      setSaving(true);
+      if (options?.silent) setAutoSaveStatus("saving");
+      try {
+        const newDsl: WorkflowDSL = {
+          ...reactFlowToDSL(nodes, edges, dsl.trigger),
+          envVars,
+          settings,
+        };
+        if (workflowId) {
+          await workflowsApi.update(workflowId, {
+            name: workflow?.name,
+            dsl: newDsl,
+          });
+        }
+        setDsl(newDsl);
+        setIsDirty(false);
+        if (options?.silent) {
+          setAutoSaveStatus("success");
+          setTimeout(() => setAutoSaveStatus("idle"), 2000);
+        } else {
+          toast.success("工作流已保存");
+        }
+        options?.onSuccess?.();
+      } catch (err) {
+        if (options?.silent) {
+          setAutoSaveStatus("error");
+          setTimeout(() => setAutoSaveStatus("idle"), 3000);
+        } else {
+          const msg =
+            (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+            "保存失败，请检查节点连接是否正确";
+          toast.error(msg);
+        }
+        options?.onError?.();
+      } finally {
+        setSaving(false);
       }
-      setDsl(newDsl);
-      setIsDirty(false);
-      toast.success("工作流已保存");
-    } catch (err) {
-      const msg =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
-        "保存失败，请检查节点连接是否正确";
-      toast.error(msg);
-    } finally {
-      setSaving(false);
-    }
-  }, [dsl, nodes, edges, workflowId, workflow?.name]);
+    },
+    [dsl, nodes, edges, workflowId, workflow?.name, envVars, settings],
+  );
 
   const handlePublish = useCallback(async () => {
     if (!workflowId || !dsl) return;
     setPublishing(true);
     try {
-      const newDsl = reactFlowToDSL(nodes, edges, dsl.trigger);
+      const newDsl: WorkflowDSL = {
+        ...reactFlowToDSL(nodes, edges, dsl.trigger),
+        envVars,
+        settings,
+      };
       await workflowsApi.update(workflowId, {
         name: workflow?.name,
         dsl: newDsl,
@@ -812,7 +855,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
     } finally {
       setPublishing(false);
     }
-  }, [dsl, nodes, edges, workflowId, workflow?.name]);
+  }, [dsl, nodes, edges, workflowId, workflow?.name, envVars, settings]);
 
   const handleTestRun = useCallback(async () => {
     if (!workflowId) {
