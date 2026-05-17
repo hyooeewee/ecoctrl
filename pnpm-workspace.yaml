@@ -36,6 +36,7 @@ peerDependencyRules:
     vitest: "*"
 allowBuilds:
   esbuild: true
+  isolated-vm: true
   msw: true
   sharp: true
   workerd: true

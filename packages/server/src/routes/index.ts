@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
+import path from "path";
 
 import { findPlatformConfig } from "@/repositories/platformConfig";
 import { findDashboardData } from "@/repositories/dashboard";
@@ -26,8 +27,18 @@ import authRoutes from "@/routes/auth";
 import oauthRoutes from "@/routes/oauth";
 import workflowRoutes, { registerWebhookRoute } from "@/routes/workflows";
 import aiRoutes from "@/routes/ai";
+import nodeRoutes from "@/routes/nodes";
+import { PluginRegistry } from "@/engine/plugin-registry";
 
 export default async function apiRoutes(fastify: FastifyInstance) {
+  // Initialize plugin registry
+  const pluginsDir = path.join(process.cwd(), "plugins");
+  const registry = new PluginRegistry(pluginsDir);
+  await registry.loadAll();
+
+  // Decorate fastify instance so routes can access registry
+  fastify.decorate("pluginRegistry", registry);
+
   fastify.addHook("onRequest", async (request: FastifyRequest, reply: FastifyReply) => {
     const publicPaths = [
       "/health",
@@ -135,5 +146,6 @@ export default async function apiRoutes(fastify: FastifyInstance) {
   await fastify.register(oauthRoutes, { prefix: "/auth/oauth" });
   await fastify.register(workflowRoutes, { prefix: "/workflows" });
   await fastify.register(aiRoutes, { prefix: "/ai" });
+  await fastify.register(nodeRoutes, { prefix: "/nodes", registry });
   await registerWebhookRoute(fastify);
 }

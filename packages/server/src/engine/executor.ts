@@ -13,6 +13,8 @@ import type {
 } from "./types";
 import { evaluateExpression, evaluateBoolean } from "./expr";
 import { resolveTemplate, buildVars } from "./template";
+import { executePluginNode } from "./plugin-executor";
+import type { PluginRegistry } from "./plugin-registry";
 
 interface InternalExecutionState {
   context: ExecutionContext;
@@ -73,6 +75,7 @@ async function executeNode(
   node: WorkflowNode,
   state: InternalExecutionState,
   dsl: WorkflowDSL,
+  registry: PluginRegistry | null,
   dryRun = false,
 ): Promise<Record<string, unknown>> {
   // Reference dsl to avoid unused parameter warning (used in recursive calls)
@@ -165,7 +168,7 @@ async function executeNode(
             ctx.variables.set(itemVar, items[i]);
             ctx.variables.set("index", i);
             if (body?.nodes && body.edges) {
-              const subResult = await executeSubGraph(body.nodes, body.edges, ctx, dryRun);
+              const subResult = await executeSubGraph(body.nodes, body.edges, ctx, registry, dryRun);
               results.push(subResult);
             }
           }
@@ -180,7 +183,7 @@ async function executeNode(
             evaluateBoolean(String(config.condition ?? "false"), vars)
           ) {
             if (body?.nodes && body.edges) {
-              const subResult = await executeSubGraph(body.nodes, body.edges, ctx, dryRun);
+              const subResult = await executeSubGraph(body.nodes, body.edges, ctx, registry, dryRun);
               results.push(subResult);
             }
             iterations++;
@@ -201,7 +204,7 @@ async function executeNode(
           const branchResults = await Promise.all(
             branches.map(async (branch) => {
               if (branch.nodes && branch.edges) {
-                return executeSubGraph(branch.nodes, branch.edges, ctx, dryRun);
+                return executeSubGraph(branch.nodes, branch.edges, ctx, registry, dryRun);
               }
               return {};
             }),
@@ -471,6 +474,19 @@ async function executeNode(
       }
 
       default: {
+        // Try plugin execution if registry is available
+        if (registry) {
+          try {
+            const result = await executePluginNode(node, state, dsl, registry, dryRun);
+            return result;
+          } catch (err) {
+            const msg = (err as Error).message;
+            if (msg.includes("not found")) {
+              throw new Error(`Unknown node type: ${node.type}`);
+            }
+            throw err;
+          }
+        }
         throw new Error(`Unknown node type: ${node.type}`);
       }
     }
@@ -498,7 +514,7 @@ async function executeNode(
         if (handler.retryDelayMs) {
           await sleep(handler.retryDelayMs);
         }
-        return executeNode(retryNode, state, dsl);
+        return executeNode(retryNode, state, dsl, registry);
       }
       if (handler.action === "skip") {
         log.status = "skipped";
@@ -518,6 +534,7 @@ async function executeSubGraph(
   nodes: WorkflowNode[],
   edges: WorkflowEdge[],
   parentContext: ExecutionContext,
+  registry: PluginRegistry | null,
   dryRun = false,
 ): Promise<Record<string, unknown>> {
   const startNode = nodes.find((n) => n.type === "start");
@@ -546,7 +563,7 @@ async function executeSubGraph(
     nodes,
     edges,
   };
-  await executeFromNode(startNode, state, dsl, dryRun);
+  await executeFromNode(startNode, state, dsl, registry, dryRun);
 
   // Collect end node outputs
   const endNodes = nodes.filter((n) => n.type === "end");
@@ -561,6 +578,7 @@ async function executeFromNode(
   startNode: WorkflowNode,
   state: InternalExecutionState,
   dsl: WorkflowDSL,
+  registry: PluginRegistry | null,
   dryRun = false,
 ): Promise<void> {
   let currentNode: WorkflowNode | undefined = startNode;
@@ -574,7 +592,7 @@ async function executeFromNode(
     visitedInPath.add(currentNode.id);
 
     try {
-      const outputs = await executeNode(currentNode, state, dsl, dryRun);
+      const outputs = await executeNode(currentNode, state, dsl, registry, dryRun);
 
       // Handle goto
       if (outputs.__goto && typeof outputs.__goto === "string") {
@@ -617,6 +635,7 @@ export async function executeWorkflow(
   dsl: WorkflowDSL,
   triggerData: Record<string, unknown>,
   envVars: Record<string, string>,
+  registry: PluginRegistry | null = null,
   dryRun = false,
 ): Promise<ExecutionResult> {
   const ctx: ExecutionContext = {
@@ -644,7 +663,7 @@ export async function executeWorkflow(
   }
 
   try {
-    await executeFromNode(startNode, state, dsl, dryRun);
+    await executeFromNode(startNode, state, dsl, registry, dryRun);
 
     const endNodes = dsl.nodes.filter((n) => n.type === "end");
     const lastEnd = endNodes.find((n) => state.completed.has(n.id));
