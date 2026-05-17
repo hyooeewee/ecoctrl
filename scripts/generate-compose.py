@@ -300,7 +300,7 @@ def apply_env_overrides(compose: dict, env_name: str, env_vars: dict[str, str]) 
             if key.startswith("S3_") or key == "STORAGE_PROVIDER":
                 del env[key]
 
-    # Dev-specific: add PNPM_HOME, add pnpm-store volume
+    # Dev-specific: add PNPM_HOME, add pnpm-store volume, rename project
     if env_name == "dev":
         server = services.get("server", {})
         env = server.get("environment", {})
@@ -315,6 +315,7 @@ def apply_env_overrides(compose: dict, env_name: str, env_vars: dict[str, str]) 
             svc["volumes"] = vols
 
         compose["volumes"] = {"pnpm-store": {}}
+        compose["name"] = "ecoctrl-dev"
 
     # Compute effective variables and substitute
     effective_vars = dict(env_vars)
