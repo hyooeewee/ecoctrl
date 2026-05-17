@@ -1,32 +1,79 @@
-import fs from "fs/promises";
-import path from "path";
-import type { PluginDefinition, PluginManifest, PluginVersionInfo } from "./plugin-types";
+import type { StorageAdapter } from "@/storage/types";
+import { getLogger } from "@/lib/logger";
+import type { PluginDefinition, PluginManifest } from "./plugin-types";
 import { extractPluginFromZip, validatePluginPackage, computeContentHash } from "./plugin-loader";
+
+const logger = getLogger("plugin-registry");
+
+const PLUGIN_PREFIX = "plugins/";
+
+async function streamToString(stream: ReadableStream | NodeJS.ReadableStream): Promise<string> {
+  // Handle Web Streams API ReadableStream
+  if ("getReader" in stream) {
+    const reader = stream.getReader();
+    const chunks: Uint8Array[] = [];
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+    return Buffer.concat(chunks).toString("utf-8");
+  }
+
+  // Handle Node.js ReadableStream
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    stream.on("data", (chunk: Buffer) => chunks.push(chunk));
+    stream.on("end", () => resolve(Buffer.concat(chunks).toString("utf-8")));
+    stream.on("error", reject);
+  });
+}
+
+function buildKey(id: string, version: string, filename: string): string {
+  return `${PLUGIN_PREFIX}${id}/${version}/${filename}`;
+}
 
 export class PluginRegistry {
   private plugins = new Map<string, Map<string, PluginDefinition>>(); // id -> version -> definition
-  private pluginsDir: string;
+  private storage: StorageAdapter;
 
-  constructor(pluginsDir: string) {
-    this.pluginsDir = pluginsDir;
+  constructor(storage: StorageAdapter) {
+    this.storage = storage;
   }
 
   async loadAll(): Promise<void> {
     this.plugins.clear();
     try {
-      const entries = await fs.readdir(this.pluginsDir, { withFileTypes: true });
-      for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
-        const pluginId = entry.name;
-        const pluginPath = path.join(this.pluginsDir, pluginId);
-        const versions = await fs.readdir(pluginPath, { withFileTypes: true });
-        for (const v of versions) {
-          if (!v.isDirectory()) continue;
-          await this.loadPlugin(pluginId, v.name, path.join(pluginPath, v.name));
+      const keys = await this.storage.list(PLUGIN_PREFIX);
+      // Group keys by plugin id and version
+      const groups = new Map<string, Map<string, string[]>>(); // id -> version -> filenames
+      for (const key of keys) {
+        const relative = key.slice(PLUGIN_PREFIX.length); // "id/version/filename"
+        const parts = relative.split("/");
+        if (parts.length < 3) continue;
+        const id = parts[0];
+        const version = parts[1];
+        const filename = parts.slice(2).join("/");
+        let versions = groups.get(id);
+        if (!versions) {
+          versions = new Map();
+          groups.set(id, versions);
+        }
+        let files = versions.get(version);
+        if (!files) {
+          files = [];
+          versions.set(version, files);
+        }
+        files.push(filename);
+      }
+
+      for (const [id, versions] of groups) {
+        for (const [version, files] of versions) {
+          await this.loadPlugin(id, version, files);
         }
       }
     } catch {
-      // plugins directory may not exist yet
+      // Storage may be empty or unavailable
     }
   }
 
@@ -34,23 +81,24 @@ export class PluginRegistry {
     await this.loadAll();
   }
 
-  private async loadPlugin(id: string, version: string, dir: string): Promise<void> {
-    const manifestPath = path.join(dir, "manifest.json");
-    const backendPath = path.join(dir, "backend.js");
-    const schemaPath = path.join(dir, "schema.json");
-    const iconPath = path.join(dir, "icon.svg");
-
+  private async loadPlugin(id: string, version: string, files: string[]): Promise<void> {
     try {
-      const manifestRaw = await fs.readFile(manifestPath, "utf-8");
+      const manifestRaw = await this.readFile(id, version, "manifest.json");
+      if (!manifestRaw) return;
       const manifest = JSON.parse(manifestRaw) as PluginManifest;
-      const backendCode = await fs.readFile(backendPath, "utf-8");
-      const schemaRaw = await fs.readFile(schemaPath, "utf-8");
+
+      const entryFile = manifest.entry || "backend.js";
+      const backendCode = await this.readFile(id, version, entryFile);
+      if (!backendCode) return;
+
+      const schemaFile = manifest.schema || "schema.json";
+      const schemaRaw = await this.readFile(id, version, schemaFile);
+      if (!schemaRaw) return;
       const schema = JSON.parse(schemaRaw) as Record<string, unknown>;
+
       let iconSvg: string | undefined;
-      try {
-        iconSvg = await fs.readFile(iconPath, "utf-8");
-      } catch {
-        // icon is optional
+      if (manifest.icon && files.includes(manifest.icon)) {
+        iconSvg = await this.readFile(id, version, manifest.icon);
       }
 
       const def: PluginDefinition = {
@@ -60,17 +108,25 @@ export class PluginRegistry {
         backendCode,
         schema,
         iconSvg,
-        pluginDir: dir,
       };
 
-      let versions = this.plugins.get(id);
-      if (!versions) {
-        versions = new Map();
-        this.plugins.set(id, versions);
+      let versionMap = this.plugins.get(id);
+      if (!versionMap) {
+        versionMap = new Map();
+        this.plugins.set(id, versionMap);
       }
-      versions.set(version, def);
+      versionMap.set(version, def);
     } catch (err) {
-      console.error(`Failed to load plugin ${id}@${version}:`, (err as Error).message);
+      logger.error(`Failed to load plugin ${id}@${version}: ${(err as Error).message}`);
+    }
+  }
+
+  private async readFile(id: string, version: string, filename: string): Promise<string | undefined> {
+    try {
+      const stream = await this.storage.get(buildKey(id, version, filename));
+      return await streamToString(stream);
+    } catch {
+      return undefined;
     }
   }
 
@@ -119,15 +175,12 @@ export class PluginRegistry {
       }
     }
 
-    const pluginDir = path.join(this.pluginsDir, manifest.id, manifest.version);
-    await fs.mkdir(pluginDir, { recursive: true });
-
-    // Write files
-    await fs.writeFile(path.join(pluginDir, "manifest.json"), JSON.stringify(manifest, null, 2));
-    await fs.writeFile(path.join(pluginDir, manifest.entry), backendCode);
-    await fs.writeFile(path.join(pluginDir, manifest.schema), JSON.stringify(schema, null, 2));
+    // Upload files to storage
+    await this.storage.put(buildKey(manifest.id, manifest.version, "manifest.json"), Buffer.from(JSON.stringify(manifest, null, 2)));
+    await this.storage.put(buildKey(manifest.id, manifest.version, manifest.entry), Buffer.from(backendCode));
+    await this.storage.put(buildKey(manifest.id, manifest.version, manifest.schema), Buffer.from(JSON.stringify(schema, null, 2)));
     if (iconSvg && manifest.icon) {
-      await fs.writeFile(path.join(pluginDir, manifest.icon), iconSvg);
+      await this.storage.put(buildKey(manifest.id, manifest.version, manifest.icon), Buffer.from(iconSvg));
     }
 
     const def: PluginDefinition = {
@@ -137,7 +190,6 @@ export class PluginRegistry {
       backendCode,
       schema,
       iconSvg,
-      pluginDir,
     };
 
     let versions = this.plugins.get(manifest.id);
@@ -167,8 +219,22 @@ export class PluginRegistry {
       this.plugins.delete(id);
     }
 
-    // Remove from filesystem
-    await fs.rm(def.pluginDir, { recursive: true, force: true });
+    // Remove from storage
+    const filesToDelete = [
+      buildKey(id, version, "manifest.json"),
+      buildKey(id, version, def.manifest.entry),
+      buildKey(id, version, def.manifest.schema),
+    ];
+    if (def.manifest.icon) {
+      filesToDelete.push(buildKey(id, version, def.manifest.icon));
+    }
+    for (const key of filesToDelete) {
+      try {
+        await this.storage.delete(key);
+      } catch {
+        // Ignore deletion errors
+      }
+    }
   }
 }
 

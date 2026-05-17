@@ -18,7 +18,6 @@ export interface PluginDefinition {
   backendCode: string;
   schema: Record<string, unknown>;
   iconSvg?: string;
-  pluginDir: string;
 }
 
 export interface PluginVersionInfo {
