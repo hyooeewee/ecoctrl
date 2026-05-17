@@ -314,6 +314,13 @@ def apply_env_overrides(compose: dict, env_name: str, env_vars: dict[str, str]) 
                 vols.append("pnpm-store:/root/.pnpm-store")
             svc["volumes"] = vols
 
+        # Ensure dotenv.config({ path: ".env.local" }) can find the file
+        # since tsx runs inside packages/server where .env.local does not exist.
+        server_vols = list(server.get("volumes", []))
+        if "../docker/.env.local:/app/packages/server/.env.local:ro" not in server_vols:
+            server_vols.append("../docker/.env.local:/app/packages/server/.env.local:ro")
+        server["volumes"] = server_vols
+
         compose["volumes"] = {"pnpm-store": {}}
         compose["name"] = "ecoctrl-dev"
 
