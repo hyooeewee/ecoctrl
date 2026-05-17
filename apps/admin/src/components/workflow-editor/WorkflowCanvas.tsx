@@ -31,6 +31,7 @@ import {
   X,
   Zap,
   ChevronRight,
+  ChevronDown,
   LayoutTemplate,
   Settings,
   MoreHorizontal,
@@ -219,6 +220,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [activeConfigTab, setActiveConfigTab] = useState("config");
   const [isDirty, setIsDirty] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -660,40 +662,63 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
           </div>
           <div className="flex-1 overflow-y-auto">
             <div className="space-y-1 px-2 pb-4">
-              {filteredCategories.map((category) => (
-                <div key={category.id}>
-                  <div className="px-2 py-1.5">
-                    <span className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
-                      {category.label}
-                    </span>
+              {filteredCategories.map((category) => {
+                const isCollapsed = collapsedCategories.has(category.id);
+                return (
+                  <div key={category.id}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCollapsedCategories((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(category.id)) {
+                            next.delete(category.id);
+                          } else {
+                            next.add(category.id);
+                          }
+                          return next;
+                        })
+                      }
+                      className="flex w-full items-center gap-1 px-2 py-1.5"
+                    >
+                      {isCollapsed ? (
+                        <ChevronRight size={12} className="text-muted-foreground" />
+                      ) : (
+                        <ChevronDown size={12} className="text-muted-foreground" />
+                      )}
+                      <span className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
+                        {category.label}
+                      </span>
+                    </button>
+                    {!isCollapsed &&
+                      category.items.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <div
+                            key={item.type}
+                            draggable
+                            onDragStart={(e) =>
+                              e.dataTransfer.setData("application/reactflow", item.type)
+                            }
+                            className="flex cursor-grab items-center gap-2.5 rounded-md px-2 py-2 transition-colors hover:bg-zinc-200 dark:hover:bg-zinc-800 active:cursor-grabbing"
+                          >
+                            <div
+                              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${item.colorClass}`}
+                            >
+                              <Icon size={14} />
+                            </div>
+                            <div className="flex min-w-0 flex-col">
+                              <span className="truncate text-xs font-medium">{item.label}</span>
+                              <span className="text-muted-foreground truncate text-[10px]">
+                                {item.description}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
                   </div>
-                  {category.items.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <div
-                        key={item.type}
-                        draggable
-                        onDragStart={(e) =>
-                          e.dataTransfer.setData("application/reactflow", item.type)
-                        }
-                        className="flex cursor-grab items-center gap-2.5 rounded-md px-2 py-2 transition-colors hover:bg-zinc-200 dark:hover:bg-zinc-800 active:cursor-grabbing"
-                      >
-                        <div
-                          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${item.colorClass}`}
-                        >
-                          <Icon size={14} />
-                        </div>
-                        <div className="flex min-w-0 flex-col">
-                          <span className="truncate text-xs font-medium">{item.label}</span>
-                          <span className="text-muted-foreground truncate text-[10px]">
-                            {item.description}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
+                );
+              })}
               {filteredCategories.length === 0 && (
                 <div className="text-muted-foreground px-2 py-4 text-center text-xs">
                   未找到匹配的节点
