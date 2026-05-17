@@ -21,6 +21,8 @@ interface InternalExecutionState {
   nodeLogs: NodeLogEntry[];
   completed: Set<string>;
   failed: Set<string>;
+  workflowId: string;
+  executionId: string;
 }
 
 let smtpTransport: Transporter | null = null;
@@ -567,6 +569,8 @@ async function executeSubGraph(
     nodeLogs: [],
     completed: new Set(),
     failed: new Set(),
+    workflowId: "subgraph",
+    executionId: "subgraph",
   };
 
   const dsl: WorkflowDSL = {
@@ -649,6 +653,8 @@ export async function executeWorkflow(
   envVars: Record<string, string>,
   registry: PluginRegistry | null = null,
   dryRun = false,
+  workflowId = "unknown",
+  executionId = "unknown",
 ): Promise<ExecutionResult> {
   const ctx: ExecutionContext = {
     triggerData,
@@ -662,6 +668,8 @@ export async function executeWorkflow(
     nodeLogs: [],
     completed: new Set(),
     failed: new Set(),
+    workflowId,
+    executionId,
   };
 
   const startNode = dsl.nodes.find((n) => n.type === "start");

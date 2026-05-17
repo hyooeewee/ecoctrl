@@ -8,6 +8,8 @@ interface InternalExecutionState {
   nodeLogs: NodeLogEntry[];
   completed: Set<string>;
   failed: Set<string>;
+  workflowId: string;
+  executionId: string;
 }
 
 export async function executePluginNode(
@@ -36,9 +38,7 @@ export async function executePluginNode(
     nodeName: node.name,
   };
 
-  // TODO: Get workflowId and executionId from caller context
-  // For now, use placeholders
-  const api = createPluginApi(ctx, "unknown", "unknown", node.id, node.name);
+  const api = createPluginApi(ctx, state.workflowId, state.executionId, node.id, node.name);
 
   if (dryRun) {
     return {

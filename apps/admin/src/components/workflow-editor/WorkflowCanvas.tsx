@@ -423,17 +423,27 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
       });
 
       const item = allComponents.find((c) => c.type === type);
+      const config: Record<string, unknown> = {};
+
+      // Pin plugin version at drop time to avoid non-deterministic execution
+      if (isPluginNodeType(type)) {
+        const def = getPluginNodeDef(type);
+        if (def) {
+          config.__version = def.version;
+        }
+      }
+
       const newNode: Node = {
         id: `${type}-${Date.now()}`,
         type,
         position,
-        data: { label: item?.label ?? type, type, config: {} },
+        data: { label: item?.label ?? type, type, config },
       };
 
       setIsDirty(true);
       setNodes((nds) => [...nds, newNode]);
     },
-    [rfInstance, setNodes],
+    [rfInstance, setNodes, allComponents, isPluginNodeType, getPluginNodeDef],
   );
 
   const handleDeleteNode = useCallback(
@@ -581,8 +591,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
       label: p.name,
       description: p.description || "",
       icon: Zap,
-      colorClass:
-        "bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400",
+      colorClass: "bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400",
     }));
     return [...builtins, ...plugins];
   }, [pluginNodes]);
@@ -599,8 +608,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
           label: p.name,
           description: p.description || "",
           icon: Zap,
-          colorClass:
-            "bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400",
+          colorClass: "bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400",
         })),
       });
     }
@@ -706,13 +714,15 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
   const filteredCategories = useMemo(() => {
     if (!searchQuery.trim()) return componentCategories;
     const q = searchQuery.toLowerCase();
-    return componentCategories.map((cat) => ({
-      ...cat,
-      items: cat.items.filter(
-        (item) =>
-          item.label.toLowerCase().includes(q) || item.description.toLowerCase().includes(q),
-      ),
-    })).filter((cat) => cat.items.length > 0);
+    return componentCategories
+      .map((cat) => ({
+        ...cat,
+        items: cat.items.filter(
+          (item) =>
+            item.label.toLowerCase().includes(q) || item.description.toLowerCase().includes(q),
+        ),
+      }))
+      .filter((cat) => cat.items.length > 0);
   }, [searchQuery, componentCategories]);
 
   if (loading) {
@@ -1473,8 +1483,8 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                         schema={getPluginNodeDef(selectedNodeType)?.schema ?? {}}
                         availableVersions={[]}
                         currentVersion={
-                          ((selectedNode.data.config as Record<string, unknown>)?.__version as string) ??
-                          "latest"
+                          ((selectedNode.data.config as Record<string, unknown>)
+                            ?.__version as string) ?? "latest"
                         }
                         onChange={(config) =>
                           updateNodeData(selectedNode.id, {

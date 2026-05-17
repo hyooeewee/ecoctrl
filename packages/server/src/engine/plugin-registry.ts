@@ -2,6 +2,7 @@ import type { StorageAdapter } from "@/storage/types";
 import { getLogger } from "@/lib/logger";
 import type { PluginDefinition, PluginManifest } from "./plugin-types";
 import { extractPluginFromZip, validatePluginPackage, computeContentHash } from "./plugin-loader";
+import AsyncLock from "async-lock";
 
 const logger = getLogger("plugin-registry");
 
@@ -36,6 +37,7 @@ function buildKey(id: string, version: string, filename: string): string {
 export class PluginRegistry {
   private plugins = new Map<string, Map<string, PluginDefinition>>(); // id -> version -> definition
   private storage: StorageAdapter;
+  private lock = new AsyncLock();
 
   constructor(storage: StorageAdapter) {
     this.storage = storage;
@@ -121,7 +123,11 @@ export class PluginRegistry {
     }
   }
 
-  private async readFile(id: string, version: string, filename: string): Promise<string | undefined> {
+  private async readFile(
+    id: string,
+    version: string,
+    filename: string,
+  ): Promise<string | undefined> {
     try {
       const stream = await this.storage.get(buildKey(id, version, filename));
       return await streamToString(stream);
@@ -161,45 +167,67 @@ export class PluginRegistry {
   }
 
   async install(zipBuffer: Buffer): Promise<PluginDefinition> {
-    const { files, comment } = await extractPluginFromZip(zipBuffer);
+    return this.lock.acquire("registry", async () => {
+      const { files, comment } = await extractPluginFromZip(zipBuffer);
 
-    // Validate structure
-    const { manifest, backendCode, schema, iconSvg } = await validatePluginPackage(files);
+      // Validate structure
+      const { manifest, backendCode, schema, iconSvg } = await validatePluginPackage(files);
 
-    // Check content hash from zip comment (optional)
-    if (comment) {
-      const expectedHash = comment.trim();
-      const actualHash = computeContentHash(files);
-      if (expectedHash !== actualHash) {
-        throw new Error(`Package integrity check failed: hash mismatch`);
+      // Idempotency: reject if already installed
+      const existing = this.plugins.get(manifest.id)?.get(manifest.version);
+      if (existing) {
+        throw new Error(
+          `Plugin ${manifest.id}@${manifest.version} already exists. Uninstall first.`,
+        );
       }
-    }
 
-    // Upload files to storage
-    await this.storage.put(buildKey(manifest.id, manifest.version, "manifest.json"), Buffer.from(JSON.stringify(manifest, null, 2)));
-    await this.storage.put(buildKey(manifest.id, manifest.version, manifest.entry), Buffer.from(backendCode));
-    await this.storage.put(buildKey(manifest.id, manifest.version, manifest.schema), Buffer.from(JSON.stringify(schema, null, 2)));
-    if (iconSvg && manifest.icon) {
-      await this.storage.put(buildKey(manifest.id, manifest.version, manifest.icon), Buffer.from(iconSvg));
-    }
+      // Check content hash from zip comment (optional)
+      if (comment) {
+        const expectedHash = comment.trim();
+        const actualHash = computeContentHash(files);
+        if (expectedHash !== actualHash) {
+          throw new Error(`Package integrity check failed: hash mismatch`);
+        }
+      }
 
-    const def: PluginDefinition = {
-      id: manifest.id,
-      version: manifest.version,
-      manifest,
-      backendCode,
-      schema,
-      iconSvg,
-    };
+      // Upload files to storage
+      await this.storage.put(
+        buildKey(manifest.id, manifest.version, "manifest.json"),
+        Buffer.from(JSON.stringify(manifest, null, 2)),
+      );
+      await this.storage.put(
+        buildKey(manifest.id, manifest.version, manifest.entry),
+        Buffer.from(backendCode),
+      );
+      await this.storage.put(
+        buildKey(manifest.id, manifest.version, manifest.schema),
+        Buffer.from(JSON.stringify(schema, null, 2)),
+      );
+      if (iconSvg && manifest.icon) {
+        await this.storage.put(
+          buildKey(manifest.id, manifest.version, manifest.icon),
+          Buffer.from(iconSvg),
+        );
+      }
 
-    let versions = this.plugins.get(manifest.id);
-    if (!versions) {
-      versions = new Map();
-      this.plugins.set(manifest.id, versions);
-    }
-    versions.set(manifest.version, def);
+      const def: PluginDefinition = {
+        id: manifest.id,
+        version: manifest.version,
+        manifest,
+        backendCode,
+        schema,
+        iconSvg,
+      };
 
-    return def;
+      let versions = this.plugins.get(manifest.id);
+      if (!versions) {
+        versions = new Map();
+        this.plugins.set(manifest.id, versions);
+      }
+      versions.set(manifest.version, def);
+
+      return def;
+    });
   }
 
   async exportPlugin(id: string, version: string): Promise<Buffer> {
@@ -241,38 +269,38 @@ export class PluginRegistry {
   }
 
   async uninstall(id: string, version: string): Promise<void> {
-    const versions = this.plugins.get(id);
-    if (!versions) {
-      throw new Error(`Plugin ${id} not found`);
-    }
-    const def = versions.get(version);
-    if (!def) {
-      throw new Error(`Version ${version} of plugin ${id} not found`);
-    }
-
-    // TODO: Check refCount before uninstalling (will be implemented in route layer)
-
-    versions.delete(version);
-    if (versions.size === 0) {
-      this.plugins.delete(id);
-    }
-
-    // Remove from storage
-    const filesToDelete = [
-      buildKey(id, version, "manifest.json"),
-      buildKey(id, version, def.manifest.entry),
-      buildKey(id, version, def.manifest.schema),
-    ];
-    if (def.manifest.icon) {
-      filesToDelete.push(buildKey(id, version, def.manifest.icon));
-    }
-    for (const key of filesToDelete) {
-      try {
-        await this.storage.delete(key);
-      } catch {
-        // Ignore deletion errors
+    return this.lock.acquire("registry", async () => {
+      const versions = this.plugins.get(id);
+      if (!versions) {
+        throw new Error(`Plugin ${id} not found`);
       }
-    }
+      const def = versions.get(version);
+      if (!def) {
+        throw new Error(`Version ${version} of plugin ${id} not found`);
+      }
+
+      versions.delete(version);
+      if (versions.size === 0) {
+        this.plugins.delete(id);
+      }
+
+      // Remove from storage
+      const filesToDelete = [
+        buildKey(id, version, "manifest.json"),
+        buildKey(id, version, def.manifest.entry),
+        buildKey(id, version, def.manifest.schema),
+      ];
+      if (def.manifest.icon) {
+        filesToDelete.push(buildKey(id, version, def.manifest.icon));
+      }
+      for (const key of filesToDelete) {
+        try {
+          await this.storage.delete(key);
+        } catch {
+          // Ignore deletion errors
+        }
+      }
+    });
   }
 }
 
