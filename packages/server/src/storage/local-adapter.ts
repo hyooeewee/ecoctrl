@@ -23,7 +23,7 @@ export class LocalAdapter implements StorageAdapter {
     return path.join(this.baseDir, safeKey);
   }
 
-  async put(key: string, data: Buffer | ReadableStream, options?: PutOptions): Promise<void> {
+  async put(key: string, data: Buffer | ReadableStream, _options?: PutOptions): Promise<void> {
     const filePath = this.resolve(key);
     await mkdir(path.dirname(filePath), { recursive: true });
 

@@ -1,21 +1,6 @@
 import { z } from "zod";
 
-export const PointItemSchema = z.object({
-  id: z.string().default(""),
-  name: z.string(),
-  pointType: z.string(),
-  pointNo: z.string(),
-  props: z.array(
-    z.object({
-      key: z.string(),
-      name: z.string(),
-      unit: z.string().optional(),
-    }),
-  ),
-});
-export type PointItem = z.infer<typeof PointItemSchema>;
-
-export const Model3DSchema = z.object({
+export const DataModelSchema = z.object({
   id: z.string(),
   name: z.string(),
   version: z.string(),
@@ -25,6 +10,5 @@ export const Model3DSchema = z.object({
   fileUrl: z.string().nullable(),
   thumbnailUrl: z.string().nullable(),
   docUrl: z.string().nullable(),
-  points: z.array(PointItemSchema).default([]),
 });
-export type Model3D = z.infer<typeof Model3DSchema>;
+export type DataModel = z.infer<typeof DataModelSchema>;

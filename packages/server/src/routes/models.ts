@@ -1,17 +1,20 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import JSZip from "jszip";
-import { Model3DSchema, PointItemSchema } from "@ecoctrl/shared";
-import type { PointItem } from "@ecoctrl/shared";
+import { DataModelSchema } from "@ecoctrl/shared";
 import { getModelStorage } from "@/storage";
 import {
   findManyModels,
   findModelById,
+  findModelByName,
   createModel,
   updateModel,
   deleteModel,
 } from "@/repositories/models";
+import { findObjectById, createObject } from "@/repositories/objects";
+import { createManyPoints, deletePointsByObjectId } from "@/repositories/points";
 import { errors } from "@/lib/schemas";
+import { parseJsonPoints, parseCsvPoints, parseXlsxPoints } from "@/lib/parsers";
 
 const storage = getModelStorage();
 
@@ -42,7 +45,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
       schema: {
         tags: ["Models"],
         summary: "Get 3D models",
-        response: { 200: z.array(Model3DSchema) },
+        response: { 200: z.array(DataModelSchema) },
       },
     },
     async (_request, reply) => {
@@ -64,7 +67,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         tags: ["Models"],
         summary: "Upload a 3D model",
         response: {
-          201: Model3DSchema,
+          201: DataModelSchema,
           ...errors,
         },
       },
@@ -76,7 +79,6 @@ export default async function modelRoutes(fastify: FastifyInstance) {
       let name = "";
       let version = "";
       let deviceType = "";
-      let pointsRaw = "";
 
       for await (const part of parts) {
         if (part.type === "file") {
@@ -86,7 +88,6 @@ export default async function modelRoutes(fastify: FastifyInstance) {
           if (part.fieldname === "name") name = part.value as string;
           if (part.fieldname === "version") version = part.value as string;
           if (part.fieldname === "deviceType") deviceType = part.value as string;
-          if (part.fieldname === "points") pointsRaw = part.value as string;
         }
       }
 
@@ -96,7 +97,6 @@ export default async function modelRoutes(fastify: FastifyInstance) {
 
       const finalName = name || filename.replace(/\.[^/.]+$/, "");
       const finalVersion = version || "v1.0";
-      const points = pointsRaw ? JSON.parse(pointsRaw) : [];
 
       const ext = filename.slice(filename.lastIndexOf(".")).toLowerCase();
       const modelId = crypto.randomUUID();
@@ -147,7 +147,6 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         fileUrl,
         thumbnailUrl: null,
         docUrl: null,
-        points,
       });
       const response = {
         ...created,
@@ -168,22 +167,20 @@ export default async function modelRoutes(fastify: FastifyInstance) {
           name: z.string(),
           version: z.string(),
           deviceType: z.string(),
-          points: z.array(PointItemSchema).default([]),
           fileUrl: z.string().nullable().optional(),
         }),
         response: {
-          200: Model3DSchema,
+          200: DataModelSchema,
           ...errors,
         },
       },
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const { name, version, deviceType, points, fileUrl } = request.body as {
+      const { name, version, deviceType, fileUrl } = request.body as {
         name: string;
         version: string;
         deviceType: string;
-        points?: PointItem[];
         fileUrl?: string | null;
       };
 
@@ -200,7 +197,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         }
       }
 
-      const updated = await updateModel(id, { name, version, deviceType, points, fileUrl });
+      const updated = await updateModel(id, { name, version, deviceType, fileUrl });
       if (!updated) {
         return reply.status(404).send({ error: "Model not found" });
       }
@@ -220,7 +217,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         summary: "Replace model file",
         params: z.object({ id: z.string().describe("Model ID") }),
         response: {
-          200: Model3DSchema,
+          200: DataModelSchema,
           ...errors,
         },
       },
@@ -331,6 +328,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         return reply.status(404).send({ error: "Model not found" });
       }
 
+      // Cascade delete is handled by DB FK constraints (objects + points)
       const keys = await storage.list(`models/${id}/`);
       for (const key of keys) {
         await storage.delete(key);
@@ -363,6 +361,153 @@ export default async function modelRoutes(fastify: FastifyInstance) {
 
       const url = await storage.getUrl(model.fileUrl);
       return reply.redirect(url);
+    },
+  );
+
+  fastify.post(
+    "/import-points",
+    {
+      schema: {
+        tags: ["Models"],
+        summary: "Import points from file (json/csv/xlsx)",
+        consumes: ["multipart/form-data"],
+        response: {
+          200: z.object({
+            createdModels: z.number(),
+            updatedModels: z.number(),
+            createdObjects: z.number(),
+            updatedObjects: z.number(),
+            createdPoints: z.number(),
+            updatedPoints: z.number(),
+            devices: z.array(z.string()),
+          }),
+          ...errors,
+        },
+      },
+    },
+    async (request, reply) => {
+      const parts = request.parts();
+      let fileBuffer: Buffer | undefined;
+      let filename = "";
+
+      for await (const part of parts) {
+        if (part.type === "file") {
+          fileBuffer = await collectStream(part.file);
+          filename = part.filename;
+        }
+      }
+
+      if (!fileBuffer) {
+        return reply.status(400).send({ error: "No file uploaded" });
+      }
+
+      const ext = filename.slice(filename.lastIndexOf(".")).toLowerCase();
+      let parseResult: {
+        deviceType: string;
+        devices: {
+          deviceName: string;
+          points: {
+            name: string;
+            pointType: string;
+            pointNo: string;
+            props: { key: string; name: string; unit?: string }[];
+          }[];
+        }[];
+      };
+
+      try {
+        if (ext === ".xlsx") {
+          parseResult = parseXlsxPoints(fileBuffer);
+        } else if (ext === ".csv") {
+          parseResult = parseCsvPoints(fileBuffer);
+        } else if (ext === ".json") {
+          parseResult = parseJsonPoints(fileBuffer);
+        } else {
+          return reply
+            .status(400)
+            .send({ error: "Unsupported file format. Use .json, .csv, or .xlsx" });
+        }
+      } catch (err) {
+        return reply
+          .status(400)
+          .send({ error: err instanceof Error ? err.message : "Failed to parse file" });
+      }
+
+      const { deviceType, devices } = parseResult;
+
+      // Find or create model by deviceType
+      let model = await findModelByName(deviceType);
+      let createdModels = 0;
+      let updatedModels = 0;
+
+      if (!model) {
+        model = await createModel({
+          name: deviceType,
+          version: "v1.0",
+          format: "DATA",
+          size: "-",
+          deviceType: deviceType.toUpperCase(),
+          fileUrl: null,
+          thumbnailUrl: null,
+          docUrl: null,
+        });
+        createdModels = 1;
+      } else {
+        updatedModels = 1;
+      }
+
+      let createdObjects = 0;
+      let updatedObjects = 0;
+      let createdPoints = 0;
+      let updatedPoints = 0;
+      const deviceNames: string[] = [];
+
+      for (const device of devices) {
+        const deviceName = device.deviceName;
+        deviceNames.push(deviceName);
+
+        // Find or create object by deviceName
+        let object = await findObjectById(deviceName);
+        if (!object) {
+          object = await createObject({
+            id: deviceName,
+            name: deviceName,
+            modelId: model.id,
+            modelName: model.name,
+          });
+          createdObjects++;
+        } else if (object.modelId === model.id) {
+          // Clear existing points for this object and recreate
+          await deletePointsByObjectId(object.uuid);
+          updatedObjects++;
+        }
+
+        // Create points for this object
+        const pointData = device.points.map((p) => ({
+          objectId: object!.uuid,
+          modelId: model!.id,
+          pointType: p.pointType,
+          pointNo: p.pointNo,
+          name: p.name,
+          props: p.props,
+          values: {} as Record<string, string>,
+        }));
+
+        if (pointData.length > 0) {
+          await createManyPoints(pointData);
+          createdPoints += pointData.length;
+        }
+      }
+
+      return reply.send({
+        createdModels,
+        updatedModels,
+        createdObjects,
+        updatedObjects,
+        createdPoints,
+        updatedPoints,
+        devices: deviceNames,
+      });
     },
   );
 }

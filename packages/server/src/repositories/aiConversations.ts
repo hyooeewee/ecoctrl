@@ -1,7 +1,6 @@
 import { eq, desc } from "drizzle-orm";
 import { db } from "@/config/database";
 import { aiConversations } from "@/schemas/aiConversations";
-import type { ChatMessage } from "@/ai/types";
 
 interface CreateMessageInput {
   userId: number;
