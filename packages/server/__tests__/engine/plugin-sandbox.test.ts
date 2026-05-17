@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { executeInSandbox } from "./plugin-sandbox";
-import type { PluginApi } from "./plugin-types";
+import { executeInSandbox } from "@/engine/plugin-sandbox";
+import type { PluginApi } from "@/engine/plugin-types";
 
 function createMockApi(): PluginApi {
   const store = new Map<string, unknown>();

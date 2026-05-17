@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import fs from "fs/promises";
 import path from "path";
 import os from "os";
-import { PluginRegistry } from "./plugin-registry";
+import { PluginRegistry } from "@/engine/plugin-registry";
 import { LocalAdapter } from "@/storage/local-adapter";
 import type { StorageAdapter } from "@/storage/types";
 

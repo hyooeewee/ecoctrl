@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validatePluginPackage, extractPluginFromZip, computeContentHash } from "./plugin-loader";
+import { validatePluginPackage, extractPluginFromZip, computeContentHash } from "@/engine/plugin-loader";
 
 describe("computeContentHash", () => {
   it("computes sha256 of sorted file contents", () => {
