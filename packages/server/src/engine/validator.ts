@@ -14,7 +14,7 @@ const CONTROL_NODES: NodeType[] = [
   "parallel",
   "delay",
 ];
-const ACTION_NODES: NodeType[] = ["http_request", "database", "email", "variable"];
+const ACTION_NODES: NodeType[] = ["http_request", "database", "email", "variable", "point"];
 const VALID_NODE_TYPES = new Set([...CONTROL_NODES, ...ACTION_NODES]);
 
 function hasEdgeTo(nodeId: string, edges: WorkflowEdge[]): boolean {

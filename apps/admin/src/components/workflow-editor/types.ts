@@ -16,7 +16,8 @@ export type NodeType =
   | "http_request"
   | "database"
   | "email"
-  | "variable";
+  | "variable"
+  | "point";
 
 export interface WorkflowNode {
   id: string;
