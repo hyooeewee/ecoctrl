@@ -1,4 +1,3 @@
-import path from "path";
 import { PgBoss, type Job } from "pg-boss";
 import { eq } from "drizzle-orm";
 import { db } from "@/config/database";
@@ -6,6 +5,7 @@ import { workflowExecutions } from "@/schemas/workflows";
 import { findWorkflowById } from "@/repositories/workflows";
 import { executeWorkflow } from "@/engine/executor";
 import { PluginRegistry } from "@/engine/plugin-registry";
+import { getPluginStorage } from "@/storage";
 import { getLogger } from "@/lib/logger";
 import { env } from "@/lib/env";
 import type { ExecutionJobData } from "./pgboss";
@@ -14,9 +14,9 @@ const logger = getLogger("queue");
 
 const JOB_NAME = "workflow.execute";
 
-// Plugin registry for worker process
-const pluginsDir = path.join(process.cwd(), "plugins");
-const pluginRegistry = new PluginRegistry(pluginsDir);
+// Plugin registry for worker process (uses same storage as API server)
+const pluginStorage = getPluginStorage();
+const pluginRegistry = new PluginRegistry(pluginStorage);
 
 function getEnvVars(): Record<string, string> {
   const vars: Record<string, string> = {};

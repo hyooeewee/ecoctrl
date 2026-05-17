@@ -3,14 +3,18 @@ import fs from "fs/promises";
 import path from "path";
 import os from "os";
 import { PluginRegistry } from "./plugin-registry";
+import { LocalAdapter } from "@/storage/local-adapter";
+import type { StorageAdapter } from "@/storage/types";
 
 describe("PluginRegistry", () => {
   let tmpDir: string;
+  let storage: StorageAdapter;
   let registry: PluginRegistry;
 
   beforeEach(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "plugin-test-"));
-    registry = new PluginRegistry(tmpDir);
+    storage = new LocalAdapter({ baseDir: tmpDir });
+    registry = new PluginRegistry(storage);
   });
 
   afterEach(async () => {
@@ -52,10 +56,10 @@ describe("PluginRegistry", () => {
     expect(plugin.version).toBe("1.0.0");
     expect(plugin.manifest.name).toBe("Test Action");
 
-    // Verify filesystem
-    const manifestPath = path.join(tmpDir, "test-action", "1.0.0", "manifest.json");
-    const manifestRaw = await fs.readFile(manifestPath, "utf-8");
-    expect(JSON.parse(manifestRaw).id).toBe("test-action");
+    // Verify storage
+    const manifestKey = "plugins/test-action/1.0.0/manifest.json";
+    const exists = await storage.exists(manifestKey);
+    expect(exists).toBe(true);
   });
 
   it("gets the latest version when no version specified", async () => {
@@ -140,33 +144,39 @@ describe("PluginRegistry", () => {
     await registry.uninstall("to-uninstall", "1.0.0");
     expect(registry.get("to-uninstall")).toBeNull();
 
-    // Verify filesystem cleanup
-    const pluginDir = path.join(tmpDir, "to-uninstall", "1.0.0");
-    await expect(fs.access(pluginDir)).rejects.toThrow();
+    // Verify storage cleanup
+    const manifestKey = "plugins/to-uninstall/1.0.0/manifest.json";
+    const exists = await storage.exists(manifestKey);
+    expect(exists).toBe(false);
   });
 
-  it("loads plugins from disk on loadAll", async () => {
-    // Manually create plugin directory structure
-    const pluginDir = path.join(tmpDir, "disk-plugin", "1.0.0");
-    await fs.mkdir(pluginDir, { recursive: true });
-    await fs.writeFile(
-      path.join(pluginDir, "manifest.json"),
-      JSON.stringify({
-        id: "disk-plugin",
-        name: "Disk Plugin",
-        version: "1.0.0",
-        category: "action",
-        entry: "backend.js",
-        schema: "schema.json",
-      }),
+  it("loads plugins from storage on loadAll", async () => {
+    // Manually create plugin files in storage
+    const pluginId = "disk-plugin";
+    const version = "1.0.0";
+    await storage.put(
+      `plugins/${pluginId}/${version}/manifest.json`,
+      Buffer.from(
+        JSON.stringify({
+          id: pluginId,
+          name: "Disk Plugin",
+          version,
+          category: "action",
+          entry: "backend.js",
+          schema: "schema.json",
+        }),
+      ),
     );
-    await fs.writeFile(path.join(pluginDir, "backend.js"), "module.exports = async () => {}");
-    await fs.writeFile(
-      path.join(pluginDir, "schema.json"),
-      JSON.stringify({ type: "object", properties: { x: { type: "string" } } }),
+    await storage.put(
+      `plugins/${pluginId}/${version}/backend.js`,
+      Buffer.from("module.exports = async () => {}"),
+    );
+    await storage.put(
+      `plugins/${pluginId}/${version}/schema.json`,
+      Buffer.from(JSON.stringify({ type: "object", properties: { x: { type: "string" } } })),
     );
 
-    const freshRegistry = new PluginRegistry(tmpDir);
+    const freshRegistry = new PluginRegistry(storage);
     await freshRegistry.loadAll();
 
     const plugin = freshRegistry.get("disk-plugin");

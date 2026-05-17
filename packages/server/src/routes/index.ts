@@ -29,11 +29,12 @@ import workflowRoutes, { registerWebhookRoute } from "@/routes/workflows";
 import aiRoutes from "@/routes/ai";
 import nodeRoutes from "@/routes/nodes";
 import { PluginRegistry } from "@/engine/plugin-registry";
+import { getPluginStorage } from "@/storage";
 
 export default async function apiRoutes(fastify: FastifyInstance) {
-  // Initialize plugin registry
-  const pluginsDir = path.join(process.cwd(), "plugins");
-  const registry = new PluginRegistry(pluginsDir);
+  // Initialize plugin registry with storage adapter (minio or local)
+  const pluginStorage = getPluginStorage();
+  const registry = new PluginRegistry(pluginStorage);
   await registry.loadAll();
 
   // Decorate fastify instance so routes can access registry
