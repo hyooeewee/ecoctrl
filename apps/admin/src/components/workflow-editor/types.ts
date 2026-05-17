@@ -86,3 +86,14 @@ export interface WorkflowExecution {
   durationMs: number | null;
   createdAt: string;
 }
+
+export type DynamicNodeType = string;
+
+export interface PluginNodeDefinition {
+  id: string;
+  name: string;
+  category: "trigger" | "action" | "condition";
+  icon?: string;
+  schema: Record<string, unknown>;
+  version: string;
+}
