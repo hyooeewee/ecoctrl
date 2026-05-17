@@ -32,6 +32,7 @@ import {
   Zap,
   ChevronRight,
   ChevronDown,
+  ChevronLeft,
   LayoutTemplate,
   Settings,
   MoreHorizontal,
@@ -220,6 +221,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [libraryOpen, setLibraryOpen] = useState(true);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [activeConfigTab, setActiveConfigTab] = useState("config");
   const [isDirty, setIsDirty] = useState(false);
@@ -634,98 +636,112 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar - Nodes */}
-        <div className="flex w-[260px] flex-col border-r bg-zinc-50 dark:bg-zinc-950">
-          <div className="border-b px-4 py-3">
-            <h3 className="text-sm font-semibold">节点库</h3>
-          </div>
-          <div className="px-3 py-2">
-            <div className="relative">
-              <Search
-                size={14}
-                className="text-muted-foreground absolute top-1/2 left-2.5 -translate-y-1/2"
-              />
-              <Input
-                placeholder="搜索节点..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-8 pl-8 text-sm"
-              />
-              {searchQuery && (
-                <button
-                  className="text-muted-foreground absolute top-1/2 right-2 -translate-y-1/2 hover:text-foreground"
-                  onClick={() => setSearchQuery("")}
-                >
-                  <X size={12} />
-                </button>
-              )}
+        <div className="relative flex">
+          <div
+            className={`flex flex-col overflow-hidden border-r bg-zinc-50 transition-all duration-200 dark:bg-zinc-950 ${libraryOpen ? "w-[260px]" : "w-0 border-r-0"}`}
+          >
+            <div className="border-b px-4 py-3">
+              <h3 className="text-sm font-semibold">节点库</h3>
             </div>
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            <div className="space-y-1 px-2 pb-4">
-              {filteredCategories.map((category) => {
-                const isCollapsed = collapsedCategories.has(category.id);
-                return (
-                  <div key={category.id}>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setCollapsedCategories((prev) => {
-                          const next = new Set(prev);
-                          if (next.has(category.id)) {
-                            next.delete(category.id);
-                          } else {
-                            next.add(category.id);
-                          }
-                          return next;
-                        })
-                      }
-                      className="flex w-full items-center gap-1 px-2 py-1.5"
-                    >
-                      {isCollapsed ? (
-                        <ChevronRight size={12} className="text-muted-foreground" />
-                      ) : (
-                        <ChevronDown size={12} className="text-muted-foreground" />
-                      )}
-                      <span className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
-                        {category.label}
-                      </span>
-                    </button>
-                    {!isCollapsed &&
-                      category.items.map((item) => {
-                        const Icon = item.icon;
-                        return (
-                          <div
-                            key={item.type}
-                            draggable
-                            onDragStart={(e) =>
-                              e.dataTransfer.setData("application/reactflow", item.type)
+            <div className="px-3 py-2">
+              <div className="relative">
+                <Search
+                  size={14}
+                  className="text-muted-foreground absolute top-1/2 left-2.5 -translate-y-1/2"
+                />
+                <Input
+                  placeholder="搜索节点..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-8 pl-8 text-sm"
+                />
+                {searchQuery && (
+                  <button
+                    className="text-muted-foreground absolute top-1/2 right-2 -translate-y-1/2 hover:text-foreground"
+                    onClick={() => setSearchQuery("")}
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <div className="space-y-1 px-2 pb-4">
+                {filteredCategories.map((category) => {
+                  const isCollapsed = collapsedCategories.has(category.id);
+                  return (
+                    <div key={category.id}>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCollapsedCategories((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(category.id)) {
+                              next.delete(category.id);
+                            } else {
+                              next.add(category.id);
                             }
-                            className="flex cursor-grab items-center gap-2.5 rounded-md px-2 py-2 transition-colors hover:bg-zinc-200 dark:hover:bg-zinc-800 active:cursor-grabbing"
-                          >
+                            return next;
+                          })
+                        }
+                        className="flex w-full items-center gap-1 px-2 py-1.5"
+                      >
+                        {isCollapsed ? (
+                          <ChevronRight size={12} className="text-muted-foreground" />
+                        ) : (
+                          <ChevronDown size={12} className="text-muted-foreground" />
+                        )}
+                        <span className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
+                          {category.label}
+                        </span>
+                      </button>
+                      {!isCollapsed &&
+                        category.items.map((item) => {
+                          const Icon = item.icon;
+                          return (
                             <div
-                              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${item.colorClass}`}
+                              key={item.type}
+                              draggable
+                              onDragStart={(e) =>
+                                e.dataTransfer.setData("application/reactflow", item.type)
+                              }
+                              className="flex cursor-grab items-center gap-2.5 rounded-md px-2 py-2 transition-colors hover:bg-zinc-200 dark:hover:bg-zinc-800 active:cursor-grabbing"
                             >
-                              <Icon size={14} />
+                              <div
+                                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${item.colorClass}`}
+                              >
+                                <Icon size={14} />
+                              </div>
+                              <div className="flex min-w-0 flex-col">
+                                <span className="truncate text-xs font-medium">{item.label}</span>
+                                <span className="text-muted-foreground truncate text-[10px]">
+                                  {item.description}
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex min-w-0 flex-col">
-                              <span className="truncate text-xs font-medium">{item.label}</span>
-                              <span className="text-muted-foreground truncate text-[10px]">
-                                {item.description}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                    </div>
+                  );
+                })}
+                {filteredCategories.length === 0 && (
+                  <div className="text-muted-foreground px-2 py-4 text-center text-xs">
+                    未找到匹配的节点
                   </div>
-                );
-              })}
-              {filteredCategories.length === 0 && (
-                <div className="text-muted-foreground px-2 py-4 text-center text-xs">
-                  未找到匹配的节点
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
+
+          {/* Collapse toggle */}
+          <button
+            type="button"
+            onClick={() => setLibraryOpen((v) => !v)}
+            className={`absolute top-1/2 z-10 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full border bg-white shadow-sm transition-all duration-200 hover:bg-zinc-100 dark:bg-zinc-800 dark:border-zinc-700 ${libraryOpen ? "left-[252px]" : "left-0"}`}
+            title={libraryOpen ? "收起节点库" : "展开节点库"}
+          >
+            {libraryOpen ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
+          </button>
         </div>
 
         {/* Canvas */}
