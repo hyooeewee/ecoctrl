@@ -51,7 +51,9 @@ export type NodeType =
   | "email"
   | "variable"
   | "point_read"
-  | "point_write";
+  | "point_write"
+  // Plugin nodes (any string)
+  | string;
 
 export interface ErrorHandler {
   action: "retry" | "skip" | "abort" | "goto";
@@ -62,7 +64,7 @@ export interface ErrorHandler {
 
 export interface WorkflowNode {
   id: string;
-  type: NodeType;
+  type: NodeType | string;
   name: string;
   config: Record<string, unknown>;
   onError?: ErrorHandler;
@@ -95,7 +97,7 @@ export interface ExecutionContext {
 export interface NodeLogEntry {
   nodeId: string;
   nodeName: string;
-  nodeType: NodeType;
+  nodeType: string;
   status: "running" | "completed" | "failed" | "skipped";
   startedAt: string;
   completedAt?: string;

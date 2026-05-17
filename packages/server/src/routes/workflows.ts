@@ -282,7 +282,14 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
         if (value) envVars[key] = value;
       }
 
-      const result = await executeWorkflow(dsl, { ...body.data, source: "test" }, envVars, true);
+      const result = await executeWorkflow(
+        dsl,
+        { ...body.data, source: "test" },
+        envVars,
+        null,
+        true,
+        id,
+      );
 
       return reply.send(result);
     },

@@ -1,0 +1,214 @@
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import fs from "fs/promises";
+import path from "path";
+import os from "os";
+import { PluginRegistry } from "./plugin-registry";
+import { LocalAdapter } from "@/storage/local-adapter";
+import type { StorageAdapter } from "@/storage/types";
+
+describe("PluginRegistry", () => {
+  let tmpDir: string;
+  let storage: StorageAdapter;
+  let registry: PluginRegistry;
+
+  beforeEach(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "plugin-test-"));
+    storage = new LocalAdapter({ baseDir: tmpDir });
+    registry = new PluginRegistry(storage);
+  });
+
+  afterEach(async () => {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
+
+  it("returns null for unknown plugin", () => {
+    expect(registry.get("unknown", "1.0.0")).toBeNull();
+  });
+
+  it("tracks installed versions", () => {
+    expect(registry.getVersions("timer-trigger")).toEqual([]);
+  });
+
+  it("installs a plugin from zip buffer", async () => {
+    const AdmZip = (await import("adm-zip")).default;
+    const zip = new AdmZip();
+    zip.addFile(
+      "manifest.json",
+      Buffer.from(
+        JSON.stringify({
+          id: "ecoctrl-test-action",
+          name: "Test Action",
+          version: "1.0.0",
+          category: "action",
+          entry: "backend.js",
+          schema: "schema.json",
+        }),
+      ),
+    );
+    zip.addFile("backend.js", Buffer.from("module.exports = async () => {}"));
+    zip.addFile(
+      "schema.json",
+      Buffer.from(JSON.stringify({ type: "object", properties: { x: { type: "string" } } })),
+    );
+
+    const plugin = await registry.install(zip.toBuffer());
+    expect(plugin.id).toBe("ecoctrl-test-action");
+    expect(plugin.version).toBe("1.0.0");
+    expect(plugin.manifest.name).toBe("Test Action");
+
+    // Verify storage
+    const manifestKey = "plugins/ecoctrl-test-action/1.0.0/manifest.json";
+    const exists = await storage.exists(manifestKey);
+    expect(exists).toBe(true);
+  });
+
+  it("gets the latest version when no version specified", async () => {
+    const AdmZip = (await import("adm-zip")).default;
+
+    // Install v1.0.0
+    const zip1 = new AdmZip();
+    zip1.addFile(
+      "manifest.json",
+      Buffer.from(
+        JSON.stringify({
+          id: "ecoctrl-multi-version",
+          name: "Multi Version",
+          version: "1.0.0",
+          category: "action",
+          entry: "backend.js",
+          schema: "schema.json",
+        }),
+      ),
+    );
+    zip1.addFile("backend.js", Buffer.from("module.exports = async () => {}"));
+    zip1.addFile(
+      "schema.json",
+      Buffer.from(JSON.stringify({ type: "object", properties: { x: { type: "string" } } })),
+    );
+    await registry.install(zip1.toBuffer());
+
+    // Install v2.0.0
+    const zip2 = new AdmZip();
+    zip2.addFile(
+      "manifest.json",
+      Buffer.from(
+        JSON.stringify({
+          id: "ecoctrl-multi-version",
+          name: "Multi Version",
+          version: "2.0.0",
+          category: "action",
+          entry: "backend.js",
+          schema: "schema.json",
+        }),
+      ),
+    );
+    zip2.addFile("backend.js", Buffer.from("module.exports = async () => {}"));
+    zip2.addFile(
+      "schema.json",
+      Buffer.from(JSON.stringify({ type: "object", properties: { x: { type: "string" } } })),
+    );
+    await registry.install(zip2.toBuffer());
+
+    const latest = registry.get("ecoctrl-multi-version");
+    expect(latest?.version).toBe("2.0.0");
+
+    const specific = registry.get("ecoctrl-multi-version", "1.0.0");
+    expect(specific?.version).toBe("1.0.0");
+  });
+
+  it("uninstalls a plugin version", async () => {
+    const AdmZip = (await import("adm-zip")).default;
+    const zip = new AdmZip();
+    zip.addFile(
+      "manifest.json",
+      Buffer.from(
+        JSON.stringify({
+          id: "ecoctrl-to-uninstall",
+          name: "To Uninstall",
+          version: "1.0.0",
+          category: "action",
+          entry: "backend.js",
+          schema: "schema.json",
+        }),
+      ),
+    );
+    zip.addFile("backend.js", Buffer.from("module.exports = async () => {}"));
+    zip.addFile(
+      "schema.json",
+      Buffer.from(JSON.stringify({ type: "object", properties: { x: { type: "string" } } })),
+    );
+    await registry.install(zip.toBuffer());
+
+    expect(registry.get("ecoctrl-to-uninstall")).not.toBeNull();
+
+    await registry.uninstall("ecoctrl-to-uninstall", "1.0.0");
+    expect(registry.get("ecoctrl-to-uninstall")).toBeNull();
+
+    // Verify storage cleanup
+    const manifestKey = "plugins/to-uninstall/1.0.0/manifest.json";
+    const exists = await storage.exists(manifestKey);
+    expect(exists).toBe(false);
+  });
+
+  it("loads plugins from storage on loadAll", async () => {
+    // Manually create plugin files in storage
+    const pluginId = "ecoctrl-disk-plugin";
+    const version = "1.0.0";
+    await storage.put(
+      `plugins/${pluginId}/${version}/manifest.json`,
+      Buffer.from(
+        JSON.stringify({
+          id: pluginId,
+          name: "Disk Plugin",
+          version,
+          category: "action",
+          entry: "backend.js",
+          schema: "schema.json",
+        }),
+      ),
+    );
+    await storage.put(
+      `plugins/${pluginId}/${version}/backend.js`,
+      Buffer.from("module.exports = async () => {}"),
+    );
+    await storage.put(
+      `plugins/${pluginId}/${version}/schema.json`,
+      Buffer.from(JSON.stringify({ type: "object", properties: { x: { type: "string" } } })),
+    );
+
+    const freshRegistry = new PluginRegistry(storage);
+    await freshRegistry.loadAll();
+
+    const plugin = freshRegistry.get("ecoctrl-disk-plugin");
+    expect(plugin).not.toBeNull();
+    expect(plugin?.manifest.name).toBe("Disk Plugin");
+  });
+
+  it("rejects install with hash mismatch", async () => {
+    const AdmZip = (await import("adm-zip")).default;
+    const zip = new AdmZip();
+    zip.addFile(
+      "manifest.json",
+      Buffer.from(
+        JSON.stringify({
+          id: "ecoctrl-hash-test",
+          name: "Hash Test",
+          version: "1.0.0",
+          category: "action",
+          entry: "backend.js",
+          schema: "schema.json",
+        }),
+      ),
+    );
+    zip.addFile("backend.js", Buffer.from("module.exports = async () => {}"));
+    zip.addFile(
+      "schema.json",
+      Buffer.from(JSON.stringify({ type: "object", properties: { x: { type: "string" } } })),
+    );
+    zip.addZipComment("wrong-hash-value");
+
+    await expect(registry.install(zip.toBuffer())).rejects.toThrow(
+      "Package integrity check failed",
+    );
+  });
+});

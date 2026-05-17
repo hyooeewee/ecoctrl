@@ -61,6 +61,7 @@ services:
       S3_SECRET_KEY: ${MINIO_SECRET_KEY}
       S3_BUCKET_FILES: ${S3_BUCKET_FILES}
       S3_BUCKET_MODELS: ${S3_BUCKET_MODELS}
+      S3_BUCKET_PLUGINS: ${S3_BUCKET_PLUGINS}
       S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE}
       INIT_ADMIN_USERNAME: ${INIT_ADMIN_USERNAME}
       INIT_ADMIN_PASSWORD: ${INIT_ADMIN_PASSWORD}
@@ -74,6 +75,8 @@ services:
         condition: service_healthy
     env_file:
       - .env.local
+    volumes:
+      - ./ecoctrl/server_logs:/app/packages/server/logs
     healthcheck:
       test:
         - CMD
