@@ -2,6 +2,7 @@ import {
   ReactFlow,
   Background,
   Controls,
+  ControlButton,
   MiniMap,
   BackgroundVariant,
   useNodesState,
@@ -30,15 +31,18 @@ import {
   Search,
   X,
   Zap,
+  Bug,
+  Rocket,
+  Loader2,
   ChevronRight,
   ChevronDown,
   ChevronLeft,
   LayoutTemplate,
   Settings,
-  MoreHorizontal,
   Pencil,
   Activity,
   AlertTriangle,
+  Braces,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -342,6 +346,15 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
   const [editDescription, setEditDescription] = useState("");
   const [pointNames, setPointNames] = useState<string[]>([]);
   const [pointSearch, setPointSearch] = useState("");
+  const [handleMenu, setHandleMenu] = useState<{
+    nodeId: string;
+    handleId?: string;
+    handleType: "target" | "source";
+    x: number; // DOM pixel position for menu popup
+    y: number;
+    flowX?: number; // Flow coordinate for node placement (when dragging connection)
+    flowY?: number;
+  } | null>(null);
   const filteredPointNames = useMemo(
     () =>
       pointSearch
@@ -364,6 +377,13 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
   }, []);
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
   const dragCleanupRef = useRef<(() => void) | null>(null);
+  const connectingRef = useRef<{
+    nodeId: string;
+    handleId?: string;
+    handleType: "target" | "source";
+  } | null>(null);
+  const menuOpenedAtRef = useRef(0);
+  const connectionMadeRef = useRef(false);
 
   // Load workflow data
   useEffect(() => {
@@ -432,6 +452,8 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
 
   const onConnect = useCallback(
     (connection: Connection) => {
+      connectionMadeRef.current = true;
+      connectingRef.current = null;
       setIsDirty(true);
       const newEdge: Edge = {
         ...connection,
@@ -444,6 +466,112 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
     [setEdges],
   );
 
+  const onConnectStart = useCallback(
+    (
+      _: MouseEvent | TouchEvent,
+      params: {
+        nodeId: string | null;
+        handleId: string | null;
+        handleType: "target" | "source" | null;
+      },
+    ) => {
+      if (!params.nodeId || !params.handleType) return;
+      connectingRef.current = {
+        nodeId: params.nodeId,
+        handleId: params.handleId ?? undefined,
+        handleType: params.handleType,
+      };
+    },
+    [],
+  );
+
+  const onConnectEnd = useCallback(
+    (
+      event: MouseEvent | TouchEvent,
+      connectionState?: {
+        fromNode?: { id: string } | null;
+        fromHandle?: { id?: string | null; type?: string | null } | null;
+        connection?: Connection | null;
+      },
+    ) => {
+      // If a connection was successfully made (either via connectionState or onConnect), don't show the menu
+      if (connectionMadeRef.current) {
+        connectionMadeRef.current = false;
+        connectingRef.current = null;
+        return;
+      }
+      const isConnected = connectionState?.connection != null;
+      if (isConnected) {
+        connectingRef.current = null;
+        return;
+      }
+
+      // Prefer connectionState (React Flow v12), fallback to ref
+      const fromNode = connectionState?.fromNode;
+      const fromHandle = connectionState?.fromHandle;
+
+      let nodeId: string;
+      let handleId: string | undefined;
+      let handleType: "target" | "source";
+
+      if (fromNode && fromHandle) {
+        nodeId = fromNode.id;
+        handleId = fromHandle.id ?? undefined;
+        handleType = (fromHandle.type as "target" | "source") ?? "source";
+      } else if (connectingRef.current) {
+        nodeId = connectingRef.current.nodeId;
+        handleId = connectingRef.current.handleId;
+        handleType = connectingRef.current.handleType;
+      } else {
+        return;
+      }
+
+      connectingRef.current = null;
+
+      const wrapper = reactFlowWrapper.current;
+      if (!wrapper) return;
+      const rect = wrapper.getBoundingClientRect();
+      const clientX = (event as MouseEvent).clientX;
+      const clientY = (event as MouseEvent).clientY;
+
+      // Only show menu if released inside the canvas
+      if (
+        clientX < rect.left ||
+        clientX > rect.right ||
+        clientY < rect.top ||
+        clientY > rect.bottom
+      ) {
+        return;
+      }
+
+      // Convert screen position to flow position for node placement
+      const flowPos = rfInstance?.screenToFlowPosition({ x: clientX, y: clientY });
+
+      const menuWidth = 200;
+      const menuHeight = 320;
+      const menuOffset = handleType === "source" ? 12 : -212;
+      let menuX = clientX - rect.left + menuOffset;
+      let menuY = clientY - rect.top - 12;
+      // Clamp to canvas bounds
+      menuX = Math.max(4, Math.min(menuX, rect.width - menuWidth - 4));
+      menuY = Math.max(4, Math.min(menuY, rect.height - menuHeight - 4));
+
+      setHandleMenu({
+        nodeId,
+        handleId,
+        handleType,
+        x: menuX,
+        y: menuY,
+        flowX: flowPos?.x,
+        flowY: flowPos?.y,
+      });
+
+      // Guard against onPaneClick immediately closing the menu
+      menuOpenedAtRef.current = Date.now();
+    },
+    [],
+  );
+
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     setSelectedNode(node);
     setRightPanelOpen(true);
@@ -451,8 +579,13 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
   }, []);
 
   const onPaneClick = useCallback(() => {
+    // Ignore pane clicks that immediately follow an onConnectEnd menu open
+    if (Date.now() - menuOpenedAtRef.current < 150) {
+      return;
+    }
     setSelectedNode(null);
     setRightPanelOpen(false);
+    setHandleMenu(null);
   }, []);
 
   const onNodeDragStop = useCallback(() => {
@@ -460,6 +593,99 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
     setSelectedNode(null);
     setRightPanelOpen(false);
   }, [setNodes]);
+
+  // Refs for stable callbacks inside node data
+  const nodesRef = useRef(nodes);
+  nodesRef.current = nodes;
+
+  const handleAddNodeFromHandle = useCallback(
+    (
+      nodeId: string,
+      handleId?: string,
+      handleType?: "target" | "source",
+      edgeX?: number,
+      edgeY?: number,
+    ) => {
+      if (edgeX == null || edgeY == null || !handleType) return;
+      const wrapper = reactFlowWrapper.current;
+      if (!wrapper) return;
+      const rect = wrapper.getBoundingClientRect();
+      const menuWidth = 200;
+      const menuHeight = 320; // approximate max height of popup
+      const offset = 8;
+      let x: number;
+      if (handleType === "source") {
+        x = edgeX - rect.left + offset;
+      } else {
+        x = edgeX - rect.left - menuWidth - offset;
+      }
+      // Clamp to canvas bounds
+      x = Math.max(4, Math.min(x, rect.width - menuWidth - 4));
+      let y = edgeY - rect.top - 12;
+      y = Math.max(4, Math.min(y, rect.height - menuHeight - 4));
+      setHandleMenu({
+        nodeId,
+        handleId,
+        handleType,
+        x,
+        y,
+      });
+    },
+    [],
+  );
+
+  const handleSelectNodeFromMenu = useCallback(
+    (type: string) => {
+      if (!handleMenu) return;
+      const { nodeId, handleId, handleType } = handleMenu;
+      const currentNode = nodesRef.current.find((n) => n.id === nodeId);
+      if (!currentNode) return;
+
+      const item = ALL_COMPONENTS.find((c) => c.type === type);
+      const newNodeId = `${type}-${Date.now()}`;
+      const newNode: Node = {
+        id: newNodeId,
+        type,
+        position:
+          handleMenu.flowX != null && handleMenu.flowY != null
+            ? { x: handleMenu.flowX, y: handleMenu.flowY }
+            : {
+                x:
+                  handleType === "source"
+                    ? currentNode.position.x + 350
+                    : currentNode.position.x - 350,
+                y: currentNode.position.y,
+              },
+        data: { label: item?.label ?? type, type, config: {} },
+      };
+
+      let newEdge: Edge;
+      if (handleType === "source") {
+        newEdge = {
+          id: `e-${nodeId}-${newNodeId}-${Date.now()}`,
+          source: nodeId,
+          target: newNodeId,
+          sourceHandle: handleId,
+          type: handleId ? "condition" : "default",
+          label: handleId ?? undefined,
+        };
+      } else {
+        newEdge = {
+          id: `e-${newNodeId}-${nodeId}-${Date.now()}`,
+          source: newNodeId,
+          target: nodeId,
+          targetHandle: handleId,
+          type: "default",
+        };
+      }
+
+      setIsDirty(true);
+      setNodes((nds) => [...nds, newNode]);
+      setEdges((eds) => addEdge(newEdge, eds));
+      setHandleMenu(null);
+    },
+    [handleMenu, setNodes, setEdges],
+  );
 
   const handleDragStart = useCallback(
     (event: React.DragEvent, type: string) => {
@@ -833,44 +1059,41 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={handleAutoLayout}>
-            <LayoutTemplate size={14} />
-            自动布局
-          </Button>
           <Button
             variant="outline"
             size="sm"
             className="h-8 gap-1.5"
             onClick={handleTestRun}
-            disabled={testing}
+            disabled={saving || publishing || testing}
           >
-            <Zap size={14} />
-            {testing ? "测试中..." : "测试运行"}
+            {testing ? <Loader2 size={14} className="animate-spin" /> : <Bug size={14} />}
+            调试
           </Button>
           <Button
             variant="outline"
             size="sm"
             className="h-8 gap-1.5"
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || publishing || testing}
           >
-            <Save size={14} />
-            {saving ? "保存中..." : "保存"}
+            {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            保存
           </Button>
           <Button
             size="sm"
             className="h-8 gap-1.5"
             onClick={handlePublish}
-            disabled={publishing || !workflowId}
+            disabled={saving || publishing || testing || !workflowId}
           >
-            <Play size={14} />
-            {publishing ? "发布中..." : "发布"}
+            {publishing ? <Loader2 size={14} className="animate-spin" /> : <Rocket size={14} />}
+            发布
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8" title="设置">
+          <Button variant="outline" size="sm" className="h-8 gap-1.5" title="环境变量">
+            <Braces size={14} />
+            变量
+          </Button>
+          <Button variant="outline" size="icon" className="h-8 w-8" title="设置">
             <Settings size={14} />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8" title="更多">
-            <MoreHorizontal size={14} />
           </Button>
         </div>
       </div>
@@ -988,15 +1211,37 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
         {/* Canvas */}
         <div
           ref={reactFlowWrapper}
-          className="relative flex flex-1 flex-col overflow-hidden bg-zinc-50 dark:bg-zinc-950"
+          className="workflow-editor-canvas relative flex flex-1 flex-col overflow-hidden bg-zinc-50 dark:bg-zinc-950"
         >
+          <style>{`
+            .workflow-editor-canvas .react-flow__pane.draggable,
+            .workflow-editor-canvas .react-flow__node.draggable,
+            .workflow-editor-canvas .react-flow__node.selectable {
+              cursor: default;
+            }
+            .workflow-editor-canvas .react-flow__pane.dragging,
+            .workflow-editor-canvas .react-flow__node.dragging {
+              cursor: grabbing;
+            }
+            .workflow-editor-canvas .react-flow__handle {
+              transform: translate(-50%, -50%) scale(1.4);
+            }
+            .workflow-editor-canvas .react-flow__handle-right {
+              transform: translate(50%, -50%) scale(1.4);
+            }
+          `}</style>
           <div className="flex-1 overflow-hidden">
             <ReactFlow
-              nodes={nodes}
+              nodes={nodes.map((n) => ({
+                ...n,
+                data: { ...n.data, onAddNodeFromHandle: handleAddNodeFromHandle },
+              }))}
               edges={edges}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
+              onConnectStart={onConnectStart}
+              onConnectEnd={onConnectEnd}
               onNodeClick={onNodeClick}
               onPaneClick={onPaneClick}
               onNodeDragStop={onNodeDragStop}
@@ -1015,7 +1260,11 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                 size={1}
                 className="bg-zinc-50 dark:bg-zinc-950"
               />
-              <Controls className="!bg-white !shadow-sm dark:!bg-zinc-900" />
+              <Controls className="!bg-white !shadow-sm dark:!bg-zinc-900">
+                <ControlButton onClick={handleAutoLayout} title="自动布局" className="border-t">
+                  <LayoutTemplate size={16} />
+                </ControlButton>
+              </Controls>
               <MiniMap
                 className="!bg-white/80 !shadow-sm dark:!bg-zinc-900/80"
                 nodeStrokeWidth={3}
@@ -1023,6 +1272,59 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                 pannable
               />
             </ReactFlow>
+
+            {/* Handle click node picker popup */}
+            {handleMenu && (
+              <div
+                className="absolute z-50 w-[200px] overflow-hidden rounded-lg border bg-white shadow-lg dark:bg-zinc-900 dark:border-zinc-700"
+                style={{ left: handleMenu.x, top: handleMenu.y }}
+              >
+                <div className="border-b px-3 py-2">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {handleMenu.handleType === "source" ? "选择下一步节点" : "选择上一步节点"}
+                  </span>
+                </div>
+                <div className="max-h-[280px] overflow-y-auto py-1">
+                  {(() => {
+                    const isSource = handleMenu.handleType === "source";
+                    const currentNodeIsStart =
+                      nodes.find((n) => n.id === handleMenu.nodeId)?.type === "start";
+                    return COMPONENT_CATEGORIES.map((cat) => {
+                      const items = cat.items.filter((item) => {
+                        if (isSource) return item.type !== "start";
+                        return !(currentNodeIsStart && item.type === "start");
+                      });
+                      if (items.length === 0) return null;
+                      return (
+                        <div key={cat.id}>
+                          <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            {cat.label}
+                          </div>
+                          {items.map((item) => {
+                            const Icon = item.icon;
+                            return (
+                              <button
+                                key={item.type}
+                                type="button"
+                                onClick={() => handleSelectNodeFromMenu(item.type)}
+                                className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                              >
+                                <div
+                                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded ${item.colorClass}`}
+                                >
+                                  <Icon size={10} />
+                                </div>
+                                <span>{item.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Test Log Panel */}
