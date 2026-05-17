@@ -117,6 +117,34 @@ export default async function nodeRoutes(
     },
   );
 
+  fastify.get(
+    "/:id/:version/download",
+    {
+      schema: {
+        tags: ["Nodes"],
+        summary: "Download a plugin as .ecn file",
+        params: z.object({ id: z.string(), version: z.string() }),
+        response: {
+          200: z.any(),
+          ...errors,
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id, version } = request.params as { id: string; version: string };
+      try {
+        const buffer = await registry.exportPlugin(id, version);
+        const filename = `${id}-${version}.ecn`;
+        return reply
+          .header("Content-Type", "application/octet-stream")
+          .header("Content-Disposition", `attachment; filename="${filename}"`)
+          .send(buffer);
+      } catch (err) {
+        return reply.status(404).send({ error: (err as Error).message });
+      }
+    },
+  );
+
   fastify.post(
     "/install",
     {

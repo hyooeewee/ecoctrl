@@ -202,6 +202,44 @@ export class PluginRegistry {
     return def;
   }
 
+  async exportPlugin(id: string, version: string): Promise<Buffer> {
+    const def = this.get(id, version);
+    if (!def) {
+      throw new Error(`Plugin ${id}@${version} not found`);
+    }
+
+    // List all files for this plugin version in storage
+    const prefix = buildKey(id, version, "");
+    const keys = await this.storage.list(prefix);
+
+    const files = new Map<string, string>();
+    for (const key of keys) {
+      const relative = key.slice(prefix.length);
+      if (!relative) continue;
+      const content = await this.readFile(id, version, relative);
+      if (content !== undefined) {
+        files.set(relative, content);
+      }
+    }
+
+    if (files.size === 0) {
+      throw new Error(`No files found for plugin ${id}@${version}`);
+    }
+
+    // Build zip (adm-zip is synchronous; for large files consider worker_threads)
+    const AdmZip = (await import("adm-zip")).default;
+    const zip = new AdmZip();
+    for (const [name, content] of files) {
+      zip.addFile(name, Buffer.from(content));
+    }
+
+    // Add content hash as zip comment
+    const hash = computeContentHash(files);
+    zip.addZipComment(hash);
+
+    return zip.toBuffer();
+  }
+
   async uninstall(id: string, version: string): Promise<void> {
     const versions = this.plugins.get(id);
     if (!versions) {
