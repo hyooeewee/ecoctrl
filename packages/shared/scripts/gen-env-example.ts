@@ -3,10 +3,12 @@ import { dirname, join, resolve } from "node:path";
 import { cancel, confirm, intro, isCancel, outro, spinner } from "@clack/prompts";
 
 /**
- * Annotations recognized in .env.local line endings:
- *   # @public[: VAL]   → keep value (or replace with VAL); preserve comment
- *   # @secret          → clear the value; preserve comment (same as no annotation)
- *   no annotation      → clear the value; preserve comment (safe default)
+ * Annotations recognized in .env.local:
+ *   # @public[: VAL]   → keep value (or replace with VAL)
+ *   # @secret          → clear the value
+ *   no annotation      → clear the value (safe default)
+ *
+ * Supports both leading-comment style (recommended) and legacy inline style.
  */
 const ANNOTATION_PUBLIC = /#\s*@public(?::\s*([^#]+))?/;
 const ANNOTATION_SECRET = /#\s*@secret\b/;
@@ -26,37 +28,93 @@ Options:
 `);
 }
 
-function processLine(line: string): string {
-  const trimmed = line.trim();
-  if (!trimmed || trimmed.startsWith("#")) return line;
+function processLines(lines: string[]): string[] {
+  const result: string[] = [];
+  let pendingPublic: { value?: string } | null = null;
+  let pendingSecret = false;
 
-  const eq = line.indexOf("=");
-  if (eq === -1) return line;
+  for (const line of lines) {
+    const trimmed = line.trim();
 
-  const key = line.slice(0, eq);
-  const raw = line.slice(eq + 1);
-
-  const hashIdx = raw.indexOf("#");
-  const valuePart = hashIdx >= 0 ? raw.slice(0, hashIdx).trimEnd() : raw.trimEnd();
-  const commentPart = hashIdx >= 0 ? raw.slice(hashIdx) : "";
-
-  // @public: VAL → replace with VAL; @public → keep original value
-  const pubMatch = raw.match(ANNOTATION_PUBLIC);
-  if (pubMatch) {
-    const newValue = pubMatch[1] ? pubMatch[1].trim() : valuePart;
-    const remainingComment = commentPart.replace(ANNOTATION_PUBLIC, "").trim();
-    if (remainingComment && remainingComment !== "#") {
-      return `${key}=${newValue} ${remainingComment}`;
+    // Empty line: reset state
+    if (!trimmed) {
+      result.push(line);
+      pendingPublic = null;
+      pendingSecret = false;
+      continue;
     }
-    return `${key}=${newValue}`;
+
+    // Comment line – check for annotation
+    if (trimmed.startsWith("#")) {
+      const pubMatch = trimmed.match(ANNOTATION_PUBLIC);
+      if (pubMatch) {
+        pendingPublic = { value: pubMatch[1] ? pubMatch[1].trim() : undefined };
+        pendingSecret = false;
+        // Strip annotation; keep any remaining descriptive text
+        let remaining = trimmed.replace(ANNOTATION_PUBLIC, "").trim();
+        remaining = remaining.replace(/^#\s*#/, "#").trim();
+        if (remaining && remaining !== "#") {
+          result.push(remaining);
+        }
+        continue;
+      }
+
+      const secMatch = trimmed.match(ANNOTATION_SECRET);
+      if (secMatch) {
+        pendingSecret = true;
+        pendingPublic = null;
+        let remaining = trimmed.replace(ANNOTATION_SECRET, "").trim();
+        remaining = remaining.replace(/^#\s*#/, "#").trim();
+        if (remaining && remaining !== "#") {
+          result.push(remaining);
+        }
+        continue;
+      }
+
+      // Regular comment
+      result.push(line);
+      continue;
+    }
+
+    // Variable line
+    const eq = line.indexOf("=");
+    if (eq === -1) {
+      result.push(line);
+      pendingPublic = null;
+      pendingSecret = false;
+      continue;
+    }
+
+    const key = line.slice(0, eq).trimEnd();
+    const rawValue = line.slice(eq + 1);
+
+    // Backward compat: also scan for inline annotation in the value part
+    const hashIdx = rawValue.indexOf("#");
+    const valuePart = hashIdx >= 0 ? rawValue.slice(0, hashIdx).trimEnd() : rawValue.trimEnd();
+    const commentPart = hashIdx >= 0 ? rawValue.slice(hashIdx) : "";
+    const inlinePubMatch = commentPart.match(ANNOTATION_PUBLIC);
+    const inlineSecMatch = commentPart.match(ANNOTATION_SECRET);
+
+    if (pendingPublic) {
+      const newValue = pendingPublic.value ?? valuePart;
+      result.push(`${key}=${newValue}`);
+    } else if (pendingSecret) {
+      result.push(`${key}=`);
+    } else if (inlinePubMatch) {
+      const newValue = inlinePubMatch[1] ? inlinePubMatch[1].trim() : valuePart;
+      result.push(`${key}=${newValue}`);
+    } else if (inlineSecMatch) {
+      result.push(`${key}=`);
+    } else {
+      // No annotation: clear value (safe default)
+      result.push(`${key}=`);
+    }
+
+    pendingPublic = null;
+    pendingSecret = false;
   }
 
-  // Default (including @secret): clear value, strip annotation from comment
-  const remainingComment = commentPart.replace(ANNOTATION_SECRET, "").trim();
-  if (remainingComment && remainingComment !== "#") {
-    return `${key}= ${remainingComment}`;
-  }
-  return `${key}=`;
+  return result;
 }
 
 function findBackupName(destPath: string): string {
@@ -119,7 +177,7 @@ async function main() {
     process.exit(0);
   }
 
-  const result = content.split("\n").map(processLine).join("\n");
+  const result = processLines(content.split("\n")).join("\n");
   s.stop(`Processed ${src}`);
 
   if (checkOnly) {

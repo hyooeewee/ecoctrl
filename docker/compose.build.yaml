@@ -70,8 +70,7 @@ services:
       minio:
         condition: service_healthy
     env_file:
-      - path: .env.local
-        required: false
+      - .env.local
     healthcheck:
       test:
         - CMD

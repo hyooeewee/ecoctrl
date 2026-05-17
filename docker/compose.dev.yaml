@@ -71,8 +71,7 @@ services:
       minio:
         condition: service_healthy
     env_file:
-      - path: .env.local
-        required: false
+      - .env.local
     healthcheck:
       test:
         - CMD
@@ -91,6 +90,7 @@ services:
       - /app/node_modules
       - /app/packages/server/node_modules
       - pnpm-store:/root/.pnpm-store
+      - ../docker/.env.local:/app/packages/server/.env.local:ro
   web:
     container_name: ecoctrl-web
     restart: always
