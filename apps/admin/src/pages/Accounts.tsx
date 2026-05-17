@@ -1,5 +1,6 @@
 import { Plus, Search, Edit2, Trash2, Download, ExternalLink } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { Badge } from "@ecoctrl/ui";
 import { Button } from "@ecoctrl/ui";
@@ -25,6 +26,12 @@ export default function Accounts() {
   const [newUser, setNewUser] = useState({ username: "", email: "", password: "", role: "viewer" });
   const [adding, setAdding] = useState(false);
   const [currentUser, setCurrentUser] = useState<Pick<User, "username" | "avatarUrl"> | null>(null);
+
+  // Confirm dialog state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmTitle, setConfirmTitle] = useState("");
+  const [confirmDesc, setConfirmDesc] = useState("");
+  const confirmActionRef = useRef<(() => void) | null>(null);
 
   const STATUS_MAP: Record<string, { label: string; color: string }> = {
     online: { label: "在线", color: "bg-green-500" },
@@ -77,21 +84,26 @@ export default function Accounts() {
       setNewUser({ username: "", email: "", password: "", role: "viewer" });
     } catch (err) {
       console.error(err);
-      alert("添加用户失败");
+      toast.error("添加用户失败");
     } finally {
       setAdding(false);
     }
   };
 
-  const handleDelete = async (id: string, username: string) => {
-    if (!window.confirm(`确定要删除用户 "${username}" 吗？`)) return;
-    try {
-      await usersApi.delete(id);
-      await fetchUsers();
-    } catch (err) {
-      console.error(err);
-      alert("删除用户失败");
-    }
+  const handleDelete = (id: string, username: string) => {
+    setConfirmTitle("确认删除");
+    setConfirmDesc(`确定要删除用户 "${username}" 吗？此操作不可撤销。`);
+    confirmActionRef.current = async () => {
+      try {
+        await usersApi.delete(id);
+        await fetchUsers();
+        setConfirmOpen(false);
+      } catch (err) {
+        console.error(err);
+        toast.error("删除用户失败");
+      }
+    };
+    setConfirmOpen(true);
   };
 
   const handleEdit = async (user: User) => {
@@ -100,7 +112,7 @@ export default function Accounts() {
       await fetchUsers();
     } catch (err) {
       console.error(err);
-      alert("修改用户失败");
+      toast.error("修改用户失败");
     }
   };
 
@@ -329,6 +341,24 @@ export default function Accounts() {
                 {adding ? "添加中..." : "添加"}
               </AppButton>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Dialog */}
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{confirmTitle}</DialogTitle>
+            <DialogDescription>{confirmDesc}</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
+              取消
+            </Button>
+            <Button variant="destructive" onClick={() => confirmActionRef.current?.()}>
+              删除
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

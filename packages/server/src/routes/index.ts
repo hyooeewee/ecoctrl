@@ -18,6 +18,7 @@ import settingsRoutes from "@/routes/settings";
 import userSettingsRoutes from "@/routes/userSettings";
 import modelRoutes from "@/routes/models";
 import objectRoutes from "@/routes/objects";
+import pointRoutes from "@/routes/points";
 import { getModelStorage } from "@/storage";
 import iotRoutes from "@/routes/iot";
 import backupScheduleRoutes from "@/routes/backupSchedule";
@@ -126,6 +127,7 @@ export default async function apiRoutes(fastify: FastifyInstance) {
   await fastify.register(settingsRoutes, { prefix: "/public/settings" });
   await fastify.register(userSettingsRoutes, { prefix: "/settings" });
   await fastify.register(objectRoutes, { prefix: "/objects" });
+  await fastify.register(pointRoutes, { prefix: "/points" });
   await fastify.register(iotRoutes, { prefix: "/iot" });
   await fastify.register(modelRoutes, { prefix: "/models" });
   await fastify.register(backupScheduleRoutes, { prefix: "/system" });

@@ -1,8 +1,10 @@
 import { MapPin, Tag, Plus, Pencil, Trash2, X } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@ecoctrl/ui";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoctrl/ui";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@ecoctrl/ui";
 import { Input } from "@ecoctrl/ui";
 import { Label } from "@ecoctrl/ui";
 import {
@@ -131,6 +133,12 @@ export default function DashboardModel() {
     meshKeywords: [] as string[],
   });
 
+  // Confirm dialog state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmTitle, setConfirmTitle] = useState("");
+  const [confirmDesc, setConfirmDesc] = useState("");
+  const confirmActionRef = useRef<(() => void) | null>(null);
+
   useEffect(() => {
     const fetchConfig = async () => {
       try {
@@ -154,7 +162,7 @@ export default function DashboardModel() {
       setUploadFile(null);
     } catch (err) {
       console.error("Upload failed:", err);
-      alert("上传失败，请重试");
+      toast.error("上传失败，请重试");
     } finally {
       setUploading(false);
     }
@@ -167,7 +175,7 @@ export default function DashboardModel() {
       setConfig(updated);
     } catch (err) {
       console.error("Save failed:", err);
-      alert("保存失败，请重试");
+      toast.error("保存失败，请重试");
     } finally {
       setSaving(false);
     }
@@ -229,9 +237,14 @@ export default function DashboardModel() {
   };
 
   const handleHotspotDelete = (id: string, name: string) => {
-    if (!window.confirm(`确定要删除热点 "${name}" 吗？`)) return;
-    const next = (config?.hotspots ?? []).filter((h) => h.id !== id);
-    saveConfig({ hotspots: next });
+    setConfirmTitle("确认删除");
+    setConfirmDesc(`确定要删除热点 "${name}" 吗？此操作不可撤销。`);
+    confirmActionRef.current = () => {
+      const next = (config?.hotspots ?? []).filter((h) => h.id !== id);
+      saveConfig({ hotspots: next });
+      setConfirmOpen(false);
+    };
+    setConfirmOpen(true);
   };
 
   // --- Label handlers ---
@@ -292,9 +305,14 @@ export default function DashboardModel() {
   };
 
   const handleLabelDelete = (key: string) => {
-    if (!window.confirm(`确定要删除标签 "${key}" 吗？`)) return;
-    const next = (config?.labels ?? []).filter((l) => l.key !== key);
-    saveConfig({ labels: next });
+    setConfirmTitle("确认删除");
+    setConfirmDesc(`确定要删除标签 "${key}" 吗？此操作不可撤销。`);
+    confirmActionRef.current = () => {
+      const next = (config?.labels ?? []).filter((l) => l.key !== key);
+      saveConfig({ labels: next });
+      setConfirmOpen(false);
+    };
+    setConfirmOpen(true);
   };
 
   const existingFileInfo = config?.modelFileUrl
@@ -332,8 +350,13 @@ export default function DashboardModel() {
               onFileSelect={setUploadFile}
               onFileClear={() => setUploadFile(null)}
               onDeleteExisting={() => {
-                if (!window.confirm("确定要删除当前模型文件吗？")) return;
-                saveConfig({ modelFileUrl: null });
+                setConfirmTitle("确认删除");
+                setConfirmDesc("确定要删除当前模型文件吗？此操作不可撤销。");
+                confirmActionRef.current = () => {
+                  saveConfig({ modelFileUrl: null });
+                  setConfirmOpen(false);
+                };
+                setConfirmOpen(true);
               }}
               acceptedFormats=".glb,.gltf,.obj"
             />
@@ -762,6 +785,24 @@ export default function DashboardModel() {
           </SheetFooter>
         </SheetContent>
       </Sheet>
+
+      {/* Confirm Dialog */}
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{confirmTitle}</DialogTitle>
+            <DialogDescription>{confirmDesc}</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
+              取消
+            </Button>
+            <Button variant="destructive" onClick={() => confirmActionRef.current?.()}>
+              删除
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

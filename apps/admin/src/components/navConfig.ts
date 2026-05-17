@@ -31,12 +31,12 @@ export const navNodes: NavNode[] = [
   { id: "accounts", label: "账户控制", icon: Users },
   {
     id: "models",
-    label: "设备详情",
+    label: "数据模型",
     icon: Server,
     tabs: [
-      { id: "models", label: "3D模型" },
+      { id: "models", label: "数据模型" },
       { id: "objects", label: "业务对象" },
-      { id: "points", label: "数据点位" },
+      { id: "points", label: "点位信息" },
     ],
     tabStoreKey: "modelsTab",
   },

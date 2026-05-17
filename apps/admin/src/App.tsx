@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { ScrollArea } from "@ecoctrl/ui";
+import { ScrollArea, Toaster } from "@ecoctrl/ui";
 import React, { useEffect, useMemo, useState } from "react";
 
 import Header from "@/components/Header";
@@ -179,6 +179,7 @@ export default function App() {
           )}
         </main>
       </div>
+      <Toaster position="top-center" />
     </div>
   );
 }

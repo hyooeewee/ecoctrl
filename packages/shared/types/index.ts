@@ -9,5 +9,6 @@ export * from "./api/faults.ts";
 export * from "./api/maintenance.ts";
 export * from "./api/models.ts";
 export * from "./api/objects.ts";
+export * from "./api/points.ts";
 export * from "./api/reports.ts";
 export * from "./api/user.ts";

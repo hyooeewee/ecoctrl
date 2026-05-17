@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { BusinessObjectSchema, type BusinessObject } from "@ecoctrl/shared";
+import { BusinessObjectSchema } from "@ecoctrl/shared";
 import { errors } from "@/lib/schemas";
 import {
   findManyObjects,
@@ -46,11 +46,6 @@ export default async function objectRoutes(fastify: FastifyInstance) {
         modelId: string;
         modelName: string;
         status?: string;
-        points: {
-          pointId: string;
-          pointName: string;
-          values: Record<string, string>;
-        }[];
       };
 
       const created = await createObject(data);
@@ -100,7 +95,17 @@ export default async function objectRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const dataList = request.body as Omit<BusinessObject, "uuid">[];
+      const dataList = request.body as Omit<
+        {
+          uuid: string;
+          id: string;
+          name: string;
+          modelId: string;
+          modelName: string;
+          status?: string;
+        },
+        "uuid"
+      >[];
       const items = await createManyObjects(dataList);
       return reply.status(201).send({ count: items.length, items });
     },
