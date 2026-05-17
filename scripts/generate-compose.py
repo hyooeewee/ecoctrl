@@ -300,10 +300,9 @@ def apply_env_overrides(compose: dict, env_name: str, env_vars: dict[str, str]) 
             if key.startswith("S3_") or key == "STORAGE_PROVIDER":
                 del env[key]
 
-    # Dev-specific: remove server healthcheck, add PNPM_HOME, add pnpm-store volume
+    # Dev-specific: add PNPM_HOME, add pnpm-store volume
     if env_name == "dev":
         server = services.get("server", {})
-        server.pop("healthcheck", None)
         env = server.get("environment", {})
         env["PNPM_HOME"] = "/root/.pnpm-store"
         server["environment"] = env
