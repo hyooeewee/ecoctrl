@@ -18,6 +18,7 @@ import settingsRoutes from "@/routes/settings";
 import userSettingsRoutes from "@/routes/userSettings";
 import modelRoutes from "@/routes/models";
 import objectRoutes from "@/routes/objects";
+import { getModelStorage } from "@/storage";
 import iotRoutes from "@/routes/iot";
 import backupScheduleRoutes from "@/routes/backupSchedule";
 import authRoutes from "@/routes/auth";
@@ -84,6 +85,8 @@ export default async function apiRoutes(fastify: FastifyInstance) {
     },
   );
 
+  const modelStorage = getModelStorage();
+
   fastify.get(
     "/public/model",
     {
@@ -96,15 +99,17 @@ export default async function apiRoutes(fastify: FastifyInstance) {
     },
     async (_request, reply) => {
       const config = await findDashboardModel();
-      return reply.send(
-        config ?? {
-          modelFileUrl: null,
-          cameraPreset: "Default_View_01",
-          ambientLightIntensity: 0.85,
-          hotspots: [],
-          labels: [],
-        },
-      );
+      const result = config ?? {
+        modelFileUrl: null,
+        cameraPreset: "Default_View_01",
+        ambientLightIntensity: 0.85,
+        hotspots: [],
+        labels: [],
+      };
+      if (result.modelFileUrl) {
+        result.modelFileUrl = await modelStorage.getUrl(result.modelFileUrl);
+      }
+      return reply.send(result);
     },
   );
 

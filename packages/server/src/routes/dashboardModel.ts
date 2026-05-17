@@ -31,15 +31,17 @@ export default async function dashboardModelRoutes(fastify: FastifyInstance) {
     },
     async (_request, reply) => {
       const config = await findDashboardModel();
-      return reply.send(
-        config ?? {
-          modelFileUrl: null,
-          cameraPreset: "Default_View_01",
-          ambientLightIntensity: 0.85,
-          hotspots: [],
-          labels: [],
-        },
-      );
+      const result = config ?? {
+        modelFileUrl: null,
+        cameraPreset: "Default_View_01",
+        ambientLightIntensity: 0.85,
+        hotspots: [],
+        labels: [],
+      };
+      if (result.modelFileUrl) {
+        result.modelFileUrl = await storage.getUrl(result.modelFileUrl);
+      }
+      return reply.send(result);
     },
   );
 
@@ -93,7 +95,11 @@ export default async function dashboardModelRoutes(fastify: FastifyInstance) {
         labels: existing?.labels ?? [],
       });
 
-      return reply.send(updated);
+      const response = {
+        ...updated,
+        modelFileUrl: updated.modelFileUrl ? await storage.getUrl(updated.modelFileUrl) : null,
+      };
+      return reply.send(response);
     },
   );
 
@@ -126,6 +132,9 @@ export default async function dashboardModelRoutes(fastify: FastifyInstance) {
         labels: body.labels ?? existing?.labels ?? [],
       };
       const result = await updateDashboardModel(updated);
+      if (result?.modelFileUrl) {
+        result.modelFileUrl = await storage.getUrl(result.modelFileUrl);
+      }
       return reply.send(result);
     },
   );
