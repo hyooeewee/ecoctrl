@@ -86,7 +86,9 @@ async function safeHttp(
 
   try {
     const fetchBody: string | undefined =
-      options?.body && typeof options.body === "object" ? JSON.stringify(options.body) : (options?.body as string | undefined);
+      options?.body && typeof options.body === "object"
+        ? JSON.stringify(options.body)
+        : (options?.body as string | undefined);
     const response = await fetch(url, {
       method,
       headers: options?.headers,

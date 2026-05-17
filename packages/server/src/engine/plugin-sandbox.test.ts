@@ -76,7 +76,13 @@ describe("executeInSandbox", () => {
     `;
     const api: PluginApi = {
       ...createMockApi(),
-      context: { workflowId: "wf-test", executionId: "ex-test", triggerData: {}, nodeId: "node-42", nodeName: "TestNode" },
+      context: {
+        workflowId: "wf-test",
+        executionId: "ex-test",
+        triggerData: {},
+        nodeId: "node-42",
+        nodeName: "TestNode",
+      },
     };
     const result = await executeInSandbox(code, {}, api);
     expect(result).toEqual({ nodeId: "node-42", workflowId: "wf-test" });

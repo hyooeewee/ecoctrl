@@ -27,14 +27,22 @@ export async function executeInSandbox(
       `globalThis.__resolve_result = function(value) {
         return $0.applySync(undefined, [value], { arguments: { copy: true } });
       }`,
-      [(value: unknown) => { capturedResult = value; }],
+      [
+        (value: unknown) => {
+          capturedResult = value;
+        },
+      ],
       { arguments: { reference: true } },
     );
     await context.evalClosure(
       `globalThis.__reject_result = function(err) {
         return $0.applySync(undefined, [err], { arguments: { copy: true } });
       }`,
-      [(err: Error) => { capturedError = err; }],
+      [
+        (err: Error) => {
+          capturedError = err;
+        },
+      ],
       { arguments: { reference: true } },
     );
 
@@ -115,10 +123,19 @@ async function injectApi(context: ivm.Context, api: PluginApi): Promise<void> {
       `globalThis.__http_${method} = async function(url, options) {
         return await $0.apply(undefined, [url, options], { arguments: { copy: true }, result: { copy: true, promise: true } });
       }`,
-      [async (url: string, options?: unknown) => {
-        const result = await api.http[method](url, options as { headers?: Record<string, string>; body?: string | object; timeout?: number });
-        return result;
-      }],
+      [
+        async (url: string, options?: unknown) => {
+          const result = await api.http[method](
+            url,
+            options as {
+              headers?: Record<string, string>;
+              body?: string | object;
+              timeout?: number;
+            },
+          );
+          return result;
+        },
+      ],
       { arguments: { reference: true } },
     );
   }
@@ -170,7 +187,14 @@ async function injectApi(context: ivm.Context, api: PluginApi): Promise<void> {
   // Notify
   await context.evalClosure(
     `globalThis.__notify_send = function(options) { return $0.applySync(undefined, [options], { arguments: { copy: true } }); }`,
-    [(options: { title: string; content: string; level?: "info" | "warning" | "error"; to?: string[] }) => api.notify.send(options)],
+    [
+      (options: {
+        title: string;
+        content: string;
+        level?: "info" | "warning" | "error";
+        to?: string[];
+      }) => api.notify.send(options),
+    ],
     { arguments: { reference: true } },
   );
 
