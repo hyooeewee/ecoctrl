@@ -43,7 +43,7 @@ describe("validatePluginPackage", () => {
       [
         "manifest.json",
         JSON.stringify({
-          id: "test-node",
+          id: "ecoctrl-test-node",
           name: "Test",
           version: "1.0.0",
           category: "action",
@@ -61,7 +61,7 @@ describe("validatePluginPackage", () => {
       [
         "manifest.json",
         JSON.stringify({
-          id: "test-node",
+          id: "ecoctrl-test-node",
           name: "Test",
           version: "1.0.0",
           category: "action",
@@ -80,7 +80,7 @@ describe("validatePluginPackage", () => {
       [
         "manifest.json",
         JSON.stringify({
-          id: "test-node",
+          id: "ecoctrl-test-node",
           name: "Test",
           version: "1.0.0",
           category: "action",
@@ -99,7 +99,7 @@ describe("validatePluginPackage", () => {
       [
         "manifest.json",
         JSON.stringify({
-          id: "test-node",
+          id: "ecoctrl-test-node",
           name: "Test",
           version: "1.0.0",
           category: "action",
@@ -120,7 +120,7 @@ describe("validatePluginPackage", () => {
       [
         "manifest.json",
         JSON.stringify({
-          id: "test-node",
+          id: "ecoctrl-test-node",
           name: "Test",
           version: "1.0.0",
           category: "action",
@@ -132,7 +132,7 @@ describe("validatePluginPackage", () => {
       ["schema.json", JSON.stringify({ type: "object", properties: { x: { type: "string" } } })],
     ]);
     const result = await validatePluginPackage(files);
-    expect(result.manifest.id).toBe("test-node");
+    expect(result.manifest.id).toBe("ecoctrl-test-node");
     expect(result.backendCode).toBe("module.exports = async () => {}");
     expect(result.schema.type).toBe("object");
   });
@@ -145,7 +145,7 @@ describe("extractPluginFromZip", () => {
     zip.addFile(
       "manifest.json",
       Buffer.from(
-        JSON.stringify({ id: "zip-test", name: "Zip Test", version: "1.0.0", category: "action" }),
+        JSON.stringify({ id: "ecoctrl-zip-test", name: "Zip Test", version: "1.0.0", category: "action" }),
       ),
     );
     zip.addFile("backend.js", Buffer.from("module.exports = async () => {}"));
