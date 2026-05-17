@@ -106,8 +106,8 @@ export default function Preferences({ userId, initialPrefs, onSaved }: Preferenc
       if (nextPrefs.theme) {
         import("@/lib/darkMode").then((m) => m.applyDarkMode(nextPrefs.theme!));
       }
-      // Sync all saved preferences to zustand override so they take effect immediately.
-      useAppStore.getState().setPreferenceOverride(nextPrefs);
+      // Individual fields are already synced to store in updateField.
+      // No need to overwrite the entire preferencesOverride here.
       if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
       savedTimerRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
     } catch (err) {
@@ -122,6 +122,13 @@ export default function Preferences({ userId, initialPrefs, onSaved }: Preferenc
     const next = { ...prefs, [key]: value } as UserPreferences;
     setPrefs(next);
     setSaveStatus("idle");
+
+    // Sync the individual field to store immediately so it takes effect
+    // without waiting for the remote save or overwriting other overrides.
+    useAppStore.getState().setPreferenceOverride({ [key]: value });
+    if (key === "sidebarCollapsed") {
+      useAppStore.getState().setSidebarCollapsed(value as boolean);
+    }
 
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => doSave(next), 500);
