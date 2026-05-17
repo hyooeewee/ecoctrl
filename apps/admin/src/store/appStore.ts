@@ -22,6 +22,9 @@ interface AppState {
   workflowsTab: string;
   setWorkflowsTab: (tab: string) => void;
 
+  sidebarCollapsed: boolean;
+  setSidebarCollapsed: (collapsed: boolean) => void;
+
   // Local overrides for user preferences. Keys present here take precedence
   // over database defaults. Allows device/session-level customization.
   preferencesOverride: Partial<UserPreferences>;
@@ -50,12 +53,15 @@ export const useAppStore = create<AppState>()(
       workflowsTab: "workflows",
       setWorkflowsTab: (tab) => set({ workflowsTab: tab }),
 
+      sidebarCollapsed: false,
+      setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
+
       preferencesOverride: {},
       setPreferenceOverride: (patch) =>
         set((state) => ({
           preferencesOverride: { ...state.preferencesOverride, ...patch },
         })),
-      clearPreferenceOverrides: () => set({ preferencesOverride: {} }),
+      clearPreferenceOverrides: () => set({ preferencesOverride: {}, sidebarCollapsed: false }),
     }),
     {
       name: "ecoctrl-admin-storage",
@@ -66,6 +72,7 @@ export const useAppStore = create<AppState>()(
         dashboardModelTab: state.dashboardModelTab,
         modelsTab: state.modelsTab,
         workflowsTab: state.workflowsTab,
+        sidebarCollapsed: state.sidebarCollapsed,
         preferencesOverride: state.preferencesOverride,
       }),
     },

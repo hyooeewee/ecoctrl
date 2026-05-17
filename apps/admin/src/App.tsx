@@ -45,6 +45,8 @@ export default function App() {
   const setActiveTab = useAppStore((state) => state.setActiveTab);
   const preferencesOverride = useAppStore((state) => state.preferencesOverride);
   const setPreferenceOverride = useAppStore((state) => state.setPreferenceOverride);
+  const sidebarCollapsed = useAppStore((state) => state.sidebarCollapsed);
+  const setSidebarCollapsed = useAppStore((state) => state.setSidebarCollapsed);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [userDetail, setUserDetail] = useState<AuthUser | null>(null);
@@ -150,8 +152,8 @@ export default function App() {
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        defaultCollapsed={effectivePrefs.sidebarCollapsed}
-        onCollapsedChange={(collapsed) => setPreferenceOverride({ sidebarCollapsed: collapsed })}
+        defaultCollapsed={sidebarCollapsed}
+        onCollapsedChange={setSidebarCollapsed}
       />
 
       <div className="flex h-full min-w-0 flex-1 flex-col">
