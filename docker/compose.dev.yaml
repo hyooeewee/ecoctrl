@@ -73,6 +73,16 @@ services:
     env_file:
       - path: .env.local
         required: false
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - -f
+        - http://localhost:3001/health
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     image: node:24-alpine
     working_dir: /app
     command: sh -c "corepack enable && pnpm --filter @ecoctrl/server dev"
