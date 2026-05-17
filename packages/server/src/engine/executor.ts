@@ -1,5 +1,6 @@
 import { db } from "@/config/database";
 import { findPlatformConfig } from "@/repositories/platformConfig";
+import { findPointByName, updatePoint } from "@/repositories/points";
 import { createTransport, type Transporter } from "nodemailer";
 import { sql } from "drizzle-orm";
 import type {
@@ -391,6 +392,62 @@ async function executeNode(
           }
         }
         outputs = { vars: Object.fromEntries(ctx.variables) };
+        break;
+      }
+
+      case "point": {
+        const operation = String(config.operation ?? "read");
+        const pointName = String(config.pointName ?? "");
+        const valueKey = String(config.valueKey ?? "");
+        const filters: { objectId?: string; modelId?: string; pointNo?: string } = {};
+        if (config.objectId) filters.objectId = String(config.objectId);
+        if (config.modelId) filters.modelId = String(config.modelId);
+        if (config.pointNo) filters.pointNo = String(config.pointNo);
+
+        if (!pointName) {
+          throw new Error("Point node requires 'pointName'");
+        }
+
+        const point = await findPointByName(pointName, filters);
+        if (!point) {
+          throw new Error(`Point not found: ${pointName}`);
+        }
+
+        if (operation === "read") {
+          outputs = {
+            id: point.id,
+            name: point.name,
+            pointNo: point.pointNo,
+            objectId: point.objectId,
+            modelId: point.modelId,
+            values: point.values,
+            props: point.props,
+          };
+        } else if (operation === "read_value") {
+          if (!valueKey) {
+            throw new Error("read_value operation requires 'valueKey'");
+          }
+          outputs = {
+            value: (point.values ?? {})[valueKey],
+            pointName: point.name,
+            valueKey,
+          };
+        } else if (operation === "write") {
+          if (!valueKey) {
+            throw new Error("write operation requires 'valueKey'");
+          }
+          const newValue = resolveTemplate(config.value, ctx);
+          const updatedValues = { ...point.values, [valueKey]: newValue };
+          const updated = await updatePoint(point.id, { values: updatedValues });
+          outputs = {
+            updated: !!updated,
+            pointName: point.name,
+            valueKey,
+            value: newValue,
+          };
+        } else {
+          throw new Error(`Unsupported point operation: ${operation}`);
+        }
         break;
       }
 
