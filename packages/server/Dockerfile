@@ -8,7 +8,6 @@
 #     --name ecoctrl-server \
 #     -p 3000:3000 \
 #     --env-file .env.local \
-#     -v ecoctrl-uploads:/app/uploads \
 #     ecoctrl-server
 
 ARG BUILDER_IMAGE=ghcr.io/hyooeewee/ecoctrl/builder:cache
@@ -56,31 +55,23 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
 # This ensures node_modules resolution works correctly for ESM imports
 COPY --from=builder /app/packages/server/dist /app/packages/server/dist
 
-# Copy shared package source (required for workspace:* resolution at runtime)
+# Copy shared package source (required for workspace:* resolution at install time)
 COPY packages/shared packages/shared
 
-# Copy schema, drizzle config, and migration files for runtime
-COPY packages/server/drizzle.config.ts packages/server/
+# Copy migration files for runtime (used by drizzle-orm migrator)
 COPY packages/server/drizzle/ packages/server/drizzle/
-COPY packages/server/src/schemas packages/server/src/schemas
-
-# Replace workspace symlink with actual files — esm-loader's resolveTsPaths
-# cannot follow symlinks, so we copy the real source into node_modules.
-RUN rm -rf /app/packages/server/node_modules/@ecoctrl/shared && \
-    cp -a /app/packages/shared /app/packages/server/node_modules/@ecoctrl/shared
-
-# Install drizzle-kit globally for migration capability
-RUN npm install -g drizzle-kit@0.31.10
 
 # Install curl for healthcheck
 RUN apk add --no-cache curl
 
-# Ensure uploads directory exists and is writable
-RUN mkdir -p /app/uploads && chmod 755 /app/uploads
+ENV NODE_ENV=production
 
 # Do NOT copy .env.local — pass env vars at runtime via --env-file or -e flags
 
 EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl -fsS http://localhost:3000/health > /dev/null || exit 1
 
 # Run from packages/server to match the node_modules resolution path
 WORKDIR /app/packages/server
