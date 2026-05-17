@@ -23,7 +23,9 @@ coverage/
 docker/ecoctrl/
 .pnpm-store/
 .worktrees/
+**/logs/
 
 **/superpowers/
 **/CLAUDE.md
 *.csv
+*.xlsx
