@@ -47,7 +47,13 @@ export default async function modelRoutes(fastify: FastifyInstance) {
     },
     async (_request, reply) => {
       const items = await findManyModels();
-      return reply.send(items);
+      const resolved = await Promise.all(
+        items.map(async (item) => ({
+          ...item,
+          fileUrl: item.fileUrl ? await storage.getUrl(item.fileUrl) : null,
+        })),
+      );
+      return reply.send(resolved);
     },
   );
 
@@ -143,7 +149,11 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         docUrl: null,
         points,
       });
-      return reply.status(201).send(created);
+      const response = {
+        ...created,
+        fileUrl: created.fileUrl ? await storage.getUrl(created.fileUrl) : null,
+      };
+      return reply.status(201).send(response);
     },
   );
 
@@ -194,7 +204,11 @@ export default async function modelRoutes(fastify: FastifyInstance) {
       if (!updated) {
         return reply.status(404).send({ error: "Model not found" });
       }
-      return updated;
+      const response = {
+        ...updated,
+        fileUrl: updated.fileUrl ? await storage.getUrl(updated.fileUrl) : null,
+      };
+      return response;
     },
   );
 
@@ -286,7 +300,14 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         size: formatFileSize(sizeBytes),
         fileUrl,
       });
-      return updated;
+      if (!updated) {
+        return reply.status(404).send({ error: "Model not found" });
+      }
+      const response = {
+        ...updated,
+        fileUrl: updated.fileUrl ? await storage.getUrl(updated.fileUrl) : null,
+      };
+      return response;
     },
   );
 
