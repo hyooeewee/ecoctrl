@@ -37,6 +37,7 @@ import {
   Settings,
   MoreHorizontal,
   Pencil,
+  Activity,
   type LucideIcon,
 } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -77,6 +78,7 @@ const NODE_TYPES = {
   email: ActionNode,
   variable: ActionNode,
   delay: ActionNode,
+  point: ActionNode,
   condition: ConditionNode,
   switch: ConditionNode,
   loop: LoopNode,
@@ -149,6 +151,19 @@ const COMPONENT_CATEGORIES: ComponentCategory[] = [
         description: "等待指定时间",
         icon: Clock,
         colorClass: "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400",
+      },
+    ],
+  },
+  {
+    id: "point",
+    label: "点位操作",
+    items: [
+      {
+        type: "point",
+        label: "点位操作",
+        description: "按名称读写点位数据",
+        icon: Activity,
+        colorClass: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400",
       },
     ],
   },
@@ -1016,6 +1031,149 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                                 config: {
                                   ...(selectedNode.data.config as Record<string, unknown>),
                                   subject: e.target.value,
+                                },
+                              })
+                            }
+                            className="h-9 rounded-md border bg-white px-3 text-sm dark:bg-zinc-950"
+                          />
+                        </div>
+                      </>
+                    )}
+                    {selectedNodeType === "point" && (
+                      <>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">Operation</Label>
+                          <Input
+                            value={
+                              (((selectedNode.data.config as Record<string, unknown>) ?? {})
+                                ?.operation as string) ?? "read"
+                            }
+                            placeholder="read / read_value / write"
+                            onChange={(e) =>
+                              updateNodeData(selectedNode.id, {
+                                config: {
+                                  ...(selectedNode.data.config as Record<string, unknown>),
+                                  operation: e.target.value,
+                                },
+                              })
+                            }
+                            className="h-9 rounded-md border bg-white px-3 text-sm dark:bg-zinc-950"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">Point Name</Label>
+                          <Input
+                            value={
+                              (((selectedNode.data.config as Record<string, unknown>) ?? {})
+                                ?.pointName as string) ?? ""
+                            }
+                            placeholder="{{ trigger.pointName }}"
+                            onChange={(e) =>
+                              updateNodeData(selectedNode.id, {
+                                config: {
+                                  ...(selectedNode.data.config as Record<string, unknown>),
+                                  pointName: e.target.value,
+                                },
+                              })
+                            }
+                            className="h-9 rounded-md border bg-white px-3 text-sm dark:bg-zinc-950"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">Value Key</Label>
+                          <Input
+                            value={
+                              (((selectedNode.data.config as Record<string, unknown>) ?? {})
+                                ?.valueKey as string) ?? ""
+                            }
+                            placeholder="values key (for read_value / write)"
+                            onChange={(e) =>
+                              updateNodeData(selectedNode.id, {
+                                config: {
+                                  ...(selectedNode.data.config as Record<string, unknown>),
+                                  valueKey: e.target.value,
+                                },
+                              })
+                            }
+                            className="h-9 rounded-md border bg-white px-3 text-sm dark:bg-zinc-950"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">Value</Label>
+                          <Input
+                            value={
+                              (((selectedNode.data.config as Record<string, unknown>) ?? {})
+                                ?.value as string) ?? ""
+                            }
+                            placeholder="value to write (for write operation)"
+                            onChange={(e) =>
+                              updateNodeData(selectedNode.id, {
+                                config: {
+                                  ...(selectedNode.data.config as Record<string, unknown>),
+                                  value: e.target.value,
+                                },
+                              })
+                            }
+                            className="h-9 rounded-md border bg-white px-3 text-sm dark:bg-zinc-950"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">
+                            Object ID (optional filter)
+                          </Label>
+                          <Input
+                            value={
+                              (((selectedNode.data.config as Record<string, unknown>) ?? {})
+                                ?.objectId as string) ?? ""
+                            }
+                            placeholder="filter by objectId"
+                            onChange={(e) =>
+                              updateNodeData(selectedNode.id, {
+                                config: {
+                                  ...(selectedNode.data.config as Record<string, unknown>),
+                                  objectId: e.target.value,
+                                },
+                              })
+                            }
+                            className="h-9 rounded-md border bg-white px-3 text-sm dark:bg-zinc-950"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">
+                            Model ID (optional filter)
+                          </Label>
+                          <Input
+                            value={
+                              (((selectedNode.data.config as Record<string, unknown>) ?? {})
+                                ?.modelId as string) ?? ""
+                            }
+                            placeholder="filter by modelId"
+                            onChange={(e) =>
+                              updateNodeData(selectedNode.id, {
+                                config: {
+                                  ...(selectedNode.data.config as Record<string, unknown>),
+                                  modelId: e.target.value,
+                                },
+                              })
+                            }
+                            className="h-9 rounded-md border bg-white px-3 text-sm dark:bg-zinc-950"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">
+                            Point No (optional filter)
+                          </Label>
+                          <Input
+                            value={
+                              (((selectedNode.data.config as Record<string, unknown>) ?? {})
+                                ?.pointNo as string) ?? ""
+                            }
+                            placeholder="filter by pointNo"
+                            onChange={(e) =>
+                              updateNodeData(selectedNode.id, {
+                                config: {
+                                  ...(selectedNode.data.config as Record<string, unknown>),
+                                  pointNo: e.target.value,
                                 },
                               })
                             }

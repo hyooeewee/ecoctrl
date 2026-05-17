@@ -150,6 +150,38 @@ export async function deletePoint(id: string): Promise<Point | null> {
   };
 }
 
+export async function findPointByName(
+  name: string,
+  filters?: { objectId?: string; modelId?: string; pointNo?: string },
+): Promise<Point | null> {
+  const conditions = [eq(points.name, name)];
+  if (filters?.objectId) conditions.push(eq(points.objectId, filters.objectId));
+  if (filters?.modelId) conditions.push(eq(points.modelId, filters.modelId));
+  if (filters?.pointNo) conditions.push(eq(points.pointNo, filters.pointNo));
+
+  const rows = await db
+    .select()
+    .from(points)
+    .where(and(...conditions));
+  if (rows.length === 0) return null;
+  if (rows.length > 1) {
+    console.warn(
+      `findPointByName: multiple points found for name "${name}", returning first match`,
+    );
+  }
+  const r = rows[0]!;
+  return {
+    id: r.id,
+    objectId: r.objectId,
+    modelId: r.modelId,
+    pointType: r.pointType,
+    pointNo: r.pointNo,
+    name: r.name,
+    props: r.props ?? [],
+    values: r.values ?? {},
+  };
+}
+
 export async function deletePointsByObjectId(objectId: string): Promise<number> {
   const result = await db.delete(points).where(eq(points.objectId, objectId)).returning();
   return result.length;
