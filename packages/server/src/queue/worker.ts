@@ -65,6 +65,9 @@ async function processJob(job: Job<ExecutionJobData>): Promise<void> {
       triggerData,
       getEnvVars(),
       pluginRegistry,
+      false,
+      workflowId,
+      executionId,
     );
 
     const durationMs = Date.now() - startTime;
@@ -128,4 +131,15 @@ export async function startWorker(): Promise<void> {
   );
 
   logger.info("[worker] Started listening for workflow.execute jobs");
+
+  // Periodically reload plugin registry to pick up changes from API server
+  const RELOAD_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+  setInterval(async () => {
+    try {
+      await pluginRegistry.reload();
+      logger.info(`[worker] Plugin registry reloaded, ${pluginRegistry.getAll().length} plugins`);
+    } catch (err) {
+      logger.error(`[worker] Failed to reload plugin registry: ${(err as Error).message}`);
+    }
+  }, RELOAD_INTERVAL_MS);
 }

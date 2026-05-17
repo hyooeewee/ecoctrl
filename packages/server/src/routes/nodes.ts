@@ -1,5 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { z } from "zod";
+import { db } from "@/config/database";
+import { workflows } from "@/schemas/workflows";
 import type { PluginRegistry } from "@/engine/plugin-registry";
 import { errors, errorResponseSchema } from "@/lib/schemas";
 
@@ -213,6 +215,18 @@ export default async function nodeRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id, version } = request.params as { id: string; version: string };
       try {
+        // Check workflow references before uninstalling
+        const allWorkflows = await db.select().from(workflows);
+        const refs = allWorkflows.filter((wf) => {
+          const dsl = (wf.publishedDsl ?? wf.dsl) as { nodes?: Array<{ type: string }> } | null;
+          return dsl?.nodes?.some((n) => n.type === id);
+        });
+        if (refs.length > 0) {
+          return reply.status(409).send({
+            error: `Plugin ${id} is referenced by ${refs.length} workflow(s). Remove references before uninstalling.`,
+          });
+        }
+
         await registry.uninstall(id, version);
         return reply.status(204).send();
       } catch (err) {

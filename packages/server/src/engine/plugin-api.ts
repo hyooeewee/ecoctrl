@@ -1,4 +1,7 @@
 import type { PluginApi, ExecutionContext } from "./plugin-types";
+import { getLogger } from "@/lib/logger";
+
+const logger = getLogger("plugin");
 
 const ALLOWED_ENV_KEYS = ["API_BASE_URL", "NODE_ENV", "APP_NAME"];
 
@@ -44,9 +47,18 @@ export function createPluginApi(
     },
 
     log: {
-      info: (msg, meta) => console.log(`[plugin:${nodeId}] ${msg}`, meta ?? ""),
-      warn: (msg, meta) => console.warn(`[plugin:${nodeId}] ${msg}`, meta ?? ""),
-      error: (msg, meta) => console.error(`[plugin:${nodeId}] ${msg}`, meta ?? ""),
+      info: (msg, meta) => {
+        if (meta) logger.info(meta, `[plugin:${nodeId}] ${msg}`);
+        else logger.info(`[plugin:${nodeId}] ${msg}`);
+      },
+      warn: (msg, meta) => {
+        if (meta) logger.warn(meta, `[plugin:${nodeId}] ${msg}`);
+        else logger.warn(`[plugin:${nodeId}] ${msg}`);
+      },
+      error: (msg, meta) => {
+        if (meta) logger.error(meta, `[plugin:${nodeId}] ${msg}`);
+        else logger.error(`[plugin:${nodeId}] ${msg}`);
+      },
     },
 
     env: {
@@ -94,6 +106,7 @@ async function safeHttp(
       headers: options?.headers,
       body: fetchBody,
       signal: controller.signal,
+      redirect: "error",
     });
     clearTimeout(timer);
     const body = await response.text();
@@ -115,12 +128,24 @@ async function safeHttp(
 }
 
 function isInternalHost(hostname: string): boolean {
-  if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1") return true;
-  if (hostname.startsWith("10.")) return true;
-  if (hostname.startsWith("192.168.")) return true;
-  if (hostname.startsWith("172.")) {
-    const second = parseInt(hostname.split(".")[1] ?? "0", 10);
+  const lower = hostname.toLowerCase();
+  if (lower === "localhost" || lower === "0.0.0.0") return true;
+
+  // IPv4
+  if (lower === "127.0.0.1") return true;
+  if (lower.startsWith("127.")) return true;
+  if (lower.startsWith("10.")) return true;
+  if (lower.startsWith("192.168.")) return true;
+  if (lower.startsWith("172.")) {
+    const second = parseInt(lower.split(".")[1] ?? "0", 10);
     if (second >= 16 && second <= 31) return true;
   }
+  if (lower.startsWith("169.254.")) return true;
+
+  // IPv6
+  if (lower === "::" || lower === "::1") return true;
+  if (lower.startsWith("fc") || lower.startsWith("fd")) return true; // fc00::/7
+  if (lower.startsWith("fe80:")) return true;
+
   return false;
 }

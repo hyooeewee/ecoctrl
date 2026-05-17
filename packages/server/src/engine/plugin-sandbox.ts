@@ -9,10 +9,12 @@ export async function executeInSandbox(
   const isolate = new ivm.Isolate({ memoryLimit: 64 });
   const context = await isolate.createContext();
 
-  try {
-    // Inject ivm so the wrapper can use ExternalCopy
-    await context.global.set("__ivm", ivm);
+  // Generate random prefix for internal globals to avoid leakage
+  const prefix = `__${Math.random().toString(36).slice(2)}_`;
+  const resolveName = `${prefix}resolve`;
+  const rejectName = `${prefix}reject`;
 
+  try {
     // Inject ctx as a copyable object
     const ctxCopy = new ivm.ExternalCopy(ctx);
     await context.global.set("__ctx", ctxCopy.copyInto());
@@ -24,7 +26,7 @@ export async function executeInSandbox(
     let capturedResult: unknown = null;
     let capturedError: Error | null = null;
     await context.evalClosure(
-      `globalThis.__resolve_result = function(value) {
+      `globalThis.${resolveName} = function(value) {
         return $0.applySync(undefined, [value], { arguments: { copy: true } });
       }`,
       [
@@ -35,7 +37,7 @@ export async function executeInSandbox(
       { arguments: { reference: true } },
     );
     await context.evalClosure(
-      `globalThis.__reject_result = function(err) {
+      `globalThis.${rejectName} = function(err) {
         return $0.applySync(undefined, [err], { arguments: { copy: true } });
       }`,
       [
@@ -57,9 +59,9 @@ export async function executeInSandbox(
             throw new Error('backend.js must export a function');
           }
           var __result = await module.exports(__ctx, __api);
-          __resolve_result(__result);
+          ${resolveName}(__result);
         } catch (err) {
-          __reject_result(err.message || String(err));
+          ${rejectName}(err.message || String(err));
         }
       })();
     `;
@@ -84,6 +86,14 @@ export async function executeInSandbox(
 
     return (capturedResult ?? {}) as Record<string, unknown>;
   } finally {
+    // Clean up internal globals to prevent leakage between executions
+    try {
+      await context.eval(
+        `delete globalThis.${resolveName}; delete globalThis.${rejectName}; delete globalThis.__ctx; delete globalThis.__api;`,
+      );
+    } catch {
+      // Ignore cleanup errors
+    }
     isolate.dispose();
   }
 }

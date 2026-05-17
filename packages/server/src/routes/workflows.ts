@@ -288,6 +288,7 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
         envVars,
         null,
         true,
+        id,
       );
 
       return reply.send(result);
