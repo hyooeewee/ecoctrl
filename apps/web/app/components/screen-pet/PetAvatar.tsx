@@ -1,5 +1,5 @@
 import { SpritePetRenderer, type SpritePetState } from "./SpritePetRenderer";
-import { spritePetRegistry } from "virtual:pets";
+import { usePets } from "./hooks/usePets";
 import type { PetTheme } from "~/store/pet";
 
 interface PetAvatarProps {
@@ -42,10 +42,6 @@ function getPetState({
   return "idle";
 }
 
-function isSpritePet(theme: string): boolean {
-  return spritePetRegistry.pets.some((p) => p.id === theme);
-}
-
 export function PetAvatar({
   theme,
   isSpeaking,
@@ -57,7 +53,9 @@ export function PetAvatar({
   dragDirection,
   size = 80,
 }: PetAvatarProps) {
-  const petId = isSpritePet(theme) ? theme : (spritePetRegistry.pets[0]?.id ?? "usagi");
+  const { pets } = usePets();
+  const isSpritePet = pets.some((p) => p.id === theme);
+  const petId = isSpritePet ? theme : "usagi";
 
   return (
     <SpritePetRenderer
