@@ -32,7 +32,7 @@ import { Kbd } from "@ecoctrl/ui/kbd";
 import { workflowsApi } from "@/api/workflows";
 import { pointsApi } from "@/api/points";
 import type { WorkflowDSL, WorkflowListItem, EnvVar } from "./types";
-import { dslToReactFlow, reactFlowToDSL, getDefaultSettings } from "./transform";
+import { dslToReactFlow, getDefaultSettings } from "./transform";
 import { autoLayout } from "./layout";
 import { usePluginNodes } from "./hooks/usePluginNodes";
 import { useWorkflowHistory } from "./hooks/useWorkflowHistory";
@@ -55,38 +55,46 @@ interface WorkflowCanvasProps {
 export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasProps) {
   const [nodes, setNodes, _onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, _onEdgesChange] = useEdgesState<Edge>([]);
-  const { pluginNodes, getNodeDef } = usePluginNodes();
+  const { pluginNodes, getPluginNodeDef } = usePluginNodes();
   const { undo } = useWorkflowHistory();
 
   const [dsl, setDsl] = useState<WorkflowDSL | null>(null);
   const [workflow, setWorkflow] = useState<WorkflowListItem | null>(null);
+  const [envVars, setEnvVars] = useState<EnvVar[]>([]);
+  const [settings, setSettings] =
+    useState<NonNullable<WorkflowDSL["settings"]>>(getDefaultSettings());
+
+  const {
+    saving,
+    publishing,
+    testing,
+    testLogOpen,
+    setTestLogOpen,
+    testResult,
+    isDirty,
+    setIsDirty,
+    autoSaveStatus,
+    handleSave,
+    handlePublish,
+    handleTestRun,
+  } = useWorkflowPersistence({
+    dsl,
+    nodes,
+    edges,
+    workflowId,
+    workflow,
+    envVars,
+    settings,
+    setDsl,
+    setWorkflow,
+  });
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [publishing, setPublishing] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [testLogOpen, setTestLogOpen] = useState(false);
-  const [testResult, setTestResult] = useState<{
-    status: string;
-    error?: string;
-    nodeLogs: Array<{
-      nodeId: string;
-      nodeName: string;
-      nodeType: string;
-      status: string;
-      startedAt?: string;
-      completedAt?: string;
-      durationMs?: number;
-      output?: Record<string, unknown>;
-      error?: string;
-    }>;
-  } | null>(null);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [libraryOpen, setLibraryOpen] = useState(true);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [activeConfigTab, setActiveConfigTab] = useState("config");
-  const [isDirty, setIsDirty] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
@@ -108,14 +116,8 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
     flowY?: number;
   } | null>(null);
 
-  // Env vars & settings
-  const [envVars, setEnvVars] = useState<EnvVar[]>([]);
+  // Dialogs
   const [showEnvVarsDialog, setShowEnvVarsDialog] = useState(false);
-  const [settings, setSettings] =
-    useState<NonNullable<WorkflowDSL["settings"]>>(getDefaultSettings());
-  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "success" | "error">(
-    "idle",
-  );
   const [visibleSecrets, setVisibleSecrets] = useState<Set<string>>(new Set());
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
 
@@ -564,7 +566,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
       const config: Record<string, unknown> = {};
 
       // Pin plugin version at drop time to avoid non-deterministic execution
-      const def = getNodeDef(type);
+      const def = getPluginNodeDef(type);
       if (def) {
         config.__version = def.version;
       }
@@ -580,7 +582,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
       _pushHistory(nodesRef.current, edges);
       setNodes((nds) => [...nds, newNode]);
     },
-    [rfInstance, setNodes, pluginNodes, getNodeDef, _pushHistory, edges],
+    [rfInstance, setNodes, pluginNodes, getPluginNodeDef, _pushHistory, edges],
   );
 
   const onDragEnd = useCallback(() => {
@@ -602,111 +604,6 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
     [setNodes, setEdges, _pushHistory, edges],
   );
 
-  const handleSave = useCallback(
-    async (options?: { silent?: boolean; onSuccess?: () => void; onError?: () => void }) => {
-      if (!dsl) return;
-      setSaving(true);
-      if (options?.silent) setAutoSaveStatus("saving");
-      try {
-        const newDsl: WorkflowDSL = {
-          ...reactFlowToDSL(nodes, edges, dsl.trigger),
-          envVars,
-          settings,
-        };
-        if (workflowId) {
-          await workflowsApi.update(workflowId, {
-            name: workflow?.name,
-            dsl: newDsl,
-          });
-        }
-        setDsl(newDsl);
-        setIsDirty(false);
-        if (options?.silent) {
-          setAutoSaveStatus("success");
-          setTimeout(() => setAutoSaveStatus("idle"), 2000);
-        } else {
-          toast.success("工作流已保存");
-        }
-        options?.onSuccess?.();
-      } catch (err) {
-        if (options?.silent) {
-          setAutoSaveStatus("error");
-          setTimeout(() => setAutoSaveStatus("idle"), 3000);
-        } else {
-          const msg =
-            (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
-            "保存失败，请检查节点连接是否正确";
-          toast.error(msg);
-        }
-        options?.onError?.();
-      } finally {
-        setSaving(false);
-      }
-    },
-    [dsl, nodes, edges, workflowId, workflow?.name, envVars, settings],
-  );
-
-  const handlePublish = useCallback(async () => {
-    if (!workflowId || !dsl) return;
-    setPublishing(true);
-    try {
-      const newDsl: WorkflowDSL = {
-        ...reactFlowToDSL(nodes, edges, dsl.trigger),
-        envVars,
-        settings,
-      };
-      await workflowsApi.update(workflowId, {
-        name: workflow?.name,
-        dsl: newDsl,
-        enabled: true,
-      });
-      setDsl(newDsl);
-      setIsDirty(false);
-      setWorkflow((prev) => (prev ? { ...prev, enabled: true } : prev));
-      toast.success("工作流已发布");
-    } catch (err) {
-      const msg =
-        (err as { response?: { data?: { error?: string; details?: Array<{ message: string }> } } })
-          ?.response?.data?.error || "发布失败";
-      const details = (err as { response?: { data?: { details?: Array<{ message: string }> } } })
-        ?.response?.data?.details;
-      if (details && details.length > 0) {
-        toast.error(`${msg}: ${details.map((d) => d.message).join("; ")}`);
-      } else {
-        toast.error(msg);
-      }
-    } finally {
-      setPublishing(false);
-    }
-  }, [dsl, nodes, edges, workflowId, workflow?.name, envVars, settings]);
-
-  const handleTestRun = useCallback(async () => {
-    if (!workflowId) {
-      toast.error("请先保存工作流");
-      return;
-    }
-    setTesting(true);
-    setTestLogOpen(true);
-    try {
-      const result = await workflowsApi.test(workflowId);
-      setTestResult(result);
-      const logCount = result.nodeLogs?.length ?? 0;
-      if (result.status === "completed") {
-        toast.success(`测试运行成功，共执行 ${logCount} 个节点`);
-      } else {
-        toast.error(`测试运行失败: ${result.error ?? "未知错误"}`);
-      }
-    } catch (err) {
-      const msg =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-        "测试运行失败";
-      toast.error(msg);
-      setTestResult(null);
-    } finally {
-      setTesting(false);
-    }
-  }, [workflowId]);
-
   const handleAutoLayout = useCallback(() => {
     _pushHistory(nodesRef.current, edges);
     setNodes((nds) => autoLayout(nds, edges));
@@ -716,98 +613,20 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
     });
   }, [edges, setNodes, rfInstance, _pushHistory]);
 
-  // Auto save
-  useEffect(() => {
-    if (!settings.autoSave?.enabled || !isDirty || !dsl) return;
-    const intervalMs = (settings.autoSave.intervalSeconds ?? 30) * 1000;
-    const timer = setInterval(() => {
-      handleSave({ silent: true });
-    }, intervalMs);
-    return () => clearInterval(timer);
-  }, [settings.autoSave?.enabled, settings.autoSave?.intervalSeconds, isDirty, dsl, handleSave]);
-
-  // Keyboard shortcuts: copy / paste / delete / select-all / undo
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "c") {
-        e.preventDefault();
-        const selected = nodesRef.current.filter((n) => selectedNodeIds.includes(n.id));
-        if (selected.length > 0) {
-          copiedNodesRef.current = selected;
-          toast.success(`已复制 ${selected.length} 个节点`);
-        }
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === "v") {
-        e.preventDefault();
-        const copied = copiedNodesRef.current;
-        if (copied.length === 0) return;
-        const idMap = new Map<string, string>();
-        const newNodes: Node[] = copied.map((n) => {
-          const newId = `${n.type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-          idMap.set(n.id, newId);
-          return {
-            ...n,
-            id: newId,
-            position: { x: n.position.x + 30, y: n.position.y + 30 },
-            selected: false,
-          };
-        });
-        const newEdges: Edge[] = edges
-          .filter((edge) => idMap.has(edge.source) && idMap.has(edge.target))
-          .map((edge) => ({
-            ...edge,
-            id: `e-${idMap.get(edge.source)}-${idMap.get(edge.target)}-${Date.now()}`,
-            source: idMap.get(edge.source)!,
-            target: idMap.get(edge.target)!,
-          }));
-        setIsDirty(true);
-        _pushHistory(nodesRef.current, edges);
-        setNodes((nds) => [...nds, ...newNodes]);
-        if (newEdges.length > 0) setEdges((eds) => [...eds, ...newEdges]);
-        toast.success(`已粘贴 ${copied.length} 个节点`);
-      }
-      if (e.key === "Delete" || e.key === "Backspace") {
-        if (selectedNodeIds.length > 0) {
-          setIsDirty(true);
-          _pushHistory(nodesRef.current, edges);
-          setNodes((nds) => nds.filter((n) => !selectedNodeIds.includes(n.id)));
-          setEdges((eds) =>
-            eds.filter(
-              (e) => !selectedNodeIds.includes(e.source) && !selectedNodeIds.includes(e.target),
-            ),
-          );
-          setSelectedNodeIds([]);
-        }
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === "a") {
-        e.preventDefault();
-        const allIds = nodesRef.current.map((n) => n.id);
-        setSelectedNodeIds(allIds);
-        setNodes((nds) => nds.map((n) => ({ ...n, selected: true })));
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
-        e.preventDefault();
-        undo(setNodes, setEdges, () => {
-          setSelectedNodeIds([]);
-          toast.success("已撤销");
-        });
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [selectedNodeIds, setNodes, setEdges, _pushHistory, edges, undo]);
-
-  // Keyboard shortcut: Ctrl/Cmd + S
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
-        e.preventDefault();
-        handleSave();
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [handleSave]);
+  // Keyboard shortcuts
+  useWorkflowKeyboard({
+    nodesRef,
+    edges,
+    selectedNodeIds,
+    copiedNodesRef,
+    setNodes,
+    setEdges,
+    setIsDirty,
+    _pushHistory,
+    undo,
+    setSelectedNodeIds,
+    handleSave,
+  });
 
   // Update node data from panel
   const updateNodeData = useCallback(
@@ -1349,7 +1168,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
             filteredPointNames={filteredPointNames}
             pointSearch={pointSearch}
             setPointSearch={setPointSearch}
-            getNodeDef={getNodeDef}
+            getPluginNodeDef={getPluginNodeDef}
             canDelete={canDelete}
             onDeleteNode={handleDeleteNode}
             onClose={() => setRightPanelOpen(false)}
