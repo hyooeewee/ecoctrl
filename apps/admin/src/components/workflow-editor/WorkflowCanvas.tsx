@@ -55,7 +55,7 @@ interface WorkflowCanvasProps {
 export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasProps) {
   const [nodes, setNodes, _onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, _onEdgesChange] = useEdgesState<Edge>([]);
-  const { pluginNodes, getPluginNodeDef } = usePluginNodes();
+  const { pluginNodes, getNodeDef } = usePluginNodes();
   const { undo } = useWorkflowHistory();
 
   const [dsl, setDsl] = useState<WorkflowDSL | null>(null);
@@ -566,7 +566,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
       const config: Record<string, unknown> = {};
 
       // Pin plugin version at drop time to avoid non-deterministic execution
-      const def = getPluginNodeDef(type);
+      const def = getNodeDef(type);
       if (def) {
         config.__version = def.version;
       }
@@ -582,7 +582,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
       _pushHistory(nodesRef.current, edges);
       setNodes((nds) => [...nds, newNode]);
     },
-    [rfInstance, setNodes, pluginNodes, getPluginNodeDef, _pushHistory, edges],
+    [rfInstance, setNodes, pluginNodes, getNodeDef, _pushHistory, edges],
   );
 
   const onDragEnd = useCallback(() => {
@@ -665,11 +665,13 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
   // Component categories with plugin section
   const componentCategories = useMemo(() => {
     const categories = [...COMPONENT_CATEGORIES];
-    if (pluginNodes.length > 0) {
+    const builtInIds = new Set(Object.keys(BUILT_IN_NODE_TYPES));
+    const externalPlugins = pluginNodes.filter((p) => !builtInIds.has(p.id));
+    if (externalPlugins.length > 0) {
       categories.push({
         id: "plugins",
         label: "插件节点",
-        items: pluginNodes.map((p) => ({
+        items: externalPlugins.map((p) => ({
           type: p.id,
           label: p.name,
           description: p.description || "",
@@ -1168,7 +1170,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
             filteredPointNames={filteredPointNames}
             pointSearch={pointSearch}
             setPointSearch={setPointSearch}
-            getPluginNodeDef={getPluginNodeDef}
+            getNodeDef={getNodeDef}
             canDelete={canDelete}
             onDeleteNode={handleDeleteNode}
             onClose={() => setRightPanelOpen(false)}
