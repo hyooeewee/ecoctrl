@@ -20,14 +20,6 @@ const ADMIN_PASS = process.env.INIT_ADMIN_PASSWORD?.trim() || crypto.randomUUID(
 const ADMIN_EMAIL = process.env.INIT_ADMIN_EMAIL?.trim() || "admin@example.com";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const BUILT_IN_PLUGIN_PREFIX = "plugins/";
-// Resolve built-in plugin source directory.
-// Production: bundled dist/init.mjs sits next to dist/built-in-nodes/.
-// Development (tsx scripts/init.ts): fall back to repo source at packages/server/assets/built-in-nodes/.
-const BUILT_IN_CANDIDATES = [
-  path.join(__dirname, "built-in-nodes"),
-  path.join(__dirname, "../assets/built-in-nodes"),
-];
 
 async function initS3Buckets() {
   if (process.env.STORAGE_PROVIDER !== "minio") {
@@ -39,15 +31,6 @@ async function initS3Buckets() {
   console.log(`[init] ensured S3 buckets`);
 }
 
-async function isDirectory(dir: string): Promise<boolean> {
-  try {
-    const stat = await fs.stat(dir);
-    return stat.isDirectory();
-  } catch {
-    return false;
-  }
-}
-
 async function fileExists(file: string): Promise<boolean> {
   try {
     await fs.access(file);
@@ -57,21 +40,8 @@ async function fileExists(file: string): Promise<boolean> {
   }
 }
 
-async function resolveBuiltInDir(): Promise<string | null> {
-  for (const candidate of BUILT_IN_CANDIDATES) {
-    if (await isDirectory(candidate)) return candidate;
-  }
-  return null;
-}
-
-async function initBuiltInPlugins() {
-  const baseDir = await resolveBuiltInDir();
-  if (!baseDir) {
-    console.warn(
-      `[init] built-in plugin source not found in any of: ${BUILT_IN_CANDIDATES.join(", ")} — skipping`,
-    );
-    return;
-  }
+async function initBuiltInNodes() {
+  const baseDir = path.join(__dirname, "./built-in-nodes");
 
   const storage = getPluginStorage();
   const entries = await fs.readdir(baseDir, { withFileTypes: true });
@@ -82,18 +52,17 @@ async function initBuiltInPlugins() {
     const manifestPath = path.join(pluginDir, "manifest.json");
 
     if (!(await fileExists(manifestPath))) {
-      console.warn(`[init] built-in plugin "${dir.name}" missing manifest.json, skipping`);
+      console.warn(`[init] built-in node "${dir.name}" missing manifest.json, skipping`);
       continue;
     }
 
     const manifestRaw = await fs.readFile(manifestPath, "utf-8");
     const manifest = JSON.parse(manifestRaw) as PluginManifest;
-    const buildKey = (filename: string) =>
-      `${BUILT_IN_PLUGIN_PREFIX}${manifest.id}/${manifest.version}/${filename}`;
+    const buildKey = (filename: string) => `${manifest.id}/${manifest.version}/${filename}`;
 
     if (await storage.exists(buildKey("manifest.json"))) {
       console.log(
-        `[init] built-in plugin ${manifest.id}@${manifest.version} already seeded, skipping`,
+        `[init] built-in node ${manifest.id}@${manifest.version} already seeded, skipping`,
       );
       continue;
     }
@@ -115,7 +84,7 @@ async function initBuiltInPlugins() {
       }
     }
 
-    console.log(`[init] seeded built-in plugin ${manifest.id}@${manifest.version}`);
+    console.log(`[init] seeded built-in nodes ${manifest.id}@${manifest.version}`);
   }
 }
 
@@ -591,7 +560,7 @@ async function initIotTokens() {
 
 async function initBuiltInPets() {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const builtInDir = path.join(__dirname, "../assets/built-in-pets");
+  const builtInDir = path.join(__dirname, "./built-in-pets");
   const storage = getPetStorage();
 
   try {
@@ -644,7 +613,7 @@ async function main() {
 
   console.log("[init] checking database state...");
   await initS3Buckets();
-  await initBuiltInPlugins();
+  await initBuiltInNodes();
   await initBuiltInPets();
   await initUsers();
   await initPlatformConfig();
