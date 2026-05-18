@@ -28,6 +28,7 @@ import oauthRoutes from "@/routes/oauth";
 import workflowRoutes, { registerWebhookRoute } from "@/routes/workflows";
 import aiRoutes from "@/routes/ai";
 import nodeRoutes from "@/routes/nodes";
+import petRoutes from "@/routes/pets";
 import { PluginRegistry } from "@/engine/plugin-registry";
 import { getPluginStorage } from "@/storage";
 import { loadBuiltInPlugins } from "@/engine/built-in-loader";
@@ -61,6 +62,7 @@ export default async function apiRoutes(fastify: FastifyInstance) {
       "/api/public",
       "/api/webhook",
       "/api/ai/chat",
+      "/api/pets",
     ];
     if (publicPaths.some((p) => request.url.startsWith(p))) return;
     try {
@@ -150,5 +152,6 @@ export default async function apiRoutes(fastify: FastifyInstance) {
   await fastify.register(workflowRoutes, { prefix: "/workflows" });
   await fastify.register(aiRoutes, { prefix: "/ai" });
   await fastify.register(nodeRoutes, { prefix: "/nodes", registry });
+  await fastify.register(petRoutes, { prefix: "/pets" });
   await registerWebhookRoute(fastify);
 }
