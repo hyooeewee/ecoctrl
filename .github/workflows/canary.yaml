@@ -82,6 +82,7 @@ jobs:
         uses: docker/bake-action@v5
         with:
           files: ./docker/docker-bake.hcl
+          targets: web,admin,server
           push: true
           set: |
             *.platform=linux/amd64,linux/arm64
@@ -89,6 +90,7 @@ jobs:
           TAG: ${{ steps.version.outputs.tag }}-rc
           REGISTRY: ghcr.io/${{ github.repository }}
           LATEST: "false"
+          BUILDER_CONTEXT: docker-image://ghcr.io/${{ github.repository }}/builder:cache
 
       - name: Update canary tag to multi-platform
         if: steps.check-rc.outputs.is_rc == 'true'
