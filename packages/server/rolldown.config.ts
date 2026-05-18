@@ -25,8 +25,6 @@ export default defineConfig({
     },
   },
 
-  // 所有 bare specifier 都视为外部，不再手维护清单
-  // 等价于 esbuild 的 --packages=external
   external: (id) => {
     if (id.startsWith("node:")) return true;
     if (id.startsWith(".") || path.isAbsolute(id) || id.startsWith("@/")) return false;
@@ -36,8 +34,9 @@ export default defineConfig({
 
   plugins: [
     {
-      name: "emit-env-example",
+      name: "emit-pre-build",
       buildStart() {
+        // Generate .env.example
         const scriptPath = path.resolve(
           path.dirname(fileURLToPath(import.meta.url)),
           "../shared/scripts/gen-env-example.ts",
@@ -46,10 +45,12 @@ export default defineConfig({
         if (result.status !== 0) {
           this.warn(`gen-env-example exited with code ${result.status ?? result.signal}`);
         }
+        // Generate drizzle migration
+        spawnSync("pnpm", ["run", "db:generate"], { stdio: "inherit" });
       },
     },
     {
-      name: "emit-static-assets",
+      name: "emit-static-files",
       async generateBundle() {
         // eslint-disable-next-line no-await-in-loop
         for (const file of staticAssets) {
@@ -60,9 +61,10 @@ export default defineConfig({
       },
     },
     {
-      name: "emit-built-in-assets",
+      name: "emit-static-assets",
       async writeBundle() {
         await cp("assets/", "dist/", { recursive: true });
+        await cp("drizzle/", "dist/drizzle/", { recursive: true });
       },
     },
     {

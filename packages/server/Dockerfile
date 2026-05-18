@@ -27,8 +27,9 @@ COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY packages/server/ packages/server/
 COPY packages/shared/ packages/shared/
 
-# Build workspace dependencies then the server
+# Build workspace dependencies then the server & deploy scripts
 RUN pnpm --filter @ecoctrl/server build
+RUN pnpm --filter @ecoctrl/server deploy packages/server/prod --legacy
 
 # ────────────────────────────
 # Stage 2: Production
@@ -37,48 +38,18 @@ FROM node:24-alpine AS production
 
 WORKDIR /app
 
-# Use domestic npm mirror for stable downloads inside China
-ENV COREPACK_NPM_REGISTRY=https://registry.npmmirror.com
-ENV NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
-
-# Enable pnpm via corepack, reading version dynamically from package.json
-RUN corepack enable
-
-# Copy workspace manifests to resolve workspace:* deps at runtime
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
-RUN PNPM_VERSION=$(node -p "require('./package.json').packageManager.replace('pnpm@','')") && \
-    corepack prepare pnpm@${PNPM_VERSION} --activate
-COPY packages/server/package.json packages/server/
-COPY packages/shared/package.json packages/shared/
-
-# Install production dependencies only with shared pnpm cache
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile --ignore-scripts
-
-# Copy built assets from builder and keep the original directory structure
-# This ensures node_modules resolution works correctly for ESM imports
-COPY --from=builder /app/packages/server/dist /app/packages/server/dist
-
-# Copy shared package source (required for workspace:* resolution at install time)
-COPY packages/shared packages/shared
-
-# Copy migration files for runtime (used by drizzle-orm migrator)
-COPY packages/server/drizzle/ packages/server/drizzle/
+COPY --from=builder /app/packages/server/dist /app
+COPY --from=builder /app/packages/server/prod/node_modules /app/node_modules
 
 # Install curl for healthcheck
 RUN apk add --no-cache curl
 
 ENV NODE_ENV=production
 
-# Do NOT copy .env.local — pass env vars at runtime via --env-file or -e flags
-
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD curl -fsS http://localhost:3000/health > /dev/null || exit 1
-
-# Run from packages/server to match the node_modules resolution path
-WORKDIR /app/packages/server
 
 # Entrypoint: run init (includes migrations), then start server
 COPY <<'ENTRYPOINT' /entrypoint.sh
@@ -86,10 +57,10 @@ COPY <<'ENTRYPOINT' /entrypoint.sh
 set -e
 
 echo "Running production init..."
-node dist/init.mjs
+node init.mjs
 
 echo "Starting server..."
-exec node dist/index.mjs
+exec node index.mjs
 ENTRYPOINT
 RUN chmod +x /entrypoint.sh
 
