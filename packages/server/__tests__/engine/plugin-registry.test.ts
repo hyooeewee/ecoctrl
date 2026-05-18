@@ -36,7 +36,7 @@ describe("PluginRegistry", () => {
       "manifest.json",
       Buffer.from(
         JSON.stringify({
-          id: "ecoctrl-test-action",
+          id: "test-action",
           name: "Test Action",
           version: "1.0.0",
           category: "action",
@@ -52,12 +52,12 @@ describe("PluginRegistry", () => {
     );
 
     const plugin = await registry.install(zip.toBuffer());
-    expect(plugin.id).toBe("ecoctrl-test-action");
+    expect(plugin.id).toBe("test-action");
     expect(plugin.version).toBe("1.0.0");
     expect(plugin.manifest.name).toBe("Test Action");
 
     // Verify storage
-    const manifestKey = "plugins/ecoctrl-test-action/1.0.0/manifest.json";
+    const manifestKey = "plugins/test-action/1.0.0/manifest.json";
     const exists = await storage.exists(manifestKey);
     expect(exists).toBe(true);
   });
@@ -71,7 +71,7 @@ describe("PluginRegistry", () => {
       "manifest.json",
       Buffer.from(
         JSON.stringify({
-          id: "ecoctrl-multi-version",
+          id: "multi-version",
           name: "Multi Version",
           version: "1.0.0",
           category: "action",
@@ -93,7 +93,7 @@ describe("PluginRegistry", () => {
       "manifest.json",
       Buffer.from(
         JSON.stringify({
-          id: "ecoctrl-multi-version",
+          id: "multi-version",
           name: "Multi Version",
           version: "2.0.0",
           category: "action",
@@ -109,10 +109,10 @@ describe("PluginRegistry", () => {
     );
     await registry.install(zip2.toBuffer());
 
-    const latest = registry.get("ecoctrl-multi-version");
+    const latest = registry.get("multi-version");
     expect(latest?.version).toBe("2.0.0");
 
-    const specific = registry.get("ecoctrl-multi-version", "1.0.0");
+    const specific = registry.get("multi-version", "1.0.0");
     expect(specific?.version).toBe("1.0.0");
   });
 
@@ -123,7 +123,7 @@ describe("PluginRegistry", () => {
       "manifest.json",
       Buffer.from(
         JSON.stringify({
-          id: "ecoctrl-to-uninstall",
+          id: "to-uninstall",
           name: "To Uninstall",
           version: "1.0.0",
           category: "action",
@@ -139,10 +139,10 @@ describe("PluginRegistry", () => {
     );
     await registry.install(zip.toBuffer());
 
-    expect(registry.get("ecoctrl-to-uninstall")).not.toBeNull();
+    expect(registry.get("to-uninstall")).not.toBeNull();
 
-    await registry.uninstall("ecoctrl-to-uninstall", "1.0.0");
-    expect(registry.get("ecoctrl-to-uninstall")).toBeNull();
+    await registry.uninstall("to-uninstall", "1.0.0");
+    expect(registry.get("to-uninstall")).toBeNull();
 
     // Verify storage cleanup
     const manifestKey = "plugins/to-uninstall/1.0.0/manifest.json";
@@ -152,7 +152,7 @@ describe("PluginRegistry", () => {
 
   it("loads plugins from storage on loadAll", async () => {
     // Manually create plugin files in storage
-    const pluginId = "ecoctrl-disk-plugin";
+    const pluginId = "disk-plugin";
     const version = "1.0.0";
     await storage.put(
       `plugins/${pluginId}/${version}/manifest.json`,
@@ -179,7 +179,7 @@ describe("PluginRegistry", () => {
     const freshRegistry = new PluginRegistry(storage);
     await freshRegistry.loadAll();
 
-    const plugin = freshRegistry.get("ecoctrl-disk-plugin");
+    const plugin = freshRegistry.get("disk-plugin");
     expect(plugin).not.toBeNull();
     expect(plugin?.manifest.name).toBe("Disk Plugin");
   });
@@ -191,7 +191,7 @@ describe("PluginRegistry", () => {
       "manifest.json",
       Buffer.from(
         JSON.stringify({
-          id: "ecoctrl-hash-test",
+          id: "hash-test",
           name: "Hash Test",
           version: "1.0.0",
           category: "action",

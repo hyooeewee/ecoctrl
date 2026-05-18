@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { validatePluginPackage, extractPluginFromZip, computeContentHash } from "@/engine/plugin-loader";
+import {
+  validatePluginPackage,
+  extractPluginFromZip,
+  computeContentHash,
+} from "@/engine/plugin-loader";
 
 describe("computeContentHash", () => {
   it("computes sha256 of sorted file contents", () => {
@@ -43,7 +47,7 @@ describe("validatePluginPackage", () => {
       [
         "manifest.json",
         JSON.stringify({
-          id: "ecoctrl-test-node",
+          id: "test-node",
           name: "Test",
           version: "1.0.0",
           category: "action",
@@ -61,7 +65,7 @@ describe("validatePluginPackage", () => {
       [
         "manifest.json",
         JSON.stringify({
-          id: "ecoctrl-test-node",
+          id: "test-node",
           name: "Test",
           version: "1.0.0",
           category: "action",
@@ -80,7 +84,7 @@ describe("validatePluginPackage", () => {
       [
         "manifest.json",
         JSON.stringify({
-          id: "ecoctrl-test-node",
+          id: "test-node",
           name: "Test",
           version: "1.0.0",
           category: "action",
@@ -99,7 +103,7 @@ describe("validatePluginPackage", () => {
       [
         "manifest.json",
         JSON.stringify({
-          id: "ecoctrl-test-node",
+          id: "test-node",
           name: "Test",
           version: "1.0.0",
           category: "action",
@@ -120,7 +124,7 @@ describe("validatePluginPackage", () => {
       [
         "manifest.json",
         JSON.stringify({
-          id: "ecoctrl-test-node",
+          id: "test-node",
           name: "Test",
           version: "1.0.0",
           category: "action",
@@ -132,7 +136,7 @@ describe("validatePluginPackage", () => {
       ["schema.json", JSON.stringify({ type: "object", properties: { x: { type: "string" } } })],
     ]);
     const result = await validatePluginPackage(files);
-    expect(result.manifest.id).toBe("ecoctrl-test-node");
+    expect(result.manifest.id).toBe("test-node");
     expect(result.backendCode).toBe("module.exports = async () => {}");
     expect(result.schema.type).toBe("object");
   });
@@ -146,7 +150,7 @@ describe("extractPluginFromZip", () => {
       "manifest.json",
       Buffer.from(
         JSON.stringify({
-          id: "ecoctrl-zip-test",
+          id: "zip-test",
           name: "Zip Test",
           version: "1.0.0",
           category: "action",

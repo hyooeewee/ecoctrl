@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { PluginManifest } from "./plugin-types";
 
 const manifestSchema = z.object({
-  id: z.string().regex(/^ecoctrl-[a-z0-9-]+$/),
+  id: z.string().regex(/^[a-z0-9_-]+$/),
   name: z.string().min(1),
   version: z.string().regex(/^\d+\.\d+\.\d+$/),
   category: z.enum(["trigger", "action", "condition"]),

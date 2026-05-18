@@ -30,12 +30,14 @@ import aiRoutes from "@/routes/ai";
 import nodeRoutes from "@/routes/nodes";
 import { PluginRegistry } from "@/engine/plugin-registry";
 import { getPluginStorage } from "@/storage";
+import { loadBuiltInPlugins } from "@/engine/built-in-loader";
 
 export default async function apiRoutes(fastify: FastifyInstance) {
   // Initialize plugin registry with storage adapter (minio or local)
   const pluginStorage = getPluginStorage();
   const registry = new PluginRegistry(pluginStorage);
   await registry.loadAll();
+  await loadBuiltInPlugins(registry);
 
   // Decorate fastify instance so routes can access registry
   fastify.decorate("pluginRegistry", registry);

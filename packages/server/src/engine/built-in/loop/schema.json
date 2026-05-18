@@ -1,0 +1,29 @@
+{
+  "type": "object",
+  "properties": {
+    "mode": {
+      "type": "string",
+      "title": "Mode",
+      "enum": ["foreach", "while"],
+      "default": "foreach"
+    },
+    "maxIterations": {
+      "type": "number",
+      "title": "Max Iterations",
+      "default": 100
+    },
+    "items": {
+      "type": "string",
+      "title": "Items (expression)"
+    },
+    "itemVar": {
+      "type": "string",
+      "title": "Item Variable Name",
+      "default": "item"
+    },
+    "condition": {
+      "type": "string",
+      "title": "Condition (while mode)"
+    }
+  }
+}

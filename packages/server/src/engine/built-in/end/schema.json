@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "title": "Status",
+      "default": "success"
+    },
+    "output": {
+      "type": "object",
+      "title": "Output"
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "properties": {
+    "durationMs": {
+      "type": "number",
+      "title": "Duration (milliseconds)",
+      "default": 1000
+    }
+  }
+}

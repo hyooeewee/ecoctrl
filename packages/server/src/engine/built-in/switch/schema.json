@@ -1,0 +1,25 @@
+{
+  "type": "object",
+  "properties": {
+    "expression": {
+      "type": "string",
+      "title": "Expression"
+    },
+    "cases": {
+      "type": "array",
+      "title": "Cases",
+      "items": {
+        "type": "object",
+        "properties": {
+          "value": { "type": "string", "title": "Value" },
+          "operator": {
+            "type": "string",
+            "title": "Operator",
+            "enum": ["===", "==", "!=", "!==", ">", "<", ">=", "<="],
+            "default": "==="
+          }
+        }
+      }
+    }
+  }
+}

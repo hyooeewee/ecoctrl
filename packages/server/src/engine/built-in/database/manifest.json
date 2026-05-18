@@ -1,0 +1,9 @@
+{
+  "id": "database",
+  "name": "数据库",
+  "version": "1.0.0",
+  "category": "action",
+  "entry": "backend.js",
+  "schema": "schema.json",
+  "description": "数据库读写操作"
+}

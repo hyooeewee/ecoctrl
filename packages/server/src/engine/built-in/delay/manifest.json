@@ -1,0 +1,9 @@
+{
+  "id": "delay",
+  "name": "延迟",
+  "version": "1.0.0",
+  "category": "action",
+  "entry": "backend.js",
+  "schema": "schema.json",
+  "description": "等待指定时间"
+}

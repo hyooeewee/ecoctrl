@@ -1,0 +1,34 @@
+{
+  "type": "object",
+  "properties": {
+    "method": {
+      "type": "string",
+      "title": "Method",
+      "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],
+      "default": "GET"
+    },
+    "url": {
+      "type": "string",
+      "title": "URL",
+      "format": "uri"
+    },
+    "headers": {
+      "type": "object",
+      "title": "Headers"
+    },
+    "body": {
+      "type": "object",
+      "title": "Body"
+    },
+    "timeoutMs": {
+      "type": "number",
+      "title": "Timeout (ms)",
+      "default": 10000
+    },
+    "retry": {
+      "type": "number",
+      "title": "Retry Count",
+      "default": 0
+    }
+  }
+}

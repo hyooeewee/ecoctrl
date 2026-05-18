@@ -1,0 +1,9 @@
+{
+  "id": "condition",
+  "name": "条件",
+  "version": "1.0.0",
+  "category": "condition",
+  "entry": "backend.js",
+  "schema": "schema.json",
+  "description": "分支条件判断"
+}

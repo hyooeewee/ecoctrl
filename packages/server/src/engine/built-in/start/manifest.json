@@ -1,0 +1,9 @@
+{
+  "id": "start",
+  "name": "开始",
+  "version": "1.0.0",
+  "category": "trigger",
+  "entry": "backend.js",
+  "schema": "schema.json",
+  "description": "流程入口节点"
+}
