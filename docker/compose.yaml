@@ -51,9 +51,9 @@ services:
       NODE_ENV: development
       PORT: '3000'
       HOST: 0.0.0.0
-      DATABASE_URL: postgresql://postgres:whzzdvyk@godot.run:45432/ecoctrl
+      DATABASE_URL: postgresql://ecoctrl:ecoctrl_secret@postgres:5432/ecoctrl
       STORAGE_PROVIDER: minio
-      S3_ENDPOINT: http://godot.run:9000
+      S3_ENDPOINT: http://minio:9000
       S3_ACCESS_KEY: ecoctrl
       S3_SECRET_KEY: ecoctrl_secret
       S3_BUCKET_FILES: ecoctrl-files
