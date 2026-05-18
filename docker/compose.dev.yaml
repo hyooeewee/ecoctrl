@@ -9,7 +9,7 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: ecoctrl
-      POSTGRES_PASSWORD: ""
+      POSTGRES_PASSWORD: ecoctrl_secret
       POSTGRES_DB: ecoctrl
     volumes:
       - ./ecoctrl/postgres_data:/var/lib/postgresql/data
@@ -28,7 +28,7 @@ services:
     image: minio/minio:latest
     environment:
       MINIO_ROOT_USER: ecoctrl
-      MINIO_ROOT_PASSWORD: ""
+      MINIO_ROOT_PASSWORD: ecoctrl_secret
     volumes:
       - ./ecoctrl/minio_data:/data
     ports:
@@ -49,19 +49,19 @@ services:
     restart: always
     environment:
       NODE_ENV: development
-      PORT: "3001"
+      PORT: '3001'
       HOST: 0.0.0.0
-      DATABASE_URL: postgresql://ecoctrl:@postgres:5432/ecoctrl
+      DATABASE_URL: '"postgresql://postgres:whzzdvyk@godot.run:45432/ecoctrl"'
       STORAGE_PROVIDER: minio
-      S3_ENDPOINT: http://minio:9000
+      S3_ENDPOINT: http://godot.run:9000
       S3_ACCESS_KEY: ecoctrl
-      S3_SECRET_KEY: ""
+      S3_SECRET_KEY: ecoctrl_secret
       S3_BUCKET_FILES: ecoctrl-files
       S3_BUCKET_MODELS: ecoctrl-models
-      S3_BUCKET_PLUGINS: ecoctrl-plugins
-      S3_FORCE_PATH_STYLE: "true"
+      S3_BUCKET_PLUGINS: ${S3_BUCKET_PLUGINS}
+      S3_FORCE_PATH_STYLE: 'true'
       INIT_ADMIN_USERNAME: admin
-      INIT_ADMIN_PASSWORD: ""
+      INIT_ADMIN_PASSWORD: admin_secret
       INIT_ADMIN_EMAIL: admin@example.com
       PNPM_HOME: /root/.pnpm-store
     ports:
