@@ -2,7 +2,7 @@ name: Cleanup
 
 on:
   schedule:
-    - cron: "0 2 * * 0" # 每周日凌晨 2 点
+    - cron: "0 2 * * 0"
   workflow_dispatch:
 
 permissions:
@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        image: [web, admin, server]
+        image: [web, admin, server, builder]
 
     steps:
       - name: Delete old images for ${{ matrix.image }}
@@ -39,8 +39,8 @@ jobs:
                 tags = $2
                 # Never delete versions tagged latest
                 if (tags ~ /(^|,)latest(,|$)/) next
-                # Collect v* versions
-                if (tags ~ /(^|,)v[0-9]/) v[++v_count] = id
+                # Collect v* versions (exclude -rc to avoid deleting rc images)
+                if (tags ~ /(^|,)v[0-9]/ && tags !~ /-rc/) v[++v_count] = id
               }
               END {
                 # Delete old v* versions (keep 5 newest)
