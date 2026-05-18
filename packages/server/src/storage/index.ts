@@ -6,6 +6,7 @@ import type { StorageAdapter } from "./types";
 let _fileStorage: StorageAdapter | null = null;
 let _modelStorage: StorageAdapter | null = null;
 let _pluginStorage: StorageAdapter | null = null;
+let _petStorage: StorageAdapter | null = null;
 
 function createS3Adapter(bucket: string): StorageAdapter {
   return new S3Adapter({
@@ -60,6 +61,20 @@ export function getPluginStorage(): StorageAdapter {
   return _pluginStorage;
 }
 
+export function getPetStorage(): StorageAdapter {
+  if (!_petStorage) {
+    const provider = env.STORAGE_PROVIDER;
+    if (provider === "minio") {
+      _petStorage = createS3Adapter(env.S3_BUCKET_PETS);
+    } else if (provider === "local") {
+      _petStorage = new LocalAdapter({ baseDir: "./pets" });
+    } else {
+      throw new Error(`Unknown storage provider: ${provider}`);
+    }
+  }
+  return _petStorage;
+}
+
 /** @deprecated Use getFileStorage() or getModelStorage() instead. */
 export function getStorage(): StorageAdapter {
   return getFileStorage();
@@ -104,9 +119,19 @@ export async function ensureS3Buckets(): Promise<void> {
     forcePathStyle: env.S3_FORCE_PATH_STYLE,
   });
 
+  const petsAdapter = new S3Adapter({
+    endpoint,
+    region,
+    accessKeyId,
+    secretAccessKey,
+    bucket: env.S3_BUCKET_PETS,
+    forcePathStyle: env.S3_FORCE_PATH_STYLE,
+  });
+
   await filesAdapter.ensureBucket();
   await modelsAdapter.ensureBucket();
   await pluginsAdapter.ensureBucket();
+  await petsAdapter.ensureBucket();
 }
 
 export * from "./types";
