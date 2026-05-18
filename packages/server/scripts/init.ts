@@ -40,8 +40,22 @@ async function fileExists(file: string): Promise<boolean> {
   }
 }
 
+async function resolveAssetDir(scriptDir: string, subdir: string): Promise<string> {
+  const candidates = [
+    path.join(scriptDir, subdir),              // prod (Docker): /app/built-in-pets
+    path.join(scriptDir, "../assets", subdir),  // dev (tsx): scripts/../assets/built-in-pets
+  ];
+  for (const p of candidates) {
+    try {
+      await fs.access(p);
+      return p;
+    } catch {}
+  }
+  return candidates[0]; // fallback to first, let the caller fail with a clear error
+}
+
 async function initBuiltInNodes() {
-  const baseDir = path.join(__dirname, "./built-in-nodes");
+  const baseDir = await resolveAssetDir(__dirname, "built-in-nodes");
 
   const storage = getPluginStorage();
   const entries = await fs.readdir(baseDir, { withFileTypes: true });
@@ -559,8 +573,7 @@ async function initIotTokens() {
 }
 
 async function initBuiltInPets() {
-  const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const builtInDir = path.join(__dirname, "./built-in-pets");
+  const builtInDir = await resolveAssetDir(__dirname, "built-in-pets");
   const storage = getPetStorage();
 
   try {
