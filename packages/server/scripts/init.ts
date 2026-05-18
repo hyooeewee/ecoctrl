@@ -42,8 +42,8 @@ async function fileExists(file: string): Promise<boolean> {
 
 async function resolveAssetDir(scriptDir: string, subdir: string): Promise<string> {
   const candidates = [
-    path.join(scriptDir, subdir),              // prod (Docker): /app/built-in-pets
-    path.join(scriptDir, "../assets", subdir),  // dev (tsx): scripts/../assets/built-in-pets
+    path.join(scriptDir, subdir), // prod (Docker): /app/built-in-pets
+    path.join(scriptDir, "../assets", subdir), // dev (tsx): scripts/../assets/built-in-pets
   ];
   for (const p of candidates) {
     try {
