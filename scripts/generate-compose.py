@@ -133,6 +133,10 @@ def load_env_file(path: Path) -> dict[str, str]:
             # Strip inline comments (simple heuristic: " #")
             if " #" in value:
                 value = value.split(" #")[0].strip()
+            # Strip matching surrounding quotes (dotenv-style):
+            # KEY="value" or KEY='value' -> value
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
+                value = value[1:-1]
             result[key] = value
     return result
 
