@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { spritePetRegistry } from "virtual:pets";
+import { usePets } from "./hooks/usePets";
 
 export type SpritePetState =
   | "idle"
@@ -34,7 +34,11 @@ const STATE_MAP: Record<SpritePetState, number> = {
 // Codex-pets format: fixed frame count per row for all pets
 const FRAME_COUNTS = [6, 8, 8, 4, 5, 7, 5, 8, 5];
 
-export { spritePetRegistry };
+// Default sprite sheet dimensions for built-in pets
+const DEFAULT_COLS = 8;
+const DEFAULT_ROWS = 9;
+const DEFAULT_CELL_WIDTH = 192;
+const DEFAULT_CELL_HEIGHT = 208;
 
 export function SpritePetRenderer({
   petId,
@@ -44,10 +48,11 @@ export function SpritePetRenderer({
 }: SpritePetRendererProps) {
   const [frameIndex, setFrameIndex] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { pets } = usePets();
 
   const pet = useMemo(() => {
-    return spritePetRegistry.pets.find((p) => p.id === petId);
-  }, [petId]);
+    return pets.find((p) => p.id === petId);
+  }, [pets, petId]);
 
   const row = STATE_MAP[state] ?? 0;
 
@@ -59,7 +64,7 @@ export function SpritePetRenderer({
       clearInterval(intervalRef.current);
     }
 
-    const frameCount = FRAME_COUNTS[row] ?? pet.cols;
+    const frameCount = FRAME_COUNTS[row] ?? DEFAULT_COLS;
     intervalRef.current = setInterval(() => {
       setFrameIndex((prev) => (prev + 1) % frameCount);
     }, 1000 / fps);
@@ -82,18 +87,22 @@ export function SpritePetRenderer({
     );
   }
 
-  const bgWidth = pet.cols * pet.cellWidth * scale;
-  const bgHeight = pet.rows * pet.cellHeight * scale;
-  const offsetX = frameIndex * pet.cellWidth * scale;
-  const offsetY = row * pet.cellHeight * scale;
+  const cols = DEFAULT_COLS;
+  const rows = DEFAULT_ROWS;
+  const cellWidth = DEFAULT_CELL_WIDTH;
+  const cellHeight = DEFAULT_CELL_HEIGHT;
+  const bgWidth = cols * cellWidth * scale;
+  const bgHeight = rows * cellHeight * scale;
+  const offsetX = frameIndex * cellWidth * scale;
+  const offsetY = row * cellHeight * scale;
 
   return (
     <div
       className="inline-block"
       style={{
-        width: pet.cellWidth * scale,
-        height: pet.cellHeight * scale,
-        backgroundImage: `url(${pet.spritesheetPath})`,
+        width: cellWidth * scale,
+        height: cellHeight * scale,
+        backgroundImage: `url(${pet.spritesheetUrl})`,
         backgroundPosition: `-${offsetX}px -${offsetY}px`,
         backgroundSize: `${bgWidth}px ${bgHeight}px`,
         backgroundRepeat: "no-repeat",
