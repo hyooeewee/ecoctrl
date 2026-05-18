@@ -58,6 +58,10 @@
       "types": "./src/components/ui/input-group.tsx",
       "import": "./src/components/ui/input-group.tsx"
     },
+    "./kbd": {
+      "types": "./src/components/ui/kbd.tsx",
+      "import": "./src/components/ui/kbd.tsx"
+    },
     "./label": {
       "types": "./src/components/ui/label.tsx",
       "import": "./src/components/ui/label.tsx"
