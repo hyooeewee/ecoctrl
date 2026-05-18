@@ -106,9 +106,14 @@ export default function SettingsPage() {
   const isLayoutModified = bentoLayout.length > 0;
 
   // Fetch available pets from API
-  const [availablePets, setAvailablePets] = useState<Array<{ id: string; displayName: string }>>([]);
+  const [availablePets, setAvailablePets] = useState<Array<{ id: string; displayName: string }>>(
+    [],
+  );
   useEffect(() => {
-    petsApi.list().then(setAvailablePets).catch(() => setAvailablePets([]));
+    petsApi
+      .list()
+      .then(setAvailablePets)
+      .catch(() => setAvailablePets([]));
   }, []);
 
   // Load server settings on mount (server-side priority, non-blocking).
