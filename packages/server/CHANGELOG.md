@@ -1,5 +1,35 @@
 # @ecoctrl/server
 
+## 0.4.10
+
+### Patch Changes
+
+- [`31f28ef`](https://github.com/hyooeewee/ecoctrl/commit/31f28ef931abf1cff8b741e46e6014e22bf57169) Thanks [@hyooeewee](https://github.com/hyooeewee)! - reactored dashboardModel and users routes to replace direct filesystem I/O (fs/path) with the StorageAdapter abstraction
+
+- [`135f18b`](https://github.com/hyooeewee/ecoctrl/commit/135f18b0f171593fe459b216654d0fb3ee5ef9fa) Thanks [@hyooeewee](https://github.com/hyooeewee)! - refactored the server's build/Docker setup and the init script's asset resolution for built-in nodes and pets
+
+- [`f37c77c`](https://github.com/hyooeewee/ecoctrl/commit/f37c77c98049e2528c6d47d58c72061e6e93ab99) Thanks [@hyooeewee](https://github.com/hyooeewee)! - - Add `StorageAdapter` abstraction supporting S3 API (MinIO, R2, OSS, AWS S3)
+  - Integrate MinIO as self-hosted object storage backend
+  - Refactor `/api/files` and `/api/models` routes to use presigned URL redirects
+  - Replace `unzipper` with `jszip` for in-memory 3D model ZIP extraction
+  - Remove `uploads/` local directory dependency
+  - Add MinIO service to Docker Compose with auto bucket initialization
+
+- [`06e3532`](https://github.com/hyooeewee/ecoctrl/commit/06e353268e3404d18e212bbb092afb1e9d60b80c) Thanks [@hyooeewee](https://github.com/hyooeewee)! - **Workflow Engine**
+  - Add plugin node system with `.ecn` zip package format (manifest + backend.js + schema.json + icon.svg)
+  - Run plugin code in `isolated-vm` sandbox with curated API (http, iot, log, variables)
+  - Add built-in workflow nodes as `.ecn` packages: start, end, condition, switch, loop, parallel, delay, http-request, database, email, point-read, point-write,
+    variable
+  - Add `POST /api/nodes/install`, `DELETE /api/nodes/:id/:version`, `POST /api/nodes/reload` endpoints
+  - Refactor workflow editor with node library, test panel, config panel, persistence, undo, keyboard shortcuts, and context menus
+  - Add `@ecoctrl/ui/context-menu` and `@ecoctrl/ui/kbd` components
+
+  **Pet Remote Storage**
+  - Add `GET /api/pets` (public), `POST /api/pets`, `DELETE /api/pets/:id`, `POST /api/pets/reload` (admin) endpoints
+  - Use dedicated `ecoctrl-pets` S3 bucket via `getPetStorage()`
+  - Remove `virtual:pets` build-time module; load pets dynamically from API at runtime
+  - Retain `usagi` as built-in pet
+
 ## 0.4.9
 
 ### Patch Changes
