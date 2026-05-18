@@ -20,8 +20,8 @@ variable "BUILDER_CONTEXT" {
 target "builder" {
     dockerfile = "docker/Dockerfile.builder"
     tags = ["${REGISTRY}/builder:cache"]
-    cache-from = ["type=registry,ref=${REGISTRY}/builder:cache-buildx"]
-    cache-to = ["type=registry,ref=${REGISTRY}/builder:cache-buildx,mode=max"]
+    cache-from = ["type=gha"]
+    cache-to = ["type=gha,mode=max"]
 }
 
 # ────────────────────────────────
@@ -36,8 +36,8 @@ target "web" {
         ["${REGISTRY}/web:${TAG}"],
         LATEST == "true" ? ["${REGISTRY}/web:latest"] : []
     )
-    cache-from = ["type=registry,ref=${REGISTRY}/web:cache"]
-    cache-to = ["type=registry,ref=${REGISTRY}/web:cache,mode=max"]
+    cache-from = ["type=gha"]
+    cache-to = ["type=gha,mode=max"]
     contexts = {
         builder-base = BUILDER_CONTEXT != "" ? BUILDER_CONTEXT : "target:builder"
     }
@@ -52,8 +52,8 @@ target "admin" {
         ["${REGISTRY}/admin:${TAG}"],
         LATEST == "true" ? ["${REGISTRY}/admin:latest"] : []
     )
-    cache-from = ["type=registry,ref=${REGISTRY}/admin:cache"]
-    cache-to = ["type=registry,ref=${REGISTRY}/admin:cache,mode=max"]
+    cache-from = ["type=gha"]
+    cache-to = ["type=gha,mode=max"]
     contexts = {
         builder-base = BUILDER_CONTEXT != "" ? BUILDER_CONTEXT : "target:builder"
     }
@@ -68,8 +68,8 @@ target "server" {
         ["${REGISTRY}/server:${TAG}"],
         LATEST == "true" ? ["${REGISTRY}/server:latest"] : []
     )
-    cache-from = ["type=registry,ref=${REGISTRY}/server:cache"]
-    cache-to = ["type=registry,ref=${REGISTRY}/server:cache,mode=max"]
+    cache-from = ["type=gha"]
+    cache-to = ["type=gha,mode=max"]
     contexts = {
         builder-base = BUILDER_CONTEXT != "" ? BUILDER_CONTEXT : "target:builder"
     }
