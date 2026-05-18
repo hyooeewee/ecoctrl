@@ -12,6 +12,10 @@ permissions:
   contents: write
   packages: write
 
+concurrency:
+  group: stable
+  cancel-in-progress: true
+
 jobs:
   promote:
     name: Promote to stable
