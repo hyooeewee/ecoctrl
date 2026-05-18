@@ -1,21 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
 import { nodesApi, NodeDefinition } from "@/api/nodes";
 
-const BUILT_IN_NODE_TYPES = new Set([
-  "start",
-  "end",
-  "condition",
-  "switch",
-  "loop",
-  "parallel",
-  "delay",
-  "http_request",
-  "database",
-  "email",
-  "variable",
-  "point_read",
-  "point_write",
-]);
+// Backend manifests use kebab-case IDs for some built-in nodes,
+// but the rest of the frontend uses snake_case. Normalize here.
+const ID_OVERRIDES: Record<string, string> = {
+  "http-request": "http_request",
+  "point-read": "point_read",
+  "point-write": "point_write",
+};
+
+function normalizeNodeId(id: string): string {
+  return ID_OVERRIDES[id] ?? id;
+}
 
 export function usePluginNodes() {
   const [pluginNodes, setPluginNodes] = useState<NodeDefinition[]>([]);
@@ -27,7 +23,12 @@ export function usePluginNodes() {
       .getAll()
       .then((nodes) => {
         if (!cancelled) {
-          setPluginNodes(nodes);
+          setPluginNodes(
+            nodes.map((n) => ({
+              ...n,
+              id: normalizeNodeId(n.id),
+            })),
+          );
         }
       })
       .catch(() => {
@@ -39,11 +40,7 @@ export function usePluginNodes() {
     };
   }, []);
 
-  const isPluginNodeType = useCallback((nodeType: string): boolean => {
-    return !BUILT_IN_NODE_TYPES.has(nodeType);
-  }, []);
-
-  const getPluginNodeDef = useCallback(
+  const getNodeDef = useCallback(
     (nodeType: string): NodeDefinition | null => {
       return pluginNodes.find((n) => n.id === nodeType) ?? null;
     },
@@ -52,7 +49,6 @@ export function usePluginNodes() {
 
   return {
     pluginNodes,
-    isPluginNodeType,
-    getPluginNodeDef,
+    getNodeDef,
   };
 }
