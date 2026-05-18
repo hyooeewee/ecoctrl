@@ -40,15 +40,18 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       # ── Canary images (every push to main) ──
-      # Single-platform for speed.  Public repos have unlimited Actions minutes;
-      # switch to multi-platform if you need arm64 canary testing.
+      # Builder is multi-platform (needed by RC arm64 builds).
+      # App images are single-platform for speed.
       - name: Build & Push canary images
         uses: docker/bake-action@v5
         with:
           files: ./docker/docker-bake.hcl
           push: true
           set: |
-            *.platform=linux/amd64
+            builder.platform=linux/amd64,linux/arm64
+            web.platform=linux/amd64
+            admin.platform=linux/amd64
+            server.platform=linux/amd64
         env:
           TAG: canary
           REGISTRY: ghcr.io/${{ github.repository }}
