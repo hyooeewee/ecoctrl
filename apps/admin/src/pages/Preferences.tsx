@@ -39,6 +39,7 @@ import {
 import { preferencesApi } from "@/api/preferences";
 import SettingsPage from "@/components/SettingsPage";
 import { useAppStore } from "@/store/appStore";
+import { applyDarkMode } from "@/lib/darkMode";
 
 import type { UserPreferences } from "@ecoctrl/shared";
 
@@ -104,7 +105,7 @@ export default function Preferences({ userId, initialPrefs, onSaved }: Preferenc
       setSaveStatus("saved");
       onSaved?.(nextPrefs);
       if (nextPrefs.theme) {
-        import("@/lib/darkMode").then((m) => m.applyDarkMode(nextPrefs.theme!));
+        applyDarkMode(nextPrefs.theme!);
       }
       // Individual fields are already synced to store in updateField.
       // No need to overwrite the entire preferencesOverride here.
@@ -141,7 +142,7 @@ export default function Preferences({ userId, initialPrefs, onSaved }: Preferenc
       await preferencesApi.delete(userId);
       setPrefs(DEFAULT_PREFERENCES);
       onSaved?.(DEFAULT_PREFERENCES);
-      import("@/lib/darkMode").then((m) => m.applyDarkMode(DEFAULT_PREFERENCES.theme!));
+      applyDarkMode(DEFAULT_PREFERENCES.theme!);
       // Clear all local overrides so default values take effect.
       useAppStore.getState().clearPreferenceOverrides();
       setSaveStatus("saved");
