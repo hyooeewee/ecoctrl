@@ -1,4 +1,7 @@
 import crypto from "node:crypto";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import bcrypt from "bcryptjs";
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -6,7 +9,8 @@ import { count } from "drizzle-orm";
 import * as schema from "@/schemas/index";
 import { ensureDatabase } from "@/lib/ensureDatabase";
 import { migrateDatabase } from "@/lib/migrateDatabase";
-import { ensureS3Buckets } from "@/storage";
+import { ensureS3Buckets, getPetStorage, getPluginStorage } from "@/storage";
+import type { PluginManifest } from "@/engine/plugin-types";
 
 const client = postgres(process.env.DATABASE_URL!, { prepare: false });
 const db = drizzle(client, { schema });
@@ -14,6 +18,16 @@ const db = drizzle(client, { schema });
 const ADMIN_USER = process.env.INIT_ADMIN_USERNAME?.trim() || "admin";
 const ADMIN_PASS = process.env.INIT_ADMIN_PASSWORD?.trim() || crypto.randomUUID();
 const ADMIN_EMAIL = process.env.INIT_ADMIN_EMAIL?.trim() || "admin@example.com";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const BUILT_IN_PLUGIN_PREFIX = "plugins/";
+// Resolve built-in plugin source directory.
+// Production: bundled dist/init.mjs sits next to dist/built-in-nodes/.
+// Development (tsx scripts/init.ts): fall back to repo source at packages/server/assets/built-in-nodes/.
+const BUILT_IN_CANDIDATES = [
+  path.join(__dirname, "built-in-nodes"),
+  path.join(__dirname, "../assets/built-in-nodes"),
+];
 
 async function initS3Buckets() {
   if (process.env.STORAGE_PROVIDER !== "minio") {
@@ -23,6 +37,86 @@ async function initS3Buckets() {
 
   await ensureS3Buckets();
   console.log(`[init] ensured S3 buckets`);
+}
+
+async function isDirectory(dir: string): Promise<boolean> {
+  try {
+    const stat = await fs.stat(dir);
+    return stat.isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+async function fileExists(file: string): Promise<boolean> {
+  try {
+    await fs.access(file);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function resolveBuiltInDir(): Promise<string | null> {
+  for (const candidate of BUILT_IN_CANDIDATES) {
+    if (await isDirectory(candidate)) return candidate;
+  }
+  return null;
+}
+
+async function initBuiltInPlugins() {
+  const baseDir = await resolveBuiltInDir();
+  if (!baseDir) {
+    console.warn(
+      `[init] built-in plugin source not found in any of: ${BUILT_IN_CANDIDATES.join(", ")} — skipping`,
+    );
+    return;
+  }
+
+  const storage = getPluginStorage();
+  const entries = await fs.readdir(baseDir, { withFileTypes: true });
+  const pluginDirs = entries.filter((e) => e.isDirectory());
+
+  for (const dir of pluginDirs) {
+    const pluginDir = path.join(baseDir, dir.name);
+    const manifestPath = path.join(pluginDir, "manifest.json");
+
+    if (!(await fileExists(manifestPath))) {
+      console.warn(`[init] built-in plugin "${dir.name}" missing manifest.json, skipping`);
+      continue;
+    }
+
+    const manifestRaw = await fs.readFile(manifestPath, "utf-8");
+    const manifest = JSON.parse(manifestRaw) as PluginManifest;
+    const buildKey = (filename: string) =>
+      `${BUILT_IN_PLUGIN_PREFIX}${manifest.id}/${manifest.version}/${filename}`;
+
+    if (await storage.exists(buildKey("manifest.json"))) {
+      console.log(
+        `[init] built-in plugin ${manifest.id}@${manifest.version} already seeded, skipping`,
+      );
+      continue;
+    }
+
+    await storage.put(buildKey("manifest.json"), Buffer.from(manifestRaw));
+    await storage.put(
+      buildKey(manifest.entry),
+      await fs.readFile(path.join(pluginDir, manifest.entry)),
+    );
+    await storage.put(
+      buildKey(manifest.schema),
+      await fs.readFile(path.join(pluginDir, manifest.schema)),
+    );
+
+    if (manifest.icon) {
+      const iconPath = path.join(pluginDir, manifest.icon);
+      if (await fileExists(iconPath)) {
+        await storage.put(buildKey(manifest.icon), await fs.readFile(iconPath));
+      }
+    }
+
+    console.log(`[init] seeded built-in plugin ${manifest.id}@${manifest.version}`);
+  }
 }
 
 async function initUsers() {
@@ -495,6 +589,52 @@ async function initIotTokens() {
   console.log("[init] created IoT token");
 }
 
+async function initBuiltInPets() {
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const builtInDir = path.join(__dirname, "../assets/built-in-pets");
+  const storage = getPetStorage();
+
+  try {
+    const entries = await fs.readdir(builtInDir, { withFileTypes: true });
+    const dirs = entries.filter((e) => e.isDirectory());
+
+    for (const dir of dirs) {
+      const petDir = path.join(builtInDir, dir.name);
+      const petJsonPath = path.join(petDir, "pet.json");
+      const spritesheetPath = path.join(petDir, "spritesheet.webp");
+
+      try {
+        await fs.access(petJsonPath);
+        await fs.access(spritesheetPath);
+      } catch {
+        console.warn(`[init] built-in pet ${dir.name} missing files, skipping`);
+        continue;
+      }
+
+      const exists = await storage.exists(`${dir.name}/pet.json`);
+      if (exists) {
+        continue;
+      }
+
+      const petJsonBuffer = await fs.readFile(petJsonPath);
+      const spritesheetBuffer = await fs.readFile(spritesheetPath);
+
+      await storage.put(`${dir.name}/pet.json`, petJsonBuffer, {
+        contentType: "application/json",
+        contentLength: petJsonBuffer.length,
+      });
+      await storage.put(`${dir.name}/spritesheet.webp`, spritesheetBuffer, {
+        contentType: "image/webp",
+        contentLength: spritesheetBuffer.length,
+      });
+
+      console.log(`[init] uploaded built-in pet: ${dir.name}`);
+    }
+  } catch {
+    // assets/built-in-pets directory may not exist
+  }
+}
+
 async function main() {
   console.log("[init] ensuring database exists...");
   await ensureDatabase();
@@ -504,6 +644,8 @@ async function main() {
 
   console.log("[init] checking database state...");
   await initS3Buckets();
+  await initBuiltInPlugins();
+  await initBuiltInPets();
   await initUsers();
   await initPlatformConfig();
   await initDashboardData();

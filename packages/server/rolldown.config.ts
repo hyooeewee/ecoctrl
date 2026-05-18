@@ -2,7 +2,7 @@ import { defineConfig } from "rolldown";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
-import { writeFile, readFile } from "node:fs/promises";
+import { writeFile, readFile, cp } from "node:fs/promises";
 import pkg from "./package.json" with { type: "json" };
 
 const staticAssets = ["ecoctrl.config.cjs", ".env.example"];
@@ -57,6 +57,12 @@ export default defineConfig({
           const source = await readFile(file);
           this.emitFile({ type: "asset", fileName: file, source });
         }
+      },
+    },
+    {
+      name: "emit-built-in-assets",
+      async writeBundle() {
+        await cp("assets/", "dist/", { recursive: true });
       },
     },
     {
