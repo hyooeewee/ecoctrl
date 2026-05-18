@@ -1,0 +1,9 @@
+{
+  "id": "point-read",
+  "name": "点位读取",
+  "version": "1.0.0",
+  "category": "action",
+  "entry": "backend.js",
+  "schema": "schema.json",
+  "description": "通过 IoT 网关读取点位值"
+}

@@ -1,0 +1,9 @@
+{
+  "id": "point-write",
+  "name": "点位写入",
+  "version": "1.0.0",
+  "category": "action",
+  "entry": "backend.js",
+  "schema": "schema.json",
+  "description": "通过 IoT 网关写入点位值"
+}

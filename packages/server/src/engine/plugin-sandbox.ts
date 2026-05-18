@@ -215,6 +215,65 @@ async function injectApi(context: ivm.Context, api: PluginApi): Promise<void> {
     { arguments: { reference: true } },
   );
 
+  // Inject utils.sleep
+  await context.evalClosure(
+    `globalThis.__utils_sleep = function(ms) { return $0.applySync(undefined, [ms], { arguments: { copy: true }, result: { copy: true, promise: true } }); }`,
+    [(ms: number) => api.utils.sleep(ms)],
+    { arguments: { reference: true } },
+  );
+
+  // Inject expr.evaluateBoolean
+  await context.evalClosure(
+    `globalThis.__expr_evaluateBoolean = function(expression) { return $0.applySync(undefined, [expression], { arguments: { copy: true }, result: { copy: true } }); }`,
+    [(expression: string) => api.expr.evaluateBoolean(expression)],
+    { arguments: { reference: true } },
+  );
+
+  // Inject expr.evaluateExpression
+  await context.evalClosure(
+    `globalThis.__expr_evaluateExpression = function(expression) { return $0.applySync(undefined, [expression], { arguments: { copy: true }, result: { copy: true } }); }`,
+    [(expression: string) => api.expr.evaluateExpression(expression)],
+    { arguments: { reference: true } },
+  );
+
+  // Inject db.execute (async)
+  await context.evalClosure(
+    `globalThis.__db_execute = async function(operation, table, where, data, returning) {
+      return await $0.apply(undefined, [operation, table, where, data, returning], { arguments: { copy: true }, result: { copy: true, promise: true } });
+    }`,
+    [
+      async (
+        operation: string,
+        table: string,
+        where?: Record<string, unknown>,
+        data?: Record<string, unknown>,
+        returning?: string[],
+      ) => api.db.execute(operation, table, where, data, returning),
+    ],
+    { arguments: { reference: true } },
+  );
+
+  // Inject notify.sendMail (async)
+  await context.evalClosure(
+    `globalThis.__notify_sendMail = async function(options) {
+      return await $0.apply(undefined, [options], { arguments: { copy: true }, result: { copy: true, promise: true } });
+    }`,
+    [
+      async (options: { to: string[]; subject: string; body: string; bodyType?: string }) =>
+        api.notify.sendMail(options),
+    ],
+    { arguments: { reference: true } },
+  );
+
+  // Inject workflow.executeSubGraph (async)
+  await context.evalClosure(
+    `globalThis.__workflow_executeSubGraph = async function(nodes, edges) {
+      return await $0.apply(undefined, [nodes, edges], { arguments: { copy: true }, result: { copy: true, promise: true } });
+    }`,
+    [async (nodes: unknown[], edges: unknown[]) => api.workflow.executeSubGraph(nodes, edges)],
+    { arguments: { reference: true } },
+  );
+
   // Build the __api object inside the isolate
   await context.eval(`
     var __api = {
@@ -243,10 +302,24 @@ async function injectApi(context: ivm.Context, api: PluginApi): Promise<void> {
         writePoint: function(name, values) { return __iot_writePoint(name, values); }
       },
       notify: {
-        send: function(options) { return __notify_send(options); }
+        send: function(options) { return __notify_send(options); },
+        sendMail: function(options) { return __notify_sendMail(options); }
       },
       env: {
         get: function(key) { return __env_get(key); }
+      },
+      utils: {
+        sleep: function(ms) { return __utils_sleep(ms); }
+      },
+      expr: {
+        evaluateBoolean: function(expression) { return __expr_evaluateBoolean(expression); },
+        evaluateExpression: function(expression) { return __expr_evaluateExpression(expression); }
+      },
+      db: {
+        execute: function(operation, table, where, data, returning) { return __db_execute(operation, table, where, data, returning); }
+      },
+      workflow: {
+        executeSubGraph: function(nodes, edges) { return __workflow_executeSubGraph(nodes, edges); }
       }
     };
   `);

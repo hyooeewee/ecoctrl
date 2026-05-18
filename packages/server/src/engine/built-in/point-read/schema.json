@@ -1,0 +1,9 @@
+{
+  "type": "object",
+  "properties": {
+    "pointName": {
+      "type": "string",
+      "title": "Point Name"
+    }
+  }
+}

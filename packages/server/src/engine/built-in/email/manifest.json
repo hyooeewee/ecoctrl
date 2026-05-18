@@ -1,0 +1,9 @@
+{
+  "id": "email",
+  "name": "邮件",
+  "version": "1.0.0",
+  "category": "action",
+  "entry": "backend.js",
+  "schema": "schema.json",
+  "description": "发送邮件通知"
+}

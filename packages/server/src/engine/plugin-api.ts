@@ -1,9 +1,40 @@
 import type { PluginApi, ExecutionContext } from "./plugin-types";
 import { getLogger } from "@/lib/logger";
+import { readPointValues, writePointValues } from "@/services/iot/points";
+import { evaluateExpression, evaluateBoolean } from "./expr";
+import { createTransport } from "nodemailer";
+import { findPlatformConfig } from "@/repositories/platformConfig";
+import { db } from "@/config/database";
+import { sql } from "drizzle-orm";
+import type { PluginRegistry } from "./plugin-registry";
+import { executeSubGraph } from "./sub-graph";
 
 const logger = getLogger("plugin");
 
 const ALLOWED_ENV_KEYS = ["API_BASE_URL", "NODE_ENV", "APP_NAME"];
+
+// SMTP transport cache (moved from executor.ts)
+let smtpTransport: ReturnType<typeof createTransport> | null = null;
+let smtpConfigTime = 0;
+
+async function getSmtpTransport() {
+  const now = Date.now();
+  if (smtpTransport && now - smtpConfigTime < 60_000) {
+    return smtpTransport;
+  }
+  const config = await findPlatformConfig();
+  if (!config.smtpHost || !config.smtpUser) {
+    return null;
+  }
+  smtpTransport = createTransport({
+    host: config.smtpHost,
+    port: config.smtpPort,
+    secure: config.smtpSecure,
+    auth: { user: config.smtpUser, pass: config.smtpPass },
+  });
+  smtpConfigTime = now;
+  return smtpTransport;
+}
 
 export function createPluginApi(
   ctx: ExecutionContext,
@@ -11,6 +42,8 @@ export function createPluginApi(
   executionId: string,
   nodeId: string,
   nodeName: string,
+  registry: PluginRegistry | null,
+  dryRun: boolean,
 ): PluginApi {
   return {
     variables: {
@@ -29,20 +62,40 @@ export function createPluginApi(
     },
 
     iot: {
-      readPoint: async () => {
-        throw new Error("iot.readPoint not yet implemented");
+      readPoint: async (name: string) => {
+        const values = await readPointValues([name]);
+        return values[name];
       },
-      readPoints: async () => {
-        throw new Error("iot.readPoints not yet implemented");
+      readPoints: async (names: string[]) => {
+        return readPointValues(names);
       },
-      writePoint: async () => {
-        throw new Error("iot.writePoint not yet implemented");
+      writePoint: async (name: string, values: Record<string, unknown>) => {
+        await writePointValues([name], values);
       },
     },
 
     notify: {
       send: async () => {
         throw new Error("notify.send not yet implemented");
+      },
+      sendMail: async (options: {
+        to: string[];
+        subject: string;
+        body: string;
+        bodyType?: string;
+      }) => {
+        const transport = await getSmtpTransport();
+        if (!transport) {
+          throw new Error("SMTP not configured");
+        }
+        const bodyType = options.bodyType || "text";
+        const result = await transport.sendMail({
+          from: "noreply@ecoctrl.com",
+          to: options.to.filter(Boolean),
+          subject: options.subject,
+          [bodyType === "html" ? "html" : "text"]: options.body,
+        });
+        return { messageId: result.messageId, sent: true };
       },
     },
 
@@ -77,9 +130,130 @@ export function createPluginApi(
       nodeId,
       nodeName,
     },
+
+    utils: {
+      sleep: (ms: number) => new Promise((resolve) => setTimeout(resolve, ms)),
+    },
+
+    expr: {
+      evaluateBoolean: (expression: string) => {
+        const vars = Object.fromEntries(ctx.variables);
+        return evaluateBoolean(expression, vars);
+      },
+      evaluateExpression: (expression: string) => {
+        const vars = Object.fromEntries(ctx.variables);
+        return evaluateExpression(expression, vars);
+      },
+    },
+
+    db: {
+      execute: async (
+        operation: string,
+        table: string,
+        where?: Record<string, unknown>,
+        data?: Record<string, unknown>,
+        returning?: string[],
+      ) => {
+        const allowedTables = new Set([
+          "objects",
+          "energy_readings",
+          "alert_logs",
+          "workflow_executions",
+        ]);
+        if (!allowedTables.has(table)) {
+          throw new Error(`Table '${table}' is not in the allowed list`);
+        }
+
+        const tableId = sql.identifier(table);
+        const retCols = returning ? sql.raw(returning.join(", ")) : sql.raw("*");
+
+        if (operation === "select") {
+          if (where && Object.keys(where).length > 0) {
+            const conditions = Object.entries(where).map(
+              ([k, v]) => sql`${sql.identifier(k)} = ${v}`,
+            );
+            const whereSql = sql.join(conditions, sql` AND `);
+            const query = sql`SELECT ${retCols} FROM ${tableId} WHERE ${whereSql}`;
+            const result = await db.execute(query);
+            return { rows: result as unknown[], count: (result as unknown[]).length };
+          } else {
+            const query = sql`SELECT ${retCols} FROM ${tableId}`;
+            const result = await db.execute(query);
+            return { rows: result as unknown[], count: (result as unknown[]).length };
+          }
+        } else if (operation === "insert") {
+          if (!data || Object.keys(data).length === 0) {
+            throw new Error("INSERT requires data");
+          }
+          const columns = Object.keys(data);
+          const values = Object.values(data);
+          const colIds = columns.map((c) => sql.identifier(c));
+          const colSql = sql.join(colIds, sql`, `);
+          const valSql = sql.join(
+            values.map((v) => sql`${v}`),
+            sql`, `,
+          );
+          const query = sql`INSERT INTO ${tableId} (${colSql}) VALUES (${valSql})${returning ? sql.raw(` RETURNING ${returning.join(", ")}`) : sql.raw("")}`;
+          const result = await db.execute(query);
+          return { inserted: result as unknown[], count: (result as unknown[]).length };
+        } else if (operation === "update") {
+          if (!data || Object.keys(data).length === 0) {
+            throw new Error("UPDATE requires data");
+          }
+          const setConditions = Object.entries(data).map(
+            ([k, v]) => sql`${sql.identifier(k)} = ${v}`,
+          );
+          const setSql = sql.join(setConditions, sql`, `);
+          if (where && Object.keys(where).length > 0) {
+            const whereConditions = Object.entries(where).map(
+              ([k, v]) => sql`${sql.identifier(k)} = ${v}`,
+            );
+            const whereSql = sql.join(whereConditions, sql` AND `);
+            const query = sql`UPDATE ${tableId} SET ${setSql} WHERE ${whereSql}${returning ? sql.raw(` RETURNING ${returning.join(", ")}`) : sql.raw("")}`;
+            const result = await db.execute(query);
+            return { updated: result as unknown[], count: (result as unknown[]).length };
+          } else {
+            const query = sql`UPDATE ${tableId} SET ${setSql}${returning ? sql.raw(` RETURNING ${returning.join(", ")}`) : sql.raw("")}`;
+            const result = await db.execute(query);
+            return { updated: result as unknown[], count: (result as unknown[]).length };
+          }
+        } else if (operation === "delete") {
+          if (where && Object.keys(where).length > 0) {
+            const conditions = Object.entries(where).map(
+              ([k, v]) => sql`${sql.identifier(k)} = ${v}`,
+            );
+            const whereSql = sql.join(conditions, sql` AND `);
+            const query = sql`DELETE FROM ${tableId} WHERE ${whereSql}${returning ? sql.raw(` RETURNING ${returning.join(", ")}`) : sql.raw("")}`;
+            const result = await db.execute(query);
+            return { deleted: result as unknown[], count: (result as unknown[]).length };
+          } else {
+            const query = sql`DELETE FROM ${tableId}${returning ? sql.raw(` RETURNING ${returning.join(", ")}`) : sql.raw("")}`;
+            const result = await db.execute(query);
+            return { deleted: result as unknown[], count: (result as unknown[]).length };
+          }
+        }
+        throw new Error(`Unsupported database operation: ${operation}`);
+      },
+    },
+
+    workflow: {
+      executeSubGraph: async (nodes: unknown[], edges: unknown[]) => {
+        if (!registry) {
+          throw new Error("Registry not available for sub-graph execution");
+        }
+        return executeSubGraph(
+          nodes as import("./types").WorkflowNode[],
+          edges as import("./types").WorkflowEdge[],
+          ctx,
+          registry,
+          dryRun,
+        );
+      },
+    },
   };
 }
 
+// safeHttp function remains unchanged
 async function safeHttp(
   method: string,
   url: string,

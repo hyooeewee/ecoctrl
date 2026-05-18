@@ -1,0 +1,9 @@
+{
+  "id": "variable",
+  "name": "变量",
+  "version": "1.0.0",
+  "category": "action",
+  "entry": "backend.js",
+  "schema": "schema.json",
+  "description": "设置流程变量"
+}

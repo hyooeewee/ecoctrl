@@ -1,0 +1,28 @@
+{
+  "type": "object",
+  "properties": {
+    "operation": {
+      "type": "string",
+      "title": "Operation",
+      "enum": ["select", "insert", "update", "delete"],
+      "default": "select"
+    },
+    "table": {
+      "type": "string",
+      "title": "Table"
+    },
+    "where": {
+      "type": "object",
+      "title": "Where"
+    },
+    "data": {
+      "type": "object",
+      "title": "Data"
+    },
+    "returning": {
+      "type": "array",
+      "title": "Returning Columns",
+      "items": { "type": "string" }
+    }
+  }
+}

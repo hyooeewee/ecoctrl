@@ -1,0 +1,27 @@
+{
+  "type": "object",
+  "properties": {
+    "to": {
+      "type": "string",
+      "title": "To"
+    },
+    "subject": {
+      "type": "string",
+      "title": "Subject"
+    },
+    "template": {
+      "type": "string",
+      "title": "Template"
+    },
+    "body": {
+      "type": "string",
+      "title": "Body"
+    },
+    "bodyType": {
+      "type": "string",
+      "title": "Body Type",
+      "enum": ["text", "html"],
+      "default": "text"
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "id": "end",
+  "name": "结束",
+  "version": "1.0.0",
+  "category": "action",
+  "entry": "backend.js",
+  "schema": "schema.json",
+  "description": "流程结束节点"
+}

@@ -1,0 +1,9 @@
+{
+  "id": "http-request",
+  "name": "HTTP 请求",
+  "version": "1.0.0",
+  "category": "action",
+  "entry": "backend.js",
+  "schema": "schema.json",
+  "description": "发送 HTTP 请求"
+}

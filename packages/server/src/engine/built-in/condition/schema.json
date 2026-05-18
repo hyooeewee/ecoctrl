@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "properties": {
+    "expression": {
+      "type": "string",
+      "title": "Expression",
+      "description": "e.g. temperature > 30"
+    }
+  }
+}

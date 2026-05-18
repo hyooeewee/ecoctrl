@@ -169,16 +169,12 @@ export class PluginRegistry {
   async install(zipBuffer: Buffer): Promise<PluginDefinition> {
     return this.lock.acquire("registry", async () => {
       const { files, comment } = await extractPluginFromZip(zipBuffer);
-
-      // Validate structure
       const { manifest, backendCode, schema, iconSvg } = await validatePluginPackage(files);
 
-      // Idempotency: reject if already installed
+      // Idempotency: return existing if already installed
       const existing = this.plugins.get(manifest.id)?.get(manifest.version);
       if (existing) {
-        throw new Error(
-          `Plugin ${manifest.id}@${manifest.version} already exists. Uninstall first.`,
-        );
+        return existing;
       }
 
       // Check content hash from zip comment (optional)

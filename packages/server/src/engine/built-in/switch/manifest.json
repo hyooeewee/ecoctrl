@@ -1,0 +1,9 @@
+{
+  "id": "switch",
+  "name": "多分支",
+  "version": "1.0.0",
+  "category": "condition",
+  "entry": "backend.js",
+  "schema": "schema.json",
+  "description": "多路分支选择"
+}

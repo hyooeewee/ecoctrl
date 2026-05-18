@@ -38,7 +38,15 @@ export async function executePluginNode(
     nodeName: node.name,
   };
 
-  const api = createPluginApi(ctx, state.workflowId, state.executionId, node.id, node.name);
+  const api = createPluginApi(
+    ctx,
+    state.workflowId,
+    state.executionId,
+    node.id,
+    node.name,
+    registry,
+    dryRun,
+  );
 
   if (dryRun) {
     return {

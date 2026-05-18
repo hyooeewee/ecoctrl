@@ -84,6 +84,12 @@ export interface PluginApi {
       level?: "info" | "warning" | "error";
       to?: string[];
     }): Promise<void>;
+    sendMail(options: {
+      to: string[];
+      subject: string;
+      body: string;
+      bodyType?: string;
+    }): Promise<void>;
   };
   log: {
     info(msg: string, meta?: Record<string, unknown>): void;
@@ -99,5 +105,24 @@ export interface PluginApi {
     triggerData: Record<string, unknown>;
     nodeId: string;
     nodeName: string;
+  };
+  utils: {
+    sleep(ms: number): Promise<void>;
+  };
+  expr: {
+    evaluateBoolean(expression: string): boolean;
+    evaluateExpression(expression: string): unknown;
+  };
+  db: {
+    execute(
+      operation: string,
+      table: string,
+      where?: Record<string, unknown>,
+      data?: Record<string, unknown>,
+      returning?: string[],
+    ): Promise<Record<string, unknown>>;
+  };
+  workflow: {
+    executeSubGraph(nodes: unknown[], edges: unknown[]): Promise<Record<string, unknown>>;
   };
 }
