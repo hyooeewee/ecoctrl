@@ -10,6 +10,10 @@ variable "LATEST" {
     default = "true"
 }
 
+variable "BUILDER_CONTEXT" {
+    default = ""
+}
+
 # ────────────────────────────────
 # Shared builder base image
 # ────────────────────────────────
@@ -35,7 +39,7 @@ target "web" {
     cache-from = ["type=registry,ref=${REGISTRY}/web:cache"]
     cache-to = ["type=registry,ref=${REGISTRY}/web:cache,mode=max"]
     contexts = {
-        builder-base = "target:builder"
+        builder-base = BUILDER_CONTEXT != "" ? BUILDER_CONTEXT : "target:builder"
     }
     args = {
         BUILDER_IMAGE = "builder-base"
@@ -51,7 +55,7 @@ target "admin" {
     cache-from = ["type=registry,ref=${REGISTRY}/admin:cache"]
     cache-to = ["type=registry,ref=${REGISTRY}/admin:cache,mode=max"]
     contexts = {
-        builder-base = "target:builder"
+        builder-base = BUILDER_CONTEXT != "" ? BUILDER_CONTEXT : "target:builder"
     }
     args = {
         BUILDER_IMAGE = "builder-base"
@@ -67,7 +71,7 @@ target "server" {
     cache-from = ["type=registry,ref=${REGISTRY}/server:cache"]
     cache-to = ["type=registry,ref=${REGISTRY}/server:cache,mode=max"]
     contexts = {
-        builder-base = "target:builder"
+        builder-base = BUILDER_CONTEXT != "" ? BUILDER_CONTEXT : "target:builder"
     }
     args = {
         BUILDER_IMAGE = "builder-base"
