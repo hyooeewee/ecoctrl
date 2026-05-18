@@ -6,30 +6,61 @@ variable "REGISTRY" {
     default = "ghcr.io/hyooeewee/ecoctrl"
 }
 
+# ────────────────────────────────
+# Shared builder base image
+# ────────────────────────────────
+target "builder" {
+    dockerfile = "docker/Dockerfile.builder"
+    tags = ["${REGISTRY}/builder:cache"]
+    cache-from = ["type=registry,ref=${REGISTRY}/builder:cache-buildx"]
+    cache-to = ["type=registry,ref=${REGISTRY}/builder:cache-buildx,mode=max"]
+}
+
+# ────────────────────────────────
+# App images — use `contexts` to
+# reference the local builder
+# target instead of pulling from
+# GHCR on every build.
+# ────────────────────────────────
 target "web" {
     dockerfile = "apps/web/Dockerfile"
     tags = ["${REGISTRY}/web:${TAG}", "${REGISTRY}/web:latest"]
-    # platforms = ["linux/amd64", "linux/arm64"]
     cache-from = ["type=registry,ref=${REGISTRY}/web:cache"]
     cache-to = ["type=registry,ref=${REGISTRY}/web:cache,mode=max"]
+    contexts = {
+        builder = "target:builder"
+    }
+    args = {
+        BUILDER_IMAGE = "builder"
+    }
 }
 
 target "admin" {
     dockerfile = "apps/admin/Dockerfile"
     tags = ["${REGISTRY}/admin:${TAG}", "${REGISTRY}/admin:latest"]
-    # platforms = ["linux/amd64", "linux/arm64"]
     cache-from = ["type=registry,ref=${REGISTRY}/admin:cache"]
     cache-to = ["type=registry,ref=${REGISTRY}/admin:cache,mode=max"]
+    contexts = {
+        builder = "target:builder"
+    }
+    args = {
+        BUILDER_IMAGE = "builder"
+    }
 }
 
 target "server" {
     dockerfile = "packages/server/Dockerfile"
     tags = ["${REGISTRY}/server:${TAG}", "${REGISTRY}/server:latest"]
-    # platforms = ["linux/amd64", "linux/arm64"]
     cache-from = ["type=registry,ref=${REGISTRY}/server:cache"]
     cache-to = ["type=registry,ref=${REGISTRY}/server:cache,mode=max"]
+    contexts = {
+        builder = "target:builder"
+    }
+    args = {
+        BUILDER_IMAGE = "builder"
+    }
 }
 
 group "default" {
-    targets = ["web", "admin", "server"]
+    targets = ["builder", "web", "admin", "server"]
 }
