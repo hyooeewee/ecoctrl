@@ -25,7 +25,7 @@ interface WorkflowNodeConfigProps {
   filteredPointNames: string[];
   pointSearch: string;
   setPointSearch: (v: string) => void;
-  getNodeDef: (type: string) => NodeDefinition | null;
+  getPluginNodeDef: (type: string) => NodeDefinition | null;
   canDelete: boolean;
   onDeleteNode: (nodeId: string) => void;
   onClose: () => void;
@@ -41,7 +41,7 @@ export function WorkflowNodeConfig({
   filteredPointNames,
   pointSearch,
   setPointSearch,
-  getNodeDef,
+  getPluginNodeDef,
   canDelete,
   onDeleteNode,
   onClose,
@@ -356,13 +356,13 @@ export function WorkflowNodeConfig({
                   </div>
                 </>
               )}
-              {getNodeDef(selectedNodeType) && (
+              {getPluginNodeDef(selectedNodeType) && (
                 <NodeConfigPanel
                   nodeId={selectedNode.id}
                   nodeName={(selectedNode.data.label as string) ?? selectedNode.id}
                   nodeType={selectedNodeType}
                   currentConfig={config}
-                  schema={getNodeDef(selectedNodeType)?.schema ?? {}}
+                  schema={getPluginNodeDef(selectedNodeType)?.schema ?? {}}
                   availableVersions={[]}
                   currentVersion={(config?.__version as string) ?? "latest"}
                   onChange={(newConfig) =>
