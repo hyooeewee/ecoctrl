@@ -6,6 +6,10 @@ variable "REGISTRY" {
     default = "ghcr.io/hyooeewee/ecoctrl"
 }
 
+variable "LATEST" {
+    default = "true"
+}
+
 # ────────────────────────────────
 # Shared builder base image
 # ────────────────────────────────
@@ -24,7 +28,10 @@ target "builder" {
 # ────────────────────────────────
 target "web" {
     dockerfile = "apps/web/Dockerfile"
-    tags = ["${REGISTRY}/web:${TAG}", "${REGISTRY}/web:latest"]
+    tags = concat(
+        ["${REGISTRY}/web:${TAG}"],
+        LATEST == "true" ? ["${REGISTRY}/web:latest"] : []
+    )
     cache-from = ["type=registry,ref=${REGISTRY}/web:cache"]
     cache-to = ["type=registry,ref=${REGISTRY}/web:cache,mode=max"]
     contexts = {
@@ -37,7 +44,10 @@ target "web" {
 
 target "admin" {
     dockerfile = "apps/admin/Dockerfile"
-    tags = ["${REGISTRY}/admin:${TAG}", "${REGISTRY}/admin:latest"]
+    tags = concat(
+        ["${REGISTRY}/admin:${TAG}"],
+        LATEST == "true" ? ["${REGISTRY}/admin:latest"] : []
+    )
     cache-from = ["type=registry,ref=${REGISTRY}/admin:cache"]
     cache-to = ["type=registry,ref=${REGISTRY}/admin:cache,mode=max"]
     contexts = {
@@ -50,7 +60,10 @@ target "admin" {
 
 target "server" {
     dockerfile = "packages/server/Dockerfile"
-    tags = ["${REGISTRY}/server:${TAG}", "${REGISTRY}/server:latest"]
+    tags = concat(
+        ["${REGISTRY}/server:${TAG}"],
+        LATEST == "true" ? ["${REGISTRY}/server:latest"] : []
+    )
     cache-from = ["type=registry,ref=${REGISTRY}/server:cache"]
     cache-to = ["type=registry,ref=${REGISTRY}/server:cache,mode=max"]
     contexts = {

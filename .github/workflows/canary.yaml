@@ -1,0 +1,119 @@
+name: Canary
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      force-rc:
+        description: "Force rc build from HEAD (tag = v<version>-rc)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: canary-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  canary:
+    name: Canary
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+
+      - name: Login GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ── Canary images (every push to main) ──
+      # Single-platform for speed.  Public repos have unlimited Actions minutes;
+      # switch to multi-platform if you need arm64 canary testing.
+      - name: Build & Push canary images
+        uses: docker/bake-action@v5
+        with:
+          files: ./docker/docker-bake.hcl
+          push: true
+          set: |
+            *.platform=linux/amd64
+        env:
+          TAG: canary
+          REGISTRY: ghcr.io/${{ github.repository }}
+          LATEST: "false"
+
+      # ── RC release (Version Packages merge or force-rc) ──
+      - name: Check if Version Packages commit
+        id: check-rc
+        run: |
+          if [ "${{ github.event.inputs.force-rc }}" = "true" ]; then
+            echo "is_rc=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          if echo "$COMMIT_MSG" | grep -q "^Version Packages$"; then
+            echo "is_rc=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_rc=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Read version
+        if: steps.check-rc.outputs.is_rc == 'true'
+        id: version
+        run: |
+          VERSION=$(node -p "require('./apps/admin/package.json').version")
+          echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
+          echo "rc-tag=v${VERSION}-rc" >> $GITHUB_OUTPUT
+
+      - name: Build & Push rc (${{ steps.version.outputs.tag }}) images
+        if: steps.check-rc.outputs.is_rc == 'true'
+        uses: docker/bake-action@v5
+        with:
+          files: ./docker/docker-bake.hcl
+          push: true
+          set: |
+            *.platform=linux/amd64,linux/arm64
+        env:
+          TAG: ${{ steps.version.outputs.tag }}-rc
+          REGISTRY: ghcr.io/${{ github.repository }}
+          LATEST: "false"
+
+      - name: Update canary tag to multi-platform
+        if: steps.check-rc.outputs.is_rc == 'true'
+        run: |
+          for IMG in web admin server; do
+            docker buildx imagetools create \
+              -t ghcr.io/${{ github.repository }}/${IMG}:canary \
+              ghcr.io/${{ github.repository }}/${IMG}:${{ steps.version.outputs.tag }}-rc
+          done
+
+      - name: Create or update GitHub Pre-release
+        if: steps.check-rc.outputs.is_rc == 'true'
+        run: |
+          if gh release view ${{ steps.version.outputs.rc-tag }} > /dev/null 2>&1; then
+            # Release exists — update notes and mark as prerelease
+            gh release edit ${{ steps.version.outputs.rc-tag }} \
+              --prerelease \
+              --title "${{ steps.version.outputs.rc-tag }}" \
+              --notes "Pre-release of ${{ steps.version.outputs.tag }} (updated). Promote to stable via the **Stable Release** workflow."
+          else
+            # First time — create
+            gh release create ${{ steps.version.outputs.rc-tag }} \
+              --prerelease \
+              --title "${{ steps.version.outputs.rc-tag }}" \
+              --notes "Pre-release of ${{ steps.version.outputs.tag }}. Promote to stable via the **Stable Release** workflow."
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
