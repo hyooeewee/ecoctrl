@@ -18,7 +18,7 @@ permissions:
   packages: write
 
 concurrency:
-  group: canary-${{ github.ref }}
+  group: canary
   cancel-in-progress: true
 
 jobs:

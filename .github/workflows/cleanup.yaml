@@ -9,6 +9,10 @@ permissions:
   packages: write
   contents: write
 
+concurrency:
+  group: cleanup
+  cancel-in-progress: true
+
 jobs:
   cleanup-images:
     name: Clean old images
