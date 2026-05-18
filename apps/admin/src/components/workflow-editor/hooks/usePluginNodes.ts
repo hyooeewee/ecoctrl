@@ -27,7 +27,10 @@ export function usePluginNodes() {
       .getAll()
       .then((nodes) => {
         if (!cancelled) {
-          setPluginNodes(nodes);
+          // Filter out built-in plugins (ecoctrl-* prefix) from the plugin list;
+          // they are handled by the built-in node system and should not appear
+          // in the "Plugin Nodes" category.
+          setPluginNodes(nodes.filter((n) => !n.id.startsWith("ecoctrl-")));
         }
       })
       .catch(() => {
