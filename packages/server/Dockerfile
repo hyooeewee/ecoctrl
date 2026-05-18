@@ -19,6 +19,10 @@ FROM ${BUILDER_IMAGE} AS builder
 
 WORKDIR /app
 
+# Refresh workspace manifests so pnpm's implicit reinstall sees the current
+# allowBuilds list (cache image may predate new build-script approvals like isolated-vm).
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+
 # Copy source code
 COPY packages/server/ packages/server/
 COPY packages/shared/ packages/shared/
