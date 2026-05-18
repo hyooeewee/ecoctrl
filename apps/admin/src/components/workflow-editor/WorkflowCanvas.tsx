@@ -892,6 +892,16 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
     });
   }, [edges, setNodes, rfInstance]);
 
+  // Auto save
+  useEffect(() => {
+    if (!settings.autoSave?.enabled || !isDirty || !dsl) return;
+    const intervalMs = (settings.autoSave.intervalSeconds ?? 30) * 1000;
+    const timer = setInterval(() => {
+      handleSave({ silent: true });
+    }, intervalMs);
+    return () => clearInterval(timer);
+  }, [settings.autoSave?.enabled, settings.autoSave?.intervalSeconds, isDirty, dsl, handleSave]);
+
   // Keyboard shortcut: Ctrl/Cmd + S
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -1146,11 +1156,20 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
             {testing ? <Loader2 size={14} className="animate-spin" /> : <Bug size={14} />}
             调试
           </Button>
+          {autoSaveStatus !== "idle" && (
+            <span className="flex items-center gap-1 text-xs">
+              {autoSaveStatus === "saving" && (
+                <Cloud size={14} className="text-muted-foreground animate-pulse" />
+              )}
+              {autoSaveStatus === "success" && <Cloud size={14} className="text-emerald-500" />}
+              {autoSaveStatus === "error" && <CloudOff size={14} className="text-rose-500" />}
+            </span>
+          )}
           <Button
             variant="outline"
             size="sm"
             className="h-8 gap-1.5"
-            onClick={handleSave}
+            onClick={() => handleSave()}
             disabled={saving || publishing || testing}
           >
             {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
@@ -1165,11 +1184,23 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
             {publishing ? <Loader2 size={14} className="animate-spin" /> : <Rocket size={14} />}
             发布
           </Button>
-          <Button variant="outline" size="sm" className="h-8 gap-1.5" title="环境变量">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5"
+            title="环境变量"
+            onClick={() => setShowEnvVarsDialog(true)}
+          >
             <Braces size={14} />
             变量
           </Button>
-          <Button variant="outline" size="icon" className="h-8 w-8" title="设置">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            title="设置"
+            onClick={() => setShowSettingsDialog(true)}
+          >
             <Settings size={14} />
           </Button>
         </div>
@@ -1309,10 +1340,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
           `}</style>
           <div className="flex-1 overflow-hidden">
             <ReactFlow
-              nodes={nodes.map((n) => ({
-                ...n,
-                data: { ...n.data, onAddNodeFromHandle: handleAddNodeFromHandle },
-              }))}
+              nodes={nodesWithCallbacks}
               edges={edges}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
@@ -1327,7 +1355,6 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
               onDragEnd={onDragEnd}
               onInit={setRfInstance}
               nodeTypes={nodeTypes}
-              nodes={nodesWithCallbacks}
               fitView
               attributionPosition="bottom-right"
               deleteKeyCode={["Backspace", "Delete"]}
@@ -2107,6 +2134,208 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
             </Button>
             <Button variant="destructive" onClick={onBack}>
               离开
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Env vars dialog */}
+      <Dialog open={showEnvVarsDialog} onOpenChange={setShowEnvVarsDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>环境变量</DialogTitle>
+            <DialogDescription>
+              定义工作流中可引用的变量，如 {"{{ env.API_KEY }}"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            {envVars.length === 0 && (
+              <div className="text-muted-foreground py-4 text-center text-sm">暂无环境变量</div>
+            )}
+            {envVars.map((ev, idx) => (
+              <div key={idx} className="flex items-start gap-2">
+                <Input
+                  value={ev.key}
+                  onChange={(e) =>
+                    setEnvVars((prev) =>
+                      prev.map((v, i) => (i === idx ? { ...v, key: e.target.value } : v)),
+                    )
+                  }
+                  placeholder="KEY"
+                  className="h-8 w-[120px] text-xs"
+                />
+                {ev.type === "boolean" ? (
+                  <Switch
+                    checked={ev.value as boolean}
+                    onCheckedChange={(checked) =>
+                      setEnvVars((prev) =>
+                        prev.map((v, i) => (i === idx ? { ...v, value: checked } : v)),
+                      )
+                    }
+                  />
+                ) : ev.type === "number" ? (
+                  <Input
+                    type="number"
+                    value={ev.value as number}
+                    onChange={(e) =>
+                      setEnvVars((prev) =>
+                        prev.map((v, i) =>
+                          i === idx ? { ...v, value: Number(e.target.value) } : v,
+                        ),
+                      )
+                    }
+                    placeholder="值"
+                    className="h-8 flex-1 text-xs"
+                  />
+                ) : (
+                  <Input
+                    type={ev.type === "secret" && !visibleSecrets.has(ev.key) ? "password" : "text"}
+                    value={ev.value as string}
+                    onChange={(e) =>
+                      setEnvVars((prev) =>
+                        prev.map((v, i) => (i === idx ? { ...v, value: e.target.value } : v)),
+                      )
+                    }
+                    placeholder="值"
+                    className="h-8 flex-1 text-xs"
+                  />
+                )}
+                <select
+                  value={ev.type}
+                  onChange={(e) =>
+                    setEnvVars((prev) =>
+                      prev.map((v, i) =>
+                        i === idx
+                          ? {
+                              ...v,
+                              type: e.target.value as EnvVarType,
+                              value:
+                                e.target.value === "boolean"
+                                  ? false
+                                  : e.target.value === "number"
+                                    ? 0
+                                    : "",
+                            }
+                          : v,
+                      ),
+                    )
+                  }
+                  className="h-8 rounded-md border bg-white px-2 text-xs dark:bg-zinc-950"
+                >
+                  <option value="string">string</option>
+                  <option value="number">number</option>
+                  <option value="secret">secret</option>
+                  <option value="boolean">boolean</option>
+                </select>
+                {ev.type === "secret" && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() =>
+                      setVisibleSecrets((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(ev.key)) next.delete(ev.key);
+                        else next.add(ev.key);
+                        return next;
+                      })
+                    }
+                  >
+                    {visibleSecrets.has(ev.key) ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-rose-500"
+                  onClick={() => setEnvVars((prev) => prev.filter((_, i) => i !== idx))}
+                >
+                  <Trash2 size={14} />
+                </Button>
+              </div>
+            ))}
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() =>
+                setEnvVars((prev) => [
+                  ...prev,
+                  { key: `VAR_${prev.length + 1}`, value: "", type: "string" },
+                ])
+              }
+            >
+              + 添加变量
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEnvVarsDialog(false)}>
+              取消
+            </Button>
+            <Button
+              onClick={() => {
+                setIsDirty(true);
+                setShowEnvVarsDialog(false);
+              }}
+            >
+              确认
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Settings dialog */}
+      <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>设置</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm">自动保存</Label>
+              <Switch
+                checked={settings.autoSave?.enabled ?? false}
+                onCheckedChange={(checked) =>
+                  setSettings((prev) => ({
+                    ...prev,
+                    autoSave: { ...prev.autoSave, enabled: checked },
+                  }))
+                }
+              />
+            </div>
+            {settings.autoSave?.enabled && (
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">自动保存间隔（秒）</Label>
+                <Input
+                  type="number"
+                  min={5}
+                  max={300}
+                  value={settings.autoSave?.intervalSeconds ?? 30}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      autoSave: {
+                        ...prev.autoSave,
+                        intervalSeconds: Math.max(5, Math.min(300, Number(e.target.value))),
+                      },
+                    }))
+                  }
+                  className="h-8 text-sm"
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSettingsDialog(false)}>
+              取消
+            </Button>
+            <Button
+              onClick={() => {
+                setIsDirty(true);
+                setShowSettingsDialog(false);
+              }}
+            >
+              确认
             </Button>
           </DialogFooter>
         </DialogContent>

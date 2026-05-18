@@ -56,8 +56,8 @@ export interface EnvVar {
 
 export interface WorkflowSettings {
   autoSave?: {
-    enabled: boolean;
-    intervalSeconds: number;
+    enabled?: boolean;
+    intervalSeconds?: number;
   };
 }
 
