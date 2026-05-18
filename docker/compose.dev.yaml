@@ -58,7 +58,7 @@ services:
       S3_SECRET_KEY: ecoctrl_secret
       S3_BUCKET_FILES: ecoctrl-files
       S3_BUCKET_MODELS: ecoctrl-models
-      S3_BUCKET_PLUGINS: ${S3_BUCKET_PLUGINS}
+      S3_BUCKET_PLUGINS: ecoctrl-plugins
       S3_FORCE_PATH_STYLE: 'true'
       INIT_ADMIN_USERNAME: admin
       INIT_ADMIN_PASSWORD: admin_secret
