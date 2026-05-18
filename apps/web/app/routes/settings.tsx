@@ -26,7 +26,7 @@ import { locale, useLocale } from "~/locales";
 import { useAuthStore } from "~/store/auth";
 import { useSettingsStore } from "~/store/settings";
 import { usePetStore } from "~/store/pet";
-import { spritePetRegistry } from "virtual:pets";
+import { petsApi } from "~/lib/pets-api";
 
 import type { Route } from "./+types/settings";
 
@@ -104,6 +104,12 @@ export default function SettingsPage() {
   } = usePetStore();
 
   const isLayoutModified = bentoLayout.length > 0;
+
+  // Fetch available pets from API
+  const [availablePets, setAvailablePets] = useState<Array<{ id: string; displayName: string }>>([]);
+  useEffect(() => {
+    petsApi.list().then(setAvailablePets).catch(() => setAvailablePets([]));
+  }, []);
 
   // Load server settings on mount (server-side priority, non-blocking).
   useEffect(() => {
@@ -350,7 +356,7 @@ export default function SettingsPage() {
                   <Label className="text-sm font-medium">{t.settings.petTheme}</Label>
                   <p className="text-muted-foreground text-xs">{t.settings.petThemeDesc}</p>
                   <div className="grid grid-cols-3 gap-2">
-                    {spritePetRegistry.pets.map((p) => (
+                    {availablePets.map((p) => (
                       <button
                         key={p.id}
                         type="button"

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Settings, X } from "lucide-react";
 import { usePetStore, type PetTheme } from "~/store/pet";
-import { spritePetRegistry } from "virtual:pets";
+import { usePets } from "./hooks/usePets";
 
 export function PetSettings() {
   const [isOpen, setIsOpen] = useState(false);
@@ -14,7 +14,8 @@ export function PetSettings() {
   const setVoiceSpeed = usePetStore((s) => s.setVoiceSpeed);
   const setWakeWordEnabled = usePetStore((s) => s.setWakeWordEnabled);
 
-  const themes = spritePetRegistry.pets.map((p) => ({
+  const { pets } = usePets();
+  const themes = pets.map((p) => ({
     id: p.id as PetTheme,
     label: p.displayName,
   }));

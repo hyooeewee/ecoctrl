@@ -1,10 +1,9 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { spritePetRegistry } from "virtual:pets";
 
 export type PetTheme = string;
 
-const defaultPetId = spritePetRegistry.pets[0]?.id ?? "usagi";
+const defaultPetId = "usagi";
 
 export interface Message {
   id: string;
