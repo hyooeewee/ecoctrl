@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { z } from "zod";
 import AdmZip from "adm-zip";
-import { getFileStorage } from "@/storage";
+import { getPetStorage } from "@/storage";
 import { errors } from "@/lib/schemas";
 
 const BUILTIN_PETS = [
@@ -56,7 +56,7 @@ async function streamToString(stream: ReadableStream<Uint8Array>): Promise<strin
   return new TextDecoder().decode(result);
 }
 
-async function listRemotePets(storage: ReturnType<typeof getFileStorage>): Promise<z.infer<typeof petResponseSchema>[]> {
+async function listRemotePets(storage: ReturnType<typeof getPetStorage>): Promise<z.infer<typeof petResponseSchema>[]> {
   const keys = await storage.list("pets/");
   const petJsonKeys = keys.filter((k) => k.endsWith("/pet.json"));
   const results: z.infer<typeof petResponseSchema>[] = [];
@@ -99,7 +99,7 @@ function isAdmin(user: unknown): boolean {
 }
 
 export default async function petRoutes(fastify: FastifyInstance) {
-  const storage = getFileStorage();
+  const storage = getPetStorage();
 
   fastify.get(
     "/",
