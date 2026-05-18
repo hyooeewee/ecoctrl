@@ -40,6 +40,7 @@ import {
   LayoutTemplate,
   Settings,
   Pencil,
+  Copy,
   Activity,
   AlertTriangle,
   Braces,
@@ -339,6 +340,15 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
     "idle",
   );
   const [visibleSecrets, setVisibleSecrets] = useState<Set<string>>(new Set());
+
+  // Selection & copy-paste
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    visible: boolean;
+  }>({ x: 0, y: 0, visible: false });
+  const copiedNodesRef = useRef<Node[]>([]);
 
   const filteredPointNames = useMemo(
     () =>
@@ -902,6 +912,70 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
     return () => clearInterval(timer);
   }, [settings.autoSave?.enabled, settings.autoSave?.intervalSeconds, isDirty, dsl, handleSave]);
 
+  // Keyboard shortcuts: copy / paste / delete selected
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "c") {
+        e.preventDefault();
+        const selected = nodesRef.current.filter((n) => selectedNodeIds.includes(n.id));
+        if (selected.length > 0) {
+          copiedNodesRef.current = selected;
+          toast.success(`已复制 ${selected.length} 个节点`);
+        }
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "v") {
+        e.preventDefault();
+        const copied = copiedNodesRef.current;
+        if (copied.length === 0) return;
+        const idMap = new Map<string, string>();
+        const newNodes: Node[] = copied.map((n) => {
+          const newId = `${n.type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+          idMap.set(n.id, newId);
+          return {
+            ...n,
+            id: newId,
+            position: { x: n.position.x + 30, y: n.position.y + 30 },
+            selected: false,
+          };
+        });
+        const newEdges: Edge[] = edges
+          .filter((edge) => idMap.has(edge.source) && idMap.has(edge.target))
+          .map((edge) => ({
+            ...edge,
+            id: `e-${idMap.get(edge.source)}-${idMap.get(edge.target)}-${Date.now()}`,
+            source: idMap.get(edge.source)!,
+            target: idMap.get(edge.target)!,
+          }));
+        setIsDirty(true);
+        setNodes((nds) => [...nds, ...newNodes]);
+        if (newEdges.length > 0) setEdges((eds) => [...eds, ...newEdges]);
+        toast.success(`已粘贴 ${copied.length} 个节点`);
+      }
+      if (e.key === "Delete" || e.key === "Backspace") {
+        if (selectedNodeIds.length > 0) {
+          setIsDirty(true);
+          setNodes((nds) => nds.filter((n) => !selectedNodeIds.includes(n.id)));
+          setEdges((eds) =>
+            eds.filter(
+              (e) => !selectedNodeIds.includes(e.source) && !selectedNodeIds.includes(e.target),
+            ),
+          );
+          setSelectedNodeIds([]);
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [selectedNodeIds, setNodes, setEdges]);
+
+  // Click outside to close context menu
+  useEffect(() => {
+    if (!contextMenu.visible) return;
+    const handler = () => setContextMenu((prev) => ({ ...prev, visible: false }));
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, [contextMenu.visible]);
+
   // Keyboard shortcut: Ctrl/Cmd + S
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -1331,6 +1405,9 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
             .workflow-editor-canvas .react-flow__node.dragging {
               cursor: grabbing;
             }
+            .workflow-editor-canvas .react-flow__pane.selection {
+              cursor: crosshair;
+            }
             .workflow-editor-canvas .react-flow__handle {
               transform: translate(-50%, -50%) scale(1.4);
             }
@@ -1355,6 +1432,36 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
               onDragEnd={onDragEnd}
               onInit={setRfInstance}
               nodeTypes={nodeTypes}
+              onSelectionChange={({ nodes }) => setSelectedNodeIds(nodes.map((n) => n.id))}
+              onPaneContextMenu={(e) => {
+                e.preventDefault();
+                const wrapper = reactFlowWrapper.current;
+                if (!wrapper) return;
+                const rect = wrapper.getBoundingClientRect();
+                setContextMenu({
+                  x: e.clientX - rect.left,
+                  y: e.clientY - rect.top,
+                  visible: true,
+                });
+              }}
+              onNodeContextMenu={(e, node) => {
+                e.preventDefault();
+                const wrapper = reactFlowWrapper.current;
+                if (!wrapper) return;
+                const rect = wrapper.getBoundingClientRect();
+                const el = wrapper.querySelector(`[data-id="${node.id}"]`);
+                let x = node.position.x;
+                let y = node.position.y;
+                if (el) {
+                  const elRect = el.getBoundingClientRect();
+                  x = elRect.left - rect.left + elRect.width / 2;
+                  y = elRect.top - rect.top + elRect.height / 2;
+                }
+                setContextMenu({ x, y, visible: true });
+              }}
+              selectionOnDrag
+              panOnDrag={[1, 2]}
+              panOnScroll
               fitView
               attributionPosition="bottom-right"
               deleteKeyCode={["Backspace", "Delete"]}
@@ -1377,6 +1484,90 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                 pannable
               />
             </ReactFlow>
+
+            {/* Context menu */}
+            {contextMenu.visible && (
+              <div
+                className="absolute z-50 w-[140px] overflow-hidden rounded-lg border bg-white shadow-lg dark:bg-zinc-900 dark:border-zinc-700"
+                style={{ left: contextMenu.x, top: contextMenu.y }}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    const selected = nodesRef.current.filter((n) => selectedNodeIds.includes(n.id));
+                    if (selected.length > 0) {
+                      copiedNodesRef.current = selected;
+                      toast.success(`已复制 ${selected.length} 个节点`);
+                    }
+                    setContextMenu((prev) => ({ ...prev, visible: false }));
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                >
+                  <Copy size={12} />
+                  复制
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const copied = copiedNodesRef.current;
+                    if (copied.length === 0) {
+                      setContextMenu((prev) => ({ ...prev, visible: false }));
+                      return;
+                    }
+                    const idMap = new Map<string, string>();
+                    const newNodes: Node[] = copied.map((n) => {
+                      const newId = `${n.type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+                      idMap.set(n.id, newId);
+                      return {
+                        ...n,
+                        id: newId,
+                        position: { x: n.position.x + 30, y: n.position.y + 30 },
+                        selected: false,
+                      };
+                    });
+                    const newEdges: Edge[] = edges
+                      .filter((edge) => idMap.has(edge.source) && idMap.has(edge.target))
+                      .map((edge) => ({
+                        ...edge,
+                        id: `e-${idMap.get(edge.source)}-${idMap.get(edge.target)}-${Date.now()}`,
+                        source: idMap.get(edge.source)!,
+                        target: idMap.get(edge.target)!,
+                      }));
+                    setIsDirty(true);
+                    setNodes((nds) => [...nds, ...newNodes]);
+                    if (newEdges.length > 0) setEdges((eds) => [...eds, ...newEdges]);
+                    toast.success(`已粘贴 ${copied.length} 个节点`);
+                    setContextMenu((prev) => ({ ...prev, visible: false }));
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                >
+                  <Braces size={12} />
+                  粘贴
+                </button>
+                {selectedNodeIds.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsDirty(true);
+                      setNodes((nds) => nds.filter((n) => !selectedNodeIds.includes(n.id)));
+                      setEdges((eds) =>
+                        eds.filter(
+                          (e) =>
+                            !selectedNodeIds.includes(e.source) &&
+                            !selectedNodeIds.includes(e.target),
+                        ),
+                      );
+                      setSelectedNodeIds([]);
+                      setContextMenu((prev) => ({ ...prev, visible: false }));
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-rose-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  >
+                    <Trash2 size={12} />
+                    删除
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Handle click node picker popup */}
             {handleMenu && (
