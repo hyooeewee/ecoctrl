@@ -48,6 +48,7 @@ import {
   EyeOff,
   Cloud,
   CloudOff,
+  Undo2,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -79,6 +80,14 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@ecoctrl/ui/dialog";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuShortcut,
+} from "@ecoctrl/ui/context-menu";
+import { Kbd } from "@ecoctrl/ui/kbd";
 
 import { workflowsApi } from "@/api/workflows";
 import { pointsApi } from "@/api/points";
@@ -347,8 +356,14 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
     x: number;
     y: number;
     visible: boolean;
-  }>({ x: 0, y: 0, visible: false });
+    target: "pane" | "node";
+  }>({ x: 0, y: 0, visible: false, target: "pane" });
   const copiedNodesRef = useRef<Node[]>([]);
+
+  // Undo history
+  const historyRef = useRef<{ nodes: Node[]; edges: Edge[] }[]>([]);
+  const historyIndexRef = useRef(-1);
+  const skipHistoryRef = useRef(false);
 
   const filteredPointNames = useMemo(
     () =>
@@ -380,6 +395,25 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
   const menuOpenedAtRef = useRef(0);
   const connectionMadeRef = useRef(false);
 
+  // Push state to undo history
+  const pushHistory = useCallback((currentNodes: Node[], currentEdges: Edge[]) => {
+    if (skipHistoryRef.current) {
+      skipHistoryRef.current = false;
+      return;
+    }
+    historyRef.current = historyRef.current.slice(0, historyIndexRef.current + 1);
+    historyRef.current.push({
+      nodes: currentNodes.map((n) => ({ ...n, position: { ...n.position }, data: { ...n.data } })),
+      edges: currentEdges.map((e) => ({ ...e })),
+    });
+    historyIndexRef.current = historyRef.current.length - 1;
+    // Cap history at 50 entries
+    if (historyRef.current.length > 50) {
+      historyRef.current.shift();
+      historyIndexRef.current -= 1;
+    }
+  }, []);
+
   // Load workflow data
   useEffect(() => {
     if (!workflowId) {
@@ -394,8 +428,13 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
       };
       setDsl(defaultDsl);
       const { nodes: n, edges: e } = dslToReactFlow(defaultDsl);
-      setNodes(autoLayout(n, e));
+      const layouted = autoLayout(n, e);
+      setNodes(layouted);
       setEdges(e);
+      historyRef.current = [
+        { nodes: layouted.map((n) => ({ ...n })), edges: e.map((e) => ({ ...e })) },
+      ];
+      historyIndexRef.current = 0;
       return;
     }
 
@@ -410,8 +449,13 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
         setSettings(loadedDsl.settings ?? getDefaultSettings());
         const { nodes: n, edges: e } = dslToReactFlow(loadedDsl);
         const needsLayout = n.some((node) => !node.position);
-        setNodes(needsLayout ? autoLayout(n, e) : n);
+        const finalNodes = needsLayout ? autoLayout(n, e) : n;
+        setNodes(finalNodes);
         setEdges(e);
+        historyRef.current = [
+          { nodes: finalNodes.map((n) => ({ ...n })), edges: e.map((e) => ({ ...e })) },
+        ];
+        historyIndexRef.current = 0;
       })
       .catch(() => {
         // silently fail
@@ -452,6 +496,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
       connectionMadeRef.current = true;
       connectingRef.current = null;
       setIsDirty(true);
+      pushHistory(nodesRef.current, edges);
       const newEdge: Edge = {
         ...connection,
         id: `e-${connection.source}-${connection.target}-${Date.now()}`,
@@ -460,7 +505,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
       };
       setEdges((eds) => addEdge(newEdge, eds));
     },
-    [setEdges],
+    [setEdges, pushHistory, edges],
   );
 
   const onConnectStart = useCallback(
@@ -677,11 +722,12 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
       }
 
       setIsDirty(true);
+      pushHistory(nodesRef.current, edges);
       setNodes((nds) => [...nds, newNode]);
       setEdges((eds) => addEdge(newEdge, eds));
       setHandleMenu(null);
     },
-    [handleMenu, setNodes, setEdges],
+    [handleMenu, setNodes, setEdges, pushHistory, edges],
   );
 
   const handleDragStart = useCallback(
@@ -766,9 +812,10 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
       };
 
       setIsDirty(true);
+      pushHistory(nodesRef.current, edges);
       setNodes((nds) => [...nds, newNode]);
     },
-    [rfInstance, setNodes, pluginNodes, isPluginNodeType, getPluginNodeDef],
+    [rfInstance, setNodes, pluginNodes, isPluginNodeType, getPluginNodeDef, pushHistory, edges],
   );
 
   const onDragEnd = useCallback(() => {
@@ -781,12 +828,13 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
   const handleDeleteNode = useCallback(
     (nodeId: string) => {
       setIsDirty(true);
+      pushHistory(nodesRef.current, edges);
       setNodes((nds) => nds.filter((n) => n.id !== nodeId));
       setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
       setSelectedNode(null);
       setRightPanelOpen(false);
     },
-    [setNodes, setEdges],
+    [setNodes, setEdges, pushHistory, edges],
   );
 
   const handleSave = useCallback(
@@ -895,12 +943,13 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
   }, [workflowId]);
 
   const handleAutoLayout = useCallback(() => {
+    pushHistory(nodesRef.current, edges);
     setNodes((nds) => autoLayout(nds, edges));
     setIsDirty(true);
     requestAnimationFrame(() => {
       rfInstance?.fitView({ padding: 0.2 });
     });
-  }, [edges, setNodes, rfInstance]);
+  }, [edges, setNodes, rfInstance, pushHistory]);
 
   // Auto save
   useEffect(() => {
@@ -912,7 +961,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
     return () => clearInterval(timer);
   }, [settings.autoSave?.enabled, settings.autoSave?.intervalSeconds, isDirty, dsl, handleSave]);
 
-  // Keyboard shortcuts: copy / paste / delete selected
+  // Keyboard shortcuts: copy / paste / delete / select-all / undo
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "c") {
@@ -947,6 +996,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
             target: idMap.get(edge.target)!,
           }));
         setIsDirty(true);
+        pushHistory(nodesRef.current, edges);
         setNodes((nds) => [...nds, ...newNodes]);
         if (newEdges.length > 0) setEdges((eds) => [...eds, ...newEdges]);
         toast.success(`已粘贴 ${copied.length} 个节点`);
@@ -954,6 +1004,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
       if (e.key === "Delete" || e.key === "Backspace") {
         if (selectedNodeIds.length > 0) {
           setIsDirty(true);
+          pushHistory(nodesRef.current, edges);
           setNodes((nds) => nds.filter((n) => !selectedNodeIds.includes(n.id)));
           setEdges((eds) =>
             eds.filter(
@@ -963,18 +1014,36 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
           setSelectedNodeIds([]);
         }
       }
+      if ((e.ctrlKey || e.metaKey) && e.key === "a") {
+        e.preventDefault();
+        const allIds = nodesRef.current.map((n) => n.id);
+        setSelectedNodeIds(allIds);
+        setNodes((nds) => nds.map((n) => ({ ...n, selected: true })));
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+        e.preventDefault();
+        if (historyIndexRef.current > 0) {
+          historyIndexRef.current -= 1;
+          const state = historyRef.current[historyIndexRef.current];
+          skipHistoryRef.current = true;
+          setNodes(state.nodes.map((n) => ({ ...n })));
+          setEdges(state.edges.map((e) => ({ ...e })));
+          setSelectedNodeIds([]);
+          toast.success("已撤销");
+        } else if (historyIndexRef.current === 0) {
+          // Undo to initial empty state
+          historyIndexRef.current = -1;
+          skipHistoryRef.current = true;
+          setNodes([]);
+          setEdges([]);
+          setSelectedNodeIds([]);
+          toast.success("已撤销");
+        }
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [selectedNodeIds, setNodes, setEdges]);
-
-  // Click outside to close context menu
-  useEffect(() => {
-    if (!contextMenu.visible) return;
-    const handler = () => setContextMenu((prev) => ({ ...prev, visible: false }));
-    document.addEventListener("click", handler);
-    return () => document.removeEventListener("click", handler);
-  }, [contextMenu.visible]);
+  }, [selectedNodeIds, setNodes, setEdges, pushHistory, edges]);
 
   // Keyboard shortcut: Ctrl/Cmd + S
   useEffect(() => {
@@ -1442,6 +1511,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                   x: e.clientX - rect.left,
                   y: e.clientY - rect.top,
                   visible: true,
+                  target: "pane",
                 });
               }}
               onNodeContextMenu={(e, node) => {
@@ -1457,7 +1527,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                   x = elRect.left - rect.left + elRect.width / 2;
                   y = elRect.top - rect.top + elRect.height / 2;
                 }
-                setContextMenu({ x, y, visible: true });
+                setContextMenu({ x, y, visible: true, target: "node" });
               }}
               selectionOnDrag
               panOnDrag={[1, 2]}
@@ -1486,28 +1556,55 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
             </ReactFlow>
 
             {/* Context menu */}
-            {contextMenu.visible && (
-              <div
-                className="absolute z-50 w-[140px] overflow-hidden rounded-lg border bg-white shadow-lg dark:bg-zinc-900 dark:border-zinc-700"
-                style={{ left: contextMenu.x, top: contextMenu.y }}
+            <ContextMenu
+              open={contextMenu.visible}
+              onOpenChange={(open) => setContextMenu((prev) => ({ ...prev, visible: open }))}
+            >
+              <ContextMenuContent
+                className="w-52"
+                anchor={() => {
+                  const wrapper = reactFlowWrapper.current;
+                  const x = wrapper
+                    ? wrapper.getBoundingClientRect().left + contextMenu.x
+                    : contextMenu.x;
+                  const y = wrapper
+                    ? wrapper.getBoundingClientRect().top + contextMenu.y
+                    : contextMenu.y;
+                  return {
+                    getBoundingClientRect() {
+                      return DOMRect.fromRect({ x, y, width: 0, height: 0 });
+                    },
+                  };
+                }}
+                align="start"
+                side="right"
+                sideOffset={0}
               >
-                <button
-                  type="button"
-                  onClick={() => {
-                    const selected = nodesRef.current.filter((n) => selectedNodeIds.includes(n.id));
-                    if (selected.length > 0) {
-                      copiedNodesRef.current = selected;
-                      toast.success(`已复制 ${selected.length} 个节点`);
-                    }
-                    setContextMenu((prev) => ({ ...prev, visible: false }));
-                  }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                >
-                  <Copy size={12} />
-                  复制
-                </button>
-                <button
-                  type="button"
+                {contextMenu.target === "node" && (
+                  <>
+                    <ContextMenuItem
+                      onClick={() => {
+                        const selected = nodesRef.current.filter((n) =>
+                          selectedNodeIds.includes(n.id),
+                        );
+                        if (selected.length > 0) {
+                          copiedNodesRef.current = selected;
+                          toast.success(`已复制 ${selected.length} 个节点`);
+                        }
+                        setContextMenu((prev) => ({ ...prev, visible: false }));
+                      }}
+                    >
+                      <Copy size={14} />
+                      复制
+                      <ContextMenuShortcut>
+                        <Kbd className="h-5 min-w-5 px-1 text-[10px]">Ctrl</Kbd>
+                        <Kbd className="h-5 min-w-5 px-1 text-[10px]">C</Kbd>
+                      </ContextMenuShortcut>
+                    </ContextMenuItem>
+                    <ContextMenuSeparator />
+                  </>
+                )}
+                <ContextMenuItem
                   onClick={() => {
                     const copied = copiedNodesRef.current;
                     if (copied.length === 0) {
@@ -1534,40 +1631,95 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                         target: idMap.get(edge.target)!,
                       }));
                     setIsDirty(true);
+                    pushHistory(nodesRef.current, edges);
                     setNodes((nds) => [...nds, ...newNodes]);
                     if (newEdges.length > 0) setEdges((eds) => [...eds, ...newEdges]);
                     toast.success(`已粘贴 ${copied.length} 个节点`);
                     setContextMenu((prev) => ({ ...prev, visible: false }));
                   }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800"
                 >
-                  <Braces size={12} />
+                  <Braces size={14} />
                   粘贴
-                </button>
-                {selectedNodeIds.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsDirty(true);
-                      setNodes((nds) => nds.filter((n) => !selectedNodeIds.includes(n.id)));
-                      setEdges((eds) =>
-                        eds.filter(
-                          (e) =>
-                            !selectedNodeIds.includes(e.source) &&
-                            !selectedNodeIds.includes(e.target),
-                        ),
-                      );
-                      setSelectedNodeIds([]);
-                      setContextMenu((prev) => ({ ...prev, visible: false }));
-                    }}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-rose-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                  >
-                    <Trash2 size={12} />
-                    删除
-                  </button>
+                  <ContextMenuShortcut>
+                    <Kbd className="h-5 min-w-5 px-1 text-[10px]">Ctrl</Kbd>
+                    <Kbd className="h-5 min-w-5 px-1 text-[10px]">V</Kbd>
+                  </ContextMenuShortcut>
+                </ContextMenuItem>
+                {contextMenu.target === "node" && selectedNodeIds.length > 0 && (
+                  <>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem
+                      variant="destructive"
+                      onClick={() => {
+                        setIsDirty(true);
+                        pushHistory(nodesRef.current, edges);
+                        setNodes((nds) => nds.filter((n) => !selectedNodeIds.includes(n.id)));
+                        setEdges((eds) =>
+                          eds.filter(
+                            (e) =>
+                              !selectedNodeIds.includes(e.source) &&
+                              !selectedNodeIds.includes(e.target),
+                          ),
+                        );
+                        setSelectedNodeIds([]);
+                        setContextMenu((prev) => ({ ...prev, visible: false }));
+                      }}
+                    >
+                      <Trash2 size={14} />
+                      删除
+                      <ContextMenuShortcut>
+                        <Kbd className="h-5 min-w-5 px-1 text-[10px]">Del</Kbd>
+                      </ContextMenuShortcut>
+                    </ContextMenuItem>
+                  </>
                 )}
-              </div>
-            )}
+                <ContextMenuSeparator />
+                <ContextMenuItem
+                  onClick={() => {
+                    const allIds = nodesRef.current.map((n) => n.id);
+                    setSelectedNodeIds(allIds);
+                    setNodes((nds) => nds.map((n) => ({ ...n, selected: true })));
+                    setContextMenu((prev) => ({ ...prev, visible: false }));
+                  }}
+                >
+                  <Copy size={14} />
+                  全选
+                  <ContextMenuShortcut>
+                    <Kbd className="h-5 min-w-5 px-1 text-[10px]">Ctrl</Kbd>
+                    <Kbd className="h-5 min-w-5 px-1 text-[10px]">A</Kbd>
+                  </ContextMenuShortcut>
+                </ContextMenuItem>
+                <ContextMenuItem
+                  disabled={historyIndexRef.current <= 0}
+                  onClick={() => {
+                    if (historyIndexRef.current > 0) {
+                      historyIndexRef.current -= 1;
+                      const state = historyRef.current[historyIndexRef.current];
+                      skipHistoryRef.current = true;
+                      setNodes(state.nodes.map((n) => ({ ...n })));
+                      setEdges(state.edges.map((e) => ({ ...e })));
+                      setSelectedNodeIds([]);
+                      toast.success("已撤销");
+                    } else if (historyIndexRef.current === 0) {
+                      historyIndexRef.current = -1;
+                      skipHistoryRef.current = true;
+                      setNodes([]);
+                      setEdges([]);
+                      setSelectedNodeIds([]);
+                      toast.success("已撤销");
+                    }
+                    setContextMenu((prev) => ({ ...prev, visible: false }));
+                  }}
+                >
+                  <Undo2 size={14} />
+                  撤销
+                  <ContextMenuShortcut>
+                    <Kbd className="h-5 min-w-5 px-1 text-[10px]">Ctrl</Kbd>
+                    <Kbd className="h-5 min-w-5 px-1 text-[10px]">Z</Kbd>
+                  </ContextMenuShortcut>
+                </ContextMenuItem>
+              </ContextMenuContent>
+            </ContextMenu>
 
             {/* Handle click node picker popup */}
             {handleMenu && (
