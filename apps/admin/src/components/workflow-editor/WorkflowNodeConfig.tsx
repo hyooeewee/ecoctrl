@@ -62,7 +62,14 @@ export function WorkflowNodeConfig({
             className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
             style={{ backgroundColor: nodeColor }}
           >
-            {(selectedNode.data.label as string)?.charAt(0)?.toUpperCase() ?? "N"}
+            {nodeDef?.icon ? (
+              <div
+                dangerouslySetInnerHTML={{ __html: nodeDef.icon }}
+                className="flex h-3.5 w-3.5 items-center justify-center [&>svg]:h-full [&>svg]:w-full"
+              />
+            ) : (
+              ((selectedNode.data.label as string)?.charAt(0)?.toUpperCase() ?? "N")
+            )}
           </span>
           <span className="truncate text-sm font-semibold">
             {(selectedNode.data.label as string) ?? selectedNode.type}
