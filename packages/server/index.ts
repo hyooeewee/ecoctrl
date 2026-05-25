@@ -28,6 +28,9 @@ import { triggerEngine } from "@/engine/trigger";
 import { syncSmtpFromEnv } from "@/repositories/platformConfig";
 import { env } from "@/lib/env";
 import { ensureS3Buckets } from "@/storage";
+import postgres from "postgres";
+import { createPgNotifyListener } from "@/lib/pgNotify";
+import { sseManager } from "@/sse/manager";
 
 await ensureDatabase();
 await ensureS3Buckets();
@@ -194,6 +197,16 @@ await fastify.register(
 );
 await fastify.register(apiRoutes, { prefix: "/api" });
 
+// Start PostgreSQL NOTIFY listener for SSE events
+const notifySql = postgres(env.DATABASE_URL, { prepare: false });
+const notifyListener = createPgNotifyListener(notifySql);
+await notifyListener.start("sse_events", (event) => {
+  // Broadcast all DB-originated events to all connected clients
+  // In production, filter by userId or event scope as needed
+  sseManager.broadcast(event);
+});
+fastify.log.info("PostgreSQL NOTIFY listener started on channel 'sse_events'");
+
 // Initialize pg-boss queue and sync schedule triggers
 await initQueue();
 await triggerEngine.syncSchedules();
@@ -211,6 +224,7 @@ try {
 
 const shutdown = async (signal: string) => {
   fastify.log.info(`Received ${signal}, shutting down gracefully...`);
+  await notifyListener.stop();
   await stopQueue();
   await fastify.close();
   process.exit(0);
