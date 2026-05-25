@@ -12,10 +12,13 @@ interface HandleConfig {
 }
 
 const HANDLE_CONFIG: Record<string, HandleConfig> = {
+  // Triggers keep a hidden target handle so ReactFlow internal logic works,
+  // but users cannot visually connect upstream nodes to them.
   start: {
     targets: [{ position: Position.Left, hidden: true }],
     sources: [{ position: Position.Right }],
   },
+  // End nodes have no source handles — nothing can flow out of a terminal node.
   end: {
     targets: [{ position: Position.Left }],
   },
@@ -33,10 +36,26 @@ const HANDLE_CONFIG: Record<string, HandleConfig> = {
       { position: Position.Right, id: "false", color: "#f43f5e" },
     ],
   },
+  parallel: {
+    targets: [{ position: Position.Left }],
+    sources: [
+      { position: Position.Right, id: "branch-1" },
+      { position: Position.Right, id: "branch-2" },
+    ],
+  },
 };
 
+/** Fallback for action / default nodes. */
 const DEFAULT_HANDLES: HandleConfig = {
   targets: [{ position: Position.Left }],
+  sources: [{ position: Position.Right }],
+};
+
+/** Trigger nodes (including plugins) only have source handles.
+ *  The hidden target ensures ReactFlow recognises the node while
+ *  preventing upstream connections on the canvas. */
+const TRIGGER_HANDLES: HandleConfig = {
+  targets: [{ position: Position.Left, hidden: true }],
   sources: [{ position: Position.Right }],
 };
 
@@ -53,7 +72,16 @@ export default function UnifiedNodeShell({ data, selected, id }: NodeProps) {
   const plugin = pluginNodes.find((p) => p.id === type);
 
   const color = plugin?.color ?? "#94a3b8";
-  const handles = HANDLE_CONFIG[type] ?? DEFAULT_HANDLES;
+
+  // Resolve handles: special built-in types first, then by plugin category.
+  let handles: HandleConfig;
+  if (HANDLE_CONFIG[type]) {
+    handles = HANDLE_CONFIG[type];
+  } else if (plugin?.category === "trigger") {
+    handles = TRIGGER_HANDLES;
+  } else {
+    handles = DEFAULT_HANDLES;
+  }
 
   const ringClass = selected ? "ring-2" : "";
   const ringStyle = selected ? ({ "--tw-ring-color": color } as CSSProperties) : undefined;
