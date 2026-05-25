@@ -7,8 +7,9 @@ import { env } from "@/lib/env";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export async function migrateDatabase(): Promise<void> {
-  const client = postgres(env.DATABASE_URL, {
+export async function migrateDatabase(databaseUrl?: string): Promise<void> {
+  const targetUrl = databaseUrl || env.DATABASE_URL;
+  const client = postgres(targetUrl, {
     prepare: false,
     max: 1,
   });

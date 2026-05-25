@@ -13,6 +13,7 @@ export default defineConfig({
     environment: "node",
     include: ["__tests__/**/*.test.ts"],
     setupFiles: ["./__tests__/setup.ts"],
+    globalSetup: ["./vitest.global.ts"],
     coverage: {
       reporter: ["text", "json", "html"],
       exclude: ["node_modules/", "__tests__/"],

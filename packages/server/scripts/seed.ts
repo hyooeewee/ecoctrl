@@ -666,7 +666,7 @@ async function main() {
     selected = onlyModules;
   } else if (process.stdin.isTTY) {
     const result = await multiselect({
-      message: "Select modules to seed (space to multi-select, enter to confirm):",
+      message: "Select modules to seed (space toggle, 'a' all, enter confirm):",
       options: MODULES.map((m) => ({ value: m.value, label: m.label })),
       required: true,
     });

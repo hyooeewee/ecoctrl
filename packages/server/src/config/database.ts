@@ -7,7 +7,8 @@ let dbInstance: PostgresJsDatabase | undefined;
 
 export function getDb(): PostgresJsDatabase {
   if (!dbInstance) {
-    const client = postgres(env.DATABASE_URL, { prepare: false });
+    const dbUrl = process.env.VITEST_DATABASE_URL || env.DATABASE_URL;
+    const client = postgres(dbUrl, { prepare: false });
     dbInstance = drizzle(client);
   }
   return dbInstance;
