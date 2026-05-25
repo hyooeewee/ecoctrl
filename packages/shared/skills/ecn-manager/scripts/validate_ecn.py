@@ -10,11 +10,22 @@ Exit codes:
     1 = invalid
 """
 
+import hashlib
 import json
 import re
 import sys
 import zipfile
 from pathlib import Path
+
+
+def compute_content_hash(files: list[tuple[str, bytes]]) -> str:
+    """Compute SHA-256 hash over all files (sorted by name, then content)."""
+    files_sorted = sorted(files, key=lambda x: x[0])
+    h = hashlib.sha256()
+    for name, content in files_sorted:
+        h.update(name.encode("utf-8"))
+        h.update(content)
+    return h.hexdigest()
 
 
 def validate_manifest(manifest: dict) -> list[str]:
@@ -130,6 +141,17 @@ def validate_ecn(path: Path) -> tuple[bool, list[str]]:
             icon = manifest.get("icon")
             if icon and icon not in names:
                 errors.append(f"Icon file '{icon}' referenced but not found")
+
+            # Verify content hash if zip comment present
+            comment = zf.comment.decode("utf-8").strip() if zf.comment else None
+            if comment:
+                files_for_hash = []
+                for name in names:
+                    files_for_hash.append((name, zf.read(name)))
+                expected = comment
+                actual = compute_content_hash(files_for_hash)
+                if expected != actual:
+                    errors.append(f"SHA-256 hash mismatch (expected: {expected}, actual: {actual})")
 
     except zipfile.BadZipFile as e:
         return False, [f"Bad ZIP file: {e}"]
