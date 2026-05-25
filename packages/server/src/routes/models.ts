@@ -6,17 +6,19 @@ import { getModelStorage } from "@/storage";
 import {
   findManyModels,
   findModelById,
-  findModelByName,
+  findModelByCode,
   createModel,
   updateModel,
   deleteModel,
 } from "@/repositories/models";
-import { findObjectById, createObject } from "@/repositories/objects";
-import { createManyPoints, deletePointsByObjectId } from "@/repositories/points";
+import { findObjectByCodeAndModelId, createObject, updateObject } from "@/repositories/objects";
+import { createPoint, findPointByObjectTypeNo } from "@/repositories/points";
 import { errors } from "@/lib/schemas";
 import { parseJsonPoints, parseCsvPoints, parseXlsxPoints } from "@/lib/parsers";
+import { getLogger } from "@/lib/logger";
 
 const storage = getModelStorage();
+const logger = getLogger("models");
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes}B`;
@@ -78,7 +80,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
       let filename = "";
       let name = "";
       let version = "";
-      let deviceType = "";
+      let code = "";
 
       for await (const part of parts) {
         if (part.type === "file") {
@@ -87,7 +89,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         } else {
           if (part.fieldname === "name") name = part.value as string;
           if (part.fieldname === "version") version = part.value as string;
-          if (part.fieldname === "deviceType") deviceType = part.value as string;
+          if (part.fieldname === "code") code = part.value as string;
         }
       }
 
@@ -139,11 +141,12 @@ export default async function modelRoutes(fastify: FastifyInstance) {
       }
 
       const created = await createModel({
+        code,
         name: finalName,
+        description: null,
         version: finalVersion,
         format,
         size: formatFileSize(sizeBytes),
-        deviceType,
         fileUrl,
         thumbnailUrl: null,
         docUrl: null,
@@ -164,9 +167,9 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         summary: "Update model metadata",
         params: z.object({ id: z.string().describe("Model ID") }),
         body: z.object({
-          name: z.string(),
-          version: z.string(),
-          deviceType: z.string(),
+          name: z.string().optional(),
+          version: z.string().optional(),
+          code: z.string().optional(),
           fileUrl: z.string().nullable().optional(),
         }),
         response: {
@@ -177,10 +180,10 @@ export default async function modelRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const { name, version, deviceType, fileUrl } = request.body as {
-        name: string;
-        version: string;
-        deviceType: string;
+      const { name, version, code, fileUrl } = request.body as {
+        name?: string;
+        version?: string;
+        code?: string;
         fileUrl?: string | null;
       };
 
@@ -197,7 +200,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         }
       }
 
-      const updated = await updateModel(id, { name, version, deviceType, fileUrl });
+      const updated = await updateModel(id, { name, version, code, fileUrl });
       if (!updated) {
         return reply.status(404).send({ error: "Model not found" });
       }
@@ -374,11 +377,9 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         response: {
           200: z.object({
             createdModels: z.number(),
-            updatedModels: z.number(),
             createdObjects: z.number(),
-            updatedObjects: z.number(),
             createdPoints: z.number(),
-            updatedPoints: z.number(),
+            skippedPoints: z.number(),
             devices: z.array(z.string()),
           }),
           ...errors,
@@ -386,128 +387,141 @@ export default async function modelRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const parts = request.parts();
-      let fileBuffer: Buffer | undefined;
-      let filename = "";
-
-      for await (const part of parts) {
-        if (part.type === "file") {
-          fileBuffer = await collectStream(part.file);
-          filename = part.filename;
-        }
-      }
-
-      if (!fileBuffer) {
-        return reply.status(400).send({ error: "No file uploaded" });
-      }
-
-      const ext = filename.slice(filename.lastIndexOf(".")).toLowerCase();
-      let parseResult: {
-        deviceType: string;
-        devices: {
-          deviceName: string;
-          points: {
-            name: string;
-            pointType: string;
-            pointNo: string;
-            props: { key: string; name: string; unit?: string }[];
-          }[];
-        }[];
-      };
-
       try {
-        if (ext === ".xlsx") {
-          parseResult = parseXlsxPoints(fileBuffer);
-        } else if (ext === ".csv") {
-          parseResult = parseCsvPoints(fileBuffer);
-        } else if (ext === ".json") {
-          parseResult = parseJsonPoints(fileBuffer);
-        } else {
+        const parts = request.parts();
+        let fileBuffer: Buffer | undefined;
+        let filename = "";
+
+        for await (const part of parts) {
+          if (part.type === "file") {
+            fileBuffer = await collectStream(part.file);
+            filename = part.filename;
+          }
+        }
+
+        if (!fileBuffer) {
+          return reply.status(400).send({ error: "No file uploaded" });
+        }
+
+        const ext = filename.slice(filename.lastIndexOf(".")).toLowerCase();
+        let parseResult: {
+          deviceType: string;
+          devices: {
+            deviceName: string;
+            points: {
+              name: string;
+              pointType: string;
+              pointNo: string;
+              props: { key: string; name: string; unit?: string }[];
+            }[];
+          }[];
+        };
+
+        try {
+          if (ext === ".xlsx") {
+            parseResult = parseXlsxPoints(fileBuffer);
+          } else if (ext === ".csv") {
+            parseResult = parseCsvPoints(fileBuffer);
+          } else if (ext === ".json") {
+            parseResult = parseJsonPoints(fileBuffer);
+          } else {
+            return reply
+              .status(400)
+              .send({ error: "Unsupported file format. Use .json, .csv, or .xlsx" });
+          }
+        } catch (err) {
           return reply
             .status(400)
-            .send({ error: "Unsupported file format. Use .json, .csv, or .xlsx" });
+            .send({ error: err instanceof Error ? err.message : "Failed to parse file" });
         }
-      } catch (err) {
-        return reply
-          .status(400)
-          .send({ error: err instanceof Error ? err.message : "Failed to parse file" });
-      }
 
-      const { deviceType, devices } = parseResult;
+        const { deviceType, devices } = parseResult;
 
-      // Find or create model by deviceType
-      let model = await findModelByName(deviceType);
-      let createdModels = 0;
-      let updatedModels = 0;
+        // Find or create model by deviceType (model code)
+        let model = await findModelByCode(deviceType);
+        let createdModels = 0;
 
-      if (!model) {
-        model = await createModel({
-          name: deviceType,
-          version: "v1.0",
-          format: "DATA",
-          size: "-",
-          deviceType: deviceType.toUpperCase(),
-          fileUrl: null,
-          thumbnailUrl: null,
-          docUrl: null,
-        });
-        createdModels = 1;
-      } else {
-        updatedModels = 1;
-      }
-
-      let createdObjects = 0;
-      let updatedObjects = 0;
-      let createdPoints = 0;
-      let updatedPoints = 0;
-      const deviceNames: string[] = [];
-
-      for (const device of devices) {
-        const deviceName = device.deviceName;
-        deviceNames.push(deviceName);
-
-        // Find or create object by deviceName
-        let object = await findObjectById(deviceName);
-        if (!object) {
-          object = await createObject({
-            id: deviceName,
-            name: deviceName,
-            modelId: model.id,
-            modelName: model.name,
+        if (!model) {
+          model = await createModel({
+            code: deviceType.toUpperCase(),
+            name: null,
+            description: null,
+            version: null,
+            format: null,
+            size: null,
+            fileUrl: null,
+            thumbnailUrl: null,
+            docUrl: null,
           });
-          createdObjects++;
-        } else if (object.modelId === model.id) {
-          // Clear existing points for this object and recreate
-          await deletePointsByObjectId(object.uuid);
-          updatedObjects++;
+          createdModels = 1;
         }
 
-        // Create points for this object
-        const pointData = device.points.map((p) => ({
-          objectId: object!.uuid,
-          modelId: model!.id,
-          pointType: p.pointType,
-          pointNo: p.pointNo,
-          name: p.name,
-          props: p.props,
-          values: {} as Record<string, string>,
-        }));
+        let createdObjects = 0;
+        let createdPoints = 0;
+        let skippedPoints = 0;
+        const deviceNames: string[] = [];
 
-        if (pointData.length > 0) {
-          await createManyPoints(pointData);
-          createdPoints += pointData.length;
+        for (const device of devices) {
+          const deviceName = device.deviceName;
+          deviceNames.push(deviceName);
+
+          // Find or create object by code + modelId
+          let object = await findObjectByCodeAndModelId(deviceName, model.id);
+          if (!object) {
+            object = await createObject({
+              code: deviceName,
+              name: null,
+              description: null,
+              modelId: model.id,
+              status: "offline",
+            });
+            createdObjects++;
+          }
+
+          // Process each point: check existence, create if not exists
+          for (const p of device.points) {
+            const existing = await findPointByObjectTypeNo(object.id, p.pointType, p.pointNo);
+            if (existing) {
+              skippedPoints++;
+              continue;
+            }
+
+            await createPoint({
+              objectId: object.id,
+              modelId: model.id,
+              type: p.pointType,
+              code: p.pointNo,
+              name: p.name,
+              description: null,
+              props: p.props,
+              values: {} as Record<string, string>,
+            });
+            createdPoints++;
+          }
         }
+
+        const response = {
+          createdModels,
+          createdObjects,
+          createdPoints,
+          skippedPoints,
+          devices: deviceNames,
+        };
+
+        logger.info({ response }, "Import points completed");
+        return reply.send(response);
+      } catch (err) {
+        logger.error(
+          {
+            err: err instanceof Error ? err.message : String(err),
+            stack: err instanceof Error ? err.stack : undefined,
+          },
+          "Import points failed",
+        );
+        return reply
+          .status(500)
+          .send({ error: err instanceof Error ? err.message : "Internal server error" });
       }
-
-      return reply.send({
-        createdModels,
-        updatedModels,
-        createdObjects,
-        updatedObjects,
-        createdPoints,
-        updatedPoints,
-        devices: deviceNames,
-      });
     },
   );
 }

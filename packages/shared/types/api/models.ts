@@ -2,11 +2,12 @@ import { z } from "zod";
 
 export const DataModelSchema = z.object({
   id: z.string(),
-  name: z.string(),
-  version: z.string(),
-  format: z.string(),
-  size: z.string(),
-  deviceType: z.string(),
+  code: z.string(),
+  name: z.string().nullable(),
+  description: z.string().nullable(),
+  version: z.string().nullable(),
+  format: z.string().nullable(),
+  size: z.string().nullable(),
   fileUrl: z.string().nullable(),
   thumbnailUrl: z.string().nullable(),
   docUrl: z.string().nullable(),

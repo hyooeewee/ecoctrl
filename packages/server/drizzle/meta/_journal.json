@@ -71,6 +71,13 @@
       "when": 1779001637635,
       "tag": "0009_groovy_thunderball",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1779681739902,
+      "tag": "0010_narrow_sharon_ventura",
+      "breakpoints": true
     }
   ]
 }

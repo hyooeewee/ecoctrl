@@ -12,9 +12,9 @@ export const modelsApi = {
   update: (
     id: string,
     data: {
-      name: string;
-      version: string;
-      deviceType: string;
+      name?: string;
+      version?: string;
+      code?: string;
       fileUrl?: string | null;
     },
   ) => put<DataModel>(`/models/${id}`, data),
@@ -25,11 +25,11 @@ export const modelsApi = {
     return request<DataModel>(`/models/${id}/file`, { method: "PUT", body: formData });
   },
 
-  upload: (file: File | null, data: { name: string; version: string; deviceType: string }) => {
+  upload: (file: File | null, data: { name: string; version: string; code: string }) => {
     const formData = new FormData();
     formData.append("name", data.name);
     formData.append("version", data.version);
-    formData.append("deviceType", data.deviceType);
+    formData.append("code", data.code);
     if (file) {
       formData.append("file", file);
     }
@@ -48,11 +48,9 @@ export const modelsApi = {
     formData.append("file", file);
     return request<{
       createdModels: number;
-      updatedModels: number;
       createdObjects: number;
-      updatedObjects: number;
       createdPoints: number;
-      updatedPoints: number;
+      skippedPoints: number;
       devices: string[];
     }>("/models/import-points", { method: "POST", body: formData });
   },

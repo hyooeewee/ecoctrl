@@ -7,14 +7,15 @@ export async function findManyModels(): Promise<DataModel[]> {
   const rows = await db.select().from(models);
   return rows.map((r) => ({
     id: r.id,
+    code: r.code,
     name: r.name,
+    description: r.description,
     version: r.version,
     format: r.format,
     size: r.size,
-    deviceType: r.deviceType,
-    fileUrl: r.fileUrl ?? null,
-    thumbnailUrl: r.thumbnailUrl ?? null,
-    docUrl: r.docUrl ?? null,
+    fileUrl: r.fileUrl,
+    thumbnailUrl: r.thumbnailUrl,
+    docUrl: r.docUrl,
   }));
 }
 
@@ -24,31 +25,33 @@ export async function findModelById(id: string): Promise<DataModel | null> {
   const r = rows[0];
   return {
     id: r.id,
+    code: r.code,
     name: r.name,
+    description: r.description,
     version: r.version,
     format: r.format,
     size: r.size,
-    deviceType: r.deviceType,
-    fileUrl: r.fileUrl ?? null,
-    thumbnailUrl: r.thumbnailUrl ?? null,
-    docUrl: r.docUrl ?? null,
+    fileUrl: r.fileUrl,
+    thumbnailUrl: r.thumbnailUrl,
+    docUrl: r.docUrl,
   };
 }
 
-export async function findModelByName(name: string): Promise<DataModel | null> {
-  const rows = await db.select().from(models).where(eq(models.name, name)).limit(1);
+export async function findModelByCode(code: string): Promise<DataModel | null> {
+  const rows = await db.select().from(models).where(eq(models.code, code)).limit(1);
   if (rows.length === 0) return null;
   const r = rows[0];
   return {
     id: r.id,
+    code: r.code,
     name: r.name,
+    description: r.description,
     version: r.version,
     format: r.format,
     size: r.size,
-    deviceType: r.deviceType,
-    fileUrl: r.fileUrl ?? null,
-    thumbnailUrl: r.thumbnailUrl ?? null,
-    docUrl: r.docUrl ?? null,
+    fileUrl: r.fileUrl,
+    thumbnailUrl: r.thumbnailUrl,
+    docUrl: r.docUrl,
   };
 }
 
@@ -56,11 +59,12 @@ export async function createModel(data: Omit<DataModel, "id">): Promise<DataMode
   const result = await db
     .insert(models)
     .values({
+      code: data.code,
       name: data.name,
+      description: data.description,
       version: data.version,
       format: data.format,
       size: data.size,
-      deviceType: data.deviceType,
       fileUrl: data.fileUrl,
       thumbnailUrl: data.thumbnailUrl,
       docUrl: data.docUrl,
@@ -69,27 +73,29 @@ export async function createModel(data: Omit<DataModel, "id">): Promise<DataMode
   const r = result[0];
   return {
     id: r.id,
+    code: r.code,
     name: r.name,
+    description: r.description,
     version: r.version,
     format: r.format,
     size: r.size,
-    deviceType: r.deviceType,
-    fileUrl: r.fileUrl ?? null,
-    thumbnailUrl: r.thumbnailUrl ?? null,
-    docUrl: r.docUrl ?? null,
+    fileUrl: r.fileUrl,
+    thumbnailUrl: r.thumbnailUrl,
+    docUrl: r.docUrl,
   };
 }
 
 export async function updateModel(
   id: string,
-  data: Partial<Pick<DataModel, "name" | "version" | "format" | "size" | "fileUrl" | "deviceType">>,
+  data: Partial<Omit<DataModel, "id">>,
 ): Promise<DataModel | null> {
   const updateData: Record<string, unknown> = {};
+  if (data.code !== undefined) updateData.code = data.code;
   if (data.name !== undefined) updateData.name = data.name;
+  if (data.description !== undefined) updateData.description = data.description;
   if (data.version !== undefined) updateData.version = data.version;
   if (data.format !== undefined) updateData.format = data.format;
   if (data.size !== undefined) updateData.size = data.size;
-  if (data.deviceType !== undefined) updateData.deviceType = data.deviceType;
   if (data.fileUrl !== undefined) updateData.fileUrl = data.fileUrl;
 
   const result = await db.update(models).set(updateData).where(eq(models.id, id)).returning();
@@ -97,14 +103,15 @@ export async function updateModel(
   const r = result[0];
   return {
     id: r.id,
+    code: r.code,
     name: r.name,
+    description: r.description,
     version: r.version,
     format: r.format,
     size: r.size,
-    deviceType: r.deviceType,
-    fileUrl: r.fileUrl ?? null,
-    thumbnailUrl: r.thumbnailUrl ?? null,
-    docUrl: r.docUrl ?? null,
+    fileUrl: r.fileUrl,
+    thumbnailUrl: r.thumbnailUrl,
+    docUrl: r.docUrl,
   };
 }
 
@@ -114,13 +121,14 @@ export async function deleteModel(id: string): Promise<DataModel | null> {
   const r = result[0];
   return {
     id: r.id,
+    code: r.code,
     name: r.name,
+    description: r.description,
     version: r.version,
     format: r.format,
     size: r.size,
-    deviceType: r.deviceType,
-    fileUrl: r.fileUrl ?? null,
-    thumbnailUrl: r.thumbnailUrl ?? null,
-    docUrl: r.docUrl ?? null,
+    fileUrl: r.fileUrl,
+    thumbnailUrl: r.thumbnailUrl,
+    docUrl: r.docUrl,
   };
 }
