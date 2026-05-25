@@ -22,8 +22,8 @@
     "version": "changeset version",
     "release": "bash scripts/release-tag.sh",
     "prepare": "[ -n \"$CI\" ] || husky",
-    "sync:env": "pnpm -r --if-present env:sync",
-    "sync:env:check": "pnpm -r --if-present env:check",
+    "env:sync": "pnpm -r --if-present env:sync -y",
+    "env:check": "pnpm -r --if-present env:check",
     "test": "pnpm -r --if-present test",
     "test:watch": "pnpm -r --parallel --if-present test:watch",
     "test:coverage": "pnpm -r --if-present test:coverage"

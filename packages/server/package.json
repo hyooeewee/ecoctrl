@@ -21,7 +21,7 @@
     "db:reset": "pnpm db:cleanup -- --only=db,buckets --yes && pnpm db:init && pnpm db:seed",
     "db:squash": "dotenv -e .env.local -- tsx scripts/squash.ts",
     "db:drop": "drizzle-kit drop",
-    "env:overwrite": "tsx ../../packages/shared/scripts/gen-env-example.ts -y",
+    "env:sync": "tsx ../../packages/shared/scripts/gen-env-example.ts",
     "env:check": "tsx ../../packages/shared/scripts/gen-env-example.ts --check",
     "test": "vitest run",
     "test:watch": "vitest",
