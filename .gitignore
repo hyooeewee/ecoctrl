@@ -29,3 +29,4 @@ docker/ecoctrl/
 **/CLAUDE.md
 *.csv
 *.xlsx
+**/tmp/

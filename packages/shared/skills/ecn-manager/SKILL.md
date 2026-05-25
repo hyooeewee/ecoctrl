@@ -1,6 +1,10 @@
 ---
 name: ecn-manager
 description: Create, modify, and validate EcoCtrl .ecn plugin node packages. Use whenever the user wants to build a custom workflow node, edit an existing plugin, or validate a .ecn file. Also use when the user mentions 'plugin node', 'custom node', 'workflow node', '.ecn file', or wants to extend the workflow engine with new actions, triggers, or conditions.
+license: MIT
+metadata:
+  version: 1.1.0
+  author: EcoCtrl Team
 ---
 
 # ECN Manager
@@ -18,28 +22,83 @@ An `.ecn` file is a ZIP archive containing:
 
 ## Workflow
 
-### 1. Capture Intent
+### 1. Capture Intent (AskUserQuestion)
 
-Ask the user:
+Use **one round of `AskUserQuestion`** to collect everything. Do NOT ask one by one in chat.
 
-1. What should this node do? (read sensor, call API, send email, etc.)
-2. What category? (`trigger`, `action`, or `condition`)
-3. What config fields does it need? (endpoint URL, threshold value, etc.)
-4. Is this a new node or modifying an existing one?
+**Required questions (always ask):**
+
+1. **Plugin ID** — kebab-case identifier (e.g. `energy-monitor`)
+2. **Display name** — human-readable name (e.g. `Energy Monitor`)
+3. **Category** — `trigger` / `action` / `condition`
+4. **What should this node do?** — one sentence description
+5. **Config fields** — list of form fields the node needs (name, type, title, description, required?)
+
+**Mode choice (present as single-select):**
+
+- **Quick mode** — only the 5 questions above; AI decides color, icon, description, author
+- **Custom mode** — after the 5 questions, ask color, icon, description, author one by one
+- **Decide for me** — AI picks smart defaults for everything based on category and purpose
+
+**Rules:**
+
+- If the user chooses **Quick** or **Decide for me**, do NOT ask for optional fields.
+- Default values when AI decides:
+  - `version`: `1.0.0`
+  - `color`: `#3b82f6` (blue, neutral default)
+  - `icon`: `icon.svg` (a simple placeholder SVG is auto-generated)
+  - `description`: derived from the "what should this node do" answer
+  - `author`: empty (omitted from manifest)
 
 ### 2. Scaffold (new node)
 
-Use the bundled script to scaffold:
+After collecting all information via AskUserQuestion, generate an **unpacked source directory** first. Do NOT create the `.ecn` archive yet.
+
+**Option A — Use the non-interactive script (preferred):**
 
 ```bash
-python <skill-path>/scripts/create_ecn.py <output-directory>
+python <skill-path>/scripts/create_ecn.py <output-directory> --json '<metadata-json>'
 ```
 
-This interactively prompts for metadata and generates:
+This creates a folder like `<output-directory>/<plugin-id>/` containing:
 
-- `manifest.json` — with proper id, name, version, category
-- `backend.js` — with the PluginApi import comment and skeleton function
-- `schema.json` — with user-defined config fields
+- `manifest.json`
+- `backend.js`
+- `schema.json`
+- `icon.svg`
+
+Pass a single JSON string with all fields:
+
+```json
+{
+  "id": "energy-monitor",
+  "name": "Energy Monitor",
+  "version": "1.0.0",
+  "category": "trigger",
+  "description": "...",
+  "author": "...",
+  "color": "#3b82f6",
+  "icon": "icon.svg",
+  "fields": [
+    {
+      "name": "threshold",
+      "type": "number",
+      "title": "Threshold",
+      "description": "...",
+      "required": true
+    }
+  ]
+}
+```
+
+**Option B — Direct file generation:**
+
+If the script is unavailable, write the 4 files directly with `Write` into a folder:
+
+- `<plugin-id>/manifest.json`
+- `<plugin-id>/backend.js`
+- `<plugin-id>/schema.json`
+- `<plugin-id>/icon.svg` (placeholder)
 
 ### 3. Implement backend.js
 
@@ -53,7 +112,27 @@ Key rules:
 - Use `api.log.info/warn/error` for debugging
 - Handle errors gracefully; uncaught errors fail the workflow execution
 
-### 4. Validate
+### 4. Implement backend.js
+
+Edit the generated `backend.js` to implement the node's logic. Use the PluginApi reference (see `references/plugin_api_reference.md`) for available APIs.
+
+Key rules:
+
+- Must export via `module.exports = async function(ctx, api) { ... }`
+- `ctx.config` contains values from the node's config form (defined by schema.json)
+- Return an object — it becomes the node's output for downstream nodes
+- Use `api.log.info/warn/error` for debugging
+- Handle errors gracefully; uncaught errors fail the workflow execution
+
+### 5. Package
+
+After editing is complete, package the source directory into a `.ecn` file:
+
+```bash
+python <skill-path>/scripts/package_ecn.py <source-directory> [output.ecn]
+```
+
+### 6. Validate
 
 Always validate before considering the node done:
 
@@ -69,21 +148,7 @@ Checks:
 - backend.js contains `module.exports`
 - Referenced icon file exists
 
-### 5. Package / Extract (round-trip editing)
-
-**Extract for editing:**
-
-```bash
-python <skill-path>/scripts/extract_ecn.py <plugin.ecn> <output-directory>
-```
-
-**Re-package after edits:**
-
-```bash
-python <skill-path>/scripts/package_ecn.py <source-directory> [output.ecn]
-```
-
-### 6. Install
+### 7. Install
 
 The user installs the `.ecn` through the Admin UI:
 

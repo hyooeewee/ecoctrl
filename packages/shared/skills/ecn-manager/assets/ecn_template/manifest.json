@@ -6,6 +6,7 @@
   "description": "Describe what this plugin does",
   "entry": "backend.js",
   "schema": "schema.json",
+  "icon": "icon.svg",
   "author": "",
   "minEngineVersion": ""
 }
