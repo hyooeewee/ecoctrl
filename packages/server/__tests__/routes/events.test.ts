@@ -26,7 +26,7 @@ describe("POST /token (SSE)", () => {
 
   it("should reject unauthenticated requests", async () => {
     const res = await fastify.inject({ method: "POST", url: "/events/token" });
-    expect(res.statusCode).toBe("401");
+    expect(res.statusCode).toBe(401);
   });
 
   it("should return a short-lived SSE token for authenticated user", async () => {
@@ -37,7 +37,7 @@ describe("POST /token (SSE)", () => {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
-    expect(res.statusCode).toBe("200");
+    expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.payload);
     expect(body.token).toBeDefined();
     expect(body.expiresIn).toBe(30);
