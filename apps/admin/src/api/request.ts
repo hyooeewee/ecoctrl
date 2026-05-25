@@ -121,6 +121,9 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 
   const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
   const res = await doRequest(url, init, accessToken);
+  if (res.status === 204 || res.headers.get("content-length") === "0") {
+    return undefined as T;
+  }
   return res.json() as Promise<T>;
 }
 
