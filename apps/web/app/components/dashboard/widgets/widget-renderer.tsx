@@ -1,4 +1,4 @@
-import type { WidgetConfig } from "./types";
+import type { WidgetConfig, WidgetData } from "./types";
 import { StatCard } from "./_stat-card";
 import { ChartWidget } from "./chart-widget";
 import { ListWidget } from "./list-widget";
@@ -6,10 +6,11 @@ import { WeatherWidget } from "./weather-widget";
 
 interface WidgetRendererProps {
   widget: WidgetConfig;
+  liveData?: WidgetData;
 }
 
-export function WidgetRenderer({ widget }: WidgetRendererProps) {
-  const d = widget.data;
+export function WidgetRenderer({ widget, liveData }: WidgetRendererProps) {
+  const d = liveData ?? widget.data;
 
   if ("location" in d && "currentTemp" in d) {
     return <WeatherWidget widget={widget} data={d} />;
