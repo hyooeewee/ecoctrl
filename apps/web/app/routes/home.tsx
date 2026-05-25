@@ -115,7 +115,7 @@ export default function Home() {
   const setWidgetData = useWidgetDataStore((s) => s.setWidgetData);
   const removeWidgetData = useWidgetDataStore((s) => s.removeWidgetData);
 
-  useSse({
+  const { isConnected, isReconnecting } = useSse({
     url: `${API_PREFIX}/events`,
     enabled: isLoggedIn,
     onMessage: (msg) => {
@@ -131,6 +131,8 @@ export default function Home() {
       }
     },
   });
+
+  const sseStatus = isConnected ? "connected" : isReconnecting ? "reconnecting" : "disconnected";
 
   // Immersive mode is triggered by either fullscreen button or clicking a label.
   const isImmersive = fullscreen || activeLabel !== null;
@@ -308,7 +310,11 @@ export default function Home() {
         <div className="absolute inset-0 z-10 flex flex-col pointer-events-none">
           {/* Header */}
           <div className="pointer-events-auto">
-            <DashboardHeader onLogoClick={handleLogoClick} navVisible={navVisible} />
+            <DashboardHeader
+              onLogoClick={handleLogoClick}
+              navVisible={navVisible}
+              sseStatus={sseStatus}
+            />
           </div>
 
           {/* Main bento grid layout — cards re-enable events individually */}
