@@ -22,7 +22,7 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: "jsdom",
       globals: true,
-      include: ["__tests__/**/*.test.{ts,tsx}", "app/**/*.test.{ts,tsx}"],
+      include: ["__tests__/**/*.test.{ts,tsx}"],
       setupFiles: ["./__tests__/setup.ts"],
       coverage: {
         reporter: ["text", "json", "html"],

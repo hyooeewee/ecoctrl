@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { SSEManager } from "./manager";
+import { SSEManager } from "@/sse/manager";
 
 describe("SSEManager", () => {
   let manager: SSEManager;

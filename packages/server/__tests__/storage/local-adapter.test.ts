@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { rm, mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { LocalAdapter } from "./local-adapter";
+import { LocalAdapter } from "@/storage/local-adapter";
 
 describe("LocalAdapter", () => {
   let baseDir: string;

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createPgNotifyListener, type NotifyCallback } from "./pgNotify";
+import { createPgNotifyListener, type NotifyCallback } from "@/lib/pgNotify";
 
 describe("createPgNotifyListener", () => {
   let mockSql: { listen: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn> };

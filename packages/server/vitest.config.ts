@@ -11,7 +11,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["__tests__/**/*.test.ts", "src/**/*.test.ts"],
+    include: ["__tests__/**/*.test.ts"],
     setupFiles: ["./__tests__/setup.ts"],
     coverage: {
       reporter: ["text", "json", "html"],

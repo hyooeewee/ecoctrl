@@ -1,19 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { chatStream } from "./ai-api";
+import { chatStream } from "~/lib/ai-api";
 
 // Mock the api helpers to avoid auth-store dependency
-vi.mock("./api", () => ({
+vi.mock("~/lib/api", () => ({
   apiGet: vi.fn(),
   apiPost: vi.fn(),
 }));
 
-import { apiGet, apiPost } from "./api";
+import { apiGet, apiPost } from "~/lib/api";
 import {
   fetchConversations,
   clearConversations,
   fetchPetPreferences,
   updatePetPreferences,
-} from "./ai-api";
+} from "~/lib/ai-api";
 
 function createMockStream(chunks: string[]) {
   let index = 0;
