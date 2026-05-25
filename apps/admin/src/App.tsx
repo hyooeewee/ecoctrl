@@ -22,6 +22,7 @@ import Profile from "@/pages/Profile";
 import Reports from "@/pages/Reports";
 import DashboardModel from "@/pages/DashboardModel";
 import { applyDarkMode } from "@/lib/darkMode";
+import { auth } from "./lib/auth";
 import { authApi } from "./api/auth";
 import type { AuthUser } from "./api/auth";
 import { preferencesApi } from "./api/preferences";
@@ -75,7 +76,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
+    const token = auth.getAccessToken();
     if (token) {
       authApi
         .me()
@@ -85,8 +86,7 @@ export default function App() {
           loadUserPrefs(user.id);
         })
         .catch(() => {
-          localStorage.removeItem("accessToken");
-          localStorage.removeItem("refreshToken");
+          auth.clear();
         })
         .finally(() => setAuthReady(true));
     } else {

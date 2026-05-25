@@ -15,6 +15,7 @@ import {
 import { Input } from "@ecoctrl/ui";
 import { cn } from "@/lib/utils";
 
+import { auth } from "../lib/auth";
 import { authApi } from "../api/auth";
 import type { AuthUser } from "../api/auth";
 import { useAvatar } from "@/hooks/useAvatar";
@@ -333,15 +334,14 @@ export default function Header({
                 className="text-red-500"
                 onClick={async () => {
                   try {
-                    const refreshToken = localStorage.getItem("refreshToken");
+                    const refreshToken = auth.getRefreshToken();
                     if (refreshToken) {
                       await authApi.logout(refreshToken);
                     }
                   } catch {
                     // ignore
                   }
-                  localStorage.removeItem("accessToken");
-                  localStorage.removeItem("refreshToken");
+                  auth.clear();
                   window.location.reload();
                 }}
               >
