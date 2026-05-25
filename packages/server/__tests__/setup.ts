@@ -1,6 +1,6 @@
 // Server test setup: configure test database connection if needed
-// Uncomment the line below when a test database is ready
-// process.env.DATABASE_URL = process.env.DATABASE_URL_TEST || process.env.DATABASE_URL;
+process.env.JWT_SECRET = process.env.JWT_SECRET || "test-jwt-secret-for-tests-only";
+process.env.DATABASE_URL = process.env.DATABASE_URL || "postgres://test:test@localhost:5432/test";
 
 const TEST_ENV = "server";
 export { TEST_ENV };
