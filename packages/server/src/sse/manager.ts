@@ -50,7 +50,11 @@ export class SSEManager {
     const lines: string[] = [];
     if (event.id) lines.push(`id: ${event.id}`);
     lines.push(`event: ${event.type}`);
-    lines.push(`data: ${JSON.stringify({ ...event.payload, _timestamp: event.timestamp })}`);
+    const data =
+      typeof event.payload === "object" && event.payload !== null
+        ? { ...event.payload, _timestamp: event.timestamp }
+        : { value: event.payload, _timestamp: event.timestamp };
+    lines.push(`data: ${JSON.stringify(data)}`);
     lines.push("");
     return lines.join("\n") + "\n";
   }

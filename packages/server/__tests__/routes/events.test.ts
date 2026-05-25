@@ -1,30 +1,22 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import Fastify from "fastify";
 import fastifyJwt from "@fastify/jwt";
-import { serializerCompiler, validatorCompiler, ZodTypeProvider } from "fastify-type-provider-zod";
 import eventsRoute from "../../src/routes/events";
 
 describe("POST /token (SSE)", () => {
   let fastify: ReturnType<typeof Fastify>;
 
   beforeAll(async () => {
-    fastify = Fastify().withTypeProvider<ZodTypeProvider>();
-    fastify.setValidatorCompiler(validatorCompiler);
-    fastify.setSerializerCompiler(serializerCompiler);
-
+    fastify = Fastify();
     await fastify.register(fastifyJwt, { secret: "test-secret" });
-
-    // Mock JWT auth hook (same pattern as src/routes/index.ts)
-    fastify.addHook("onRequest", async (request, reply) => {
-      if (request.url === "/events/token") {
-        try {
-          await request.jwtVerify();
-        } catch {
-          return reply.status(401).send({ error: "Unauthorized" });
-        }
+    // Add a preHandler that simulates JWT auth by setting request.user
+    fastify.addHook("preHandler", async (request) => {
+      try {
+        await request.jwtVerify();
+      } catch {
+        // Not authenticated, leave user undefined
       }
     });
-
     await fastify.register(eventsRoute, { prefix: "/events" });
   });
 
@@ -34,7 +26,7 @@ describe("POST /token (SSE)", () => {
 
   it("should reject unauthenticated requests", async () => {
     const res = await fastify.inject({ method: "POST", url: "/events/token" });
-    expect(res.statusCode).toBe(401);
+    expect(res.statusCode).toBe("401");
   });
 
   it("should return a short-lived SSE token for authenticated user", async () => {
@@ -45,7 +37,7 @@ describe("POST /token (SSE)", () => {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
-    expect(res.statusCode).toBe(200);
+    expect(res.statusCode).toBe("200");
     const body = JSON.parse(res.payload);
     expect(body.token).toBeDefined();
     expect(body.expiresIn).toBe(30);

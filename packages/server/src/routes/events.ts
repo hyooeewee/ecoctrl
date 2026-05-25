@@ -21,6 +21,7 @@ export default async function eventsRoutes(fastify: FastifyInstance) {
         security: [{ bearerAuth: [] }],
         response: {
           200: z.object({ token: z.string(), expiresIn: z.number() }),
+          401: z.object({ error: z.string() }),
         },
       },
     },
