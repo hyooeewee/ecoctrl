@@ -7,6 +7,7 @@ import {
   ListObjectsV2Command,
   CopyObjectCommand,
   CreateBucketCommand,
+  DeleteBucketCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { StorageAdapter, PutOptions, ObjectStat } from "./types";
@@ -138,5 +139,9 @@ export class S3Adapter implements StorageAdapter {
       Key: destKey,
     });
     await this.client.send(command);
+  }
+
+  async deleteBucket(): Promise<void> {
+    await this.client.send(new DeleteBucketCommand({ Bucket: this.bucket }));
   }
 }

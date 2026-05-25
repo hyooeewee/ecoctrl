@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { createReadStream } from "node:fs";
-import { mkdir, readdir, stat, unlink, copyFile } from "node:fs/promises";
+import { mkdir, readdir, rm, stat, unlink, copyFile } from "node:fs/promises";
 import type { StorageAdapter, PutOptions, ObjectStat } from "./types";
 
 export interface LocalAdapterConfig {
@@ -90,5 +90,9 @@ export class LocalAdapter implements StorageAdapter {
     const dest = this.resolve(destKey);
     await mkdir(path.dirname(dest), { recursive: true });
     await copyFile(src, dest);
+  }
+
+  async deleteBucket(): Promise<void> {
+    await rm(this.baseDir, { recursive: true, force: true });
   }
 }
