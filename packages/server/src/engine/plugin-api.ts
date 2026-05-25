@@ -8,6 +8,7 @@ import { db } from "@/config/database";
 import { sql } from "drizzle-orm";
 import type { PluginRegistry } from "./plugin-registry";
 import { executeSubGraph } from "./sub-graph";
+import { emitEvent } from "@/lib/notifyTrigger";
 
 const logger = getLogger("plugin");
 
@@ -75,8 +76,21 @@ export function createPluginApi(
     },
 
     notify: {
-      send: async () => {
-        throw new Error("notify.send not yet implemented");
+      send: async (options: {
+        title: string;
+        content: string;
+        level?: "info" | "warning" | "error";
+        to?: string[];
+      }) => {
+        const payload: Record<string, unknown> = {
+          title: options.title,
+          content: options.content,
+          level: options.level ?? "info",
+        };
+        if (options.to && options.to.length > 0) {
+          payload._targetUserId = options.to[0];
+        }
+        await emitEvent("notification", payload);
       },
       sendMail: async (options: {
         to: string[];
