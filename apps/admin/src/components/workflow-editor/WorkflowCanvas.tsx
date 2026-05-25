@@ -221,7 +221,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
         setEnvVars(loadedDsl.envVars ?? []);
         setSettings(loadedDsl.settings ?? getDefaultSettings());
         const { nodes: n, edges: e } = dslToReactFlow(loadedDsl);
-        const needsLayout = n.some((node) => !node.position);
+        const needsLayout = loadedDsl.nodes.some((node) => !node.position);
         const finalNodes = needsLayout ? autoLayout(n, e) : n;
         setNodes(finalNodes);
         setEdges(e);
