@@ -10,6 +10,7 @@ export interface UseSseOptions {
 
 export interface UseSseResult {
   isConnected: boolean;
+  isReconnecting: boolean;
   lastMessage: SSEMessage | null;
   connect: () => void;
   disconnect: () => void;
@@ -18,6 +19,7 @@ export interface UseSseResult {
 export function useSse(options: UseSseOptions): UseSseResult {
   const { url, enabled = true, onMessage, heartbeatTimeoutMs } = options;
   const [isConnected, setIsConnected] = useState(false);
+  const [isReconnecting, setIsReconnecting] = useState(false);
   const [lastMessage, setLastMessage] = useState<SSEMessage | null>(null);
   const clientRef = useRef<SSEClient | null>(null);
 
@@ -25,9 +27,15 @@ export function useSse(options: UseSseOptions): UseSseResult {
     if (clientRef.current) return;
 
     const client = new SSEClient(url, {
-      onConnect: () => setIsConnected(true),
+      onConnect: () => {
+        setIsConnected(true);
+        setIsReconnecting(false);
+      },
       onDisconnect: () => setIsConnected(false),
-      onError: () => setIsConnected(false),
+      onError: () => {
+        setIsConnected(false);
+        setIsReconnecting(true);
+      },
       onMessage: (msg) => {
         setLastMessage(msg);
         onMessage?.(msg);
@@ -43,6 +51,7 @@ export function useSse(options: UseSseOptions): UseSseResult {
     clientRef.current?.dispose();
     clientRef.current = null;
     setIsConnected(false);
+    setIsReconnecting(false);
   }, []);
 
   useEffect(() => {
@@ -56,5 +65,5 @@ export function useSse(options: UseSseOptions): UseSseResult {
     };
   }, [enabled, connect, disconnect]);
 
-  return { isConnected, lastMessage, connect, disconnect };
+  return { isConnected, isReconnecting, lastMessage, connect, disconnect };
 }
