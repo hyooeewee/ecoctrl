@@ -24,8 +24,14 @@ export function createPgNotifyListener(sql: postgres.Sql<Record<string, never>>)
         }
       });
       unsubscribeFn = async () => {
-        if (meta?.unsubscribe) {
-          await meta.unsubscribe();
+        // postgres.js listen returns an unsubscribe function directly or via meta
+        if (typeof meta === "function") {
+          await meta();
+        } else if (
+          meta &&
+          typeof (meta as { unsubscribe?: () => Promise<void> }).unsubscribe === "function"
+        ) {
+          await (meta as { unsubscribe: () => Promise<void> }).unsubscribe();
         }
       };
     },
