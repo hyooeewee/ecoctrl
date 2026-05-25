@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { useContext, type CSSProperties } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { LayoutTemplate } from "lucide-react";
 
@@ -56,7 +56,7 @@ export default function UnifiedNodeShell({ data, selected, id }: NodeProps) {
   const handles = HANDLE_CONFIG[type] ?? DEFAULT_HANDLES;
 
   const ringClass = selected ? "ring-2" : "";
-  const ringStyle = selected ? { ringColor: color } : undefined;
+  const ringStyle = selected ? ({ "--tw-ring-color": color } as CSSProperties) : undefined;
 
   return (
     <div
@@ -101,7 +101,10 @@ export default function UnifiedNodeShell({ data, selected, id }: NodeProps) {
         style={{ backgroundColor: hexWithAlpha(color, 0x20), color }}
       >
         {plugin?.icon ? (
-          <div dangerouslySetInnerHTML={{ __html: plugin.icon }} className="h-4 w-4" />
+          <div
+            dangerouslySetInnerHTML={{ __html: plugin.icon }}
+            className="flex h-4 w-4 items-center justify-center [&>svg]:h-full [&>svg]:w-full"
+          />
         ) : (
           <LayoutTemplate size={16} />
         )}

@@ -9,6 +9,7 @@ export function dslToReactFlow(dsl: WorkflowDSL): { nodes: Node[]; edges: Edge[]
       position: n.position ?? { x: 0, y: 0 },
       data: {
         label: n.name,
+        type: n.type,
         config: n.config,
         onError: n.onError,
       },
