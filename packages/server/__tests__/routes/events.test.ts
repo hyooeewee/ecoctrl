@@ -10,13 +10,16 @@ describe("POST /token (SSE)", () => {
     fastify = Fastify();
     await fastify.register(fastifyJwt, { secret: "test-secret" });
     // Add a preHandler that simulates JWT auth by setting request.user
-    fastify.addHook("preHandler", async (request) => {
-      try {
-        await request.jwtVerify();
-      } catch {
-        // Not authenticated, leave user undefined
-      }
-    });
+    fastify.addHook(
+      "preHandler",
+      async (request: { jwtVerify: () => Promise<void>; user?: unknown }) => {
+        try {
+          await request.jwtVerify();
+        } catch {
+          // Not authenticated, leave user undefined
+        }
+      },
+    );
     await fastify.register(eventsRoute, { prefix: "/events" });
   });
 
