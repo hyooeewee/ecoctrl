@@ -22,7 +22,7 @@ export async function executeSubGraph(
   dryRun = false,
 ): Promise<Record<string, unknown>> {
   const startNode = nodes.find((n) => n.type === "start");
-  if (!startNode) {
+  if (!startNode || !registry) {
     return {};
   }
 

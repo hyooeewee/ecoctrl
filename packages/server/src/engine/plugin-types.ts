@@ -89,7 +89,7 @@ export interface PluginApi {
       subject: string;
       body: string;
       bodyType?: string;
-    }): Promise<void>;
+    }): Promise<{ messageId: string; sent: boolean }>;
   };
   log: {
     info(msg: string, meta?: Record<string, unknown>): void;
