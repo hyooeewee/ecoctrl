@@ -1,4 +1,13 @@
-import { Search, X, ChevronRight, ChevronDown, ChevronLeft, LayoutTemplate } from "lucide-react";
+import { useRef } from "react";
+import {
+  Search,
+  X,
+  ChevronRight,
+  ChevronDown,
+  ChevronLeft,
+  LayoutTemplate,
+  Upload,
+} from "lucide-react";
 import { Input } from "@ecoctrl/ui/input";
 import type { ComponentCategory } from "./types";
 
@@ -12,6 +21,8 @@ interface WorkflowLibraryProps {
   onCategoryToggle: (id: string) => void;
   onDragStart: (e: React.DragEvent, type: string) => void;
   onDragEnd: () => void;
+  onUpload: (file: File) => void;
+  uploading?: boolean;
 }
 
 export function WorkflowLibrary({
@@ -24,14 +35,37 @@ export function WorkflowLibrary({
   onCategoryToggle,
   onDragStart,
   onDragEnd,
+  onUpload,
+  uploading,
 }: WorkflowLibraryProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   return (
     <div className="relative flex">
       <div
         className={`flex flex-col overflow-hidden border-r bg-zinc-50 transition-all duration-200 dark:bg-zinc-950 ${libraryOpen ? "w-[260px]" : "w-0 border-r-0"}`}
       >
-        <div className="border-b px-4 py-3">
+        <div className="flex items-center justify-between border-b px-4 py-3">
           <h3 className="text-sm font-semibold">节点库</h3>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".ecn"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) onUpload(file);
+              e.target.value = "";
+            }}
+          />
+          <button
+            type="button"
+            disabled={uploading}
+            onClick={() => fileInputRef.current?.click()}
+            className="text-muted-foreground hover:text-foreground disabled:opacity-50"
+            title="上传节点包"
+          >
+            <Upload size={14} />
+          </button>
         </div>
         <div className="px-3 py-2">
           <div className="relative">
