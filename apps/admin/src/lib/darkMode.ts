@@ -4,19 +4,18 @@ const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
 
 let listener: ((e: MediaQueryListEvent) => void) | null = null;
 
+export function getEffectiveTheme(theme: Theme): "light" | "dark" {
+  if (theme === "dark") return "dark";
+  if (theme === "light") return "light";
+  return mediaQuery.matches ? "dark" : "light";
+}
+
 function apply(mode: Theme) {
   const root = document.documentElement;
-  if (mode === "dark") {
+  if (getEffectiveTheme(mode) === "dark") {
     root.classList.add("dark");
-  } else if (mode === "light") {
-    root.classList.remove("dark");
   } else {
-    // system
-    if (mediaQuery.matches) {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
+    root.classList.remove("dark");
   }
 }
 
