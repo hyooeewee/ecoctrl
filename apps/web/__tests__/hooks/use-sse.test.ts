@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, waitFor, act } from "@testing-library/react";
-import { useSse } from "./use-sse";
+import { useSse } from "~/hooks/use-sse";
 import type { SSEClientOptions } from "~/lib/sse";
 
 // Capture callbacks from SSEClient constructor to simulate events

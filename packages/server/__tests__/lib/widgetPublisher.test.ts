@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { emitWidgetUpdate, emitWidgetDelete } from "./widgetPublisher";
+import { emitWidgetUpdate, emitWidgetDelete } from "@/lib/widgetPublisher";
 
 // Mock the notifyTrigger module
-vi.mock("./notifyTrigger", () => ({
+vi.mock("@/lib/notifyTrigger", () => ({
   emitEvent: vi.fn(),
 }));
 

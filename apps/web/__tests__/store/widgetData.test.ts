@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { useWidgetDataStore } from "./widgetData";
+import { useWidgetDataStore } from "~/store/widgetData";
 
 describe("widgetData store", () => {
   it("should set widget data", () => {
