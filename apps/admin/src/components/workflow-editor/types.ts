@@ -123,7 +123,7 @@ export interface ComponentItem {
   label: string;
   description: string;
   iconSvg?: string; // SVG string from plugin node API
-  colorClass: string;
+  color?: string;
   /** Handle colors for drag preview: left = target, right = source */
   handles?: { left?: string; right?: string; condition?: boolean };
 }

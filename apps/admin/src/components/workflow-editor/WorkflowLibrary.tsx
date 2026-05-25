@@ -94,7 +94,7 @@ export function WorkflowLibrary({
                           {item.iconSvg ? (
                             <div
                               dangerouslySetInnerHTML={{ __html: item.iconSvg }}
-                              className="h-4 w-4"
+                              className="flex h-4 w-4 items-center justify-center [&>svg]:h-full [&>svg]:w-full"
                             />
                           ) : (
                             <LayoutTemplate size={14} />

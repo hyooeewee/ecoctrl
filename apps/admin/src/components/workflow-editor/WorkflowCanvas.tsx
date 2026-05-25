@@ -529,7 +529,12 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
         flushSync(() => {
           root.render(
             <div className="react-flow__node" style={{ pointerEvents: "none" }}>
-              <DragNodePreview type={type} data={nodeData} />
+              <DragNodePreview
+                type={type}
+                data={nodeData}
+                color={item?.color}
+                iconSvg={item?.icon}
+              />
             </div>,
           );
         });
@@ -1131,24 +1136,32 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                           <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                             {cat.label}
                           </div>
-                          {items.map((item) => {
-                            const Icon = item.icon;
-                            return (
-                              <button
-                                key={item.type}
-                                type="button"
-                                onClick={() => handleSelectNodeFromMenu(item.type)}
-                                className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                          {items.map((item) => (
+                            <button
+                              key={item.type}
+                              type="button"
+                              onClick={() => handleSelectNodeFromMenu(item.type)}
+                              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                            >
+                              <div
+                                className="flex h-5 w-5 shrink-0 items-center justify-center rounded"
+                                style={{
+                                  backgroundColor: (item.color ?? "#94a3b8") + "26",
+                                  color: item.color ?? "#94a3b8",
+                                }}
                               >
-                                <div
-                                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded ${item.colorClass}`}
-                                >
-                                  <Icon size={10} />
-                                </div>
-                                <span>{item.label}</span>
-                              </button>
-                            );
-                          })}
+                                {item.iconSvg ? (
+                                  <div
+                                    dangerouslySetInnerHTML={{ __html: item.iconSvg }}
+                                    className="flex h-3.5 w-3.5 items-center justify-center [&>svg]:h-full [&>svg]:w-full"
+                                  />
+                                ) : (
+                                  <LayoutTemplate size={10} />
+                                )}
+                              </div>
+                              <span>{item.label}</span>
+                            </button>
+                          ))}
                         </div>
                       );
                     });
