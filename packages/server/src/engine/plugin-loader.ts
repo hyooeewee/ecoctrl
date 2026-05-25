@@ -65,6 +65,9 @@ export async function validatePluginPackage(files: Map<string, string>): Promise
   if (!schema.properties) {
     throw new Error("schema.json must have a properties field");
   }
+  if (Object.keys(schema.properties).length === 0) {
+    throw new Error("schema.json properties must not be empty");
+  }
 
   const iconSvg = manifest.icon ? files.get(manifest.icon) : undefined;
 
