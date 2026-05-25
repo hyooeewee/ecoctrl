@@ -98,4 +98,19 @@ describe("useSse", () => {
 
     expect(result.current.isReconnecting).toBe(false);
   });
+
+  it("should set isReconnecting on internal disconnect (heartbeat timeout)", async () => {
+    const { result } = renderHook(() => useSse({ url: "/api/events", enabled: true }));
+
+    await waitFor(() => expect(result.current.isConnected).toBe(true));
+    expect(result.current.isReconnecting).toBe(false);
+
+    // Simulate internal disconnect (e.g. heartbeat timeout)
+    act(() => {
+      mockCallbacks?.onDisconnect?.();
+    });
+
+    expect(result.current.isConnected).toBe(false);
+    expect(result.current.isReconnecting).toBe(true);
+  });
 });

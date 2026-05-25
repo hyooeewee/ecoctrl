@@ -31,7 +31,10 @@ export function useSse(options: UseSseOptions): UseSseResult {
         setIsConnected(true);
         setIsReconnecting(false);
       },
-      onDisconnect: () => setIsConnected(false),
+      onDisconnect: () => {
+        setIsConnected(false);
+        setIsReconnecting(true);
+      },
       onError: () => {
         setIsConnected(false);
         setIsReconnecting(true);
