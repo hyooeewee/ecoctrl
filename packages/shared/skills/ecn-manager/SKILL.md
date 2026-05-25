@@ -22,33 +22,40 @@ An `.ecn` file is a ZIP archive containing:
 
 ## Workflow
 
-### 1. Capture Intent (AskUserQuestion)
+### 1. Capture Intent
 
-Use **one round of `AskUserQuestion`** to collect everything. Do NOT ask one by one in chat.
+**Step A — Ask once if information is insufficient (max one round):**
 
-**Required questions (always ask):**
+If the user only says "create a node" or similar vague request without any specifics, ask once to understand the purpose and context, for example:
 
-1. **Plugin ID** — kebab-case identifier (e.g. `energy-monitor`)
-2. **Display name** — human-readable name (e.g. `Energy Monitor`)
-3. **Category** — `trigger` / `action` / `condition`
-4. **What should this node do?** — one sentence description
-5. **Config fields** — list of form fields the node needs (name, type, title, description, required?)
+- What will this node do? (read sensor, call API, cron trigger, send notification, etc.)
+- What type of node is this? (trigger / action / condition)
 
-**Mode choice (present as single-select):**
+**Step B — Use `AskUserQuestion` to collect everything in one go:**
 
-- **Quick mode** — only the 5 questions above; AI decides color, icon, description, author
-- **Custom mode** — after the 5 questions, ask color, icon, description, author one by one
-- **Decide for me** — AI picks smart defaults for everything based on category and purpose
+Generate 2 concrete candidate options **based on the user's purpose**, plus a 3rd option meaning "AI decides based on purpose". Use the **same language as the current conversation** for option labels (not hardcoded English).
 
-**Rules:**
+Example (English conversation):
 
-- If the user chooses **Quick** or **Decide for me**, do NOT ask for optional fields.
-- Default values when AI decides:
-  - `version`: `1.0.0`
-  - `color`: `#3b82f6` (blue, neutral default)
-  - `icon`: `icon.svg` (a simple placeholder SVG is auto-generated)
-  - `description`: derived from the "what should this node do" answer
-  - `author`: empty (omitted from manifest)
+1. **Plugin ID** — `energy-monitor` / `power-tracker` / `AI decides based on purpose`
+2. **Display name** — `Energy Monitor` / `Power Tracker` / `AI decides based on purpose`
+3. **Category** — `trigger` / `action` / `condition` / `AI decides based on purpose`
+4. **Config fields** — `threshold + endpoint` / `interval + timeout` / `none` / `AI decides based on purpose`
+
+**AI design rules (when the user picks "AI decides"):**
+
+Do NOT use generic defaults. Derive every value from the stated purpose:
+
+| Field           | Rule                                                                                                                                                                                                                          |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`            | kebab-case, derived from purpose keywords                                                                                                                                                                                     |
+| `name`          | human-readable, derived from purpose                                                                                                                                                                                          |
+| `color`         | Pick a semantic color based on category/purpose: trigger=`#f59e0b` (amber), action=`#3b82f6` (blue), condition=`#22c55e` (green). Override if the domain has a stronger association (e.g. energy=`#22c55e`, alert=`#ef4444`). |
+| `description`   | One sentence summarizing what the node does                                                                                                                                                                                   |
+| `config fields` | Infer the minimal useful fields from the purpose. A sensor reader needs `endpoint` + `interval`; a threshold alert needs `threshold` + `comparison`.                                                                          |
+| `version`       | Always `1.0.0`                                                                                                                                                                                                                |
+| `icon`          | Always `icon.svg` (placeholder)                                                                                                                                                                                               |
+| `author`        | Empty (omitted from manifest)                                                                                                                                                                                                 |
 
 ### 2. Scaffold (new node)
 
@@ -60,7 +67,9 @@ After collecting all information via AskUserQuestion, generate an **unpacked sou
 python <skill-path>/scripts/create_ecn.py <output-directory> --json '<metadata-json>'
 ```
 
-This creates a folder like `<output-directory>/<plugin-id>/` containing:
+**Prefer `.` (the session's working directory) as `<output-directory>`.** Only use a different path if the user explicitly requests it or the context requires it (e.g. CI, ephemeral workspace).
+
+This creates a folder like `./<plugin-id>/` containing:
 
 - `manifest.json`
 - `backend.js`
@@ -93,7 +102,7 @@ Pass a single JSON string with all fields:
 
 **Option B — Direct file generation:**
 
-If the script is unavailable, write the 4 files directly with `Write` into a folder:
+If the script is unavailable, write the 4 files directly with `Write` into a folder under the **current working directory**:
 
 - `<plugin-id>/manifest.json`
 - `<plugin-id>/backend.js`
@@ -112,19 +121,7 @@ Key rules:
 - Use `api.log.info/warn/error` for debugging
 - Handle errors gracefully; uncaught errors fail the workflow execution
 
-### 4. Implement backend.js
-
-Edit the generated `backend.js` to implement the node's logic. Use the PluginApi reference (see `references/plugin_api_reference.md`) for available APIs.
-
-Key rules:
-
-- Must export via `module.exports = async function(ctx, api) { ... }`
-- `ctx.config` contains values from the node's config form (defined by schema.json)
-- Return an object — it becomes the node's output for downstream nodes
-- Use `api.log.info/warn/error` for debugging
-- Handle errors gracefully; uncaught errors fail the workflow execution
-
-### 5. Package
+### 4. Package
 
 After editing is complete, package the source directory into a `.ecn` file:
 
@@ -132,7 +129,7 @@ After editing is complete, package the source directory into a `.ecn` file:
 python <skill-path>/scripts/package_ecn.py <source-directory> [output.ecn]
 ```
 
-### 6. Validate
+### 5. Validate
 
 Always validate before considering the node done:
 
@@ -148,7 +145,7 @@ Checks:
 - backend.js contains `module.exports`
 - Referenced icon file exists
 
-### 7. Install
+### 6. Install
 
 The user installs the `.ecn` through the Admin UI:
 
