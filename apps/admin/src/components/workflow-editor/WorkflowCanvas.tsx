@@ -5,20 +5,11 @@ import {
   ControlButton,
   MiniMap,
   BackgroundVariant,
-  useNodesState,
-  useEdgesState,
-  addEdge,
-  type Connection,
-  type Edge,
-  type Node,
-  type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { LayoutTemplate, Copy, Trash2, Undo2, Braces } from "lucide-react";
 import { toast } from "sonner";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createRoot } from "react-dom/client";
-import { flushSync } from "react-dom";
+import React from "react";
 
 import {
   ContextMenu,
@@ -29,21 +20,8 @@ import {
 } from "@ecoctrl/ui/context-menu";
 import { Kbd } from "@ecoctrl/ui/kbd";
 
-import { workflowsApi } from "@/api/workflows";
-import { pointsApi } from "@/api/points";
-import { nodesApi } from "@/api/nodes";
-import type { WorkflowDSL, WorkflowListItem, EnvVar } from "./types";
-import { dslToReactFlow, getDefaultSettings } from "./transform";
-import { autoLayout } from "./layout";
-import { usePluginNodes } from "./hooks/usePluginNodes";
-import { useWorkflowHistory } from "./hooks/useWorkflowHistory";
-import { useWorkflowKeyboard } from "./hooks/useWorkflowKeyboard";
-import { useWorkflowPersistence } from "./hooks/useWorkflowPersistence";
-import { DragNodePreview } from "./nodes/DragNodePreview";
-import UnifiedNodeShell from "./nodes/UnifiedNodeShell";
 import { PluginNodesContext } from "./nodes-context";
-import { CATEGORY_LABELS } from "./constants";
-import type { ComponentCategory, NodeType } from "./types";
+import { useWorkflowCanvas } from "./hooks/useWorkflowCanvas";
 
 import { WorkflowToolbar } from "./WorkflowToolbar";
 import { WorkflowLibrary } from "./WorkflowLibrary";
@@ -57,769 +35,9 @@ interface WorkflowCanvasProps {
 }
 
 export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasProps) {
-  const [nodes, setNodes, _onNodesChange] = useNodesState<Node>([]);
-  const [edges, setEdges, _onEdgesChange] = useEdgesState<Edge>([]);
-  const { pluginNodes, getNodeDef, refresh: refreshPluginNodes } = usePluginNodes();
-  const { undo } = useWorkflowHistory();
+  const canvas = useWorkflowCanvas({ workflowId, onBack });
 
-  const [dsl, setDsl] = useState<WorkflowDSL | null>(null);
-  const [workflow, setWorkflow] = useState<WorkflowListItem | null>(null);
-  const [envVars, setEnvVars] = useState<EnvVar[]>([]);
-  const [settings, setSettings] =
-    useState<NonNullable<WorkflowDSL["settings"]>>(getDefaultSettings());
-  const [uploadingNode, setUploadingNode] = useState(false);
-
-  const {
-    saving,
-    publishing,
-    testing,
-    testLogOpen,
-    setTestLogOpen,
-    testResult,
-    isDirty,
-    setIsDirty,
-    autoSaveStatus,
-    handleSave,
-    handlePublish,
-    handleTestRun,
-  } = useWorkflowPersistence({
-    dsl,
-    nodes,
-    edges,
-    workflowId,
-    workflow,
-    envVars,
-    settings,
-    setDsl,
-    setWorkflow,
-  });
-  const [loading, setLoading] = useState(false);
-  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
-  const [rightPanelOpen, setRightPanelOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [libraryOpen, setLibraryOpen] = useState(true);
-  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
-  const [activeConfigTab, setActiveConfigTab] = useState("config");
-  const [editingName, setEditingName] = useState(false);
-  const [editedName, setEditedName] = useState("");
-  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [editTitle, setEditTitle] = useState("");
-  const [editTags, setEditTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState("");
-  const [tagPopoverOpen, setTagPopoverOpen] = useState(false);
-  const [editDescription, setEditDescription] = useState("");
-  const [pointNames, setPointNames] = useState<string[]>([]);
-  const [pointSearch, setPointSearch] = useState("");
-  const [handleMenu, setHandleMenu] = useState<{
-    nodeId: string;
-    handleId?: string;
-    handleType: "target" | "source";
-    x: number;
-    y: number;
-    flowX?: number;
-    flowY?: number;
-  } | null>(null);
-
-  // Dialogs
-  const [showEnvVarsDialog, setShowEnvVarsDialog] = useState(false);
-  const [visibleSecrets, setVisibleSecrets] = useState<Set<string>>(new Set());
-  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
-
-  // Selection & copy-paste
-  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
-  const [contextMenu, setContextMenu] = useState<{
-    x: number;
-    y: number;
-    visible: boolean;
-    target: "pane" | "node";
-  }>({ x: 0, y: 0, visible: false, target: "pane" });
-  const copiedNodesRef = useRef<Node[]>([]);
-
-  const historyRef = useRef<{ nodes: Node[]; edges: Edge[] }[]>([]);
-  const historyIndexRef = useRef(-1);
-  const skipHistoryRef = useRef(false);
-
-  const filteredPointNames = useMemo(
-    () =>
-      pointSearch
-        ? pointNames.filter((name) => name.toLowerCase().includes(pointSearch.toLowerCase()))
-        : pointNames,
-    [pointNames, pointSearch],
-  );
-  const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const tagInputRef = useRef<HTMLDivElement>(null);
-
-  // Click outside to close tag dropdown
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (tagInputRef.current && !tagInputRef.current.contains(e.target as globalThis.Node)) {
-        setTagPopoverOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-  const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
-  const dragCleanupRef = useRef<(() => void) | null>(null);
-  const connectingRef = useRef<{
-    nodeId: string;
-    handleId?: string;
-    handleType: "target" | "source";
-  } | null>(null);
-  const menuOpenedAtRef = useRef(0);
-  const connectionMadeRef = useRef(false);
-
-  // Push state to undo history
-  const _pushHistory = useCallback((currentNodes: Node[], currentEdges: Edge[]) => {
-    if (skipHistoryRef.current) {
-      skipHistoryRef.current = false;
-      return;
-    }
-    historyRef.current = historyRef.current.slice(0, historyIndexRef.current + 1);
-    historyRef.current.push({
-      nodes: currentNodes.map((n) => ({ ...n, position: { ...n.position }, data: { ...n.data } })),
-      edges: currentEdges.map((e) => ({ ...e })),
-    });
-    historyIndexRef.current = historyRef.current.length - 1;
-    // Cap history at 50 entries
-    if (historyRef.current.length > 50) {
-      historyRef.current.shift();
-      historyIndexRef.current -= 1;
-    }
-  }, []);
-
-  // Load workflow data
-  useEffect(() => {
-    if (!workflowId) {
-      const defaultDsl: WorkflowDSL = {
-        version: "1.0",
-        trigger: { type: "manual", config: {} },
-        nodes: [
-          { id: "start", type: "start", name: "开始", config: {} },
-          { id: "end", type: "end", name: "结束", config: {} },
-        ],
-        edges: [{ id: "e-start-end", source: "start", target: "end" }],
-      };
-      setDsl(defaultDsl);
-      const { nodes: n, edges: e } = dslToReactFlow(defaultDsl);
-      const layouted = autoLayout(n, e);
-      setNodes(layouted);
-      setEdges(e);
-      historyRef.current = [
-        { nodes: layouted.map((n) => ({ ...n })), edges: e.map((e) => ({ ...e })) },
-      ];
-      historyIndexRef.current = 0;
-      return;
-    }
-
-    setLoading(true);
-    workflowsApi
-      .getById(workflowId)
-      .then((wf) => {
-        setWorkflow(wf);
-        const loadedDsl = wf.dsl;
-        setDsl(loadedDsl);
-        setEnvVars(loadedDsl.envVars ?? []);
-        setSettings(loadedDsl.settings ?? getDefaultSettings());
-        const { nodes: n, edges: e } = dslToReactFlow(loadedDsl);
-        const needsLayout = loadedDsl.nodes.some((node) => !node.position);
-        const finalNodes = needsLayout ? autoLayout(n, e) : n;
-        setNodes(finalNodes);
-        setEdges(e);
-        historyRef.current = [
-          { nodes: finalNodes.map((n) => ({ ...n })), edges: e.map((e) => ({ ...e })) },
-        ];
-        historyIndexRef.current = 0;
-      })
-      .catch(() => {
-        // silently fail
-      })
-      .finally(() => setLoading(false));
-  }, [workflowId, setNodes, setEdges]);
-
-  // Load point names for dropdown
-  useEffect(() => {
-    pointsApi
-      .list()
-      .then((points) => {
-        setPointNames(points.map((p) => p.name).filter(Boolean));
-      })
-      .catch(() => {
-        // silently fail
-      });
-  }, []);
-
-  const onNodesChange = useCallback(
-    (changes: Parameters<typeof _onNodesChange>[0]) => {
-      setIsDirty(true);
-      _onNodesChange(changes);
-    },
-    [_onNodesChange],
-  );
-
-  const onEdgesChange = useCallback(
-    (changes: Parameters<typeof _onEdgesChange>[0]) => {
-      setIsDirty(true);
-      _onEdgesChange(changes);
-    },
-    [_onEdgesChange],
-  );
-
-  const onConnect = useCallback(
-    (connection: Connection) => {
-      connectionMadeRef.current = true;
-      connectingRef.current = null;
-      setIsDirty(true);
-      _pushHistory(nodesRef.current, edges);
-      const newEdge: Edge = {
-        ...connection,
-        id: `e-${connection.source}-${connection.target}-${Date.now()}`,
-        type: connection.sourceHandle ? "condition" : "default",
-        label: connection.sourceHandle ?? undefined,
-      };
-      setEdges((eds) => addEdge(newEdge, eds));
-    },
-    [setEdges, _pushHistory, edges],
-  );
-
-  const onConnectStart = useCallback(
-    (
-      _: MouseEvent | TouchEvent,
-      params: {
-        nodeId: string | null;
-        handleId: string | null;
-        handleType: "target" | "source" | null;
-      },
-    ) => {
-      if (!params.nodeId || !params.handleType) return;
-      connectingRef.current = {
-        nodeId: params.nodeId,
-        handleId: params.handleId ?? undefined,
-        handleType: params.handleType,
-      };
-    },
-    [],
-  );
-
-  const onConnectEnd = useCallback(
-    (
-      event: MouseEvent | TouchEvent,
-      connectionState?: {
-        fromNode?: { id: string } | null;
-        fromHandle?: { id?: string | null; type?: string | null } | null;
-        connection?: Connection | null;
-      },
-    ) => {
-      // If a connection was successfully made (either via connectionState or onConnect), don't show the menu
-      if (connectionMadeRef.current) {
-        connectionMadeRef.current = false;
-        connectingRef.current = null;
-        return;
-      }
-      const isConnected = connectionState?.connection != null;
-      if (isConnected) {
-        connectingRef.current = null;
-        return;
-      }
-
-      // Prefer connectionState (React Flow v12), fallback to ref
-      const fromNode = connectionState?.fromNode;
-      const fromHandle = connectionState?.fromHandle;
-
-      let nodeId: string;
-      let handleId: string | undefined;
-      let handleType: "target" | "source";
-
-      if (fromNode && fromHandle) {
-        nodeId = fromNode.id;
-        handleId = fromHandle.id ?? undefined;
-        handleType = (fromHandle.type as "target" | "source") ?? "source";
-      } else if (connectingRef.current) {
-        nodeId = connectingRef.current.nodeId;
-        handleId = connectingRef.current.handleId;
-        handleType = connectingRef.current.handleType;
-      } else {
-        return;
-      }
-
-      connectingRef.current = null;
-
-      const wrapper = reactFlowWrapper.current;
-      if (!wrapper) return;
-      const rect = wrapper.getBoundingClientRect();
-      const clientX = (event as MouseEvent).clientX;
-      const clientY = (event as MouseEvent).clientY;
-
-      // Only show menu if released inside the canvas
-      if (
-        clientX < rect.left ||
-        clientX > rect.right ||
-        clientY < rect.top ||
-        clientY > rect.bottom
-      ) {
-        return;
-      }
-
-      // Convert screen position to flow position for node placement
-      const flowPos = rfInstance?.screenToFlowPosition({ x: clientX, y: clientY });
-
-      const menuWidth = 200;
-      const menuHeight = 320;
-      const menuOffset = handleType === "source" ? 12 : -212;
-      let menuX = clientX - rect.left + menuOffset;
-      let menuY = clientY - rect.top - 12;
-      // Clamp to canvas bounds
-      menuX = Math.max(4, Math.min(menuX, rect.width - menuWidth - 4));
-      menuY = Math.max(4, Math.min(menuY, rect.height - menuHeight - 4));
-
-      setHandleMenu({
-        nodeId,
-        handleId,
-        handleType,
-        x: menuX,
-        y: menuY,
-        flowX: flowPos?.x,
-        flowY: flowPos?.y,
-      });
-
-      // Guard against onPaneClick immediately closing the menu
-      menuOpenedAtRef.current = Date.now();
-    },
-    [],
-  );
-
-  const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
-    setSelectedNode(node);
-    setRightPanelOpen(true);
-    setActiveConfigTab("config");
-  }, []);
-
-  const onPaneClick = useCallback(() => {
-    // Ignore pane clicks that immediately follow an onConnectEnd menu open
-    if (Date.now() - menuOpenedAtRef.current < 150) {
-      return;
-    }
-    setSelectedNode(null);
-    setRightPanelOpen(false);
-    setHandleMenu(null);
-  }, []);
-
-  const onNodeDragStop = useCallback(() => {
-    setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
-    setSelectedNode(null);
-    setRightPanelOpen(false);
-  }, [setNodes]);
-
-  // Refs for stable callbacks inside node data
-  const nodesRef = useRef(nodes);
-  nodesRef.current = nodes;
-
-  const handleAddNodeFromHandle = useCallback(
-    (
-      nodeId: string,
-      handleId?: string,
-      handleType?: "target" | "source",
-      edgeX?: number,
-      edgeY?: number,
-    ) => {
-      if (edgeX == null || edgeY == null || !handleType) return;
-      const wrapper = reactFlowWrapper.current;
-      if (!wrapper) return;
-      const rect = wrapper.getBoundingClientRect();
-      const menuWidth = 200;
-      const menuHeight = 320; // approximate max height of popup
-      const offset = 8;
-      let x: number;
-      if (handleType === "source") {
-        x = edgeX - rect.left + offset;
-      } else {
-        x = edgeX - rect.left - menuWidth - offset;
-      }
-      // Clamp to canvas bounds
-      x = Math.max(4, Math.min(x, rect.width - menuWidth - 4));
-      let y = edgeY - rect.top - 12;
-      y = Math.max(4, Math.min(y, rect.height - menuHeight - 4));
-      setHandleMenu({
-        nodeId,
-        handleId,
-        handleType,
-        x,
-        y,
-      });
-    },
-    [],
-  );
-
-  const handleSelectNodeFromMenu = useCallback(
-    (type: string) => {
-      if (!handleMenu) return;
-      const { nodeId, handleId, handleType } = handleMenu;
-      const currentNode = nodesRef.current.find((n) => n.id === nodeId);
-      if (!currentNode) return;
-
-      const item = pluginNodes.find((p) => p.id === type);
-      const newNodeId = `${type}-${Date.now()}`;
-      const newNode: Node = {
-        id: newNodeId,
-        type,
-        position:
-          handleMenu.flowX != null && handleMenu.flowY != null
-            ? { x: handleMenu.flowX, y: handleMenu.flowY }
-            : {
-                x:
-                  handleType === "source"
-                    ? currentNode.position.x + 350
-                    : currentNode.position.x - 350,
-                y: currentNode.position.y,
-              },
-        data: { label: item?.name ?? type, type, config: {} },
-      };
-
-      let newEdge: Edge;
-      if (handleType === "source") {
-        newEdge = {
-          id: `e-${nodeId}-${newNodeId}-${Date.now()}`,
-          source: nodeId,
-          target: newNodeId,
-          sourceHandle: handleId,
-          type: handleId ? "condition" : "default",
-          label: handleId ?? undefined,
-        };
-      } else {
-        newEdge = {
-          id: `e-${newNodeId}-${nodeId}-${Date.now()}`,
-          source: newNodeId,
-          target: nodeId,
-          targetHandle: handleId,
-          type: "default",
-        };
-      }
-
-      setIsDirty(true);
-      _pushHistory(nodesRef.current, edges);
-      setNodes((nds) => [...nds, newNode]);
-      setEdges((eds) => addEdge(newEdge, eds));
-      setHandleMenu(null);
-    },
-    [handleMenu, setNodes, setEdges, _pushHistory, edges],
-  );
-
-  const handleDragStart = useCallback(
-    (event: React.DragEvent, type: string) => {
-      event.dataTransfer.setData("application/reactflow", type);
-      event.dataTransfer.effectAllowed = "move";
-
-      const item = pluginNodes.find((p) => p.id === type);
-      const nodeData = { label: item?.name ?? type, type, config: {} };
-
-      const container = document.createElement("div");
-      const existingNode = document.querySelector(".react-flow__node");
-      let scale = 1;
-      if (existingNode) {
-        scale = existingNode.getBoundingClientRect().width / 280;
-      } else if (rfInstance) {
-        scale = rfInstance.getViewport().zoom;
-      }
-      container.style.cssText = "position:fixed;top:-100px;left:0;pointer-events:none;";
-      // @ts-expect-error zoom is non-standard but works reliably in Chrome for setDragImage
-      container.style.zoom = scale;
-      document.body.appendChild(container);
-
-      try {
-        const root = createRoot(container);
-        flushSync(() => {
-          root.render(
-            <div className="react-flow__node" style={{ pointerEvents: "none" }}>
-              <DragNodePreview
-                type={type}
-                data={nodeData}
-                color={item?.color}
-                iconSvg={item?.icon}
-              />
-            </div>,
-          );
-        });
-
-        dragCleanupRef.current = () => {
-          root.unmount();
-          if (container.parentNode) document.body.removeChild(container);
-        };
-
-        event.dataTransfer.setDragImage(container, 140 * scale, 28 * scale);
-      } catch {
-        if (container.parentNode) document.body.removeChild(container);
-      }
-    },
-    [rfInstance],
-  );
-
-  const onDragOver = useCallback((event: React.DragEvent) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-  }, []);
-
-  const onDrop = useCallback(
-    (event: React.DragEvent) => {
-      event.preventDefault();
-      if (!rfInstance) return;
-
-      const type = event.dataTransfer.getData("application/reactflow");
-      if (!type) return;
-
-      const position = rfInstance.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
-
-      const plugin = pluginNodes.find((p) => p.id === type);
-      const config: Record<string, unknown> = {};
-
-      // Pin plugin version at drop time to avoid non-deterministic execution
-      const def = getNodeDef(type);
-      if (def) {
-        config.__version = def.version;
-      }
-
-      const newNode: Node = {
-        id: `${type}-${Date.now()}`,
-        type,
-        position,
-        data: { label: plugin?.name ?? type, type, config },
-      };
-
-      setIsDirty(true);
-      _pushHistory(nodesRef.current, edges);
-      setNodes((nds) => [...nds, newNode]);
-    },
-    [rfInstance, setNodes, pluginNodes, getNodeDef, _pushHistory, edges],
-  );
-
-  const onDragEnd = useCallback(() => {
-    if (dragCleanupRef.current) {
-      dragCleanupRef.current();
-      dragCleanupRef.current = null;
-    }
-  }, []);
-
-  const handleDeleteNode = useCallback(
-    (nodeId: string) => {
-      setIsDirty(true);
-      _pushHistory(nodesRef.current, edges);
-      setNodes((nds) => nds.filter((n) => n.id !== nodeId));
-      setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
-      setSelectedNode(null);
-      setRightPanelOpen(false);
-    },
-    [setNodes, setEdges, _pushHistory, edges],
-  );
-
-  const handleAutoLayout = useCallback(() => {
-    _pushHistory(nodesRef.current, edges);
-    setNodes((nds) => autoLayout(nds, edges));
-    setIsDirty(true);
-    requestAnimationFrame(() => {
-      rfInstance?.fitView({ padding: 0.2 });
-    });
-  }, [edges, setNodes, rfInstance, _pushHistory]);
-
-  const handleUploadNode = useCallback(
-    async (file: File) => {
-      setUploadingNode(true);
-      try {
-        await nodesApi.install(file);
-        await refreshPluginNodes();
-      } catch (err) {
-        // silently fail
-      } finally {
-        setUploadingNode(false);
-      }
-    },
-    [refreshPluginNodes],
-  );
-
-  // Keyboard shortcuts
-  useWorkflowKeyboard({
-    nodesRef,
-    edges,
-    selectedNodeIds,
-    copiedNodesRef,
-    setNodes,
-    setEdges,
-    setIsDirty,
-    _pushHistory,
-    undo,
-    setSelectedNodeIds,
-    handleSave,
-  });
-
-  // Update node data from panel
-  const updateNodeData = useCallback(
-    (nodeId: string, updates: Partial<Node["data"]>) => {
-      setIsDirty(true);
-      setNodes((nds) =>
-        nds.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, ...updates } } : n)),
-      );
-      setSelectedNode((prev) =>
-        prev && prev.id === nodeId ? { ...prev, data: { ...prev.data, ...updates } } : prev,
-      );
-    },
-    [setNodes],
-  );
-
-  // Memoize nodes with callbacks to avoid re-creating objects on every render
-  const nodesWithCallbacks = useMemo(
-    () =>
-      nodes.map((n) => ({
-        ...n,
-        data: { ...n.data, onAddNodeFromHandle: handleAddNodeFromHandle },
-      })),
-    [nodes, handleAddNodeFromHandle],
-  );
-
-  // All nodes use UnifiedNodeShell for consistent rendering
-  const nodeTypes = useMemo(() => {
-    const types: Record<string, React.ComponentType<any>> = {};
-    for (const plugin of pluginNodes) {
-      types[plugin.id] = UnifiedNodeShell;
-    }
-    return types;
-  }, [pluginNodes]);
-
-  // Component categories grouped by node category from API — no special "plugins" bucket
-  const componentCategories = useMemo(() => {
-    const groups = new Map<string, ComponentCategory>();
-
-    for (const plugin of pluginNodes) {
-      const catId = plugin.category;
-      const label = CATEGORY_LABELS[catId] ?? catId;
-
-      if (!groups.has(catId)) {
-        groups.set(catId, { id: catId, label, items: [] });
-      }
-      groups.get(catId)!.items.push({
-        type: plugin.id as NodeType,
-        label: plugin.name,
-        description: plugin.description || "",
-        iconSvg: plugin.icon,
-        color: plugin.color,
-      });
-    }
-
-    return Array.from(groups.values());
-  }, [pluginNodes]);
-
-  // Warn before closing tab with unsaved changes
-  useEffect(() => {
-    const handler = (e: BeforeUnloadEvent) => {
-      if (isDirty) {
-        e.preventDefault();
-        e.returnValue = "";
-      }
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [isDirty]);
-
-  const workflowName =
-    workflow?.name ?? dsl?.nodes?.find((n) => n.type === "start")?.name ?? "未命名工作流";
-  const isPublished = workflow?.enabled ?? false;
-
-  // Name editing handlers
-  const handleNameClick = useCallback(() => {
-    setEditingName(true);
-    setEditedName(workflowName);
-  }, [workflowName]);
-
-  const handleNameCommit = useCallback(() => {
-    const trimmed = editedName.trim();
-    if (trimmed && trimmed !== workflowName) {
-      setWorkflow((prev) => (prev ? { ...prev, name: trimmed } : prev));
-      setIsDirty(true);
-    }
-    setEditingName(false);
-  }, [editedName, workflowName]);
-
-  const handleNameCancel = useCallback(() => {
-    setEditingName(false);
-  }, []);
-
-  const handleNameKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter") handleNameCommit();
-      if (e.key === "Escape") handleNameCancel();
-    },
-    [handleNameCommit, handleNameCancel],
-  );
-
-  // Edit dialog handlers
-  const handleOpenEditDialog = useCallback(() => {
-    setEditTitle(workflow?.name ?? workflowName);
-    const tags = (dsl?.trigger?.config?.tags as string[]) ?? [];
-    setEditTags(Array.isArray(tags) ? tags : []);
-    setEditDescription(workflow?.description ?? "");
-    setTagInput("");
-    setShowEditDialog(true);
-  }, [workflow, workflowName, dsl]);
-
-  const handleSaveWorkflowInfo = useCallback(async () => {
-    const trimmed = editTitle.trim();
-    if (!trimmed) return;
-
-    const newTrigger = dsl?.trigger
-      ? {
-          ...dsl.trigger,
-          config: { ...dsl.trigger.config, tags: editTags },
-        }
-      : { type: "manual" as const, config: { tags: editTags } };
-
-    if (workflowId && dsl) {
-      try {
-        await workflowsApi.update(workflowId, {
-          name: trimmed,
-          description: editDescription.trim() || undefined,
-          dsl: { ...dsl, trigger: newTrigger },
-        });
-      } catch {
-        // silently fail
-      }
-    }
-
-    setWorkflow((prev) =>
-      prev ? { ...prev, name: trimmed, description: editDescription.trim() || null } : prev,
-    );
-    setDsl((prev) => (prev ? { ...prev, trigger: newTrigger } : prev));
-    setIsDirty(true);
-    setShowEditDialog(false);
-  }, [editTitle, editTags, editDescription, workflowId, dsl]);
-
-  // Back button with dirty check
-  const handleBack = useCallback(() => {
-    if (isDirty) {
-      setShowLeaveDialog(true);
-    } else {
-      onBack();
-    }
-  }, [isDirty, onBack]);
-
-  const selectedNodeType = selectedNode?.type as string;
-  const canDelete = selectedNodeType !== "start" && selectedNodeType !== "end" && !!selectedNode;
-
-  const filteredCategories = useMemo(() => {
-    if (!searchQuery.trim()) return componentCategories;
-    const q = searchQuery.toLowerCase();
-    return componentCategories
-      .map((cat) => ({
-        ...cat,
-        items: cat.items.filter(
-          (item) =>
-            item.label.toLowerCase().includes(q) || item.description.toLowerCase().includes(q),
-        ),
-      }))
-      .filter((cat) => cat.items.length > 0);
-  }, [searchQuery, componentCategories]);
-
-  if (loading) {
+  if (canvas.loading) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-muted-foreground text-sm">加载中...</div>
@@ -830,55 +48,55 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
   return (
     <div className="flex h-full flex-col">
       <WorkflowToolbar
-        workflowName={workflowName}
-        isPublished={isPublished}
-        isDirty={isDirty}
-        editingName={editingName}
-        editedName={editedName}
-        saving={saving}
-        publishing={publishing}
-        testing={testing}
-        autoSaveStatus={autoSaveStatus}
+        workflowName={canvas.workflowName}
+        isPublished={canvas.isPublished}
+        isDirty={canvas.isDirty}
+        editingName={canvas.editingName}
+        editedName={canvas.editedName}
+        saving={canvas.saving}
+        publishing={canvas.publishing}
+        testing={canvas.testing}
+        autoSaveStatus={canvas.autoSaveStatus}
         workflowId={workflowId}
-        onBack={handleBack}
-        onNameClick={handleNameClick}
-        onNameCommit={handleNameCommit}
-        onNameCancel={handleNameCancel}
-        onNameChange={setEditedName}
-        onNameKeyDown={handleNameKeyDown}
-        onEditDialog={handleOpenEditDialog}
-        onTestRun={handleTestRun}
-        onSave={handleSave}
-        onPublish={handlePublish}
-        onEnvVars={() => setShowEnvVarsDialog(true)}
-        onSettings={() => setShowSettingsDialog(true)}
+        onBack={canvas.handleBack}
+        onNameClick={canvas.handleNameClick}
+        onNameCommit={canvas.handleNameCommit}
+        onNameCancel={canvas.handleNameCancel}
+        onNameChange={canvas.setEditedName}
+        onNameKeyDown={canvas.handleNameKeyDown}
+        onEditDialog={canvas.handleOpenEditDialog}
+        onTestRun={canvas.handleTestRun}
+        onSave={canvas.handleSave}
+        onPublish={canvas.handlePublish}
+        onEnvVars={() => canvas.setShowEnvVarsDialog(true)}
+        onSettings={() => canvas.setShowSettingsDialog(true)}
       />
 
       <div className="flex flex-1 overflow-hidden">
         <WorkflowLibrary
-          libraryOpen={libraryOpen}
-          searchQuery={searchQuery}
-          collapsedCategories={collapsedCategories}
-          filteredCategories={filteredCategories}
-          onLibraryToggle={() => setLibraryOpen((v) => !v)}
-          onSearchChange={setSearchQuery}
+          libraryOpen={canvas.libraryOpen}
+          searchQuery={canvas.searchQuery}
+          collapsedCategories={canvas.collapsedCategories}
+          filteredCategories={canvas.filteredCategories}
+          onLibraryToggle={() => canvas.setLibraryOpen((v) => !v)}
+          onSearchChange={canvas.setSearchQuery}
           onCategoryToggle={(id) =>
-            setCollapsedCategories((prev) => {
+            canvas.setCollapsedCategories((prev) => {
               const next = new Set(prev);
               if (next.has(id)) next.delete(id);
               else next.add(id);
               return next;
             })
           }
-          onDragStart={handleDragStart}
-          onDragEnd={onDragEnd}
-          onUpload={handleUploadNode}
-          uploading={uploadingNode}
+          onDragStart={canvas.handleDragStart}
+          onDragEnd={canvas.onDragEnd}
+          onUpload={canvas.handleUploadNode}
+          uploading={canvas.uploadingNode}
         />
 
         {/* Canvas */}
         <div
-          ref={reactFlowWrapper}
+          ref={canvas.reactFlowWrapper}
           className="workflow-editor-canvas relative flex flex-1 flex-col overflow-hidden bg-zinc-50 dark:bg-zinc-950"
         >
           <style>{`
@@ -902,30 +120,30 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
             }
           `}</style>
           <div className="flex-1 overflow-hidden">
-            <PluginNodesContext.Provider value={pluginNodes}>
+            <PluginNodesContext.Provider value={canvas.pluginNodes}>
               <ReactFlow
-                nodes={nodesWithCallbacks}
-                edges={edges}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onConnect={onConnect}
-                onConnectStart={onConnectStart}
-                onConnectEnd={onConnectEnd}
-                onNodeClick={onNodeClick}
-                onPaneClick={onPaneClick}
-                onNodeDragStop={onNodeDragStop}
-                onDragOver={onDragOver}
-                onDrop={onDrop}
-                onDragEnd={onDragEnd}
-                onInit={setRfInstance}
-                nodeTypes={nodeTypes}
-                onSelectionChange={({ nodes }) => setSelectedNodeIds(nodes.map((n) => n.id))}
+                nodes={canvas.nodesWithCallbacks}
+                edges={canvas.edges}
+                onNodesChange={canvas.onNodesChange}
+                onEdgesChange={canvas.onEdgesChange}
+                onConnect={canvas.onConnect}
+                onConnectStart={canvas.onConnectStart}
+                onConnectEnd={canvas.onConnectEnd}
+                onNodeClick={canvas.onNodeClick}
+                onPaneClick={canvas.onPaneClick}
+                onNodeDragStop={canvas.onNodeDragStop}
+                onDragOver={canvas.onDragOver}
+                onDrop={canvas.onDrop}
+                onDragEnd={canvas.onDragEnd}
+                onInit={canvas.setRfInstance}
+                nodeTypes={canvas.nodeTypes}
+                onSelectionChange={({ nodes }) => canvas.setSelectedNodeIds(nodes.map((n) => n.id))}
                 onPaneContextMenu={(e) => {
                   e.preventDefault();
-                  const wrapper = reactFlowWrapper.current;
+                  const wrapper = canvas.reactFlowWrapper.current;
                   if (!wrapper) return;
                   const rect = wrapper.getBoundingClientRect();
-                  setContextMenu({
+                  canvas.setContextMenu({
                     x: e.clientX - rect.left,
                     y: e.clientY - rect.top,
                     visible: true,
@@ -934,7 +152,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                 }}
                 onNodeContextMenu={(e, node) => {
                   e.preventDefault();
-                  const wrapper = reactFlowWrapper.current;
+                  const wrapper = canvas.reactFlowWrapper.current;
                   if (!wrapper) return;
                   const rect = wrapper.getBoundingClientRect();
                   const el = wrapper.querySelector(`[data-id="${node.id}"]`);
@@ -945,7 +163,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                     x = elRect.left - rect.left + elRect.width / 2;
                     y = elRect.top - rect.top + elRect.height / 2;
                   }
-                  setContextMenu({ x, y, visible: true, target: "node" });
+                  canvas.setContextMenu({ x, y, visible: true, target: "node" });
                 }}
                 selectionOnDrag
                 panOnDrag={[1, 2]}
@@ -961,7 +179,11 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                   className="bg-zinc-50 dark:bg-zinc-950"
                 />
                 <Controls className="!bg-white !shadow-sm dark:!bg-zinc-900">
-                  <ControlButton onClick={handleAutoLayout} title="自动布局" className="border-t">
+                  <ControlButton
+                    onClick={canvas.handleAutoLayout}
+                    title="自动布局"
+                    className="border-t"
+                  >
                     <LayoutTemplate size={16} />
                   </ControlButton>
                 </Controls>
@@ -976,19 +198,19 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
 
             {/* Context menu */}
             <ContextMenu
-              open={contextMenu.visible}
-              onOpenChange={(open) => setContextMenu((prev) => ({ ...prev, visible: open }))}
+              open={canvas.contextMenu.visible}
+              onOpenChange={(open) => canvas.setContextMenu((prev) => ({ ...prev, visible: open }))}
             >
               <ContextMenuContent
                 className="w-52"
                 anchor={() => {
-                  const wrapper = reactFlowWrapper.current;
+                  const wrapper = canvas.reactFlowWrapper.current;
                   const x = wrapper
-                    ? wrapper.getBoundingClientRect().left + contextMenu.x
-                    : contextMenu.x;
+                    ? wrapper.getBoundingClientRect().left + canvas.contextMenu.x
+                    : canvas.contextMenu.x;
                   const y = wrapper
-                    ? wrapper.getBoundingClientRect().top + contextMenu.y
-                    : contextMenu.y;
+                    ? wrapper.getBoundingClientRect().top + canvas.contextMenu.y
+                    : canvas.contextMenu.y;
                   return {
                     getBoundingClientRect() {
                       return DOMRect.fromRect({ x, y, width: 0, height: 0 });
@@ -999,18 +221,18 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                 side="right"
                 sideOffset={0}
               >
-                {contextMenu.target === "node" && (
+                {canvas.contextMenu.target === "node" && (
                   <>
                     <ContextMenuItem
                       onClick={() => {
-                        const selected = nodesRef.current.filter((n) =>
-                          selectedNodeIds.includes(n.id),
+                        const selected = canvas.nodesRef.current.filter((n) =>
+                          canvas.selectedNodeIds.includes(n.id),
                         );
                         if (selected.length > 0) {
-                          copiedNodesRef.current = selected;
+                          canvas.copiedNodesRef.current = selected;
                           toast.success(`已复制 ${selected.length} 个节点`);
                         }
-                        setContextMenu((prev) => ({ ...prev, visible: false }));
+                        canvas.setContextMenu((prev) => ({ ...prev, visible: false }));
                       }}
                     >
                       <Copy size={14} />
@@ -1025,13 +247,13 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                 )}
                 <ContextMenuItem
                   onClick={() => {
-                    const copied = copiedNodesRef.current;
+                    const copied = canvas.copiedNodesRef.current;
                     if (copied.length === 0) {
-                      setContextMenu((prev) => ({ ...prev, visible: false }));
+                      canvas.setContextMenu((prev) => ({ ...prev, visible: false }));
                       return;
                     }
                     const idMap = new Map<string, string>();
-                    const newNodes: Node[] = copied.map((n) => {
+                    const newNodes = copied.map((n) => {
                       const newId = `${n.type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
                       idMap.set(n.id, newId);
                       return {
@@ -1041,7 +263,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                         selected: false,
                       };
                     });
-                    const newEdges: Edge[] = edges
+                    const newEdges = canvas.edges
                       .filter((edge) => idMap.has(edge.source) && idMap.has(edge.target))
                       .map((edge) => ({
                         ...edge,
@@ -1049,12 +271,12 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                         source: idMap.get(edge.source)!,
                         target: idMap.get(edge.target)!,
                       }));
-                    setIsDirty(true);
-                    _pushHistory(nodesRef.current, edges);
-                    setNodes((nds) => [...nds, ...newNodes]);
-                    if (newEdges.length > 0) setEdges((eds) => [...eds, ...newEdges]);
+                    canvas.setIsDirty(true);
+                    canvas._pushHistory(canvas.nodesRef.current, canvas.edges);
+                    canvas.setNodes((nds) => [...nds, ...newNodes]);
+                    if (newEdges.length > 0) canvas.setEdges((eds) => [...eds, ...newEdges]);
                     toast.success(`已粘贴 ${copied.length} 个节点`);
-                    setContextMenu((prev) => ({ ...prev, visible: false }));
+                    canvas.setContextMenu((prev) => ({ ...prev, visible: false }));
                   }}
                 >
                   <Braces size={14} />
@@ -1064,24 +286,26 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                     <Kbd className="h-5 min-w-5 px-1 text-[10px]">V</Kbd>
                   </ContextMenuShortcut>
                 </ContextMenuItem>
-                {contextMenu.target === "node" && selectedNodeIds.length > 0 && (
+                {canvas.contextMenu.target === "node" && canvas.selectedNodeIds.length > 0 && (
                   <>
                     <ContextMenuSeparator />
                     <ContextMenuItem
                       variant="destructive"
                       onClick={() => {
-                        setIsDirty(true);
-                        _pushHistory(nodesRef.current, edges);
-                        setNodes((nds) => nds.filter((n) => !selectedNodeIds.includes(n.id)));
-                        setEdges((eds) =>
+                        canvas.setIsDirty(true);
+                        canvas._pushHistory(canvas.nodesRef.current, canvas.edges);
+                        canvas.setNodes((nds) =>
+                          nds.filter((n) => !canvas.selectedNodeIds.includes(n.id)),
+                        );
+                        canvas.setEdges((eds) =>
                           eds.filter(
                             (e) =>
-                              !selectedNodeIds.includes(e.source) &&
-                              !selectedNodeIds.includes(e.target),
+                              !canvas.selectedNodeIds.includes(e.source) &&
+                              !canvas.selectedNodeIds.includes(e.target),
                           ),
                         );
-                        setSelectedNodeIds([]);
-                        setContextMenu((prev) => ({ ...prev, visible: false }));
+                        canvas.setSelectedNodeIds([]);
+                        canvas.setContextMenu((prev) => ({ ...prev, visible: false }));
                       }}
                     >
                       <Trash2 size={14} />
@@ -1095,10 +319,10 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                 <ContextMenuSeparator />
                 <ContextMenuItem
                   onClick={() => {
-                    const allIds = nodesRef.current.map((n) => n.id);
-                    setSelectedNodeIds(allIds);
-                    setNodes((nds) => nds.map((n) => ({ ...n, selected: true })));
-                    setContextMenu((prev) => ({ ...prev, visible: false }));
+                    const allIds = canvas.nodesRef.current.map((n) => n.id);
+                    canvas.setSelectedNodeIds(allIds);
+                    canvas.setNodes((nds) => nds.map((n) => ({ ...n, selected: true })));
+                    canvas.setContextMenu((prev) => ({ ...prev, visible: false }));
                   }}
                 >
                   <Copy size={14} />
@@ -1109,13 +333,13 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                   </ContextMenuShortcut>
                 </ContextMenuItem>
                 <ContextMenuItem
-                  disabled={historyIndexRef.current <= 0}
+                  disabled={canvas.historyIndexRef.current <= 0}
                   onClick={() => {
-                    undo(setNodes, setEdges, () => {
-                      setSelectedNodeIds([]);
+                    canvas.undo(canvas.setNodes, canvas.setEdges, () => {
+                      canvas.setSelectedNodeIds([]);
                       toast.success("已撤销");
                     });
-                    setContextMenu((prev) => ({ ...prev, visible: false }));
+                    canvas.setContextMenu((prev) => ({ ...prev, visible: false }));
                   }}
                 >
                   <Undo2 size={14} />
@@ -1129,22 +353,25 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
             </ContextMenu>
 
             {/* Handle click node picker popup */}
-            {handleMenu && (
+            {canvas.handleMenu && (
               <div
-                className="absolute z-50 w-[200px] overflow-hidden rounded-lg border bg-white shadow-lg dark:bg-zinc-900 dark:border-zinc-700"
-                style={{ left: handleMenu.x, top: handleMenu.y }}
+                className="absolute z-50 w-[200px] overflow-hidden rounded-lg border bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+                style={{ left: canvas.handleMenu.x, top: canvas.handleMenu.y }}
               >
                 <div className="border-b px-3 py-2">
                   <span className="text-xs font-medium text-muted-foreground">
-                    {handleMenu.handleType === "source" ? "选择下一步节点" : "选择上一步节点"}
+                    {canvas.handleMenu.handleType === "source"
+                      ? "选择下一步节点"
+                      : "选择上一步节点"}
                   </span>
                 </div>
                 <div className="max-h-[280px] overflow-y-auto py-1">
                   {(() => {
-                    const isSource = handleMenu.handleType === "source";
+                    const isSource = canvas.handleMenu.handleType === "source";
                     const currentNodeIsStart =
-                      nodes.find((n) => n.id === handleMenu.nodeId)?.type === "start";
-                    return componentCategories.map((cat) => {
+                      canvas.nodes.find((n) => n.id === canvas.handleMenu!.nodeId)?.type ===
+                      "start";
+                    return canvas.componentCategories.map((cat) => {
                       const items = cat.items.filter((item) => {
                         if (isSource) return item.type !== "start";
                         return !(currentNodeIsStart && item.type === "start");
@@ -1159,7 +386,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                             <button
                               key={item.type}
                               type="button"
-                              onClick={() => handleSelectNodeFromMenu(item.type)}
+                              onClick={() => canvas.handleSelectNodeFromMenu(item.type)}
                               className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800"
                             >
                               <div
@@ -1191,60 +418,60 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
           </div>
 
           <WorkflowTestPanel
-            testResult={testResult}
-            testLogOpen={testLogOpen}
-            onToggle={() => setTestLogOpen((v) => !v)}
+            testResult={canvas.testResult}
+            testLogOpen={canvas.testLogOpen}
+            onToggle={() => canvas.setTestLogOpen((v) => !v)}
           />
-        </div>
 
-        {rightPanelOpen && selectedNode && (
-          <WorkflowNodeConfig
-            selectedNode={selectedNode}
-            selectedNodeType={selectedNodeType}
-            activeConfigTab={activeConfigTab}
-            onTabChange={setActiveConfigTab}
-            updateNodeData={updateNodeData}
-            pointNames={pointNames}
-            filteredPointNames={filteredPointNames}
-            pointSearch={pointSearch}
-            setPointSearch={setPointSearch}
-            getNodeDef={getNodeDef}
-            canDelete={canDelete}
-            onDeleteNode={handleDeleteNode}
-            onClose={() => setRightPanelOpen(false)}
-          />
-        )}
+          {canvas.selectedNode && (
+            <WorkflowNodeConfig
+              selectedNode={canvas.selectedNode}
+              selectedNodeType={canvas.selectedNodeType}
+              activeConfigTab={canvas.activeConfigTab}
+              onTabChange={canvas.setActiveConfigTab}
+              updateNodeData={canvas.updateNodeData}
+              pointNames={canvas.pointNames}
+              filteredPointNames={canvas.filteredPointNames}
+              pointSearch={canvas.pointSearch}
+              setPointSearch={canvas.setPointSearch}
+              getNodeDef={canvas.getNodeDef}
+              canDelete={canvas.canDelete}
+              onDeleteNode={canvas.handleDeleteNode}
+              onClose={() => canvas.setRightPanelOpen(false)}
+            />
+          )}
+        </div>
       </div>
 
       <WorkflowDialogs
-        showEditDialog={showEditDialog}
-        setShowEditDialog={setShowEditDialog}
-        editTitle={editTitle}
-        setEditTitle={setEditTitle}
-        editTags={editTags}
-        setEditTags={setEditTags}
-        tagInput={tagInput}
-        setTagInput={setTagInput}
-        tagPopoverOpen={tagPopoverOpen}
-        setTagPopoverOpen={setTagPopoverOpen}
-        editDescription={editDescription}
-        setEditDescription={setEditDescription}
-        tagInputRef={tagInputRef}
-        onSaveWorkflowInfo={handleSaveWorkflowInfo}
-        showLeaveDialog={showLeaveDialog}
-        setShowLeaveDialog={setShowLeaveDialog}
+        showEditDialog={canvas.showEditDialog}
+        setShowEditDialog={canvas.setShowEditDialog}
+        editTitle={canvas.editTitle}
+        setEditTitle={canvas.setEditTitle}
+        editTags={canvas.editTags}
+        setEditTags={canvas.setEditTags}
+        tagInput={canvas.tagInput}
+        setTagInput={canvas.setTagInput}
+        tagPopoverOpen={canvas.tagPopoverOpen}
+        setTagPopoverOpen={canvas.setTagPopoverOpen}
+        editDescription={canvas.editDescription}
+        setEditDescription={canvas.setEditDescription}
+        tagInputRef={canvas.tagInputRef}
+        onSaveWorkflowInfo={canvas.handleSaveWorkflowInfo}
+        showLeaveDialog={canvas.showLeaveDialog}
+        setShowLeaveDialog={canvas.setShowLeaveDialog}
         onLeave={onBack}
-        showEnvVarsDialog={showEnvVarsDialog}
-        setShowEnvVarsDialog={setShowEnvVarsDialog}
-        envVars={envVars}
-        setEnvVars={setEnvVars}
-        visibleSecrets={visibleSecrets}
-        setVisibleSecrets={setVisibleSecrets}
-        showSettingsDialog={showSettingsDialog}
-        setShowSettingsDialog={setShowSettingsDialog}
-        settings={settings}
-        setSettings={setSettings}
-        setIsDirty={setIsDirty}
+        showEnvVarsDialog={canvas.showEnvVarsDialog}
+        setShowEnvVarsDialog={canvas.setShowEnvVarsDialog}
+        envVars={canvas.envVars}
+        setEnvVars={canvas.setEnvVars}
+        visibleSecrets={canvas.visibleSecrets}
+        setVisibleSecrets={canvas.setVisibleSecrets}
+        showSettingsDialog={canvas.showSettingsDialog}
+        setShowSettingsDialog={canvas.setShowSettingsDialog}
+        settings={canvas.settings}
+        setSettings={canvas.setSettings}
+        setIsDirty={canvas.setIsDirty}
       />
     </div>
   );
