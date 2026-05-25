@@ -2,7 +2,7 @@
   "id": "loop",
   "name": "循环",
   "version": "1.0.0",
-  "category": "action",
+  "category": "condition",
   "entry": "backend.js",
   "schema": "schema.json",
   "description": "循环执行子流程",

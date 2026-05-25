@@ -2,7 +2,7 @@
   "id": "parallel",
   "name": "并行",
   "version": "1.0.0",
-  "category": "action",
+  "category": "condition",
   "entry": "backend.js",
   "schema": "schema.json",
   "description": "并行执行多个分支",
