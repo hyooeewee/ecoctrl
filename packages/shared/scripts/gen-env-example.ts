@@ -137,7 +137,7 @@ async function main() {
     const a = args[i];
     if (a === "--dest") dest = args[++i];
     else if (a === "--check") checkOnly = true;
-    else if (a === "-y") yesFlag = true;
+    else if (a === "-y" || a === "--yes") yesFlag = true;
     else if (a === "-h" || a === "--help") return help();
     else if (a.startsWith("-")) {
       console.error(`Unknown option: ${a}`);
