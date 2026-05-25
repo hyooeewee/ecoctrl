@@ -23,9 +23,10 @@ export class SSEManager {
     return this.connections.size;
   }
 
-  broadcast(event: SSEEvent): void {
+  broadcast(event: SSEEvent, userId?: string): void {
     const payload = this.serialize(event);
     for (const conn of this.connections.values()) {
+      if (userId && conn.userId !== userId) continue;
       this.write(conn, payload);
     }
   }
