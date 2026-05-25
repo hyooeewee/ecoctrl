@@ -19,10 +19,14 @@ function createMockApi(): PluginApi {
       delete: async () => ({ status: 200, body: "", json: () => ({}) }),
     },
     iot: { readPoint: async () => ({}), readPoints: async () => ({}), writePoint: async () => {} },
-    notify: { send: async () => {} },
+    notify: { send: async () => {}, sendMail: async () => ({ messageId: "test", sent: true }) },
     log: { info: () => {}, warn: () => {}, error: () => {} },
     env: { get: () => undefined },
     context: { workflowId: "", executionId: "", triggerData: {}, nodeId: "", nodeName: "" },
+    utils: { sleep: async () => {} },
+    expr: { evaluateBoolean: () => false, evaluateExpression: () => null },
+    db: { execute: async () => ({}) },
+    workflow: { executeSubGraph: async () => ({}) },
   };
 }
 
