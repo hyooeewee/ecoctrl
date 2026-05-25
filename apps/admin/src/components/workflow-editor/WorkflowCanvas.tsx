@@ -9,7 +9,6 @@ import {
 import "@xyflow/react/dist/style.css";
 import { LayoutTemplate, Copy, Trash2, Undo2, Braces } from "lucide-react";
 import { toast } from "sonner";
-import React from "react";
 
 import {
   ContextMenu,
@@ -21,6 +20,8 @@ import {
 import { Kbd } from "@ecoctrl/ui/kbd";
 
 import { PluginNodesContext } from "./nodes-context";
+import { useColorMode } from "@/hooks/useColorMode";
+import { useAppStore } from "@/store/appStore";
 import { useWorkflowCanvas } from "./hooks/useWorkflowCanvas";
 
 import { WorkflowToolbar } from "./WorkflowToolbar";
@@ -36,6 +37,9 @@ interface WorkflowCanvasProps {
 
 export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasProps) {
   const canvas = useWorkflowCanvas({ workflowId, onBack });
+
+  const theme = useAppStore((s) => s.preferencesOverride.theme ?? "system");
+  const colorMode = useColorMode(theme);
 
   if (canvas.loading) {
     return (
@@ -99,29 +103,10 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
           ref={canvas.reactFlowWrapper}
           className="workflow-editor-canvas relative flex flex-1 flex-col overflow-hidden bg-zinc-50 dark:bg-zinc-950"
         >
-          <style>{`
-            .workflow-editor-canvas .react-flow__pane.draggable,
-            .workflow-editor-canvas .react-flow__node.draggable,
-            .workflow-editor-canvas .react-flow__node.selectable {
-              cursor: default;
-            }
-            .workflow-editor-canvas .react-flow__pane.dragging,
-            .workflow-editor-canvas .react-flow__node.dragging {
-              cursor: grabbing;
-            }
-            .workflow-editor-canvas .react-flow__pane.selection {
-              cursor: crosshair;
-            }
-            .workflow-editor-canvas .react-flow__handle {
-              transform: translate(-50%, -50%) scale(1.4);
-            }
-            .workflow-editor-canvas .react-flow__handle-right {
-              transform: translate(50%, -50%) scale(1.4);
-            }
-          `}</style>
           <div className="flex-1 overflow-hidden">
             <PluginNodesContext.Provider value={canvas.pluginNodes}>
               <ReactFlow
+                colorMode={colorMode}
                 nodes={canvas.nodesWithCallbacks}
                 edges={canvas.edges}
                 onNodesChange={canvas.onNodesChange}
@@ -172,27 +157,13 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                 attributionPosition="bottom-right"
                 deleteKeyCode={["Backspace", "Delete"]}
               >
-                <Background
-                  variant={BackgroundVariant.Dots}
-                  gap={20}
-                  size={1}
-                  className="bg-zinc-50 dark:bg-zinc-950"
-                />
-                <Controls className="!bg-white !shadow-sm dark:!bg-zinc-900">
-                  <ControlButton
-                    onClick={canvas.handleAutoLayout}
-                    title="自动布局"
-                    className="border-t"
-                  >
+                <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
+                <Controls>
+                  <ControlButton onClick={canvas.handleAutoLayout} title="自动布局">
                     <LayoutTemplate size={16} />
                   </ControlButton>
                 </Controls>
-                <MiniMap
-                  className="!bg-white/80 !shadow-sm dark:!bg-zinc-900/80"
-                  nodeStrokeWidth={3}
-                  zoomable
-                  pannable
-                />
+                <MiniMap nodeStrokeWidth={3} zoomable pannable />
               </ReactFlow>
             </PluginNodesContext.Provider>
 
@@ -422,25 +393,26 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
             testLogOpen={canvas.testLogOpen}
             onToggle={() => canvas.setTestLogOpen((v) => !v)}
           />
-
-          {canvas.selectedNode && (
-            <WorkflowNodeConfig
-              selectedNode={canvas.selectedNode}
-              selectedNodeType={canvas.selectedNodeType}
-              activeConfigTab={canvas.activeConfigTab}
-              onTabChange={canvas.setActiveConfigTab}
-              updateNodeData={canvas.updateNodeData}
-              pointNames={canvas.pointNames}
-              filteredPointNames={canvas.filteredPointNames}
-              pointSearch={canvas.pointSearch}
-              setPointSearch={canvas.setPointSearch}
-              getNodeDef={canvas.getNodeDef}
-              canDelete={canvas.canDelete}
-              onDeleteNode={canvas.handleDeleteNode}
-              onClose={() => canvas.setRightPanelOpen(false)}
-            />
-          )}
         </div>
+
+        {canvas.selectedNode && canvas.rightPanelOpen && (
+          <WorkflowNodeConfig
+            selectedNode={canvas.selectedNode}
+            selectedNodeType={canvas.selectedNodeType}
+            activeConfigTab={canvas.activeConfigTab}
+            onTabChange={canvas.setActiveConfigTab}
+            updateNodeData={canvas.updateNodeData}
+            pointNames={canvas.pointNames}
+            filteredPointNames={canvas.filteredPointNames}
+            pointSearch={canvas.pointSearch}
+            setPointSearch={canvas.setPointSearch}
+            getNodeDef={canvas.getNodeDef}
+            canDelete={canvas.canDelete}
+            onDeleteNode={canvas.handleDeleteNode}
+            onDuplicateNode={canvas.handleDuplicateNode}
+            onClose={() => canvas.setRightPanelOpen(false)}
+          />
+        )}
       </div>
 
       <WorkflowDialogs

@@ -597,6 +597,13 @@ export function useWorkflowCanvas({ workflowId, onBack }: UseWorkflowCanvasOptio
     [setNodes, setEdges, _pushHistory, edges],
   );
 
+  const handleDuplicateNode = useCallback((nodeId: string) => {
+    const node = nodesRef.current.find((n) => n.id === nodeId);
+    if (!node) return;
+    copiedNodesRef.current = [node];
+    toast.success("已复制到剪贴板");
+  }, []);
+
   const handleAutoLayout = useCallback(() => {
     _pushHistory(nodesRef.current, edges);
     setNodes((nds) => autoLayout(nds, edges));
@@ -940,6 +947,7 @@ export function useWorkflowCanvas({ workflowId, onBack }: UseWorkflowCanvasOptio
 
     // Node operations
     handleDeleteNode,
+    handleDuplicateNode,
     handleAutoLayout,
     handleUploadNode,
     updateNodeData,
