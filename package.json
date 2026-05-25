@@ -5,7 +5,7 @@
     "dev:web": "pnpm --filter @ecoctrl/web dev",
     "dev:admin": "pnpm --filter @ecoctrl/admin dev",
     "dev:server": "pnpm --filter @ecoctrl/server dev",
-    "dev": "pnpm -r --parallel --if-present --filter=!@ecoctrl/docs dev",
+    "dev": "(pnpm --filter @ecoctrl/server dev &) && pnpx wait-on tcp:3001 && pnpm -r --parallel --if-present --filter='!@ecoctrl/docs' --filter='!@ecoctrl/server' dev",
     "build:web": "pnpm --filter @ecoctrl/web build",
     "build:admin": "pnpm --filter @ecoctrl/admin build",
     "build:server": "pnpm --filter @ecoctrl/server build",
