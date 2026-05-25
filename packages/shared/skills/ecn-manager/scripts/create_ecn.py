@@ -244,7 +244,7 @@ def create_ecn_from_json(output_dir: Path, json_data: dict, do_package: bool) ->
     plugin_id = json_data["id"]
     source_dir = output_dir / plugin_id
 
-    icon_svg = get_default_icon_svg()
+    icon_svg = json_data.get("icon_svg") or get_default_icon_svg()
     write_files(source_dir, manifest, schema, backend_js, icon_name, icon_svg)
 
     print(f"✅ Created source directory: {source_dir}")
