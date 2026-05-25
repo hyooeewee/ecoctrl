@@ -2,8 +2,9 @@ import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
-import { eq } from "drizzle-orm";
-import { seed, reset } from "drizzle-seed";
+import { count, eq } from "drizzle-orm";
+import { seed } from "drizzle-seed";
+import { intro, isCancel, multiselect, outro } from "@clack/prompts";
 import * as schema from "@/schemas/index";
 
 const client = postgres(process.env.DATABASE_URL!, { prepare: false });
@@ -59,12 +60,32 @@ const REPORT_RECEIVERS = [
 ];
 const REPORT_FREQS = ["每周一", "每月 1 日", "每月末", "每季度末"];
 
-async function runReset() {
-  await reset(db, schema);
-  console.log("Reset all tables");
+// ─── Module definitions ───────────────────────────────────────────
+
+interface SeedModule {
+  value: string;
+  label: string;
+  run: () => Promise<void>;
 }
 
+// ─── CLI parsing ──────────────────────────────────────────────────
+
+const args = process.argv.slice(2);
+const onlyArg = args.find((a) => a.startsWith("--only="));
+const onlyModules = onlyArg ? onlyArg.slice(7).split(",") : null;
+
+// ─── Seed functions (idempotent) ──────────────────────────────────
+
 async function seedUsers() {
+  const ecoctrlExists = await db
+    .select()
+    .from(schema.users)
+    .where(eq(schema.users.username, "ecoctrl"));
+  if (ecoctrlExists.length > 0) {
+    console.log("[seed] mock users already seeded, skipping");
+    return;
+  }
+
   await seed(db, { users: schema.users }, { seed: 1 }).refine((f) => ({
     users: {
       count: 5,
@@ -87,6 +108,7 @@ async function seedUsers() {
       },
     },
   }));
+
   // Set avatar for the first online user to match mock data
   const onlineUsers = await db
     .select()
@@ -100,7 +122,7 @@ async function seedUsers() {
       .where(eq(schema.users.id, onlineUsers[0].id));
   }
 
-  // Insert fixed mock user for authentication testing
+  // Insert fixed mock users for authentication testing
   const mockPassword = await bcrypt.hash("P@ssword4ecoctrl", 10);
   await db.insert(schema.users).values({
     id: crypto.randomUUID(),
@@ -112,21 +134,17 @@ async function seedUsers() {
     lastLogin: null,
     avatarUrl: null,
   });
-  await db.insert(schema.users).values({
-    id: crypto.randomUUID(),
-    username: "admin",
-    email: "admin@example.com",
-    password: mockPassword,
-    role: "admin",
-    status: "online",
-    lastLogin: null,
-    avatarUrl: null,
-  });
 
-  console.log("Seeded users");
+  console.log("[seed] seeded users");
 }
 
 async function seedMaintenance() {
+  const existing = await db.select({ value: count() }).from(schema.maintenanceReminders);
+  if (existing[0].value > 0) {
+    console.log("[seed] maintenance reminders already seeded, skipping");
+    return;
+  }
+
   await seed(db, { maintenanceReminders: schema.maintenanceReminders }, { seed: 2 }).refine(
     (f) => ({
       maintenanceReminders: {
@@ -148,10 +166,16 @@ async function seedMaintenance() {
       },
     }),
   );
-  console.log("Seeded maintenance reminders");
+  console.log("[seed] seeded maintenance reminders");
 }
 
 async function seedFaults() {
+  const existing = await db.select({ value: count() }).from(schema.faults);
+  if (existing[0].value > 0) {
+    console.log("[seed] faults already seeded, skipping");
+    return;
+  }
+
   await seed(db, { faults: schema.faults }, { seed: 3 }).refine((f) => ({
     faults: {
       count: 6,
@@ -180,10 +204,16 @@ async function seedFaults() {
     mttr: 4.2,
     avgResponseTime: "15min",
   });
-  console.log("Seeded faults and fault stats");
+  console.log("[seed] seeded faults and fault stats");
 }
 
 async function seedReports() {
+  const existing = await db.select({ value: count() }).from(schema.reportPlans);
+  if (existing[0].value > 0) {
+    console.log("[seed] reports already seeded, skipping");
+    return;
+  }
+
   await seed(db, { reportPlans: schema.reportPlans }, { seed: 4 }).refine((f) => ({
     reportPlans: {
       count: 4,
@@ -203,50 +233,72 @@ async function seedReports() {
     { name: "异常分析", count: "12 份", icon: "🔍" },
   ];
   await db.insert(schema.reportTemplates).values(templates);
-  console.log("Seeded reports");
+  console.log("[seed] seeded reports");
 }
 
 async function seedDashboard() {
-  const energyChart = [
-    { name: "Mon", value: 400 },
-    { name: "Tue", value: 300 },
-    { name: "Wed", value: 500 },
-    { name: "Thu", value: 280 },
-    { name: "Fri", value: 590 },
-    { name: "Sat", value: 320 },
-    { name: "Sun", value: 250 },
-  ];
-  await db
-    .insert(schema.energyReadings)
-    .values(energyChart.map((e) => ({ hour: e.name, kWh: e.value })));
+  const energyCount = await db.select({ value: count() }).from(schema.energyReadings);
+  if (energyCount[0].value === 0) {
+    const energyChart = [
+      { name: "Mon", value: 400 },
+      { name: "Tue", value: 300 },
+      { name: "Wed", value: 500 },
+      { name: "Thu", value: 280 },
+      { name: "Fri", value: 590 },
+      { name: "Sat", value: 320 },
+      { name: "Sun", value: 250 },
+    ];
+    await db
+      .insert(schema.energyReadings)
+      .values(energyChart.map((e) => ({ hour: e.name, kWh: e.value })));
+    console.log("[seed] created energy readings");
+  }
 
-  await seed(db, { alerts: schema.alerts }, { seed: 5 }).refine((f) => ({
-    alerts: {
-      count: 5,
-      columns: {
-        id: f.uuid(),
-        device: f.valuesFromArray({
-          values: ["中央空调 A1", "配电柜 B3", "水泵 C1", "电梯 #4", "照明控制系统"],
-        }),
-        level: f.valuesFromArray({ values: ["high", "medium", "low"] }),
-        message: f.valuesFromArray({ values: CN_ALERT_MESSAGES }),
-        time: f.valuesFromArray({
-          values: ["10:15:22", "09:45:10", "08:00:00", "11:20:05", "10:55:30"],
-        }),
-        status: f.valuesFromArray({ values: ["pending", "resolved"] }),
+  const alertCount = await db.select({ value: count() }).from(schema.alerts);
+  if (alertCount[0].value === 0) {
+    await seed(db, { alerts: schema.alerts }, { seed: 5 }).refine((f) => ({
+      alerts: {
+        count: 5,
+        columns: {
+          id: f.uuid(),
+          device: f.valuesFromArray({
+            values: ["中央空调 A1", "配电柜 B3", "水泵 C1", "电梯 #4", "照明控制系统"],
+          }),
+          level: f.valuesFromArray({ values: ["high", "medium", "low"] }),
+          message: f.valuesFromArray({ values: CN_ALERT_MESSAGES }),
+          time: f.valuesFromArray({
+            values: ["10:15:22", "09:45:10", "08:00:00", "11:20:05", "10:55:30"],
+          }),
+          status: f.valuesFromArray({ values: ["pending", "resolved"] }),
+        },
       },
-    },
-  }));
+    }));
+    console.log("[seed] created alerts");
+  }
 
-  console.log("Seeded dashboard data");
+  if (energyCount[0].value > 0 && alertCount[0].value > 0) {
+    console.log("[seed] dashboard data already seeded, skipping");
+  }
 }
 
 async function seedBackupSchedule() {
+  const existing = await db.select({ value: count() }).from(schema.backupSchedules);
+  if (existing[0].value > 0) {
+    console.log("[seed] backup schedule already seeded, skipping");
+    return;
+  }
+
   await db.insert(schema.backupSchedules).values({ nextBackup: "2023-11-20 03:00" });
-  console.log("Seeded backup schedule");
+  console.log("[seed] seeded backup schedule");
 }
 
 async function seedEnergyAreas() {
+  const existing = await db.select({ value: count() }).from(schema.energyAreas);
+  if (existing[0].value > 0) {
+    console.log("[seed] energy areas already seeded, skipping");
+    return;
+  }
+
   const areas = [
     {
       title: "A 栋办公区",
@@ -274,15 +326,16 @@ async function seedEnergyAreas() {
     },
   ];
   await db.insert(schema.energyAreas).values(areas);
-  console.log("Seeded energy areas");
-}
-
-async function seedModels() {
-  // Models are now created via file upload API; no mock data inserted.
-  console.log("Skipped seeding models (upload via API)");
+  console.log("[seed] seeded energy areas");
 }
 
 async function seedDashboardModel() {
+  const existing = await db.select({ value: count() }).from(schema.dashboardModels);
+  if (existing[0].value > 0) {
+    console.log("[seed] dashboard model already seeded, skipping");
+    return;
+  }
+
   await db.insert(schema.dashboardModels).values({
     modelFileUrl: null,
     cameraPreset: "Default_View_01",
@@ -290,30 +343,16 @@ async function seedDashboardModel() {
     hotspots: [],
     labels: [],
   });
-  console.log("Seeded dashboard model config");
-}
-
-async function seedPlatformConfig() {
-  await db.insert(schema.platformConfigs).values({
-    platformName: "EcoCtrl 能管平台",
-    refreshInterval: 30,
-    realtimeAlertEnabled: true,
-    timezone: "Asia/Shanghai",
-    autoBackup: true,
-    backupRetentionDays: 30,
-    sessionTimeout: 30,
-    smtpHost: "",
-    smtpPort: 587,
-    smtpUser: "",
-    smtpPass: "",
-    smtpSecure: false,
-    systemPrompt:
-      "你是蓝宝，EcoCtrl 能源管理平台的智能助手。\n\n平台能力：\n\n- 三维建筑能耗可视化（BabylonJS）\n- 实时监控暖通空调、照明、电梯、服务器等设备状态\n- 能耗数据分析与 AI 优化建议\n- 实时告警管理\n\n回复风格：\n\n- 使用中文回复\n- 简洁、专业、友好\n- 需要调用工具时直接调用，不要告知用户你在调用工具\n- 对于不确定的问题，坦诚说明不要编造",
-  });
-  console.log("Seeded platform config");
+  console.log("[seed] seeded dashboard model config");
 }
 
 async function seedDashboardWidgets() {
+  const existing = await db.select({ value: count() }).from(schema.dashboardWidgets);
+  if (existing[0].value > 0) {
+    console.log("[seed] dashboard widgets already seeded, skipping");
+    return;
+  }
+
   const widgets = [
     {
       titleKey: "totalEnergy",
@@ -574,10 +613,16 @@ async function seedDashboardWidgets() {
   ];
 
   await db.insert(schema.dashboardWidgets).values(widgets);
-  console.log("Seeded dashboard widgets");
+  console.log("[seed] seeded dashboard widgets");
 }
 
 async function seedIotTokens() {
+  const existing = await db.select({ value: count() }).from(schema.iotTokens);
+  if (existing[0].value > 0) {
+    console.log("[seed] IoT tokens already seeded, skipping");
+    return;
+  }
+
   await db.insert(schema.iotTokens).values({
     accessToken:
       "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ3ZWJ0YWxrIiwiYXVkIjoiY2xpZW50IiwiaWF0IjoxNzc2NTU4NjEwLCJkYXRhIjp7InVzZXJJZCI6bnVsbCwiYXBwSWQiOiJhcHBpZHRlc3QwMDEifSwiZXhwIjoxNzc2NTY1ODEwfQ.y5w0z0ClwPhzKb0qqXqk_mF-3tIQp6GdB26a4E3gmH0",
@@ -585,29 +630,74 @@ async function seedIotTokens() {
       "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ3ZWJ0YWxrIiwiYXVkIjoiY2xpZW50IiwiaWF0IjoxNzc2NTE1NzkxLCJkYXRhIjp7InVzZXJJZCI6ImFkbWluIiwiYXBwSWQiOiJhcHBpZHRlc3QwMDEifSwiZXhwIjoxNzc5MTA3NzkxfQ.fg5BoJ7gbEkuQpVxrry8uKP73hoeZVO93F3LtjhSM5M",
     expiresAt: 1776565810000,
   });
-  console.log("Seeded IoT token");
+  console.log("[seed] seeded IoT token");
 }
 
+// ─── Module registry ──────────────────────────────────────────────
+
+const MODULES: SeedModule[] = [
+  { value: "users", label: "Mock 用户 (users)", run: seedUsers },
+  { value: "maintenance", label: "维保提醒 (maintenance)", run: seedMaintenance },
+  { value: "faults", label: "故障数据 (faults)", run: seedFaults },
+  { value: "reports", label: "报表数据 (reports)", run: seedReports },
+  { value: "dashboard", label: "Dashboard 数据 (dashboard)", run: seedDashboard },
+  { value: "widgets", label: "Dashboard 组件 (widgets)", run: seedDashboardWidgets },
+  { value: "backup", label: "备份计划 (backup)", run: seedBackupSchedule },
+  { value: "energy", label: "能耗区域 (energy)", run: seedEnergyAreas },
+  { value: "model", label: "3D 模型配置 (model)", run: seedDashboardModel },
+  { value: "tokens", label: "IoT Token (tokens)", run: seedIotTokens },
+];
+
+// ─── Main ─────────────────────────────────────────────────────────
+
 async function main() {
-  console.log("Resetting and seeding database...");
-  await runReset();
-  await seedUsers();
-  await seedMaintenance();
-  await seedFaults();
-  await seedReports();
-  await seedDashboard();
-  await seedDashboardWidgets();
-  await seedBackupSchedule();
-  await seedEnergyAreas();
-  await seedModels();
-  await seedDashboardModel();
-  await seedPlatformConfig();
-  await seedIotTokens();
-  console.log("Done!");
+  intro("ecoctrl db:seed");
+
+  // Select modules
+  let selected: string[];
+  if (onlyModules) {
+    const valid = MODULES.map((m) => m.value);
+    const invalid = onlyModules.filter((m) => !valid.includes(m));
+    if (invalid.length > 0) {
+      console.error(`[seed] unknown modules: ${invalid.join(", ")}`);
+      console.error(`[seed] valid modules: ${valid.join(", ")}`);
+      process.exit(1);
+    }
+    selected = onlyModules;
+  } else if (process.stdin.isTTY) {
+    const result = await multiselect({
+      message: "Select modules to seed (space to multi-select, enter to confirm):",
+      options: MODULES.map((m) => ({ value: m.value, label: m.label })),
+      required: true,
+    });
+    if (isCancel(result)) {
+      outro("Cancelled.");
+      process.exit(0);
+    }
+    selected = result as string[];
+  } else {
+    // Non-TTY (Docker): run all
+    selected = MODULES.map((m) => m.value);
+  }
+
+  console.log(`[seed] selected modules: ${selected.join(", ")}`);
+
+  // Execute in order
+  for (const mod of MODULES) {
+    if (!selected.includes(mod.value)) continue;
+    try {
+      await mod.run();
+    } catch (err) {
+      console.error(`[seed] failed at module "${mod.value}":`, err);
+      process.exit(1);
+    }
+  }
+
   await client.end();
+  outro("[seed] done");
 }
 
 main().catch((err) => {
-  console.error(err);
+  console.error("[seed] failed:", err);
   process.exit(1);
 });

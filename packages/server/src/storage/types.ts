@@ -19,4 +19,5 @@ export interface StorageAdapter {
   list(prefix: string): Promise<string[]>;
   stat(key: string): Promise<ObjectStat>;
   copy(sourceKey: string, destKey: string): Promise<void>;
+  deleteBucket(): Promise<void>;
 }
