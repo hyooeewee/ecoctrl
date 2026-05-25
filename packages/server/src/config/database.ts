@@ -8,7 +8,10 @@ let dbClient: ReturnType<typeof postgres> | undefined;
 
 export function getDb(): PostgresJsDatabase {
   if (!dbInstance) {
-    const dbUrl = process.env.VITEST_DATABASE_URL || env.DATABASE_URL;
+    const dbUrl =
+      process.env.VITEST === "true" && process.env.VITEST_DATABASE_URL
+        ? process.env.VITEST_DATABASE_URL
+        : env.DATABASE_URL;
     dbClient = postgres(dbUrl, { prepare: false });
     dbInstance = drizzle(dbClient);
   }
