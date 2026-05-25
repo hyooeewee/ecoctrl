@@ -9,9 +9,10 @@ export async function findManyPoints(): Promise<Point[]> {
     id: r.id,
     objectId: r.objectId,
     modelId: r.modelId,
-    pointType: r.pointType,
-    pointNo: r.pointNo,
+    type: r.type,
+    code: r.code,
     name: r.name,
+    description: r.description,
     props: r.props ?? [],
     values: r.values ?? {},
   }));
@@ -23,9 +24,10 @@ export async function findPointsByObjectId(objectId: string): Promise<Point[]> {
     id: r.id,
     objectId: r.objectId,
     modelId: r.modelId,
-    pointType: r.pointType,
-    pointNo: r.pointNo,
+    type: r.type,
+    code: r.code,
     name: r.name,
+    description: r.description,
     props: r.props ?? [],
     values: r.values ?? {},
   }));
@@ -37,9 +39,10 @@ export async function findPointsByModelId(modelId: string): Promise<Point[]> {
     id: r.id,
     objectId: r.objectId,
     modelId: r.modelId,
-    pointType: r.pointType,
-    pointNo: r.pointNo,
+    type: r.type,
+    code: r.code,
     name: r.name,
+    description: r.description,
     props: r.props ?? [],
     values: r.values ?? {},
   }));
@@ -53,9 +56,35 @@ export async function findPointById(id: string): Promise<Point | null> {
     id: r.id,
     objectId: r.objectId,
     modelId: r.modelId,
-    pointType: r.pointType,
-    pointNo: r.pointNo,
+    type: r.type,
+    code: r.code,
     name: r.name,
+    description: r.description,
+    props: r.props ?? [],
+    values: r.values ?? {},
+  };
+}
+
+export async function findPointByObjectTypeNo(
+  objectId: string,
+  type: string,
+  code: string,
+): Promise<Point | null> {
+  const rows = await db
+    .select()
+    .from(points)
+    .where(and(eq(points.objectId, objectId), eq(points.type, type), eq(points.code, code)))
+    .limit(1);
+  if (rows.length === 0) return null;
+  const r = rows[0];
+  return {
+    id: r.id,
+    objectId: r.objectId,
+    modelId: r.modelId,
+    type: r.type,
+    code: r.code,
+    name: r.name,
+    description: r.description,
     props: r.props ?? [],
     values: r.values ?? {},
   };
@@ -67,9 +96,10 @@ export async function createPoint(data: Omit<Point, "id">): Promise<Point> {
     .values({
       objectId: data.objectId,
       modelId: data.modelId,
-      pointType: data.pointType,
-      pointNo: data.pointNo,
+      type: data.type,
+      code: data.code,
       name: data.name,
+      description: data.description,
       props: data.props,
       values: data.values,
     })
@@ -79,9 +109,10 @@ export async function createPoint(data: Omit<Point, "id">): Promise<Point> {
     id: r.id,
     objectId: r.objectId,
     modelId: r.modelId,
-    pointType: r.pointType,
-    pointNo: r.pointNo,
+    type: r.type,
+    code: r.code,
     name: r.name,
+    description: r.description,
     props: r.props ?? [],
     values: r.values ?? {},
   };
@@ -91,9 +122,10 @@ export async function createManyPoints(dataList: Omit<Point, "id">[]): Promise<P
   const values = dataList.map((data) => ({
     objectId: data.objectId,
     modelId: data.modelId,
-    pointType: data.pointType,
-    pointNo: data.pointNo,
+    type: data.type,
+    code: data.code,
     name: data.name,
+    description: data.description,
     props: data.props,
     values: data.values,
   }));
@@ -102,9 +134,10 @@ export async function createManyPoints(dataList: Omit<Point, "id">[]): Promise<P
     id: r.id,
     objectId: r.objectId,
     modelId: r.modelId,
-    pointType: r.pointType,
-    pointNo: r.pointNo,
+    type: r.type,
+    code: r.code,
     name: r.name,
+    description: r.description,
     props: r.props ?? [],
     values: r.values ?? {},
   }));
@@ -116,6 +149,7 @@ export async function updatePoint(
 ): Promise<Point | null> {
   const updateData: Record<string, unknown> = {};
   if (data.name !== undefined) updateData.name = data.name;
+  if (data.description !== undefined) updateData.description = data.description;
   if (data.props !== undefined) updateData.props = data.props;
   if (data.values !== undefined) updateData.values = data.values;
 
@@ -126,9 +160,10 @@ export async function updatePoint(
     id: r.id,
     objectId: r.objectId,
     modelId: r.modelId,
-    pointType: r.pointType,
-    pointNo: r.pointNo,
+    type: r.type,
+    code: r.code,
     name: r.name,
+    description: r.description,
     props: r.props ?? [],
     values: r.values ?? {},
   };
@@ -142,9 +177,10 @@ export async function deletePoint(id: string): Promise<Point | null> {
     id: r.id,
     objectId: r.objectId,
     modelId: r.modelId,
-    pointType: r.pointType,
-    pointNo: r.pointNo,
+    type: r.type,
+    code: r.code,
     name: r.name,
+    description: r.description,
     props: r.props ?? [],
     values: r.values ?? {},
   };
@@ -152,12 +188,12 @@ export async function deletePoint(id: string): Promise<Point | null> {
 
 export async function findPointByName(
   name: string,
-  filters?: { objectId?: string; modelId?: string; pointNo?: string },
+  filters?: { objectId?: string; modelId?: string; code?: string },
 ): Promise<Point | null> {
   const conditions = [eq(points.name, name)];
   if (filters?.objectId) conditions.push(eq(points.objectId, filters.objectId));
   if (filters?.modelId) conditions.push(eq(points.modelId, filters.modelId));
-  if (filters?.pointNo) conditions.push(eq(points.pointNo, filters.pointNo));
+  if (filters?.code) conditions.push(eq(points.code, filters.code));
 
   const rows = await db
     .select()
@@ -174,9 +210,10 @@ export async function findPointByName(
     id: r.id,
     objectId: r.objectId,
     modelId: r.modelId,
-    pointType: r.pointType,
-    pointNo: r.pointNo,
+    type: r.type,
+    code: r.code,
     name: r.name,
+    description: r.description,
     props: r.props ?? [],
     values: r.values ?? {},
   };
@@ -189,20 +226,14 @@ export async function deletePointsByObjectId(objectId: string): Promise<number> 
 
 export async function upsertPoint(
   objectId: string,
-  pointType: string,
-  pointNo: string,
-  data: Omit<Point, "id" | "objectId" | "pointType" | "pointNo">,
+  type: string,
+  code: string,
+  data: Omit<Point, "id" | "objectId" | "type" | "code">,
 ): Promise<Point> {
   const existing = await db
     .select()
     .from(points)
-    .where(
-      and(
-        eq(points.objectId, objectId),
-        eq(points.pointType, pointType),
-        eq(points.pointNo, pointNo),
-      ),
-    )
+    .where(and(eq(points.objectId, objectId), eq(points.type, type), eq(points.code, code)))
     .limit(1);
 
   if (existing.length > 0) {
@@ -212,10 +243,11 @@ export async function upsertPoint(
 
   return createPoint({
     objectId,
-    pointType,
-    pointNo,
+    type,
+    code,
     modelId: data.modelId,
     name: data.name,
+    description: data.description,
     props: data.props ?? [],
     values: data.values ?? {},
   });

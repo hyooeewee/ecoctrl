@@ -1,11 +1,11 @@
 import { z } from "zod";
 
 export const BusinessObjectSchema = z.object({
-  uuid: z.string(),
   id: z.string(),
-  name: z.string(),
+  code: z.string().nullable(),
+  name: z.string().nullable(),
+  description: z.string().nullable(),
   modelId: z.string(),
-  modelName: z.string(),
   status: z.string().optional(),
 });
 export type BusinessObject = z.infer<typeof BusinessObjectSchema>;

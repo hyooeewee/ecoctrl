@@ -1,5 +1,12 @@
 import xlsx from "xlsx";
-import type { PointItem } from "@ecoctrl/shared";
+
+export interface PointItem {
+  id: string;
+  name: string;
+  pointType: string;
+  pointNo: string;
+  props: { key: string; name: string; unit?: string }[];
+}
 
 export interface ParsedDevice {
   deviceName: string;
@@ -52,7 +59,7 @@ export function parseJsonPoints(buffer: Buffer): ParseResult {
 
   const points: PointItem[] = parsed.map((p: Record<string, unknown>) => {
     const pointType = String(p.pointType ?? "").toUpperCase();
-    const pointNo = pad4(p.pointNo ?? "0");
+    const pointNo = pad4((p.pointNo as string | number) ?? "0");
     const name = String(p.name ?? "");
     return {
       id: String(p.id ?? ""),
@@ -148,9 +155,10 @@ export function parseXlsxPoints(buffer: Buffer): ParseResult {
     throw new Error("XLSX file is empty or has no sheets");
   }
 
-  const rows = xlsx.utils.sheet_to_json<Record<string, unknown>>(sheet, { header: 1 }) as (
+  const rows = xlsx.utils.sheet_to_json<unknown[]>(sheet, { header: 1 }) as (
     | string
     | number
+    | undefined
   )[][];
   if (rows.length < 2) {
     throw new Error("XLSX file must contain at least a header row and one data row");

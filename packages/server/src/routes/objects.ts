@@ -4,7 +4,7 @@ import { BusinessObjectSchema } from "@ecoctrl/shared";
 import { errors } from "@/lib/schemas";
 import {
   findManyObjects,
-  findObjectByUuid,
+  findObjectById,
   createObject,
   createManyObjects,
   updateObject,
@@ -33,7 +33,7 @@ export default async function objectRoutes(fastify: FastifyInstance) {
       schema: {
         tags: ["Objects"],
         summary: "Create a business object",
-        body: BusinessObjectSchema.omit({ uuid: true }),
+        body: BusinessObjectSchema.omit({ id: true }),
         response: {
           201: BusinessObjectSchema,
         },
@@ -41,10 +41,10 @@ export default async function objectRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const data = request.body as {
-        id: string;
-        name: string;
+        code: string | null;
+        name: string | null;
+        description: string | null;
         modelId: string;
-        modelName: string;
         status?: string;
       };
 
@@ -54,13 +54,13 @@ export default async function objectRoutes(fastify: FastifyInstance) {
   );
 
   fastify.put(
-    "/:uuid",
+    "/:id",
     {
       schema: {
         tags: ["Objects"],
         summary: "Update a business object",
-        params: z.object({ uuid: z.string() }),
-        body: BusinessObjectSchema.omit({ uuid: true }).partial(),
+        params: z.object({ id: z.string() }),
+        body: BusinessObjectSchema.omit({ id: true }).partial(),
         response: {
           200: BusinessObjectSchema,
           ...errors,
@@ -68,13 +68,13 @@ export default async function objectRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const { uuid } = request.params as { uuid: string };
-      const obj = await findObjectByUuid(uuid);
+      const { id } = request.params as { id: string };
+      const obj = await findObjectById(id);
       if (!obj) {
         return reply.status(404).send({ error: "Object not found" });
       }
       const data = request.body as Record<string, unknown>;
-      const updated = await updateObject(uuid, data);
+      const updated = await updateObject(id, data);
       return reply.send(updated);
     },
   );
@@ -85,7 +85,7 @@ export default async function objectRoutes(fastify: FastifyInstance) {
       schema: {
         tags: ["Objects"],
         summary: "Batch import business objects",
-        body: z.array(BusinessObjectSchema.omit({ uuid: true })),
+        body: z.array(BusinessObjectSchema.omit({ id: true })),
         response: {
           201: z.object({
             count: z.number(),
@@ -97,14 +97,14 @@ export default async function objectRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       const dataList = request.body as Omit<
         {
-          uuid: string;
           id: string;
-          name: string;
+          code: string | null;
+          name: string | null;
+          description: string | null;
           modelId: string;
-          modelName: string;
           status?: string;
         },
-        "uuid"
+        "id"
       >[];
       const items = await createManyObjects(dataList);
       return reply.status(201).send({ count: items.length, items });
@@ -112,12 +112,12 @@ export default async function objectRoutes(fastify: FastifyInstance) {
   );
 
   fastify.delete(
-    "/:uuid",
+    "/:id",
     {
       schema: {
         tags: ["Objects"],
         summary: "Delete a business object",
-        params: z.object({ uuid: z.string() }),
+        params: z.object({ id: z.string() }),
         response: {
           200: z.object({ success: z.boolean() }),
           ...errors,
@@ -125,12 +125,12 @@ export default async function objectRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const { uuid } = request.params as { uuid: string };
-      const obj = await findObjectByUuid(uuid);
+      const { id } = request.params as { id: string };
+      const obj = await findObjectById(id);
       if (!obj) {
         return reply.status(404).send({ error: "Object not found" });
       }
-      await deleteObject(uuid);
+      await deleteObject(id);
       return reply.send({ success: true });
     },
   );

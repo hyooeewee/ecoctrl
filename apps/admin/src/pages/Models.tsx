@@ -85,7 +85,7 @@ export default function Models() {
   const [isSaving, setIsSaving] = useState(false);
   const [editFile, setEditFile] = useState<File | null>(null);
   const [editFileDeleted, setEditFileDeleted] = useState(false);
-  const [editDeviceType, setEditDeviceType] = useState("");
+  const [editCode, setEditCode] = useState("");
 
   // Objects tab state
   const [objects, setObjects] = useState<BusinessObject[]>([]);
@@ -145,7 +145,11 @@ export default function Models() {
   useEffect(() => {
     if (
       models.some(
-        (m) => !m.thumbnailUrl && CARD_PREVIEW_FORMATS.has(m.format.toUpperCase()) && m.fileUrl,
+        (m) =>
+          !m.thumbnailUrl &&
+          m.format &&
+          CARD_PREVIEW_FORMATS.has(m.format.toUpperCase()) &&
+          m.fileUrl,
       )
     ) {
       import("@google/model-viewer").catch(() => {});
@@ -319,9 +323,10 @@ export default function Models() {
       await fetchObjects();
       await fetchPoints();
       toast.success(
-        `导入成功：创建 ${result.createdModels} 个模型，更新 ${result.updatedModels} 个模型，` +
-          `创建 ${result.createdObjects} 个对象，更新 ${result.updatedObjects} 个对象，` +
-          `创建 ${result.createdPoints} 个点位，更新 ${result.updatedPoints} 个点位。`,
+        `导入成功：创建 ${result.createdModels} 个模型，` +
+          `创建 ${result.createdObjects} 个对象，` +
+          `创建 ${result.createdPoints} 个点位，` +
+          `跳过 ${result.skippedPoints} 个已存在点位。`,
       );
     } catch (err) {
       setImportError(err instanceof Error ? err.message : "导入失败，请重试");
@@ -351,7 +356,7 @@ export default function Models() {
     setEditModelId(model.id);
     setEditName(model.name);
     setEditVersion(model.version);
-    setEditDeviceType(model.deviceType);
+    setEditCode(model.code);
     setEditFileDeleted(false);
     setEditError("");
     setEditOpen(true);
@@ -374,13 +379,13 @@ export default function Models() {
     setEditError("");
     setEditFile(null);
     setEditFileDeleted(false);
-    setEditDeviceType("");
+    setEditCode("");
   };
 
   const handleSaveEdit = async () => {
     if (!editModelId || !editName.trim()) return;
-    if (!editDeviceType.trim()) {
-      setEditError("设备类型不能为空");
+    if (!editCode.trim()) {
+      setEditError("编码不能为空");
       return;
     }
 
@@ -390,12 +395,12 @@ export default function Models() {
       const updatePayload: {
         name: string;
         version: string;
-        deviceType: string;
+        code: string;
         fileUrl?: string | null;
       } = {
         name: editName.trim(),
         version: editVersion.trim() || "v1.0",
-        deviceType: editDeviceType.toUpperCase(),
+        code: editCode.toUpperCase(),
       };
 
       // If current file was deleted, send fileUrl: null
@@ -421,7 +426,7 @@ export default function Models() {
     }
   };
 
-  const existingDeviceTypes = [...new Set(models.map((m) => m.deviceType).filter(Boolean))];
+  const existingCodes = [...new Set(models.map((m) => m.code).filter(Boolean))];
 
   const pointColumns = useMemo<
     ColumnDef<Point & { propCount: number; objectName: string; modelName: string }>[]
@@ -694,6 +699,7 @@ export default function Models() {
                             className="h-full w-full object-cover"
                           />
                         ) : model.fileUrl &&
+                          model.format &&
                           CARD_PREVIEW_FORMATS.has(model.format.toUpperCase()) ? (
                           <model-viewer
                             src={resolveAssetUrl(model.fileUrl)}
@@ -1002,7 +1008,7 @@ export default function Models() {
       <ModelUploadWizard
         open={uploadOpen}
         onOpenChange={setUploadOpen}
-        existingDeviceTypes={existingDeviceTypes}
+        existingCodes={existingCodes}
         existingPointTypes={[]}
         onSuccess={handleUploadSuccess}
       />
@@ -1200,12 +1206,12 @@ export default function Models() {
                   htmlFor="edit-device-type"
                   className="text-sm font-medium text-foreground mb-1.5 block"
                 >
-                  设备类型
+                  编码
                 </label>
                 <Autocomplete
-                  value={editDeviceType}
-                  onValueChange={(v: string) => setEditDeviceType(v.toUpperCase())}
-                  items={existingDeviceTypes}
+                  value={editCode}
+                  onValueChange={(v: string) => setEditCode(v.toUpperCase())}
+                  items={existingCodes}
                   openOnInputClick
                   filter={() => true}
                 >
@@ -1246,7 +1252,7 @@ export default function Models() {
             <AppButton
               level="action"
               onClick={handleSaveEdit}
-              disabled={!editName.trim() || !editDeviceType.trim() || isSaving}
+              disabled={!editName.trim() || !editCode.trim() || isSaving}
               className="h-10 px-5 gap-2"
             >
               {isSaving ? (

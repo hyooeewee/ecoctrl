@@ -10,9 +10,10 @@ export const PointSchema = z.object({
   id: z.string(),
   objectId: z.string(),
   modelId: z.string(),
-  pointType: z.string(),
-  pointNo: z.string(),
-  name: z.string(),
+  type: z.string(),
+  code: z.string(),
+  name: z.string().nullable(),
+  description: z.string().nullable(),
   props: z.array(PointPropSchema).default([]),
   values: z.record(z.string(), z.string()).default({}),
 });

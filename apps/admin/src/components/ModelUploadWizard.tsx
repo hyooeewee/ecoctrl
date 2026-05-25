@@ -30,7 +30,7 @@ import type { PointItem } from "../types";
 interface ModelUploadWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  existingDeviceTypes: string[];
+  existingCodes: string[];
   existingPointTypes: string[];
   onSuccess: () => void;
 }
@@ -52,7 +52,7 @@ function getNextPointNo(points: PointItem[]): string {
 export default function ModelUploadWizard({
   open,
   onOpenChange,
-  existingDeviceTypes,
+  existingCodes,
   existingPointTypes,
   onSuccess,
 }: ModelUploadWizardProps) {
@@ -62,7 +62,7 @@ export default function ModelUploadWizard({
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadName, setUploadName] = useState("");
   const [uploadVersion, setUploadVersion] = useState("v1.0");
-  const [uploadDeviceType, setUploadDeviceType] = useState("");
+  const [uploadCode, setUploadCode] = useState("");
 
   // Step 2 state
   const [uploadPoints, setUploadPoints] = useState<PointItem[]>([]);
@@ -77,12 +77,12 @@ export default function ModelUploadWizard({
     setUploadFile(null);
     setUploadName("");
     setUploadVersion("v1.0");
-    setUploadDeviceType(existingDeviceTypes[0] ?? "");
+    setUploadCode(existingCodes[0] ?? "");
     setUploadPoints([]);
     setExpandedPointIdx(null);
     setUploadError("");
     setIsUploading(false);
-  }, [existingDeviceTypes]);
+  }, [existingCodes]);
 
   // Reset when dialog opens
   useEffect(() => {
@@ -111,7 +111,7 @@ export default function ModelUploadWizard({
       setUploadError("模型名称不能为空");
       return false;
     }
-    if (!uploadDeviceType.trim()) {
+    if (!uploadCode.trim()) {
       setUploadError("设备类型不能为空");
       return false;
     }
@@ -225,7 +225,7 @@ export default function ModelUploadWizard({
       await modelsApi.upload(uploadFile, {
         name: uploadName.trim(),
         version: uploadVersion.trim() || "v1.0",
-        deviceType: uploadDeviceType.toUpperCase(),
+        code: uploadCode.toUpperCase(),
         points: validPoints.length ? validPoints : undefined,
       });
       onOpenChange(false);
@@ -263,7 +263,7 @@ export default function ModelUploadWizard({
     [uploadPoints],
   );
 
-  const canGoNext = step === 1 ? uploadName.trim() && uploadDeviceType.trim() : true;
+  const canGoNext = step === 1 ? uploadName.trim() && uploadCode.trim() : true;
 
   // ── Render helpers ──
 
@@ -400,9 +400,9 @@ export default function ModelUploadWizard({
                     设备类型
                   </label>
                   <Autocomplete
-                    value={uploadDeviceType}
-                    onValueChange={(v: string) => setUploadDeviceType(v.toUpperCase())}
-                    items={existingDeviceTypes}
+                    value={uploadCode}
+                    onValueChange={(v: string) => setUploadCode(v.toUpperCase())}
+                    items={existingCodes}
                     openOnInputClick
                     filter={() => true}
                   >
@@ -656,7 +656,7 @@ export default function ModelUploadWizard({
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">设备类型</span>
-                      <span className="font-mono">{uploadDeviceType}</span>
+                      <span className="font-mono">{uploadCode}</span>
                     </div>
                   </div>
                 </div>
