@@ -28,6 +28,7 @@ import workflowRoutes, { registerWebhookRoute } from "@/routes/workflows";
 import aiRoutes from "@/routes/ai";
 import nodeRoutes from "@/routes/nodes";
 import petRoutes from "@/routes/pets";
+import eventsRoutes from "@/routes/events";
 import { PluginRegistry } from "@/engine/plugin-registry";
 import { getPluginStorage } from "@/storage";
 
@@ -60,6 +61,7 @@ export default async function apiRoutes(fastify: FastifyInstance) {
       "/api/webhook",
       "/api/ai/chat",
       "/api/pets",
+      "/api/events", // SSE stream uses query token auth, not Bearer header
     ];
     if (publicPaths.some((p) => request.url.startsWith(p))) return;
     try {
@@ -150,5 +152,6 @@ export default async function apiRoutes(fastify: FastifyInstance) {
   await fastify.register(aiRoutes, { prefix: "/ai" });
   await fastify.register(nodeRoutes, { prefix: "/nodes", registry });
   await fastify.register(petRoutes, { prefix: "/pets" });
+  await fastify.register(eventsRoutes, { prefix: "/events" });
   await registerWebhookRoute(fastify);
 }
