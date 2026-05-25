@@ -1,1 +1,0 @@
-ALTER TABLE "platform_configs" ALTER COLUMN "system_prompt" DROP DEFAULT;
