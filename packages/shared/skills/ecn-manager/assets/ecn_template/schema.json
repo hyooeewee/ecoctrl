@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "My Plugin Config",
+  "properties": {
+    "endpoint": {
+      "type": "string",
+      "title": "API Endpoint",
+      "description": "URL to call",
+      "default": ""
+    },
+    "timeout": {
+      "type": "integer",
+      "title": "Timeout (ms)",
+      "default": 5000,
+      "minimum": 1000,
+      "maximum": 30000
+    }
+  },
+  "required": ["endpoint"]
+}
