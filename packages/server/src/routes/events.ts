@@ -19,10 +19,6 @@ export default async function eventsRoutes(fastify: FastifyInstance) {
         tags: ["Events"],
         summary: "Get a short-lived token for SSE connection",
         security: [{ bearerAuth: [] }],
-        response: {
-          200: z.object({ token: z.string(), expiresIn: z.number() }),
-          401: z.object({ error: z.string() }),
-        },
       },
     },
     async (request, reply) => {
