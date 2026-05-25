@@ -15,7 +15,7 @@ export function createPgNotifyListener(sql: postgres.Sql<Record<string, never>>)
   return {
     async start(channel: string, callback: NotifyCallback) {
       activeCallback = callback;
-      unsubscribeFn = await sql.listen(channel, (payload) => {
+      const meta = await sql.listen(channel, (payload) => {
         try {
           const parsed = JSON.parse(payload) as SSEEvent;
           if (activeCallback) activeCallback(parsed);
@@ -23,6 +23,11 @@ export function createPgNotifyListener(sql: postgres.Sql<Record<string, never>>)
           // Silently drop malformed payloads
         }
       });
+      unsubscribeFn = async () => {
+        if (meta?.unsubscribe) {
+          await meta.unsubscribe();
+        }
+      };
     },
     async stop() {
       activeCallback = null;
