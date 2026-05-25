@@ -201,9 +201,15 @@ await fastify.register(apiRoutes, { prefix: "/api" });
 const notifySql = postgres(env.DATABASE_URL, { prepare: false });
 const notifyListener = createPgNotifyListener(notifySql);
 await notifyListener.start("sse_events", (event) => {
-  // Broadcast all DB-originated events to all connected clients
-  // In production, filter by userId or event scope as needed
-  sseManager.broadcast(event);
+  const payload = (event as unknown as Record<string, unknown>).payload as
+    | Record<string, unknown>
+    | undefined;
+  const targetUserId = payload?._targetUserId as string | undefined;
+  if (targetUserId) {
+    sseManager.broadcast(event, targetUserId);
+  } else {
+    sseManager.broadcast(event);
+  }
 });
 fastify.log.info("PostgreSQL NOTIFY listener started on channel 'sse_events'");
 

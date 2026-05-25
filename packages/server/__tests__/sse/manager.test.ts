@@ -72,4 +72,39 @@ describe("SSEManager", () => {
     expect(written).toContain("data:");
     expect(written).toContain("\n\n");
   });
+
+  it("should broadcast with userId to matching connections only", () => {
+    const write1 = vi.fn();
+    const write2 = vi.fn();
+    manager.add("user-1", { raw: { write: write1 } as unknown as NodeJS.WritableStream });
+    manager.add("user-2", { raw: { write: write2 } as unknown as NodeJS.WritableStream });
+
+    manager.broadcast(
+      {
+        type: "alert",
+        payload: { msg: "hello" },
+        timestamp: new Date().toISOString(),
+      },
+      "user-1",
+    );
+
+    expect(write1).toHaveBeenCalledTimes(1);
+    expect(write2).not.toHaveBeenCalled();
+  });
+
+  it("should broadcast without userId to all connections", () => {
+    const write1 = vi.fn();
+    const write2 = vi.fn();
+    manager.add("user-1", { raw: { write: write1 } as unknown as NodeJS.WritableStream });
+    manager.add("user-2", { raw: { write: write2 } as unknown as NodeJS.WritableStream });
+
+    manager.broadcast({
+      type: "alert",
+      payload: { msg: "hello" },
+      timestamp: new Date().toISOString(),
+    });
+
+    expect(write1).toHaveBeenCalledTimes(1);
+    expect(write2).toHaveBeenCalledTimes(1);
+  });
 });

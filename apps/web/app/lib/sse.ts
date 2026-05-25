@@ -22,6 +22,8 @@ export class SSEClient {
   private heartbeatTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private isDisposed = false;
+  private reconnectDelay = 1000;
+  private reconnectAttempt = 0;
   private url: string;
   private options: SSEClientOptions;
 
@@ -60,10 +62,13 @@ export class SSEClient {
       return;
     }
 
+    this.resetReconnectDelay();
+
     const fullUrl = `${this.url}?token=${encodeURIComponent(token)}`;
     this.es = new EventSource(fullUrl);
 
     this.es.onopen = () => {
+      this.resetReconnectDelay();
       this.options.onConnect?.();
       this.resetHeartbeat();
     };
@@ -104,9 +109,16 @@ export class SSEClient {
 
   private scheduleReconnect(): void {
     if (this.isDisposed) return;
+    this.reconnectAttempt++;
     this.reconnectTimer = setTimeout(() => {
       void this.connect();
-    }, 3000);
+    }, this.reconnectDelay);
+    this.reconnectDelay = Math.min(this.reconnectDelay * 2, 30000);
+  }
+
+  private resetReconnectDelay(): void {
+    this.reconnectDelay = 1000;
+    this.reconnectAttempt = 0;
   }
 
   private resetHeartbeat(): void {
