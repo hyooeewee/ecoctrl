@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { getDb } from "@/config/database";
 import type { SSEEvent } from "@/sse/types";
 
@@ -7,7 +8,7 @@ import type { SSEEvent } from "@/sse/types";
  */
 export async function emitSseEvent(event: SSEEvent): Promise<void> {
   const db = getDb();
-  await db.execute(`SELECT pg_notify('sse_events', ${JSON.stringify(JSON.stringify(event))})`);
+  await db.execute(sql`SELECT pg_notify('sse_events', ${JSON.stringify(event)})`);
 }
 
 /**
