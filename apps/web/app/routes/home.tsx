@@ -9,11 +9,14 @@ import { DashboardHeader } from "~/components/dashboard/dashboard-header";
 import { DashboardNav } from "~/components/dashboard/dashboard-nav";
 import { DashboardWidgets } from "~/components/dashboard/widgets";
 import { fetchDashboardData, type DashboardData } from "~/lib/dashboard-api";
+import { API_PREFIX } from "~/lib/env";
 import { fetchPublicModel, type PublicModelData } from "~/lib/model-api";
 import { cn } from "~/lib/utils";
 import { locale, useLocale } from "~/locales";
 import { useAuthStore } from "~/store/auth";
 import { useSettingsStore, type BentoLayoutItem } from "~/store/settings";
+import { useWidgetDataStore } from "~/store/widgetData";
+import { useSse } from "~/hooks/use-sse";
 
 import type { Route } from "./+types/home";
 
@@ -106,6 +109,28 @@ export default function Home() {
   const buildingRef = useRef<BuildingViewRef>(null);
   const layoutSnapshotRef = useRef<BentoLayoutItem[] | null>(null);
   const hasSnappedRef = useRef(false);
+
+  // ─── SSE: real-time widget data ───────────────────────────────────────────────
+
+  const setWidgetData = useWidgetDataStore((s) => s.setWidgetData);
+  const removeWidgetData = useWidgetDataStore((s) => s.removeWidgetData);
+
+  useSse({
+    url: `${API_PREFIX}/events`,
+    enabled: isLoggedIn,
+    onMessage: (msg) => {
+      if (msg.type === "widget_update") {
+        const { widgetId, data } = msg.payload as {
+          widgetId: string;
+          data: Record<string, unknown>;
+        };
+        setWidgetData(widgetId, data);
+      } else if (msg.type === "widget_delete") {
+        const { widgetId } = msg.payload as { widgetId: string };
+        removeWidgetData(widgetId);
+      }
+    },
+  });
 
   // Immersive mode is triggered by either fullscreen button or clicking a label.
   const isImmersive = fullscreen || activeLabel !== null;
