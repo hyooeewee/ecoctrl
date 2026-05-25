@@ -23,17 +23,17 @@ export interface NodeDetail {
 
 export const nodesApi = {
   getAll: async (): Promise<NodeDefinition[]> => {
-    return get("/api/nodes");
+    return get("/nodes");
   },
 
   getById: async (id: string): Promise<NodeDetail> => {
-    return get(`/api/nodes/${id}`);
+    return get(`/nodes/${id}`);
   },
 
   install: async (file: File): Promise<{ id: string; version: string; name: string }> => {
     const formData = new FormData();
     formData.append("file", file);
-    return post("/api/nodes/install", formData, {
+    return post("/nodes/install", formData, {
       headers: {},
     });
   },
@@ -43,6 +43,6 @@ export const nodesApi = {
   },
 
   reload: async (): Promise<{ message: string }> => {
-    return post("/api/nodes/reload", {});
+    return post("/nodes/reload", {});
   },
 };
