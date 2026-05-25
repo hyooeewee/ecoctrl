@@ -1,0 +1,11 @@
+{
+  "id": "my-plugin",
+  "name": "My Plugin",
+  "version": "1.0.0",
+  "category": "action",
+  "description": "Describe what this plugin does",
+  "entry": "backend.js",
+  "schema": "schema.json",
+  "author": "",
+  "minEngineVersion": ""
+}
