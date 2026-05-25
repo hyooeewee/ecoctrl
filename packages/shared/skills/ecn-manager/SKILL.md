@@ -54,8 +54,25 @@ Do NOT use generic defaults. Derive every value from the stated purpose:
 | `description`   | One sentence summarizing what the node does                                                                                                                                                                                   |
 | `config fields` | Infer the minimal useful fields from the purpose. A sensor reader needs `endpoint` + `interval`; a threshold alert needs `threshold` + `comparison`.                                                                          |
 | `version`       | Always `1.0.0`                                                                                                                                                                                                                |
-| `icon`          | Always `icon.svg` (placeholder)                                                                                                                                                                                               |
+| `icon_svg`      | AI generates a semantic Lucide-style SVG string based on purpose (see below). Passed as `icon_svg` in the JSON payload. If omitted, a generic placeholder is used.                                                            |
 | `author`        | Empty (omitted from manifest)                                                                                                                                                                                                 |
+
+**Icon generation rules:**
+
+- Always generate a 24x24 Lucide-style SVG: `xmlns="http://www.w3.org/2000/svg"`, `width="24"`, `height="24"`, `viewBox="0 0 24 24"`, `fill="none"`, `stroke="currentColor"`, `stroke-width="2"`, `stroke-linecap="round"`, `stroke-linejoin="round"`
+- Derive the icon shape from the node purpose:
+  - cron / schedule / timer → `clock` or `timer`
+  - email / mail / notify → `mail` or `bell`
+  - database / storage → `database`
+  - API / HTTP / webhook → `globe` or `webhook`
+  - sensor / metric / read → `activity` or `gauge`
+  - alert / warning → `alert-triangle`
+  - energy / power → `zap`
+  - file / export / import → `file-text`
+  - filter / condition → `filter`
+  - calculate / math → `calculator`
+  - default fallback → `box` (same as the placeholder)
+- Pass the complete SVG string as the `icon_svg` field in the `--json` payload. The script writes it to `icon.svg`.
 
 ### 2. Scaffold (new node)
 
@@ -87,7 +104,7 @@ Pass a single JSON string with all fields:
   "description": "...",
   "author": "...",
   "color": "#3b82f6",
-  "icon": "icon.svg",
+  "icon_svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83\"/></svg>",
   "fields": [
     {
       "name": "threshold",
@@ -107,7 +124,7 @@ If the script is unavailable, write the 4 files directly with `Write` into a fol
 - `<plugin-id>/manifest.json`
 - `<plugin-id>/backend.js`
 - `<plugin-id>/schema.json`
-- `<plugin-id>/icon.svg` (placeholder)
+- `<plugin-id>/icon.svg`
 
 ### 3. Implement backend.js
 
