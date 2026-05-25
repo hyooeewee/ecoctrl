@@ -54,7 +54,7 @@ async function resolveAssetDir(scriptDir: string, subdir: string): Promise<strin
   return candidates[0]; // fallback to first, let the caller fail with a clear error
 }
 
-async function initBuiltInNodes() {
+async function initBuiltInNodes(force = false) {
   const baseDir = await resolveAssetDir(__dirname, "built-in-nodes");
 
   const storage = getPluginStorage();
@@ -72,13 +72,20 @@ async function initBuiltInNodes() {
 
     const manifestRaw = await fs.readFile(manifestPath, "utf-8");
     const manifest = JSON.parse(manifestRaw) as PluginManifest;
-    const buildKey = (filename: string) => `${manifest.id}/${manifest.version}/${filename}`;
+    const buildKey = (filename: string) => `plugins/${manifest.id}/${manifest.version}/${filename}`;
 
-    if (await storage.exists(buildKey("manifest.json"))) {
+    const exists = await storage.exists(buildKey("manifest.json"));
+    if (exists && !force) {
       console.log(
         `[init] built-in node ${manifest.id}@${manifest.version} already seeded, skipping`,
       );
       continue;
+    }
+
+    if (exists && force) {
+      console.log(
+        `[init] built-in node ${manifest.id}@${manifest.version} already seeded, force overwriting`,
+      );
     }
 
     await storage.put(buildKey("manifest.json"), Buffer.from(manifestRaw));
@@ -618,6 +625,11 @@ async function initBuiltInPets() {
 }
 
 async function main() {
+  const force = process.argv.slice(2).some((arg) => arg === "--force" || arg === "-f");
+  if (force) {
+    console.log("[init] --force flag set, will overwrite existing built-in nodes");
+  }
+
   console.log("[init] ensuring database exists...");
   await ensureDatabase();
   console.log("[init] running migrations...");
@@ -626,7 +638,7 @@ async function main() {
 
   console.log("[init] checking database state...");
   await initS3Buckets();
-  await initBuiltInNodes();
+  await initBuiltInNodes(force);
   await initBuiltInPets();
   await initUsers();
   await initPlatformConfig();

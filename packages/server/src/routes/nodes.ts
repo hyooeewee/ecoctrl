@@ -12,6 +12,7 @@ const nodeDetailSchema = z.object({
   category: z.enum(["trigger", "action", "condition"]),
   description: z.string().optional(),
   icon: z.string().optional(),
+  color: z.string().optional(),
   schema: z.record(z.string(), z.unknown()),
 });
 
@@ -43,6 +44,7 @@ export default async function nodeRoutes(
           category: p.manifest.category,
           description: p.manifest.description,
           icon: p.iconSvg,
+          color: p.manifest.color,
           schema: p.schema,
         })),
       );

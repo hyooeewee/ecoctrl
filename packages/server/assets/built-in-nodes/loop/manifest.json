@@ -5,5 +5,7 @@
   "category": "action",
   "entry": "backend.js",
   "schema": "schema.json",
-  "description": "循环执行子流程"
+  "description": "循环执行子流程",
+  "icon": "icon.svg",
+  "color": "#06b6d4"
 }

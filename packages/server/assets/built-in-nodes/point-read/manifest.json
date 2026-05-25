@@ -5,5 +5,7 @@
   "category": "action",
   "entry": "backend.js",
   "schema": "schema.json",
-  "description": "通过 IoT 网关读取点位值"
+  "description": "通过 IoT 网关读取点位值",
+  "icon": "icon.svg",
+  "color": "#10b981"
 }

@@ -5,5 +5,7 @@
   "category": "action",
   "entry": "backend.js",
   "schema": "schema.json",
-  "description": "流程结束节点"
+  "description": "流程结束节点",
+  "icon": "icon.svg",
+  "color": "#f43f5e"
 }

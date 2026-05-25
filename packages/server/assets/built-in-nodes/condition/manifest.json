@@ -5,5 +5,7 @@
   "category": "condition",
   "entry": "backend.js",
   "schema": "schema.json",
-  "description": "分支条件判断"
+  "description": "分支条件判断",
+  "icon": "icon.svg",
+  "color": "#f59e0b"
 }
