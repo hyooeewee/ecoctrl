@@ -89,6 +89,9 @@ export function createDevProxy(
   return { proxy };
 }
 
+// Empty default export prevents VS Code Vitest extension from erroring
+export default {};
+
 export const viteConfig = {
   staged: { "*": "vp check" },
   fmt: {},
