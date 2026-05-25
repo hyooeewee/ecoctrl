@@ -1,4 +1,4 @@
-import { get, post, del } from "./request";
+import { get, post, postForm, del } from "./request";
 
 export interface NodeDefinition {
   id: string;
@@ -34,9 +34,7 @@ export const nodesApi = {
   install: async (file: File): Promise<{ id: string; version: string; name: string }> => {
     const formData = new FormData();
     formData.append("file", file);
-    return post("/nodes/install", formData, {
-      headers: {},
-    });
+    return postForm("/nodes/install", formData);
   },
 
   uninstall: async (id: string, version: string): Promise<void> => {

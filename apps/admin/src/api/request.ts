@@ -144,6 +144,9 @@ export const get = <T>(path: string, options?: RequestOptions) =>
 export const post = <T>(path: string, body?: unknown, options?: RequestOptions) =>
   request<T>(path, { ...options, method: "POST", body: body ? JSON.stringify(body) : undefined });
 
+export const postForm = <T>(path: string, formData: FormData, options?: RequestOptions) =>
+  request<T>(path, { ...options, method: "POST", body: formData });
+
 export const put = <T>(path: string, body?: unknown, options?: RequestOptions) =>
   request<T>(path, { ...options, method: "PUT", body: body ? JSON.stringify(body) : undefined });
 
