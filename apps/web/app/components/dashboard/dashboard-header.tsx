@@ -9,9 +9,15 @@ export interface DashboardHeaderProps {
   className?: string;
   onLogoClick?: () => void;
   navVisible?: boolean;
+  sseStatus?: "connected" | "reconnecting" | "disconnected";
 }
 
-export function DashboardHeader({ className, onLogoClick, navVisible }: DashboardHeaderProps) {
+export function DashboardHeader({
+  className,
+  onLogoClick,
+  navVisible,
+  sseStatus = "connected",
+}: DashboardHeaderProps) {
   const t = useLocale();
   const language = useSettingsStore((state) => state.language);
   const [now, setNow] = useState(() => new Date());
@@ -68,10 +74,23 @@ export function DashboardHeader({ className, onLogoClick, navVisible }: Dashboar
 
           {/* Content inside badge */}
           <div className="relative z-10 flex items-center gap-2.5">
-            {/* Green pulse dot */}
+            {/* SSE connection status indicator */}
             <span className="relative flex size-2">
-              <span className="bg-cyber-green absolute inline-flex size-full animate-ping rounded-full opacity-70" />
-              <span className="bg-cyber-green relative inline-flex size-2 rounded-full shadow-[0_0_8px_#22c55e]" />
+              {sseStatus === "connected" && (
+                <>
+                  <span className="bg-cyber-green absolute inline-flex size-full animate-ping rounded-full opacity-70" />
+                  <span className="bg-cyber-green relative inline-flex size-2 rounded-full shadow-[0_0_8px_#22c55e]" />
+                </>
+              )}
+              {sseStatus === "reconnecting" && (
+                <>
+                  <span className="bg-amber-400 absolute inline-flex size-full animate-ping rounded-full opacity-70" />
+                  <span className="bg-amber-400 relative inline-flex size-2 rounded-full shadow-[0_0_8px_#fbbf24]" />
+                </>
+              )}
+              {sseStatus === "disconnected" && (
+                <span className="bg-red-500 relative inline-flex size-2 rounded-full shadow-[0_0_8px_#ef4444]" />
+              )}
             </span>
 
             <span className="font-heading text-foreground/95 text-[15px] font-semibold tracking-[0.15em]">
