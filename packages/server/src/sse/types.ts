@@ -34,3 +34,14 @@ export interface WorkflowStatusPayload {
   status: "running" | "completed" | "failed";
   message?: string;
 }
+
+export interface WidgetUpdatePayload {
+  widgetId: string;
+  type: "stat" | "chart" | "list" | "weather";
+  data: Record<string, unknown>;
+}
+
+export interface WidgetEventMap {
+  widget_update: WidgetUpdatePayload;
+  widget_delete: { widgetId: string };
+}
