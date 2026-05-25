@@ -7,6 +7,7 @@ import { eq, asc, sql } from "drizzle-orm";
 import type { DashboardStats, EnergyChartItem, Alert, WidgetConfig } from "@ecoctrl/shared";
 import { fetchWeather } from "@/services/weather";
 import { findUserSettings } from "@/repositories/userSettings";
+import { emitWidgetUpdate } from "@/lib/widgetPublisher";
 
 // Grid carbon emission factor: ~0.785 kg CO₂/kWh (China average)
 const CARBON_FACTOR = 0.785;
@@ -36,7 +37,7 @@ export async function findDashboardStats(): Promise<DashboardStats> {
 
   // TODO: Compute real trends from historical business data once we have
   // multi-period readings in energyReadings / objects / alerts.
-  return {
+  const stats: DashboardStats = {
     totalEnergy: {
       value: totalEnergy.toLocaleString(),
       unit: "kWh",
@@ -61,12 +62,46 @@ export async function findDashboardStats(): Promise<DashboardStats> {
       trend: "-4.2%",
       trendType: "down",
     },
-  } as unknown as DashboardStats;
+  };
+
+  // Emit SSE widget update events for each stat
+  await emitWidgetUpdate("energy-total", "stat", {
+    value: stats.totalEnergy.value,
+    unit: stats.totalEnergy.unit,
+    trend: stats.totalEnergy.trend,
+    trendType: stats.totalEnergy.trendType,
+  });
+  await emitWidgetUpdate("online-rate", "stat", {
+    value: stats.onlineRate.value,
+    unit: stats.onlineRate.unit,
+    trend: stats.onlineRate.trend,
+    trendType: stats.onlineRate.trendType,
+  });
+  await emitWidgetUpdate("pending-alerts", "stat", {
+    value: stats.pendingAlerts.value,
+    unit: stats.pendingAlerts.unit,
+    trend: stats.pendingAlerts.trend,
+    trendType: stats.pendingAlerts.trendType,
+  });
+  await emitWidgetUpdate("carbon-emission", "stat", {
+    value: stats.carbonEmission.value,
+    unit: stats.carbonEmission.unit,
+    trend: stats.carbonEmission.trend,
+    trendType: stats.carbonEmission.trendType,
+  });
+
+  return stats as unknown as DashboardStats;
 }
 
 export async function findEnergyChart(): Promise<EnergyChartItem[]> {
   const rows = await db.select().from(energyReadings);
-  return rows.map((r) => ({ name: r.hour, value: r.kWh }));
+  const chartData = rows.map((r) => ({ name: r.hour, value: r.kWh }));
+
+  await emitWidgetUpdate("energy-chart", "chart", {
+    data: chartData,
+  });
+
+  return chartData;
 }
 
 export async function findManyAlerts(limit?: number): Promise<Alert[]> {
@@ -79,6 +114,12 @@ export async function findManyAlerts(limit?: number): Promise<Alert[]> {
     time: r.time,
     status: r.status as "pending" | "resolved",
   }));
+
+  await emitWidgetUpdate("alerts-list", "list", {
+    items: limit && limit > 0 ? result.slice(0, limit) : result,
+    count: result.length,
+  });
+
   if (limit && limit > 0) {
     return result.slice(0, limit);
   }
@@ -160,6 +201,17 @@ export async function findDashboardData(userId?: string): Promise<{
       layoutY: override?.y ?? r.layoutY,
       layoutW: override?.w ?? r.layoutW,
       layoutH: override?.h ?? r.layoutH,
+    });
+  }
+
+  // Emit weather widget update when weather data is included
+  if (weatherData) {
+    await emitWidgetUpdate("weather", "weather", {
+      location: weatherData.location,
+      currentTemp: weatherData.currentTemp,
+      unit: weatherData.unit,
+      condition: weatherData.condition,
+      forecast: weatherData.forecast,
     });
   }
 
