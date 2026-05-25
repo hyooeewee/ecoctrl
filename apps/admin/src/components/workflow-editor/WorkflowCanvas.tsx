@@ -39,7 +39,10 @@ import { useWorkflowHistory } from "./hooks/useWorkflowHistory";
 import { useWorkflowKeyboard } from "./hooks/useWorkflowKeyboard";
 import { useWorkflowPersistence } from "./hooks/useWorkflowPersistence";
 import { DragNodePreview } from "./nodes/DragNodePreview";
-import { BUILT_IN_NODE_TYPES, PLUGIN_NODE_SHELLS, COMPONENT_CATEGORIES } from "./constants";
+import UnifiedNodeShell from "./nodes/UnifiedNodeShell";
+import { PluginNodesContext } from "./nodes-context";
+import { CATEGORY_LABELS } from "./constants";
+import type { ComponentCategory, NodeType } from "./types";
 
 import { WorkflowToolbar } from "./WorkflowToolbar";
 import { WorkflowLibrary } from "./WorkflowLibrary";
@@ -652,35 +655,36 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
     [nodes, handleAddNodeFromHandle],
   );
 
-  // Dynamic node types including plugin nodes
+  // All nodes use UnifiedNodeShell for consistent rendering
   const nodeTypes = useMemo(() => {
-    const types: Record<string, React.ComponentType<any>> = { ...BUILT_IN_NODE_TYPES };
+    const types: Record<string, React.ComponentType<any>> = {};
     for (const plugin of pluginNodes) {
-      const Shell = PLUGIN_NODE_SHELLS[plugin.category];
-      if (Shell) types[plugin.id] = Shell;
+      types[plugin.id] = UnifiedNodeShell;
     }
     return types;
   }, [pluginNodes]);
 
-  // Component categories with plugin section
+  // Component categories grouped by node category from API — no special "plugins" bucket
   const componentCategories = useMemo(() => {
-    const categories = [...COMPONENT_CATEGORIES];
-    const builtInIds = new Set(Object.keys(BUILT_IN_NODE_TYPES));
-    const externalPlugins = pluginNodes.filter((p) => !builtInIds.has(p.id));
-    if (externalPlugins.length > 0) {
-      categories.push({
-        id: "plugins",
-        label: "插件节点",
-        items: externalPlugins.map((p) => ({
-          type: p.id,
-          label: p.name,
-          description: p.description || "",
-          icon: LayoutTemplate,
-          colorClass: "bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400",
-        })),
+    const groups = new Map<string, ComponentCategory>();
+
+    for (const plugin of pluginNodes) {
+      const catId = plugin.category;
+      const label = CATEGORY_LABELS[catId] ?? catId;
+
+      if (!groups.has(catId)) {
+        groups.set(catId, { id: catId, label, items: [] });
+      }
+      groups.get(catId)!.items.push({
+        type: plugin.id as NodeType,
+        label: plugin.name,
+        description: plugin.description || "",
+        iconSvg: plugin.icon,
+        color: plugin.color,
       });
     }
-    return categories;
+
+    return Array.from(groups.values());
   }, [pluginNodes]);
 
   // Warn before closing tab with unsaved changes
@@ -874,75 +878,77 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
             }
           `}</style>
           <div className="flex-1 overflow-hidden">
-            <ReactFlow
-              nodes={nodesWithCallbacks}
-              edges={edges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              onConnectStart={onConnectStart}
-              onConnectEnd={onConnectEnd}
-              onNodeClick={onNodeClick}
-              onPaneClick={onPaneClick}
-              onNodeDragStop={onNodeDragStop}
-              onDragOver={onDragOver}
-              onDrop={onDrop}
-              onDragEnd={onDragEnd}
-              onInit={setRfInstance}
-              nodeTypes={nodeTypes}
-              onSelectionChange={({ nodes }) => setSelectedNodeIds(nodes.map((n) => n.id))}
-              onPaneContextMenu={(e) => {
-                e.preventDefault();
-                const wrapper = reactFlowWrapper.current;
-                if (!wrapper) return;
-                const rect = wrapper.getBoundingClientRect();
-                setContextMenu({
-                  x: e.clientX - rect.left,
-                  y: e.clientY - rect.top,
-                  visible: true,
-                  target: "pane",
-                });
-              }}
-              onNodeContextMenu={(e, node) => {
-                e.preventDefault();
-                const wrapper = reactFlowWrapper.current;
-                if (!wrapper) return;
-                const rect = wrapper.getBoundingClientRect();
-                const el = wrapper.querySelector(`[data-id="${node.id}"]`);
-                let x = node.position.x;
-                let y = node.position.y;
-                if (el) {
-                  const elRect = el.getBoundingClientRect();
-                  x = elRect.left - rect.left + elRect.width / 2;
-                  y = elRect.top - rect.top + elRect.height / 2;
-                }
-                setContextMenu({ x, y, visible: true, target: "node" });
-              }}
-              selectionOnDrag
-              panOnDrag={[1, 2]}
-              panOnScroll
-              fitView
-              attributionPosition="bottom-right"
-              deleteKeyCode={["Backspace", "Delete"]}
-            >
-              <Background
-                variant={BackgroundVariant.Dots}
-                gap={20}
-                size={1}
-                className="bg-zinc-50 dark:bg-zinc-950"
-              />
-              <Controls className="!bg-white !shadow-sm dark:!bg-zinc-900">
-                <ControlButton onClick={handleAutoLayout} title="自动布局" className="border-t">
-                  <LayoutTemplate size={16} />
-                </ControlButton>
-              </Controls>
-              <MiniMap
-                className="!bg-white/80 !shadow-sm dark:!bg-zinc-900/80"
-                nodeStrokeWidth={3}
-                zoomable
-                pannable
-              />
-            </ReactFlow>
+            <PluginNodesContext.Provider value={pluginNodes}>
+              <ReactFlow
+                nodes={nodesWithCallbacks}
+                edges={edges}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onConnect={onConnect}
+                onConnectStart={onConnectStart}
+                onConnectEnd={onConnectEnd}
+                onNodeClick={onNodeClick}
+                onPaneClick={onPaneClick}
+                onNodeDragStop={onNodeDragStop}
+                onDragOver={onDragOver}
+                onDrop={onDrop}
+                onDragEnd={onDragEnd}
+                onInit={setRfInstance}
+                nodeTypes={nodeTypes}
+                onSelectionChange={({ nodes }) => setSelectedNodeIds(nodes.map((n) => n.id))}
+                onPaneContextMenu={(e) => {
+                  e.preventDefault();
+                  const wrapper = reactFlowWrapper.current;
+                  if (!wrapper) return;
+                  const rect = wrapper.getBoundingClientRect();
+                  setContextMenu({
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top,
+                    visible: true,
+                    target: "pane",
+                  });
+                }}
+                onNodeContextMenu={(e, node) => {
+                  e.preventDefault();
+                  const wrapper = reactFlowWrapper.current;
+                  if (!wrapper) return;
+                  const rect = wrapper.getBoundingClientRect();
+                  const el = wrapper.querySelector(`[data-id="${node.id}"]`);
+                  let x = node.position.x;
+                  let y = node.position.y;
+                  if (el) {
+                    const elRect = el.getBoundingClientRect();
+                    x = elRect.left - rect.left + elRect.width / 2;
+                    y = elRect.top - rect.top + elRect.height / 2;
+                  }
+                  setContextMenu({ x, y, visible: true, target: "node" });
+                }}
+                selectionOnDrag
+                panOnDrag={[1, 2]}
+                panOnScroll
+                fitView
+                attributionPosition="bottom-right"
+                deleteKeyCode={["Backspace", "Delete"]}
+              >
+                <Background
+                  variant={BackgroundVariant.Dots}
+                  gap={20}
+                  size={1}
+                  className="bg-zinc-50 dark:bg-zinc-950"
+                />
+                <Controls className="!bg-white !shadow-sm dark:!bg-zinc-900">
+                  <ControlButton onClick={handleAutoLayout} title="自动布局" className="border-t">
+                    <LayoutTemplate size={16} />
+                  </ControlButton>
+                </Controls>
+                <MiniMap
+                  className="!bg-white/80 !shadow-sm dark:!bg-zinc-900/80"
+                  nodeStrokeWidth={3}
+                  zoomable
+                  pannable
+                />
+              </ReactFlow>
+            </PluginNodesContext.Provider>
 
             {/* Context menu */}
             <ContextMenu

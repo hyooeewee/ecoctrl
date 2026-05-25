@@ -7,6 +7,7 @@ export interface NodeDefinition {
   category: "trigger" | "action" | "condition";
   description?: string;
   icon?: string;
+  color?: string;
   schema: Record<string, unknown>;
 }
 

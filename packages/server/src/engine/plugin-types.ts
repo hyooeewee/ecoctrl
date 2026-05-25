@@ -7,6 +7,7 @@ export interface PluginManifest {
   entry: string;
   schema: string;
   icon?: string;
+  color?: string;
   author?: string;
   minEngineVersion?: string;
 }

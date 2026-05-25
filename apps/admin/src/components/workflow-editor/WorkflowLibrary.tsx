@@ -1,6 +1,6 @@
-import { Search, X, ChevronRight, ChevronDown, ChevronLeft } from "lucide-react";
+import { Search, X, ChevronRight, ChevronDown, ChevronLeft, LayoutTemplate } from "lucide-react";
 import { Input } from "@ecoctrl/ui/input";
-import type { ComponentCategory } from "./constants";
+import type { ComponentCategory } from "./types";
 
 interface WorkflowLibraryProps {
   libraryOpen: boolean;
@@ -76,30 +76,38 @@ export function WorkflowLibrary({
                     </span>
                   </button>
                   {!isCollapsed &&
-                    category.items.map((item) => {
-                      const Icon = item.icon;
-                      return (
+                    category.items.map((item) => (
+                      <div
+                        key={item.type}
+                        draggable
+                        onDragStart={(e) => onDragStart(e, item.type)}
+                        onDragEnd={onDragEnd}
+                        className="flex cursor-grab items-center gap-2.5 rounded-md px-2 py-2 transition-colors hover:bg-zinc-200 dark:hover:bg-zinc-800 active:cursor-grabbing"
+                      >
                         <div
-                          key={item.type}
-                          draggable
-                          onDragStart={(e) => onDragStart(e, item.type)}
-                          onDragEnd={onDragEnd}
-                          className="flex cursor-grab items-center gap-2.5 rounded-md px-2 py-2 transition-colors hover:bg-zinc-200 dark:hover:bg-zinc-800 active:cursor-grabbing"
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
+                          style={{
+                            backgroundColor: (item.color ?? "#94a3b8") + "26",
+                            color: item.color ?? "#94a3b8",
+                          }}
                         >
-                          <div
-                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${item.colorClass}`}
-                          >
-                            <Icon size={14} />
-                          </div>
-                          <div className="flex min-w-0 flex-col">
-                            <span className="truncate text-xs font-medium">{item.label}</span>
-                            <span className="text-muted-foreground truncate text-[10px]">
-                              {item.description}
-                            </span>
-                          </div>
+                          {item.iconSvg ? (
+                            <div
+                              dangerouslySetInnerHTML={{ __html: item.iconSvg }}
+                              className="h-4 w-4"
+                            />
+                          ) : (
+                            <LayoutTemplate size={14} />
+                          )}
                         </div>
-                      );
-                    })}
+                        <div className="flex min-w-0 flex-col">
+                          <span className="truncate text-xs font-medium">{item.label}</span>
+                          <span className="text-muted-foreground truncate text-[10px]">
+                            {item.description}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
                 </div>
               );
             })}

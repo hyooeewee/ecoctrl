@@ -11,6 +11,7 @@ const manifestSchema = z.object({
   entry: z.string().default("backend.js"),
   schema: z.string().default("schema.json"),
   icon: z.string().optional(),
+  color: z.string().optional(),
   author: z.string().optional(),
   minEngineVersion: z.string().optional(),
 });

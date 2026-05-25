@@ -117,3 +117,19 @@ export interface PluginNodeDefinition {
   schema: Record<string, unknown>;
   version: string;
 }
+
+export interface ComponentItem {
+  type: NodeType;
+  label: string;
+  description: string;
+  iconSvg?: string; // SVG string from plugin node API
+  colorClass: string;
+  /** Handle colors for drag preview: left = target, right = source */
+  handles?: { left?: string; right?: string; condition?: boolean };
+}
+
+export interface ComponentCategory {
+  id: string;
+  label: string;
+  items: ComponentItem[];
+}
