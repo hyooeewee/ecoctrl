@@ -1,13 +1,11 @@
 import { API_PREFIX } from "../lib/env";
-
-const ACCESS_TOKEN_KEY = "accessToken";
-const REFRESH_TOKEN_KEY = "refreshToken";
+import { auth } from "../lib/auth";
 
 let isRefreshing = false;
 let refreshQueue: Array<(token: string | null) => void> = [];
 
 async function doRefresh(): Promise<string | null> {
-  const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+  const refreshToken = auth.getRefreshToken();
   if (!refreshToken) return null;
 
   try {
@@ -18,12 +16,11 @@ async function doRefresh(): Promise<string | null> {
     });
     if (!res.ok) throw new Error("Refresh failed");
     const data = (await res.json()) as { accessToken: string; refreshToken: string };
-    localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
-    localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
+    auth.setAccessToken(data.accessToken);
+    auth.setRefreshToken(data.refreshToken);
     return data.accessToken;
   } catch {
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
+    auth.clear();
     return null;
   }
 }
@@ -119,7 +116,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     url += `?${qs}`;
   }
 
-  const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
+  const accessToken = auth.getAccessToken();
   const res = await doRequest(url, init, accessToken);
   if (res.status === 204 || res.headers.get("content-length") === "0") {
     return undefined as T;
@@ -137,7 +134,7 @@ export async function fetchRaw(path: string, options: RequestOptions = {}): Prom
     url += `?${qs}`;
   }
 
-  const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
+  const accessToken = auth.getAccessToken();
   return doRequest(url, init, accessToken);
 }
 
