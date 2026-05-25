@@ -16,29 +16,23 @@ function normalizeNodeId(id: string): string {
 export function usePluginNodes() {
   const [pluginNodes, setPluginNodes] = useState<NodeDefinition[]>([]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    nodesApi
-      .getAll()
-      .then((nodes) => {
-        if (!cancelled) {
-          setPluginNodes(
-            nodes.map((n) => ({
-              ...n,
-              id: normalizeNodeId(n.id),
-            })),
-          );
-        }
-      })
-      .catch(() => {
-        // Silently ignore fetch errors; consumer can observe empty pluginNodes.
-      });
-
-    return () => {
-      cancelled = true;
-    };
+  const refresh = useCallback(async () => {
+    try {
+      const nodes = await nodesApi.getAll();
+      setPluginNodes(
+        nodes.map((n) => ({
+          ...n,
+          id: normalizeNodeId(n.id),
+        })),
+      );
+    } catch {
+      // Silently ignore fetch errors.
+    }
   }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   const getNodeDef = useCallback(
     (nodeType: string): NodeDefinition | null => {
@@ -50,5 +44,6 @@ export function usePluginNodes() {
   return {
     pluginNodes,
     getNodeDef,
+    refresh,
   };
 }

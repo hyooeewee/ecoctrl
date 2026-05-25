@@ -31,6 +31,7 @@ import { Kbd } from "@ecoctrl/ui/kbd";
 
 import { workflowsApi } from "@/api/workflows";
 import { pointsApi } from "@/api/points";
+import { nodesApi } from "@/api/nodes";
 import type { WorkflowDSL, WorkflowListItem, EnvVar } from "./types";
 import { dslToReactFlow, getDefaultSettings } from "./transform";
 import { autoLayout } from "./layout";
@@ -58,7 +59,7 @@ interface WorkflowCanvasProps {
 export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasProps) {
   const [nodes, setNodes, _onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, _onEdgesChange] = useEdgesState<Edge>([]);
-  const { pluginNodes, getNodeDef } = usePluginNodes();
+  const { pluginNodes, getNodeDef, refresh: refreshPluginNodes } = usePluginNodes();
   const { undo } = useWorkflowHistory();
 
   const [dsl, setDsl] = useState<WorkflowDSL | null>(null);
@@ -66,6 +67,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
   const [envVars, setEnvVars] = useState<EnvVar[]>([]);
   const [settings, setSettings] =
     useState<NonNullable<WorkflowDSL["settings"]>>(getDefaultSettings());
+  const [uploadingNode, setUploadingNode] = useState(false);
 
   const {
     saving,
@@ -621,6 +623,21 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
     });
   }, [edges, setNodes, rfInstance, _pushHistory]);
 
+  const handleUploadNode = useCallback(
+    async (file: File) => {
+      setUploadingNode(true);
+      try {
+        await nodesApi.install(file);
+        await refreshPluginNodes();
+      } catch (err) {
+        // silently fail
+      } finally {
+        setUploadingNode(false);
+      }
+    },
+    [refreshPluginNodes],
+  );
+
   // Keyboard shortcuts
   useWorkflowKeyboard({
     nodesRef,
@@ -855,6 +872,8 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
           }
           onDragStart={handleDragStart}
           onDragEnd={onDragEnd}
+          onUpload={handleUploadNode}
+          uploading={uploadingNode}
         />
 
         {/* Canvas */}
