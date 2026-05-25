@@ -53,7 +53,9 @@ export class SSEClient {
       const data = (await res.json()) as { token: string };
       token = data.token;
     } catch (err) {
-      this.options.onError?.(err instanceof Error ? new Event(err.message) : new Event("token-error"));
+      this.options.onError?.(
+        err instanceof Error ? new Event(err.message) : new Event("token-error"),
+      );
       this.scheduleReconnect();
       return;
     }

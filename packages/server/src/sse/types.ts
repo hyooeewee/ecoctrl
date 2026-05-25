@@ -14,12 +14,7 @@ export interface SSEConnection {
   connectedAt: number;
 }
 
-export type SSEEventType =
-  | "alert"
-  | "device_update"
-  | "workflow_status"
-  | "notification"
-  | "ping";
+export type SSEEventType = "alert" | "device_update" | "workflow_status" | "notification" | "ping";
 
 export interface AlertPayload {
   severity: "info" | "warning" | "error";

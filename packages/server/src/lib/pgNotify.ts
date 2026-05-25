@@ -24,14 +24,14 @@ export function createPgNotifyListener(sql: postgres.Sql<Record<string, never>>)
         }
       });
       unsubscribeFn = async () => {
-        // postgres.js listen returns an unsubscribe function directly or via meta
-        if (typeof meta === "function") {
-          await meta();
-        } else if (
-          meta &&
-          typeof (meta as { unsubscribe?: () => Promise<void> }).unsubscribe === "function"
-        ) {
-          await (meta as { unsubscribe: () => Promise<void> }).unsubscribe();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const m = meta as any;
+        if (typeof m === "function") {
+          await m();
+        } else if (m && typeof m.unlisten === "function") {
+          await m.unlisten();
+        } else if (m && typeof m.unsubscribe === "function") {
+          await m.unsubscribe();
         }
       };
     },
