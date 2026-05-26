@@ -177,19 +177,25 @@ async function injectApi(context: ivm.Context, api: PluginApi): Promise<void> {
   });
   await context.global.set("__context_data", contextCopy.copyInto());
 
-  // IoT
+  // IoT (all methods are async)
   await context.evalClosure(
-    `globalThis.__iot_readPoint = function(name) { return $0.applySync(undefined, [name], { result: { copy: true } }); }`,
+    `globalThis.__iot_readPoint = async function(name) {
+      return await $0.apply(undefined, [name], { arguments: { copy: true }, result: { copy: true, promise: true } });
+    }`,
     [(name: string) => api.iot.readPoint(name)],
     { arguments: { reference: true } },
   );
   await context.evalClosure(
-    `globalThis.__iot_readPoints = function(names) { return $0.applySync(undefined, [names], { arguments: { copy: true }, result: { copy: true } }); }`,
+    `globalThis.__iot_readPoints = async function(names) {
+      return await $0.apply(undefined, [names], { arguments: { copy: true }, result: { copy: true, promise: true } });
+    }`,
     [(names: string[]) => api.iot.readPoints(names)],
     { arguments: { reference: true } },
   );
   await context.evalClosure(
-    `globalThis.__iot_writePoint = function(name, values) { return $0.applySync(undefined, [name, values], { arguments: { copy: true } }); }`,
+    `globalThis.__iot_writePoint = async function(name, values) {
+      return await $0.apply(undefined, [name, values], { arguments: { copy: true }, result: { copy: true, promise: true } });
+    }`,
     [(name: string, values: Record<string, unknown>) => api.iot.writePoint(name, values)],
     { arguments: { reference: true } },
   );
@@ -297,9 +303,9 @@ async function injectApi(context: ivm.Context, api: PluginApi): Promise<void> {
       },
       context: __context_data,
       iot: {
-        readPoint: function(name) { return __iot_readPoint(name); },
-        readPoints: function(names) { return __iot_readPoints(names); },
-        writePoint: function(name, values) { return __iot_writePoint(name, values); }
+        readPoint: async function(name) { return await __iot_readPoint(name); },
+        readPoints: async function(names) { return await __iot_readPoints(names); },
+        writePoint: async function(name, values) { return await __iot_writePoint(name, values); }
       },
       notify: {
         send: function(options) { return __notify_send(options); },
