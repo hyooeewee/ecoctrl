@@ -49,15 +49,6 @@ export async function executePluginNode(
     dryRun,
   );
 
-  if (dryRun) {
-    return {
-      _dryRun: true,
-      pluginId: plugin.id,
-      version: plugin.version,
-      config: node.config,
-    };
-  }
-
   const result = await executeInSandbox(plugin.backendCode, sandboxCtx, api);
   return result;
 }
