@@ -90,6 +90,7 @@ export default function UnifiedNodeShell({ data, selected, id }: NodeProps) {
     <div
       className={`flex w-[280px] items-center gap-3 rounded-2xl border bg-white px-5 py-4 shadow-md transition-all dark:bg-zinc-900 ${ringClass}`}
       style={ringStyle}
+      title={`ID: ${id}`}
     >
       {/* Target handles */}
       {handles.targets?.map((t, i) =>

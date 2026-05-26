@@ -1,0 +1,17 @@
+{
+  "type": "object",
+  "title": "Point Write",
+  "description": "Write a value to an IoT point. Supports {{nodeId.value}} expressions to reference upstream node outputs.",
+  "properties": {
+    "pointName": {
+      "type": "string",
+      "title": "Point Name",
+      "description": "The IoT point to write to"
+    },
+    "value": {
+      "title": "Value",
+      "description": "Value to write. Use {{nodeId.value}} to reference upstream outputs, e.g. {{read_node.value}}"
+    }
+  },
+  "required": ["pointName", "value"]
+}

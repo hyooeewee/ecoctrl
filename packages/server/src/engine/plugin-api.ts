@@ -10,6 +10,7 @@ import {
   readPointProperties,
 } from "@/services/iot/points";
 import { evaluateExpression, evaluateBoolean } from "./expr";
+import { buildVars } from "./template";
 import { createTransport } from "nodemailer";
 import { findPlatformConfig } from "@/repositories/platformConfig";
 import { db } from "@/config/database";
@@ -183,11 +184,11 @@ export function createPluginApi(
 
     expr: {
       evaluateBoolean: (expression: string) => {
-        const vars = Object.fromEntries(ctx.variables);
+        const vars = buildVars(ctx);
         return evaluateBoolean(expression, vars);
       },
       evaluateExpression: (expression: string) => {
-        const vars = Object.fromEntries(ctx.variables);
+        const vars = buildVars(ctx);
         return evaluateExpression(expression, vars);
       },
     },
