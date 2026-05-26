@@ -82,6 +82,7 @@ async function processJob(job: Job<ExecutionJobData>): Promise<void> {
             log.status,
             log.durationMs,
             log.error,
+            log.output,
           );
         },
       },

@@ -30,6 +30,7 @@ export async function publishWorkflowNodeStatus(
   status: WorkflowNodeStatusPayload["status"],
   durationMs?: number,
   error?: string,
+  output?: Record<string, unknown>,
 ): Promise<void> {
   const payload: WorkflowNodeStatusPayload = {
     workflowId,
@@ -40,6 +41,7 @@ export async function publishWorkflowNodeStatus(
     status,
     durationMs,
     error,
+    output,
     timestamp: new Date().toISOString(),
   };
   await emitEvent("workflow_node_status", payload);
