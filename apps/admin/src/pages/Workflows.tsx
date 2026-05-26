@@ -1,4 +1,16 @@
-import { Plus, Pencil, Trash2, Play, Loader2, Workflow, History, Search, X } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Play,
+  Loader2,
+  Workflow,
+  History,
+  Search,
+  X,
+  Wifi,
+  WifiOff,
+} from "lucide-react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -29,6 +41,9 @@ import { Badge } from "@ecoctrl/ui/badge";
 import { Tabs, TabsContent } from "@ecoctrl/ui/tabs";
 
 import { useAppStore } from "@/store/appStore";
+import { useSseStore } from "@/store/sseStore";
+import { useSseEvents } from "@/hooks/useSseEvents";
+import type { SseWorkflowExecution } from "@/types/sse";
 import { workflowsApi } from "@/api/workflows";
 import type { WorkflowListItem } from "@/components/workflow-editor/types";
 import { WorkflowCanvas } from "@/components/workflow-editor";
@@ -63,9 +78,40 @@ export default function Workflows() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [triggerLoadingId, setTriggerLoadingId] = useState<string | null>(null);
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
+  const [recentExecutions, setRecentExecutions] = useState<SseWorkflowExecution[]>([]);
 
   const activeTab = useAppStore((state) => state.workflowsTab);
   const setActiveTab = useAppStore((state) => state.setWorkflowsTab);
+  const sseStatus = useSseStore((state) => state.status);
+
+  const [runningExecutions, setRunningExecutions] = useState<Record<string, SseWorkflowExecution>>(
+    {},
+  );
+  const { onWorkflowExecution } = useSseEvents();
+
+  useEffect(() => {
+    const remove = onWorkflowExecution((exec) => {
+      setRecentExecutions((prev) => {
+        const idx = prev.findIndex((e) => e.executionId === exec.executionId);
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = exec;
+          return next;
+        }
+        return [exec, ...prev].slice(0, 50);
+      });
+      if (exec.status === "running") {
+        setRunningExecutions((prev) => ({ ...prev, [exec.workflowId]: exec }));
+      } else if (exec.status === "completed" || exec.status === "failed") {
+        setRunningExecutions((prev) => {
+          const next = { ...prev };
+          delete next[exec.workflowId];
+          return next;
+        });
+      }
+    });
+    return remove;
+  }, [onWorkflowExecution]);
 
   const fetchWorkflows = useCallback(async () => {
     setLoading(true);
@@ -188,13 +234,27 @@ export default function Workflows() {
       {
         accessorKey: "enabled",
         header: "状态",
-        cell: ({ row }) => (
-          <Switch
-            checked={row.original.enabled}
-            onCheckedChange={(v) => handleToggleEnabled(row.original.id, v)}
-            size="sm"
-          />
-        ),
+        cell: ({ row }) => {
+          const running = runningExecutions[row.original.id];
+          return (
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={row.original.enabled}
+                onCheckedChange={(v) => handleToggleEnabled(row.original.id, v)}
+                size="sm"
+              />
+              {running && (
+                <Badge
+                  variant="outline"
+                  className="h-5 gap-1 px-1.5 text-[10px] text-amber-600 border-amber-300"
+                >
+                  <Loader2 size={10} className="animate-spin" />
+                  运行中
+                </Badge>
+              )}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "version",
@@ -260,7 +320,7 @@ export default function Workflows() {
         ),
       },
     ],
-    [handleToggleEnabled, handleTrigger, triggerLoadingId, openEditor],
+    [handleToggleEnabled, handleTrigger, triggerLoadingId, openEditor, runningExecutions],
   );
 
   const table = useReactTable({
@@ -302,10 +362,34 @@ export default function Workflows() {
                   </CardTitle>
                   <CardDescription>管理工作流定义与触发配置</CardDescription>
                 </div>
-                <Button onClick={openCreate}>
-                  <Plus size={16} className="mr-1.5" />
-                  新建工作流
-                </Button>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`h-2 w-2 rounded-full ${
+                        sseStatus === "connected"
+                          ? "bg-green-500"
+                          : sseStatus === "connecting"
+                            ? "bg-yellow-500 animate-pulse"
+                            : sseStatus === "error"
+                              ? "bg-red-500"
+                              : "bg-gray-400"
+                      }`}
+                    />
+                    <span className="text-muted-foreground text-xs">
+                      {sseStatus === "connected"
+                        ? "实时已连接"
+                        : sseStatus === "connecting"
+                          ? "连接中..."
+                          : sseStatus === "error"
+                            ? "连接错误"
+                            : "未连接"}
+                    </span>
+                  </div>
+                  <Button onClick={openCreate}>
+                    <Plus size={16} className="mr-1.5" />
+                    新建工作流
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="flex-1 overflow-auto">
@@ -413,9 +497,74 @@ export default function Workflows() {
 
         <TabsContent value="executions" className="mt-0 flex h-full flex-col">
           <Card className="flex h-full flex-col overflow-hidden">
-            <CardContent className="flex flex-1 flex-col items-center justify-center gap-4">
-              <History size={48} className="text-muted-foreground/30" />
-              <p className="text-muted-foreground">执行记录功能开发中</p>
+            <CardHeader className="shrink-0 pb-3">
+              <CardTitle className="flex items-center gap-2">
+                <History size={18} />
+                执行记录
+              </CardTitle>
+              <CardDescription>最近 50 条工作流执行记录（实时更新）</CardDescription>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-auto">
+              {recentExecutions.length === 0 ? (
+                <div className="flex h-full flex-col items-center justify-center gap-4">
+                  <History size={48} className="text-muted-foreground/30" />
+                  <p className="text-muted-foreground">暂无执行记录</p>
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>工作流 ID</TableHead>
+                        <TableHead>执行 ID</TableHead>
+                        <TableHead>状态</TableHead>
+                        <TableHead>耗时</TableHead>
+                        <TableHead>时间</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {recentExecutions.map((exec) => (
+                        <TableRow key={exec.executionId}>
+                          <TableCell className="font-mono text-xs">
+                            {exec.workflowId.slice(0, 8)}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs">
+                            {exec.executionId.slice(0, 8)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                exec.status === "completed"
+                                  ? "default"
+                                  : exec.status === "failed"
+                                    ? "destructive"
+                                    : exec.status === "running"
+                                      ? "secondary"
+                                      : "outline"
+                              }
+                              className={exec.status === "running" ? "animate-pulse" : ""}
+                            >
+                              {exec.status === "completed"
+                                ? "已完成"
+                                : exec.status === "failed"
+                                  ? "失败"
+                                  : exec.status === "running"
+                                    ? "运行中"
+                                    : "待定"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {exec.durationMs ? `${exec.durationMs}ms` : "-"}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {new Date(exec.timestamp).toLocaleString("zh-CN")}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
