@@ -1,5 +1,5 @@
 {
-  "id": "point-read",
+  "id": "point_read",
   "name": "点位读取",
   "version": "1.0.0",
   "category": "action",
