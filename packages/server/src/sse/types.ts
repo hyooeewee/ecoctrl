@@ -45,3 +45,29 @@ export interface WidgetEventMap {
   widget_update: WidgetUpdatePayload;
   widget_delete: { widgetId: string };
 }
+
+// ========================================
+// Workflow execution events
+// ========================================
+
+export interface WorkflowNodeStatusPayload {
+  workflowId: string;
+  executionId: string;
+  nodeId: string;
+  nodeName: string;
+  nodeType: string;
+  status: "running" | "completed" | "failed" | "skipped";
+  durationMs?: number;
+  error?: string;
+  timestamp: string;
+}
+
+export interface WorkflowExecutionPayload {
+  workflowId: string;
+  executionId: string;
+  status: "pending" | "running" | "completed" | "failed";
+  triggerData?: Record<string, unknown>;
+  errorMessage?: string | null;
+  durationMs?: number;
+  timestamp: string;
+}
