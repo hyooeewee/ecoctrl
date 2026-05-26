@@ -8,14 +8,17 @@ import { API_PREFIX } from "~/lib/env";
 
 export type { SSEMessage };
 
-export interface SSEClientOptions extends Omit<BaseOptions, "getToken"> {}
+export interface SSEClientOptions extends Omit<BaseOptions, "getToken"> {
+  onTokenError?: (error: unknown) => boolean;
+}
 
 export class SSEClient {
   private client: BaseSSEClient;
 
   constructor(url: string, options: SSEClientOptions) {
+    const { onTokenError, ...rest } = options;
     this.client = new BaseSSEClient(url, {
-      ...options,
+      ...rest,
       getToken: async () => {
         const { accessToken } = useAuthStore.getState();
         if (!accessToken) throw new Error("No auth");
@@ -23,13 +26,13 @@ export class SSEClient {
           method: "POST",
           headers: {
             Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
           },
         });
         if (!res.ok) throw new Error(`Token request failed: ${res.status}`);
         const data = (await res.json()) as { token: string };
         return data.token;
       },
+      onTokenError,
     });
   }
 

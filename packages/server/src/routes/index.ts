@@ -61,8 +61,10 @@ export default async function apiRoutes(fastify: FastifyInstance) {
       "/api/webhook",
       "/api/ai/chat",
       "/api/pets",
-      "/api/events", // SSE stream uses query token auth, not Bearer header
     ];
+    // SSE stream (GET /api/events) uses query token auth, not Bearer header
+    const pathname = request.url.split("?")[0];
+    if (request.method === "GET" && pathname === "/api/events") return;
     if (publicPaths.some((p) => request.url.startsWith(p))) return;
     try {
       await request.jwtVerify();
