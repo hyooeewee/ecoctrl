@@ -8,6 +8,7 @@ import { PluginRegistry } from "@/engine/plugin-registry";
 import { getPluginStorage } from "@/storage";
 import { getLogger } from "@/lib/logger";
 import { env } from "@/lib/env";
+import { publishWorkflowExecution, publishWorkflowNodeStatus } from "@/lib/eventPublisher";
 import type { ExecutionJobData } from "./pgboss";
 
 const logger = getLogger("queue");
@@ -40,6 +41,8 @@ async function processJob(job: Job<ExecutionJobData>): Promise<void> {
     .set({ status: "running", startedAt: new Date() })
     .where(eq(workflowExecutions.id, executionId));
 
+  await publishWorkflowExecution(workflowId, executionId, "running", triggerData);
+
   try {
     const workflow = await findWorkflowById(workflowId);
     if (!workflow) {
@@ -68,6 +71,20 @@ async function processJob(job: Job<ExecutionJobData>): Promise<void> {
       false,
       workflowId,
       executionId,
+      {
+        onNodeLog: async (log) => {
+          await publishWorkflowNodeStatus(
+            workflowId,
+            executionId,
+            log.nodeId,
+            log.nodeName,
+            log.nodeType,
+            log.status,
+            log.durationMs,
+            log.error,
+          );
+        },
+      },
     );
 
     const durationMs = Date.now() - startTime;
@@ -89,6 +106,15 @@ async function processJob(job: Job<ExecutionJobData>): Promise<void> {
         durationMs,
       })
       .where(eq(workflowExecutions.id, executionId));
+
+    await publishWorkflowExecution(
+      workflowId,
+      executionId,
+      result.status,
+      triggerData,
+      result.error ?? null,
+      durationMs,
+    );
   } catch (error) {
     await db
       .update(workflowExecutions)
@@ -99,6 +125,16 @@ async function processJob(job: Job<ExecutionJobData>): Promise<void> {
         durationMs: 0,
       })
       .where(eq(workflowExecutions.id, executionId));
+
+    await publishWorkflowExecution(
+      workflowId,
+      executionId,
+      "failed",
+      triggerData,
+      (error as Error).message,
+      0,
+    );
+
     throw error;
   }
 }
