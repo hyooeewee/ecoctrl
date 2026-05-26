@@ -39,6 +39,11 @@ export function useSse(options: UseSseOptions): UseSseResult {
         setIsConnected(false);
         setIsReconnecting(true);
       },
+      onTokenError: () => {
+        setIsConnected(false);
+        setIsReconnecting(false);
+        return true; // stop reconnecting
+      },
       onMessage: (msg) => {
         setLastMessage(msg);
         onMessage?.(msg);

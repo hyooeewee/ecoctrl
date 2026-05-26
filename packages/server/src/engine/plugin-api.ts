@@ -317,10 +317,18 @@ async function safeHttp(
   const timer = setTimeout(() => controller.abort(), timeout);
 
   try {
-    const fetchBody: string | undefined =
+    const hasBody = ["post", "put", "patch"].includes(method.toLowerCase());
+    let fetchBody: string | undefined =
       options?.body && typeof options.body === "object"
         ? JSON.stringify(options.body)
         : (options?.body as string | undefined);
+
+    // When Content-Type is application/json but body is empty, send empty JSON object
+    const contentType = options?.headers?.["Content-Type"] ?? options?.headers?.["content-type"];
+    if (hasBody && !fetchBody && contentType?.includes("application/json")) {
+      fetchBody = "{}";
+    }
+
     const response = await fetch(url, {
       method,
       headers: options?.headers,

@@ -12,10 +12,14 @@ export interface SSEClientOptions {
   onConnect?: () => void;
   onDisconnect?: () => void;
   onError?: (error: Event) => void;
+  /** Called when getToken fails repeatedly. Return true to stop reconnecting. */
+  onTokenError?: (error: unknown) => boolean;
   heartbeatTimeoutMs?: number;
+  maxReconnectAttempts?: number;
 }
 
 const DEFAULT_HEARTBEAT_TIMEOUT = 60000;
+const DEFAULT_MAX_RECONNECT = 10;
 
 export class SSEClient {
   private es: EventSource | null = null;
@@ -42,6 +46,10 @@ export class SSEClient {
       this.options.onError?.(
         err instanceof Error ? new Event(err.message) : new Event("token-error"),
       );
+      // If onTokenError returns true, stop reconnecting
+      if (this.options.onTokenError?.(err)) {
+        return;
+      }
       this.scheduleReconnect();
       return;
     }
@@ -94,6 +102,11 @@ export class SSEClient {
   private scheduleReconnect(): void {
     if (this.isDisposed) return;
     this.reconnectAttempt++;
+    const max = this.options.maxReconnectAttempts ?? DEFAULT_MAX_RECONNECT;
+    if (this.reconnectAttempt >= max) {
+      this.options.onError?.(new Event("max-reconnect-attempts"));
+      return;
+    }
     this.reconnectTimer = setTimeout(() => {
       void this.connect();
     }, this.reconnectDelay);

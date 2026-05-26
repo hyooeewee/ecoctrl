@@ -21,6 +21,10 @@ export function useSse() {
 
   const connect = useCallback(() => {
     if (clientRef.current) return;
+    if (!auth.getAccessToken()) {
+      setStatus("disconnected");
+      return;
+    }
 
     const client = new SSEClient("/api/events", {
       getToken: async () => {
@@ -30,12 +34,17 @@ export function useSse() {
           method: "POST",
           headers: {
             Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
           },
         });
         if (!res.ok) throw new Error(`Token request failed: ${res.status}`);
         const data = (await res.json()) as { token: string };
         return data.token;
+      },
+      onTokenError: () => {
+        // Stop reconnecting on auth failures
+        setStatus("error");
+        setError("Authentication failed");
+        return true;
       },
       onConnect: () => {
         setStatus("connected");
@@ -44,7 +53,8 @@ export function useSse() {
       onDisconnect: () => {
         setStatus("disconnected");
       },
-      onError: () => {
+      onError: (err) => {
+        console.error("[SSE]", err);
         setStatus("error");
         setError("Connection error");
       },
