@@ -21,6 +21,10 @@ interface InternalExecutionState {
   executionId: string;
 }
 
+export interface ExecutionCallbacks {
+  onNodeLog?: (log: NodeLogEntry) => void | Promise<void>;
+}
+
 function getOutgoingEdges(nodeId: string, edges: WorkflowEdge[]): WorkflowEdge[] {
   return edges.filter((e) => e.source === nodeId);
 }
@@ -53,6 +57,7 @@ async function executeNode(
   dsl: WorkflowDSL,
   registry: PluginRegistry | null,
   dryRun = false,
+  callbacks: ExecutionCallbacks = {},
 ): Promise<Record<string, unknown>> {
   const ctx = state.context;
   const log = createLogEntry(node, "running");
@@ -77,6 +82,9 @@ async function executeNode(
     log.output = outputs;
     ctx.nodeOutputs.set(node.id, outputs);
     state.completed.add(node.id);
+    if (callbacks.onNodeLog) {
+      await callbacks.onNodeLog(log);
+    }
     return outputs;
   } catch (error) {
     log.status = "failed";
@@ -84,6 +92,9 @@ async function executeNode(
     log.durationMs = Date.now() - startTime;
     log.error = (error as Error).message;
     state.failed.add(node.id);
+    if (callbacks.onNodeLog) {
+      await callbacks.onNodeLog(log);
+    }
 
     if (node.onError) {
       const handler = node.onError;
@@ -113,6 +124,7 @@ async function executeFromNode(
   dsl: WorkflowDSL,
   registry: PluginRegistry | null,
   dryRun = false,
+  callbacks: ExecutionCallbacks = {},
 ): Promise<void> {
   let currentNode: WorkflowNode | undefined = startNode;
   const visitedInPath = new Set<string>();
@@ -124,7 +136,7 @@ async function executeFromNode(
     visitedInPath.add(currentNode.id);
 
     try {
-      const outputs = await executeNode(currentNode, state, dsl, registry, dryRun);
+      const outputs = await executeNode(currentNode, state, dsl, registry, dryRun, callbacks);
 
       // Handle goto
       if (outputs.__goto && typeof outputs.__goto === "string") {
@@ -169,6 +181,7 @@ export async function executeWorkflow(
   dryRun = false,
   workflowId = "unknown",
   executionId = "unknown",
+  callbacks: ExecutionCallbacks = {},
 ): Promise<ExecutionResult> {
   const ctx: ExecutionContext = {
     triggerData,
@@ -197,7 +210,7 @@ export async function executeWorkflow(
   }
 
   try {
-    await executeFromNode(startNode, state, dsl, registry, dryRun);
+    await executeFromNode(startNode, state, dsl, registry, dryRun, callbacks);
 
     const endNodes = dsl.nodes.filter((n) => n.type === "end");
     const lastEnd = endNodes.find((n) => state.completed.has(n.id));
