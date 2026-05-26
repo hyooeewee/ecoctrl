@@ -22,13 +22,13 @@ export default async function eventsRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const user = request.user as { id: string } | undefined;
-      if (!user?.id) {
+      const user = request.user as { userId: string } | undefined;
+      if (!user?.userId) {
         return reply.status(401).send({ error: "Unauthorized" });
       }
 
       const token = fastify.jwt.sign(
-        { userId: user.id, purpose: "sse" },
+        { userId: user.userId, purpose: "sse" },
         { expiresIn: `${SSE_TOKEN_EXPIRY_SECONDS}s` },
       );
 
