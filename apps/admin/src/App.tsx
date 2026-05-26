@@ -8,6 +8,7 @@ import React, { useEffect, useMemo, useState } from "react";
 
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
+import { SseProvider } from "@/components/SseProvider";
 import Accounts from "@/pages/Accounts";
 import Config from "@/pages/Config";
 import Overview from "@/pages/Overview";
@@ -148,40 +149,42 @@ export default function App() {
   };
 
   return (
-    <div className="bg-background text-foreground selection:bg-primary/10 selection:text-primary flex h-screen overflow-hidden font-sans">
-      <Sidebar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        defaultCollapsed={sidebarCollapsed}
-        onCollapsedChange={setSidebarCollapsed}
-      />
-
-      <div className="flex h-full min-w-0 flex-1 flex-col">
-        <Header
+    <SseProvider>
+      <div className="bg-background text-foreground selection:bg-primary/10 selection:text-primary flex h-screen overflow-hidden font-sans">
+        <Sidebar
           activeTab={activeTab}
           setActiveTab={setActiveTab}
-          showBreadcrumb={effectivePrefs.showBreadcrumb}
-          theme={effectivePrefs.theme}
+          defaultCollapsed={sidebarCollapsed}
+          onCollapsedChange={setSidebarCollapsed}
         />
 
-        <main className="bg-background flex-1 overflow-hidden flex flex-col">
-          {activeTab === "config" ||
-          activeTab === "preferences" ||
-          activeTab === "profile" ||
-          activeTab === "workflows" ||
-          activeTab === "models" ||
-          activeTab === "settingsGroup" ||
-          activeTab === "faults" ||
-          activeTab === "energy" ? (
-            <div className="flex-1 flex flex-col overflow-hidden">{renderContent()}</div>
-          ) : (
-            <ScrollArea className="h-full w-full">
-              <div className="mx-auto max-w-[1440px] p-8 pb-12">{renderContent()}</div>
-            </ScrollArea>
-          )}
-        </main>
+        <div className="flex h-full min-w-0 flex-1 flex-col">
+          <Header
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            showBreadcrumb={effectivePrefs.showBreadcrumb}
+            theme={effectivePrefs.theme}
+          />
+
+          <main className="bg-background flex-1 overflow-hidden flex flex-col">
+            {activeTab === "config" ||
+            activeTab === "preferences" ||
+            activeTab === "profile" ||
+            activeTab === "workflows" ||
+            activeTab === "models" ||
+            activeTab === "settingsGroup" ||
+            activeTab === "faults" ||
+            activeTab === "energy" ? (
+              <div className="flex-1 flex flex-col overflow-hidden">{renderContent()}</div>
+            ) : (
+              <ScrollArea className="h-full w-full">
+                <div className="mx-auto max-w-[1440px] p-8 pb-12">{renderContent()}</div>
+              </ScrollArea>
+            )}
+          </main>
+        </div>
+        <Toaster position="top-center" />
       </div>
-      <Toaster position="top-center" />
-    </div>
+    </SseProvider>
   );
 }
