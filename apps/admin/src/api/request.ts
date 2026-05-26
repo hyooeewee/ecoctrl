@@ -32,6 +32,8 @@ function processQueue(token: string | null) {
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string>;
+  /** Skip window.location.reload() on refresh failure (e.g. for SSE). */
+  noReload?: boolean;
 }
 
 function buildHeaders(init: RequestInit, token: string | null): Record<string, string> {
@@ -44,8 +46,13 @@ function buildHeaders(init: RequestInit, token: string | null): Record<string, s
   };
 }
 
-async function doRequest(url: string, init: RequestInit, token: string | null): Promise<Response> {
-  const execute = async (tk: string | null): Promise<Response> => {
+async function doRequest(
+  url: string,
+  init: RequestInit,
+  token: string | null,
+  noReload?: boolean,
+): Promise<Response> {
+  const execute = async (tk: string | null, retried = false): Promise<Response> => {
     const res = await fetch(url, {
       headers: buildHeaders(init, tk),
       ...init,
@@ -67,6 +74,11 @@ async function doRequest(url: string, init: RequestInit, token: string | null): 
         throw new Error(message);
       }
 
+      // Already retried after a refresh — stop to prevent infinite loops.
+      if (retried) {
+        throw new Error("Unauthorized");
+      }
+
       if (!isRefreshing) {
         isRefreshing = true;
         const newToken = await doRefresh();
@@ -74,16 +86,18 @@ async function doRequest(url: string, init: RequestInit, token: string | null): 
         processQueue(newToken);
 
         if (!newToken) {
-          window.location.reload();
+          if (!noReload) {
+            window.location.reload();
+          }
           throw new Error("Session expired");
         }
 
-        return execute(newToken);
+        return execute(newToken, true);
       }
 
       return new Promise<Response>((resolve, reject) => {
         refreshQueue.push((tk2) => {
-          if (tk2) resolve(execute(tk2));
+          if (tk2) resolve(execute(tk2, true));
           else reject(new Error("Session expired"));
         });
       });
@@ -108,7 +122,7 @@ async function doRequest(url: string, init: RequestInit, token: string | null): 
 }
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { params, ...init } = options;
+  const { params, noReload, ...init } = options;
 
   let url = `${API_PREFIX}${path}`;
   if (params) {
@@ -117,7 +131,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   }
 
   const accessToken = auth.getAccessToken();
-  const res = await doRequest(url, init, accessToken);
+  const res = await doRequest(url, init, accessToken, noReload);
   if (res.status === 204 || res.headers.get("content-length") === "0") {
     return undefined as T;
   }
@@ -126,7 +140,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 
 // Like request but returns the raw Response for non-JSON bodies (e.g. file downloads).
 export async function fetchRaw(path: string, options: RequestOptions = {}): Promise<Response> {
-  const { params, ...init } = options;
+  const { params, noReload, ...init } = options;
 
   let url = `${API_PREFIX}${path}`;
   if (params) {
@@ -135,7 +149,7 @@ export async function fetchRaw(path: string, options: RequestOptions = {}): Prom
   }
 
   const accessToken = auth.getAccessToken();
-  return doRequest(url, init, accessToken);
+  return doRequest(url, init, accessToken, noReload);
 }
 
 export const get = <T>(path: string, options?: RequestOptions) =>

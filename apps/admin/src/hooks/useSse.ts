@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { SSEClient, type SSEMessage } from "@ecoctrl/shared";
 import { auth } from "@/lib/auth";
-import { API_PREFIX } from "@/lib/env";
+import { post } from "@/api/request";
 import { useSseStore } from "@/store/sseStore";
 
 export interface SseMessage {
@@ -28,16 +28,7 @@ export function useSse() {
 
     const client = new SSEClient("/api/events", {
       getToken: async () => {
-        const accessToken = auth.getAccessToken();
-        if (!accessToken) throw new Error("No auth");
-        const res = await fetch(`${API_PREFIX}/events/token`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-        if (!res.ok) throw new Error(`Token request failed: ${res.status}`);
-        const data = (await res.json()) as { token: string };
+        const data = await post<{ token: string }>("/events/token", undefined, { noReload: true });
         return data.token;
       },
       onTokenError: () => {

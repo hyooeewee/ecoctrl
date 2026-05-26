@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useSse } from "./useSse";
 import type { SseEventMap, SseEventType } from "@/types/sse";
 
@@ -35,33 +35,33 @@ export function useSseEvents() {
     return remove;
   }, [addHandler]);
 
-  function onWorkflowExecution(handler: SseEventHandler<"workflow_execution">) {
+  const onWorkflowExecution = useCallback((handler: SseEventHandler<"workflow_execution">) => {
     handlersRef.current.workflow_execution.add(handler);
     return () => {
       handlersRef.current.workflow_execution.delete(handler);
     };
-  }
+  }, []);
 
-  function onWorkflowNodeStatus(handler: SseEventHandler<"workflow_node_status">) {
+  const onWorkflowNodeStatus = useCallback((handler: SseEventHandler<"workflow_node_status">) => {
     handlersRef.current.workflow_node_status.add(handler);
     return () => {
       handlersRef.current.workflow_node_status.delete(handler);
     };
-  }
+  }, []);
 
-  function onAlert(handler: SseEventHandler<"alert">) {
+  const onAlert = useCallback((handler: SseEventHandler<"alert">) => {
     handlersRef.current.alert.add(handler);
     return () => {
       handlersRef.current.alert.delete(handler);
     };
-  }
+  }, []);
 
-  function onNotification(handler: SseEventHandler<"notification">) {
+  const onNotification = useCallback((handler: SseEventHandler<"notification">) => {
     handlersRef.current.notification.add(handler);
     return () => {
       handlersRef.current.notification.delete(handler);
     };
-  }
+  }, []);
 
   return { onWorkflowExecution, onWorkflowNodeStatus, onAlert, onNotification };
 }
