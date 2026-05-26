@@ -1,6 +1,14 @@
 import type { PluginApi, ExecutionContext } from "./plugin-types";
 import { getLogger } from "@/lib/logger";
-import { readPointValues, writePointValues } from "@/services/iot/points";
+import {
+  readPointValues,
+  writePointValues,
+  readPointHistory,
+  forceWritePointValues,
+  getAlarmConfigurations,
+  getHistoricalAlarms,
+  readPointProperties,
+} from "@/services/iot/points";
 import { evaluateExpression, evaluateBoolean } from "./expr";
 import { createTransport } from "nodemailer";
 import { findPlatformConfig } from "@/repositories/platformConfig";
@@ -70,8 +78,32 @@ export function createPluginApi(
       readPoints: async (names: string[]) => {
         return readPointValues(names);
       },
-      writePoint: async (name: string, values: Record<string, unknown>) => {
-        await writePointValues([name], values);
+      writePoint: async (name: string, value: unknown) => {
+        await writePointValues([{ pointId: name, value }]);
+      },
+      writePoints: async (points: Array<{ pointId: string; value: unknown }>) => {
+        await writePointValues(points);
+      },
+      forceWritePoint: async (name: string, value: unknown) => {
+        await forceWritePointValues([{ pointId: name, value }]);
+      },
+      readPointHistory: async (
+        name: string,
+        beginTime: string,
+        endTime: string,
+        interval?: number,
+      ) => {
+        return readPointHistory([name], beginTime, endTime, interval);
+      },
+      readPointProp: async (name: string, prop?: string) => {
+        const values = await readPointProperties([name], prop);
+        return values[name];
+      },
+      getAlarmConfigurations: async () => {
+        return getAlarmConfigurations();
+      },
+      getHistoricalAlarms: async (beginTime: string, endTime: string) => {
+        return getHistoricalAlarms(beginTime, endTime);
       },
     },
 

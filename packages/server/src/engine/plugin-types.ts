@@ -76,7 +76,18 @@ export interface PluginApi {
   iot: {
     readPoint(name: string): Promise<unknown>;
     readPoints(names: string[]): Promise<Record<string, unknown>>;
-    writePoint(name: string, values: Record<string, unknown>): Promise<void>;
+    writePoint(name: string, value: unknown): Promise<void>;
+    writePoints(points: Array<{ pointId: string; value: unknown }>): Promise<void>;
+    forceWritePoint(name: string, value: unknown): Promise<void>;
+    readPointHistory(
+      name: string,
+      beginTime: string,
+      endTime: string,
+      interval?: number,
+    ): Promise<Record<string, unknown>>;
+    readPointProp(name: string, prop?: string): Promise<unknown>;
+    getAlarmConfigurations(): Promise<Record<string, unknown>>;
+    getHistoricalAlarms(beginTime: string, endTime: string): Promise<Record<string, unknown>>;
   };
   notify: {
     send(options: {
