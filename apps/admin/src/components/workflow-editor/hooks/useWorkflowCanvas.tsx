@@ -394,6 +394,10 @@ export function useWorkflowCanvas({ workflowId, onBack }: UseWorkflowCanvasOptio
     setHandleMenu(null);
   }, []);
 
+  const onSelectionChange = useCallback(({ nodes: selectedNodes }: { nodes: Node[] }) => {
+    setSelectedNodeIds(selectedNodes.map((n) => n.id));
+  }, []);
+
   const onNodeDragStop = useCallback(() => {
     setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
     setSelectedNode(null);
@@ -857,6 +861,7 @@ export function useWorkflowCanvas({ workflowId, onBack }: UseWorkflowCanvasOptio
     onConnectEnd,
     onNodeClick,
     onPaneClick,
+    onSelectionChange,
     onNodeDragStop,
     onDragOver,
     onDrop,

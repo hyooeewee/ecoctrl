@@ -2,6 +2,7 @@ import type { WorkflowNode, WorkflowDSL, ExecutionContext, NodeLogEntry } from "
 import type { PluginRegistry } from "./plugin-registry";
 import { createPluginApi } from "./plugin-api";
 import { executeInSandbox } from "./plugin-sandbox";
+import { resolveTemplate } from "./template";
 
 interface InternalExecutionState {
   context: ExecutionContext;
@@ -27,9 +28,9 @@ export async function executePluginNode(
 
   const ctx = state.context;
 
-  // Build sandbox context
+  // Build sandbox context — node outputs are accessed via {{nodeId.key}} template syntax
   const sandboxCtx: Record<string, unknown> = {
-    config: node.config,
+    config: resolveTemplate(node.config, ctx),
     variables: Object.fromEntries(ctx.variables),
     triggerData: ctx.triggerData,
     workflowId: "", // Will be populated by caller

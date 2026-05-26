@@ -122,7 +122,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
                 onDragEnd={canvas.onDragEnd}
                 onInit={canvas.setRfInstance}
                 nodeTypes={canvas.nodeTypes}
-                onSelectionChange={({ nodes }) => canvas.setSelectedNodeIds(nodes.map((n) => n.id))}
+                onSelectionChange={canvas.onSelectionChange}
                 onPaneContextMenu={(e) => {
                   e.preventDefault();
                   const wrapper = canvas.reactFlowWrapper.current;
@@ -411,6 +411,8 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
             onDeleteNode={canvas.handleDeleteNode}
             onDuplicateNode={canvas.handleDuplicateNode}
             onClose={() => canvas.setRightPanelOpen(false)}
+            nodes={canvas.nodes}
+            edges={canvas.edges}
           />
         )}
       </div>

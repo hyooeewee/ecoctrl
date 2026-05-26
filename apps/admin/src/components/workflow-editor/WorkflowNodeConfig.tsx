@@ -1,4 +1,5 @@
-import { X, Trash2, AlertTriangle, Play, Copy } from "lucide-react";
+import { X, Trash2, AlertTriangle, Play, Copy, Check, Hash } from "lucide-react";
+import { useState, useCallback } from "react";
 import { Button } from "@ecoctrl/ui/button";
 import { Input } from "@ecoctrl/ui/input";
 import { Label } from "@ecoctrl/ui/label";
@@ -11,7 +12,7 @@ import {
   ComboboxList,
   ComboboxItem,
 } from "@ecoctrl/ui/combobox";
-import type { Node } from "@xyflow/react";
+import type { Node, Edge } from "@xyflow/react";
 import { NodeConfigPanel } from "./NodeConfigPanel";
 import type { NodeDefinition } from "@/api/nodes";
 
@@ -30,6 +31,8 @@ interface WorkflowNodeConfigProps {
   onDeleteNode: (nodeId: string) => void;
   onDuplicateNode: (nodeId: string) => void;
   onClose: () => void;
+  nodes: Node[];
+  edges: Edge[];
 }
 
 export function WorkflowNodeConfig({
@@ -47,11 +50,27 @@ export function WorkflowNodeConfig({
   onDeleteNode,
   onDuplicateNode,
   onClose,
+  nodes,
+  edges,
 }: WorkflowNodeConfigProps) {
   const config = (selectedNode.data.config as Record<string, unknown>) ?? {};
   const nodeDef = getNodeDef(selectedNodeType);
   const isPointNode = selectedNodeType === "point_read" || selectedNodeType === "point_write";
   const nodeColor = (selectedNode.data.color as string) ?? "#94a3b8";
+
+  const [copied, setCopied] = useState(false);
+  const handleCopyId = useCallback(() => {
+    navigator.clipboard.writeText(selectedNode.id).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }, [selectedNode.id]);
+
+  // Resolve upstream nodes for the expression reference helper
+  const upstreamNodes = edges
+    .filter((e) => e.target === selectedNode.id)
+    .map((e) => nodes.find((n) => n.id === e.source))
+    .filter((n): n is Node => !!n);
 
   return (
     <div className="flex w-[320px] shrink-0 flex-col border-l bg-white dark:bg-zinc-900">
@@ -71,9 +90,21 @@ export function WorkflowNodeConfig({
               ((selectedNode.data.label as string)?.charAt(0)?.toUpperCase() ?? "N")
             )}
           </span>
-          <span className="truncate text-sm font-semibold">
-            {(selectedNode.data.label as string) ?? selectedNode.type}
-          </span>
+          <div className="flex min-w-0 flex-col">
+            <span className="truncate text-sm font-semibold">
+              {(selectedNode.data.label as string) ?? selectedNode.type}
+            </span>
+            <button
+              type="button"
+              onClick={handleCopyId}
+              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+              title="点击复制节点 ID"
+            >
+              <Hash size={9} />
+              <span className="font-mono">{selectedNode.id}</span>
+              {copied && <Check size={9} className="text-emerald-500" />}
+            </button>
+          </div>
         </div>
         <div className="flex items-center gap-0.5">
           <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" title="测试运行">
@@ -196,13 +227,16 @@ export function WorkflowNodeConfig({
               )}
 
               {/* Schema-driven config panel */}
-              {nodeDef && !isPointNode && (
+              {nodeDef && (
                 <NodeConfigPanel
                   nodeId={selectedNode.id}
                   nodeName={(selectedNode.data.label as string) ?? selectedNode.id}
                   nodeType={selectedNodeType}
                   currentConfig={config}
                   schema={nodeDef.schema ?? {}}
+                  skipFields={isPointNode ? ["pointName"] : undefined}
+                  upstreamNodes={upstreamNodes}
+                  getNodeDef={getNodeDef}
                   onChange={(newConfig) =>
                     updateNodeData(selectedNode.id, {
                       config: { ...config, ...newConfig },
