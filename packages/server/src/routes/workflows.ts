@@ -286,7 +286,7 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
         dsl,
         { ...body.data, source: "test" },
         envVars,
-        null,
+        (request.server as any).pluginRegistry,
         true,
         id,
       );
