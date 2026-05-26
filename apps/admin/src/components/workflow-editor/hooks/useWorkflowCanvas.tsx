@@ -793,7 +793,10 @@ export function useWorkflowCanvas({ workflowId, onBack }: UseWorkflowCanvasOptio
         // silently fail
       })
       .finally(() => setLoading(false));
-  }, [workflowId, setNodes, setEdges, historyRef, historyIndexRef]);
+    // NOTE: intentionally omit setNodes/setEdges from deps —
+    // React Flow v12 setters are not stable references.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workflowId]);
 
   // Load point names for dropdown
   useEffect(() => {
