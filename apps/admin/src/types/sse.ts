@@ -17,6 +17,7 @@ export interface SseWorkflowNodeStatus {
   status: "running" | "completed" | "failed" | "skipped";
   durationMs?: number;
   error?: string;
+  output?: Record<string, unknown>;
   timestamp: string;
 }
 
