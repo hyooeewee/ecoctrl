@@ -32,7 +32,7 @@ export function useSse() {
         return data.token;
       },
       onTokenError: () => {
-        // Stop reconnecting on auth failures
+        clientRef.current = null;
         setStatus("error");
         setError("Authentication failed");
         return true;

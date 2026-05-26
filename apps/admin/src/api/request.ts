@@ -20,7 +20,7 @@ async function doRefresh(): Promise<string | null> {
     auth.setRefreshToken(data.refreshToken);
     return data.accessToken;
   } catch {
-    auth.clear();
+    auth.removeRefreshToken();
     return null;
   }
 }
