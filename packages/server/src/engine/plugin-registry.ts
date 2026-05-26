@@ -43,17 +43,6 @@ export class PluginRegistry {
     this.storage = storage;
   }
 
-  /** Register a built-in plugin directly (not from storage). */
-  registerBuiltin(def: PluginDefinition): void {
-    let versionMap = this.plugins.get(def.id);
-    if (!versionMap) {
-      versionMap = new Map();
-      this.plugins.set(def.id, versionMap);
-    }
-    versionMap.set(def.version, def);
-    logger.info(`[registry] Built-in plugin registered: ${def.id}@${def.version}`);
-  }
-
   async loadAll(): Promise<void> {
     this.plugins.clear();
     try {

@@ -1,5 +1,5 @@
 {
-  "id": "point-write",
+  "id": "point_write",
   "name": "点位写入",
   "version": "1.0.0",
   "category": "action",
