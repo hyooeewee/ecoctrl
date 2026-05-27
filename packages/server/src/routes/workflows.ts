@@ -267,7 +267,8 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
       }
 
       const body = (request.body as { data?: Record<string, unknown> }) ?? {};
-      const dsl = workflow.publishedDsl ?? workflow.dsl;
+      // Test always uses the current draft DSL, not the published version
+      const dsl = workflow.dsl;
 
       const serverEnv: Record<string, string> = {};
       const allowed = [
