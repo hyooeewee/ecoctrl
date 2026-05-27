@@ -30,6 +30,10 @@
       "types": "./src/components/ui/card.tsx",
       "import": "./src/components/ui/card.tsx"
     },
+    "./checkbox": {
+      "types": "./src/components/ui/checkbox.tsx",
+      "import": "./src/components/ui/checkbox.tsx"
+    },
     "./combobox": {
       "types": "./src/components/ui/combobox.tsx",
       "import": "./src/components/ui/combobox.tsx"
