@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
-import { Braces, ChevronRight, Info } from "lucide-react";
+import { Braces, ChevronDown, ChevronRight, Info } from "lucide-react";
 import type { Node } from "@xyflow/react";
 import { Label } from "@ecoctrl/ui/label";
 import { Input } from "@ecoctrl/ui/input";
@@ -9,7 +9,7 @@ import { Textarea } from "@ecoctrl/ui/textarea";
 import { Popover, PopoverTrigger, PopoverContent } from "@ecoctrl/ui/popover";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@ecoctrl/ui/hover-card";
 import type { NodeDefinition } from "@/api/nodes";
-import type { EnvVar } from "../types";
+import type { EnvVar } from "./types";
 
 // ========================================
 // JSON Schema Form Types
@@ -215,66 +215,89 @@ function ExpressionRefHelper({
           : "absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5"
       }
     >
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger
-          className={
-            triggerClassName ??
-            "flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/40 opacity-0 transition-all hover:bg-muted hover:text-muted-foreground group-hover/input:opacity-100 [&[data-popup-open]]:opacity-100"
-          }
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Braces size={13} />
-        </PopoverTrigger>
-        <PopoverContent align="end" side="bottom" sideOffset={6} className="w-72 p-3">
-          <div className="space-y-2">
-            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-              插入引用
-            </p>
-            <div className="space-y-2 max-h-[320px] overflow-y-auto">
-              {renderSection(
-                "内置函数",
-                builtinFns.map((fn) => ({ label: fn.key, expr: `{{${fn.key}}}` })),
-              )}
-              {renderSection(
-                "环境变量",
-                nonSecretVars.map((v) => ({ label: v.key, expr: `{{var.${v.key}}}` })),
-              )}
-              {renderSection(
-                "密钥",
-                secretVars.map((v) => ({ label: v.key, expr: `{{secret.${v.key}}}` })),
-              )}
-              {upstreamNodes.length > 0 &&
-                upstreamNodes.map((node) => (
-                  <div key={node.id} className="space-y-0.5">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                      节点输出
-                    </p>
-                    <p className="truncate text-xs font-medium text-foreground/70">{node.label}</p>
-                    <div className="flex flex-wrap gap-1 pl-2">
-                      {node.outputKeys.map((key) => {
-                        const expr = `{{${node.id}.${key}}}`;
-                        return (
-                          <button
-                            key={key}
-                            type="button"
-                            className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-mono text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-                            onClick={() => {
-                              onSelect(expr);
-                              setOpen(false);
-                            }}
-                          >
-                            <ChevronRight size={9} />
-                            {key}
-                          </button>
-                        );
-                      })}
+      {/* Direct click: insert {{}} and trigger autocomplete */}
+      <button
+        type="button"
+        className={
+          triggerClassName ??
+          "flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/40 opacity-0 transition-all hover:bg-muted hover:text-muted-foreground group-hover/input:opacity-100"
+        }
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect("{{}}");
+        }}
+      >
+        <Braces size={13} />
+      </button>
+
+      {/* Dropdown browse — only in inline mode (Combobox fields without autocomplete) */}
+      {isInline && (
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger
+            render={
+              <button
+                type="button"
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground/40 hover:bg-muted hover:text-muted-foreground transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ChevronDown size={10} />
+              </button>
+            }
+          />
+          <PopoverContent align="end" side="bottom" sideOffset={6} className="w-72 p-3">
+            <div className="space-y-2">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                插入引用
+              </p>
+              <div className="space-y-2 max-h-[320px] overflow-y-auto">
+                {renderSection(
+                  "内置函数",
+                  builtinFns.map((fn) => ({ label: fn.key, expr: `{{${fn.key}}}` })),
+                )}
+                {renderSection(
+                  "环境变量",
+                  nonSecretVars.map((v) => ({ label: v.key, expr: `{{var.${v.key}}}` })),
+                )}
+                {renderSection(
+                  "密钥",
+                  secretVars.map((v) => ({ label: v.key, expr: `{{secret.${v.key}}}` })),
+                )}
+                {upstreamNodes.length > 0 &&
+                  upstreamNodes.map((node) => (
+                    <div key={node.id} className="space-y-0.5">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                        节点输出
+                      </p>
+                      <p className="truncate text-xs font-medium text-foreground/70">
+                        {node.label}
+                      </p>
+                      <div className="flex flex-wrap gap-1 pl-2">
+                        {node.outputKeys.map((key) => {
+                          const expr = `{{${node.id}.${key}}}`;
+                          return (
+                            <button
+                              key={key}
+                              type="button"
+                              className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-mono text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                              onClick={() => {
+                                onSelect(expr);
+                                setOpen(false);
+                              }}
+                            >
+                              <ChevronRight size={9} />
+                              {key}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+              </div>
             </div>
-          </div>
-        </PopoverContent>
-      </Popover>
+          </PopoverContent>
+        </Popover>
+      )}
+
       <HoverCard>
         <HoverCardTrigger>
           <span className="flex h-5 w-5 shrink-0 cursor-help items-center justify-center rounded text-muted-foreground/40 hover:bg-muted hover:text-muted-foreground transition-colors">
@@ -401,14 +424,26 @@ function SchemaField({
         onChange(next);
         requestAnimationFrame(() => {
           el.focus();
-          el.setSelectionRange(start + expr.length, start + expr.length);
+          if (expr === "{{}}") {
+            // Place cursor between {{ and }} and trigger autocomplete
+            el.setSelectionRange(start + 2, start + 2);
+            setAuto({
+              active: true,
+              startPos: start,
+              query: "",
+              selectedIndex: 0,
+              candidates: allCandidates,
+            });
+          } else {
+            el.setSelectionRange(start + expr.length, start + expr.length);
+          }
         });
       } else {
         const cur = value === undefined || value === null ? "" : String(value);
         onChange(cur + expr);
       }
     },
-    [value, onChange],
+    [value, onChange, allCandidates],
   );
 
   const selectCandidate = useCallback(
