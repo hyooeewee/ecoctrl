@@ -7,7 +7,7 @@ import { Switch } from "@ecoctrl/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ecoctrl/ui/select";
 import { Textarea } from "@ecoctrl/ui/textarea";
 import { Popover, PopoverTrigger, PopoverContent } from "@ecoctrl/ui/popover";
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@ecoctrl/ui/tooltip";
+import { HoverCard, HoverCardTrigger, HoverCardContent } from "@ecoctrl/ui/hover-card";
 import type { NodeDefinition } from "@/api/nodes";
 import type { EnvVar } from "../types";
 
@@ -275,64 +275,58 @@ function ExpressionRefHelper({
           </div>
         </PopoverContent>
       </Popover>
-      <TooltipProvider delayDuration={200}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground/40 hover:bg-muted hover:text-muted-foreground transition-colors"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Info size={11} />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent
-            side="bottom"
-            align="end"
-            sideOffset={6}
-            className="max-w-[260px] space-y-1.5 text-xs"
-          >
-            <p className="font-medium">引用语法</p>
-            <div className="space-y-1 text-muted-foreground">
-              <p>
-                <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
-                  {"{{var.x}}"}
-                </code>{" "}
-                环境变量
-              </p>
-              <p>
-                <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
-                  {"{{secret.x}}"}
-                </code>{" "}
-                密钥
-              </p>
-              <p>
-                <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
-                  {"{{nodeId.key}}"}
-                </code>{" "}
-                上游节点输出
-              </p>
-              <p>
-                <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
-                  {"{{now()}}"}
-                </code>{" "}
-                /{" "}
-                <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
-                  {"{{uuid()}}"}
-                </code>{" "}
-                内置函数
-              </p>
-              <p>
-                <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
-                  {"{{ var.a + var.b }}"}
-                </code>{" "}
-                表达式
-              </p>
+      <HoverCard>
+        <HoverCardTrigger>
+          <span className="flex h-5 w-5 shrink-0 cursor-help items-center justify-center rounded text-muted-foreground/40 hover:bg-muted hover:text-muted-foreground transition-colors">
+            <Info size={11} />
+          </span>
+        </HoverCardTrigger>
+        <HoverCardContent
+          side="bottom"
+          align="end"
+          sideOffset={6}
+          className="flex w-[260px] flex-col items-start gap-2 px-3 py-2.5"
+        >
+          <p className="font-medium">引用语法</p>
+          <div className="grid gap-1.5 text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <code className="shrink-0 rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
+                {"{{var.x}}"}
+              </code>
+              <span>环境变量</span>
             </div>
-            <p className="text-[10px] text-muted-foreground/70">输入 {"{{"} 触发自动补全</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+            <div className="flex items-center gap-2">
+              <code className="shrink-0 rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
+                {"{{secret.x}}"}
+              </code>
+              <span>密钥</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <code className="shrink-0 rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
+                {"{{nodeId.key}}"}
+              </code>
+              <span>上游节点输出</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <code className="shrink-0 rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
+                {"{{now()}}"}
+              </code>
+              <span>/</span>
+              <code className="shrink-0 rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
+                {"{{uuid()}}"}
+              </code>
+              <span>内置函数</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <code className="shrink-0 rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
+                {"{{ var.a + var.b }}"}
+              </code>
+              <span>表达式</span>
+            </div>
+          </div>
+          <p className="text-[10px] text-muted-foreground/70">输入 {"{{"} 触发自动补全</p>
+        </HoverCardContent>
+      </HoverCard>
     </div>
   );
 }
