@@ -868,6 +868,7 @@ export default function Models() {
                 </div>
                 <AppButton
                   level="action"
+                  size="lg"
                   className="gap-2"
                   onClick={() => {
                     setUploadOpen(true);
@@ -896,6 +897,7 @@ export default function Models() {
                   </p>
                   <AppButton
                     level="action"
+                    size="lg"
                     className="mt-4 gap-2"
                     onClick={() => {
                       setUploadOpen(true);
@@ -1007,6 +1009,7 @@ export default function Models() {
             emptyAction={
               <AppButton
                 level="action"
+                size="lg"
                 className="mt-4 gap-2"
                 onClick={() => {
                   resetObjectForm();
@@ -1020,6 +1023,7 @@ export default function Models() {
             action={
               <AppButton
                 level="action"
+                size="lg"
                 className="gap-2"
                 onClick={() => {
                   resetObjectForm();
@@ -1075,6 +1079,7 @@ export default function Models() {
             emptyAction={
               <AppButton
                 level="action"
+                size="lg"
                 className="mt-4 gap-2"
                 onClick={() => {
                   resetImport();
@@ -1088,6 +1093,7 @@ export default function Models() {
             action={
               <AppButton
                 level="action"
+                size="lg"
                 className="gap-2"
                 onClick={() => {
                   resetImport();
