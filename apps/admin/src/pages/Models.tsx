@@ -974,11 +974,14 @@ export default function Models() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="">全部模型</SelectItem>
-                        {models.map((m) => (
-                          <SelectItem key={m.id} value={m.name}>
-                            {m.name}
-                          </SelectItem>
-                        ))}
+                        {models.map((m) => {
+                          const label = m.name ?? m.code ?? "";
+                          return (
+                            <SelectItem key={m.id} value={label}>
+                              {label}
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1139,11 +1142,14 @@ export default function Models() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="">全部模型</SelectItem>
-                        {models.map((m) => (
-                          <SelectItem key={m.id} value={m.name}>
-                            {m.name}
-                          </SelectItem>
-                        ))}
+                        {models.map((m) => {
+                          const label = m.name ?? m.code ?? "";
+                          return (
+                            <SelectItem key={m.id} value={label}>
+                              {label}
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                   </div>
