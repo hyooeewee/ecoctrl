@@ -44,6 +44,7 @@ interface WorkflowNodeConfigProps {
   canDelete: boolean;
   onDeleteNode: (nodeId: string) => void;
   onDuplicateNode: (nodeId: string) => void;
+  onTestNode?: (nodeId: string) => void;
   onClose: () => void;
   nodes: Node[];
   edges: Edge[];
@@ -69,6 +70,7 @@ export function WorkflowNodeConfig({
   canDelete,
   onDeleteNode,
   onDuplicateNode,
+  onTestNode,
   onClose,
   nodes,
   edges,
@@ -246,7 +248,13 @@ export function WorkflowNodeConfig({
 
         {/* Right-top: Controls */}
         <div className="flex items-center gap-0.5">
-          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" title="测试运行">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 shrink-0"
+            title="测试运行"
+            onClick={() => onTestNode?.(selectedNode.id)}
+          >
             <Play size={13} />
           </Button>
           <Button

@@ -151,6 +151,37 @@ export function useWorkflowPersistence(options: UseWorkflowPersistenceOptions) {
     }
   }, [workflowId]);
 
+  const handleTestNode = useCallback(
+    async (nodeId: string) => {
+      if (!workflowId) {
+        toast.error("请先保存工作流");
+        return;
+      }
+      setTesting(true);
+      try {
+        const result = await workflowsApi.test(workflowId, undefined, nodeId);
+        setTestResult(result);
+        const targetLog = result.nodeLogs?.find((log) => log.nodeId === nodeId);
+        if (result.status === "completed" && targetLog?.status === "completed") {
+          toast.success("单节点测试成功");
+        } else if (targetLog?.status === "failed") {
+          toast.error(`单节点测试失败: ${targetLog.error ?? "未知错误"}`);
+        } else {
+          toast.error(`单节点测试失败: ${result.error ?? "未知错误"}`);
+        }
+      } catch (err) {
+        const msg =
+          (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
+          "单节点测试失败";
+        toast.error(msg);
+        setTestResult(null);
+      } finally {
+        setTesting(false);
+      }
+    },
+    [workflowId],
+  );
+
   // Auto save
   useEffect(() => {
     if (!settings.autoSave?.enabled || !isDirty || !dsl) return;
@@ -174,5 +205,6 @@ export function useWorkflowPersistence(options: UseWorkflowPersistenceOptions) {
     handleSave,
     handlePublish,
     handleTestRun,
+    handleTestNode,
   };
 }

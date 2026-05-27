@@ -249,6 +249,7 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
         tags: ["Workflows"],
         summary: "Test workflow with dry run",
         params: z.object({ id: z.string().uuid() }),
+        querystring: z.object({ nodeId: z.string().optional() }),
         body: z.object({ data: z.record(z.string(), z.unknown()).optional() }),
       },
     },
@@ -267,8 +268,47 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
       }
 
       const body = (request.body as { data?: Record<string, unknown> }) ?? {};
-      // Test always uses the current draft DSL, not the published version
-      const dsl = workflow.dsl;
+      const query = request.query as { nodeId?: string };
+
+      let dsl = workflow.dsl as WorkflowDSL;
+
+      // Single-node test: build a temporary DSL with start -> target -> end
+      if (query.nodeId) {
+        const targetNode = dsl.nodes.find((n) => n.id === query.nodeId);
+        if (!targetNode) {
+          return reply.status(400).send({ error: `Node ${query.nodeId} not found in workflow` });
+        }
+        if (targetNode.type === "start" || targetNode.type === "end") {
+          return reply
+            .status(400)
+            .send({ error: `Cannot test node type '${targetNode.type}' directly` });
+        }
+
+        const startNode = dsl.nodes.find((n) => n.type === "start") ?? {
+          id: "start",
+          type: "start",
+          name: "开始",
+          config: {},
+        };
+        const endNode = dsl.nodes.find((n) => n.type === "end") ?? {
+          id: "end",
+          type: "end",
+          name: "结束",
+          config: {},
+        };
+
+        dsl = {
+          version: "1.0",
+          trigger: { type: "manual", config: {} },
+          nodes: [startNode, targetNode, endNode],
+          edges: [
+            { id: `e-start-${targetNode.id}`, source: "start", target: targetNode.id },
+            { id: `e-${targetNode.id}-end`, source: targetNode.id, target: "end" },
+          ],
+          envVars: dsl.envVars,
+          settings: dsl.settings,
+        };
+      }
 
       const serverEnv: Record<string, string> = {};
       const allowed = [
@@ -286,11 +326,11 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
         if (value) serverEnv[key] = value;
       }
 
-      const { env: workflowEnv, secrets } = splitEnvVars(dsl as WorkflowDSL);
+      const { env: workflowEnv, secrets } = splitEnvVars(dsl);
       const mergedEnv = mergeServerEnv(serverEnv, workflowEnv);
 
       const result = await executeWorkflow(
-        dsl as WorkflowDSL,
+        dsl,
         { ...body.data, source: "test" },
         mergedEnv,
         secrets,

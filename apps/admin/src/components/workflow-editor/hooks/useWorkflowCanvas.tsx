@@ -167,6 +167,7 @@ export function useWorkflowCanvas({ workflowId, onBack, onDirtyChange }: UseWork
     handleSave,
     handlePublish,
     handleTestRun,
+    handleTestNode,
   } = useWorkflowPersistence({
     dsl,
     nodes,
@@ -984,6 +985,7 @@ export function useWorkflowCanvas({ workflowId, onBack, onDirtyChange }: UseWork
     handleSave,
     handlePublish,
     handleTestRun,
+    handleTestNode,
 
     // History
     _pushHistory,

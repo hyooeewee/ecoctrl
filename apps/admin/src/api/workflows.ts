@@ -40,7 +40,7 @@ export const workflowsApi = {
   trigger: (id: string, data?: Record<string, unknown>) =>
     post<{ executionId: string }>(`/workflows/${id}/trigger`, { data }),
 
-  test: (id: string, data?: Record<string, unknown>) =>
+  test: (id: string, data?: Record<string, unknown>, nodeId?: string) =>
     post<{
       status: string;
       output?: Record<string, unknown>;
@@ -53,7 +53,7 @@ export const workflowsApi = {
         error?: string;
       }>;
       dryRun?: boolean;
-    }>(`/workflows/${id}/test`, { data }),
+    }>(`/workflows/${id}/test`, { data }, { params: nodeId ? { nodeId } : undefined }),
 
   getExecutions: (id: string, page = 1, pageSize = 20) =>
     get<PaginatedResult<unknown>>(`/workflows/${id}/executions`, {
