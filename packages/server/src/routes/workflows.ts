@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { z } from "zod";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { db } from "@/config/database";
 import { users } from "@/schemas/users";
 import { workflowExecutions } from "@/schemas/workflows";
@@ -13,6 +13,8 @@ import {
   checkWorkflowAccess,
   findWorkflowExecutions,
   findRecentExecutions,
+  deleteExecution,
+  deleteManyExecutions,
 } from "@/repositories/workflows";
 import { triggerEngine } from "@/engine/trigger";
 import { validateDsl } from "@/engine/validator";
@@ -458,6 +460,65 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
       }
 
       return reply.send(rows[0]);
+    },
+  );
+
+  // Delete single execution
+  fastify.delete(
+    "/:id/executions/:executionId",
+    {
+      schema: {
+        tags: ["Workflows"],
+        summary: "Delete workflow execution",
+        params: z.object({ id: z.string().uuid(), executionId: z.string().uuid() }),
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const payload = request.user as { userId: string };
+      const { id, executionId } = request.params as { id: string; executionId: string };
+      const role = await getUserRole(payload.userId);
+
+      if (!(await checkWorkflowAccess(id, payload.userId, role))) {
+        return reply.status(403).send({ error: "Forbidden" });
+      }
+
+      await deleteExecution(executionId);
+      return reply.status(204).send();
+    },
+  );
+
+  // Batch delete executions
+  fastify.delete(
+    "/executions",
+    {
+      schema: {
+        tags: ["Workflows"],
+        summary: "Batch delete workflow executions",
+        body: z.object({ ids: z.array(z.string().uuid()) }),
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const payload = request.user as { userId: string };
+      const { ids } = request.body as { ids: string[] };
+      const role = await getUserRole(payload.userId);
+
+      // Verify all executions belong to workflows accessible by the user
+      const rows = await db
+        .select({
+          executionId: workflowExecutions.id,
+          workflowId: workflowExecutions.workflowId,
+        })
+        .from(workflowExecutions)
+        .where(inArray(workflowExecutions.id, ids));
+
+      for (const row of rows) {
+        if (!(await checkWorkflowAccess(row.workflowId, payload.userId, role))) {
+          return reply.status(403).send({ error: "Forbidden" });
+        }
+      }
+
+      await deleteManyExecutions(ids);
+      return reply.status(204).send();
     },
   );
 }

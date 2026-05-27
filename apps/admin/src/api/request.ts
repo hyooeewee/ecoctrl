@@ -164,8 +164,8 @@ export const postForm = <T>(path: string, formData: FormData, options?: RequestO
 export const put = <T>(path: string, body?: unknown, options?: RequestOptions) =>
   request<T>(path, { ...options, method: "PUT", body: body ? JSON.stringify(body) : undefined });
 
-export const del = <T>(path: string, options?: RequestOptions) =>
-  request<T>(path, { ...options, method: "DELETE" });
+export const del = <T>(path: string, body?: unknown, options?: RequestOptions) =>
+  request<T>(path, { ...options, method: "DELETE", body: body ? JSON.stringify(body) : undefined });
 
 export const patch = <T>(path: string, body?: unknown, options?: RequestOptions) =>
   request<T>(path, { ...options, method: "PATCH", body: body ? JSON.stringify(body) : undefined });
