@@ -76,6 +76,7 @@ interface WorkflowNodeConfigProps {
   onDuplicateNode: (nodeId: string) => void;
   onTestNode?: (nodeId: string) => void;
   onClose: () => void;
+  onSelectNode?: (node: Node) => void;
   nodes: Node[];
   edges: Edge[];
   envVars?: EnvVar[];
@@ -102,6 +103,7 @@ export function WorkflowNodeConfig({
   onDuplicateNode,
   onTestNode,
   onClose,
+  onSelectNode,
   nodes,
   edges,
   envVars,
@@ -227,6 +229,17 @@ export function WorkflowNodeConfig({
     },
     [config, selectedNode.id, updateNodeData],
   );
+
+  // Resolve direct parent and child nodes from edge connections
+  const parentNodes = edges
+    .filter((e) => e.target === selectedNode.id)
+    .map((e) => nodes.find((n) => n.id === e.source))
+    .filter((n): n is Node => !!n);
+
+  const childNodes = edges
+    .filter((e) => e.source === selectedNode.id)
+    .map((e) => nodes.find((n) => n.id === e.target))
+    .filter((n): n is Node => !!n);
 
   return (
     <div
@@ -354,6 +367,16 @@ export function WorkflowNodeConfig({
             }`}
           >
             历史
+          </button>
+          <button
+            onClick={() => onTabChange("related")}
+            className={`pb-2 text-sm transition-colors ${
+              activeConfigTab === "related"
+                ? "border-b-2 border-primary font-medium text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            关联
           </button>
         </div>
 
@@ -512,6 +535,83 @@ export function WorkflowNodeConfig({
                     <div className="text-muted-foreground text-sm">该节点在本次调试中未执行</div>
                   </div>
                 )}
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="related" className="mt-0 flex-1">
+          <ScrollArea className="h-[calc(100vh-180px)]">
+            <div className="space-y-5 px-4 py-5">
+              {/* Upstream */}
+              <div className="space-y-2">
+                <div className="text-xs font-medium text-muted-foreground">上游节点</div>
+                {parentNodes.length > 0 ? (
+                  <div className="flex flex-col gap-1.5">
+                    {parentNodes.map((node) => {
+                      const pType = (node.data.type as string) || "";
+                      const pDef = getNodeDef(pType);
+                      const pColor = pDef?.color ?? "#94a3b8";
+                      return (
+                        <button
+                          key={node.id}
+                          type="button"
+                          onClick={() => onSelectNode?.(node)}
+                          className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm transition-colors hover:bg-muted"
+                          title={`${(node.data.label as string) ?? node.type} (${node.id})`}
+                        >
+                          <span
+                            className="inline-block h-2.5 w-2.5 rounded-full"
+                            style={{ backgroundColor: pColor }}
+                          />
+                          <span className="truncate">
+                            {(node.data.label as string) ?? node.type}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">无上游节点</p>
+                )}
+              </div>
+
+              {/* Divider */}
+              {parentNodes.length > 0 && childNodes.length > 0 && (
+                <div className="border-t border-dashed border-border/60" />
+              )}
+
+              {/* Downstream */}
+              <div className="space-y-2">
+                <div className="text-xs font-medium text-muted-foreground">下游节点</div>
+                {childNodes.length > 0 ? (
+                  <div className="flex flex-col gap-1.5">
+                    {childNodes.map((node) => {
+                      const cType = (node.data.type as string) || "";
+                      const cDef = getNodeDef(cType);
+                      const cColor = cDef?.color ?? "#94a3b8";
+                      return (
+                        <button
+                          key={node.id}
+                          type="button"
+                          onClick={() => onSelectNode?.(node)}
+                          className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm transition-colors hover:bg-muted"
+                          title={`${(node.data.label as string) ?? node.type} (${node.id})`}
+                        >
+                          <span
+                            className="inline-block h-2.5 w-2.5 rounded-full"
+                            style={{ backgroundColor: cColor }}
+                          />
+                          <span className="truncate">
+                            {(node.data.label as string) ?? node.type}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">无下游节点</p>
+                )}
+              </div>
             </div>
           </ScrollArea>
         </TabsContent>

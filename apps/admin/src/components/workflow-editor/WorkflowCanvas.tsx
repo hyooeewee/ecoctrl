@@ -509,6 +509,10 @@ export default function WorkflowCanvas({ workflowId, onBack, onDirtyChange }: Wo
               onDuplicateNode={canvas.handleDuplicateNode}
               onTestNode={canvas.handleTestNode}
               onClose={() => canvas.setRightPanelOpen(false)}
+              onSelectNode={(node) => {
+                canvas.setSelectedNode(node);
+                canvas.setRightPanelOpen(true);
+              }}
               nodes={canvas.nodes}
               edges={canvas.edges}
               envVars={canvas.envVars}
