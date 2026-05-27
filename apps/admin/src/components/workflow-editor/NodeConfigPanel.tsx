@@ -53,6 +53,7 @@ interface UpstreamNodeInfo {
   id: string;
   label: string;
   outputKeys: string[];
+  outputProperties?: Record<string, unknown>;
 }
 
 // ========================================
@@ -71,6 +72,50 @@ interface AutocompleteState {
   query: string;
   selectedIndex: number;
   candidates: Candidate[];
+}
+
+// Recursively expand output schema properties into nested candidate paths.
+// Arrays are sampled with [0] index; objects recurse into their properties.
+function expandOutputPaths(
+  prefix: string,
+  schemaProp: unknown,
+  depth: number = 0,
+  maxDepth: number = 5,
+): Array<{ path: string }> {
+  if (depth >= maxDepth) return [];
+
+  const prop = schemaProp as {
+    type?: string;
+    properties?: Record<string, unknown>;
+    items?: unknown;
+  };
+  if (!prop) return [];
+
+  // Object with properties
+  if (prop.properties || prop.type === "object") {
+    const props = prop.properties ?? {};
+    const results: Array<{ path: string }> = [];
+    for (const [key, subProp] of Object.entries(props)) {
+      const newPath = `${prefix}.${key}`;
+      const subResults = expandOutputPaths(newPath, subProp, depth + 1, maxDepth);
+      // Include this path (user may want the object/array itself)
+      results.push({ path: newPath });
+      results.push(...subResults);
+    }
+    return results;
+  }
+
+  // Array with items
+  if (prop.type === "array" && prop.items) {
+    const itemPath = `${prefix}[0]`;
+    const subResults = expandOutputPaths(itemPath, prop.items, depth + 1, maxDepth);
+    const results: Array<{ path: string }> = [{ path: itemPath }];
+    results.push(...subResults);
+    return results;
+  }
+
+  // Primitive - no children to expand
+  return [];
 }
 
 function buildCandidates(
@@ -99,6 +144,18 @@ function buildCandidates(
         value: `{{${node.id}.${key}}}`,
         category: `节点: ${node.label}`,
       });
+
+      const propSchema = node.outputProperties?.[key];
+      if (propSchema) {
+        const nested = expandOutputPaths(`${node.id}.${key}`, propSchema, 0);
+        for (const n of nested) {
+          candidates.push({
+            label: n.path,
+            value: `{{${n.path}}}`,
+            category: `节点: ${node.label}`,
+          });
+        }
+      }
     }
   }
 
@@ -746,7 +803,12 @@ export function NodeConfigPanel({
       | { properties?: Record<string, unknown> }
       | undefined;
     const outputKeys = outputSchema?.properties ? Object.keys(outputSchema.properties) : ["value"];
-    return { id: node.id, label: nodeLabel, outputKeys };
+    return {
+      id: node.id,
+      label: nodeLabel,
+      outputKeys,
+      outputProperties: outputSchema?.properties,
+    };
   });
 
   const handleFieldChange = useCallback(

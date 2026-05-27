@@ -207,7 +207,12 @@ export function WorkflowNodeConfig({
       | { properties?: Record<string, unknown> }
       | undefined;
     const outputKeys = outputSchema?.properties ? Object.keys(outputSchema.properties) : ["value"];
-    return { id: node.id, label: nodeLabel, outputKeys };
+    return {
+      id: node.id,
+      label: nodeLabel,
+      outputKeys,
+      outputProperties: outputSchema?.properties,
+    };
   });
 
   const envVarsForHelper = (envVars ?? []).map((v) => ({ key: v.key, type: v.type }));
