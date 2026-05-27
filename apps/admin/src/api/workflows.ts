@@ -56,6 +56,19 @@ export const workflowsApi = {
       params: { page: String(page), pageSize: String(pageSize) },
     }),
 
+  getRecentExecutions: () =>
+    get<
+      Array<{
+        workflowId: string;
+        executionId: string;
+        status: string;
+        triggerData?: Record<string, unknown>;
+        errorMessage?: string | null;
+        durationMs?: number;
+        timestamp: string;
+      }>
+    >("/workflows/executions"),
+
   getExecution: (workflowId: string, executionId: string) =>
     get<WorkflowExecution>(`/workflows/${workflowId}/executions/${executionId}`),
 };

@@ -93,6 +93,23 @@ export default function Workflows() {
   );
   const { onWorkflowExecution } = useSseEvents();
 
+  // Load recent executions from database on mount
+  useEffect(() => {
+    workflowsApi
+      .getRecentExecutions()
+      .then((rows) => {
+        setRecentExecutions(rows);
+        const running: Record<string, SseWorkflowExecution> = {};
+        for (const exec of rows) {
+          if (exec.status === "running") running[exec.workflowId] = exec;
+        }
+        setRunningExecutions(running);
+      })
+      .catch(() => {
+        // silently fail
+      });
+  }, []);
+
   useEffect(() => {
     const remove = onWorkflowExecution((exec) => {
       setRecentExecutions((prev) => {

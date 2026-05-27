@@ -12,6 +12,7 @@ import {
   deleteWorkflow,
   checkWorkflowAccess,
   findWorkflowExecutions,
+  findRecentExecutions,
 } from "@/repositories/workflows";
 import { triggerEngine } from "@/engine/trigger";
 import { validateDsl } from "@/engine/validator";
@@ -324,6 +325,34 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
       const body = (request.body as { data?: Record<string, unknown> }) ?? {};
       const executionId = await triggerEngine.emitManual(id, payload.userId, body.data ?? {});
       return reply.send({ executionId });
+    },
+  );
+
+  // List recent executions across all workflows (global)
+  fastify.get(
+    "/executions",
+    {
+      schema: {
+        tags: ["Workflows"],
+        summary: "List recent executions",
+        security: [{ bearerAuth: [] }],
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const payload = request.user as { userId: string };
+      const role = await getUserRole(payload.userId);
+      const rows = await findRecentExecutions(payload.userId, role, 50);
+      return reply.send(
+        rows.map((r) => ({
+          workflowId: r.workflowId,
+          executionId: r.id,
+          status: r.status,
+          triggerData: r.triggerData,
+          errorMessage: r.errorMessage,
+          durationMs: r.durationMs,
+          timestamp: r.createdAt?.toISOString() ?? new Date().toISOString(),
+        })),
+      );
     },
   );
 

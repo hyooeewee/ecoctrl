@@ -125,11 +125,13 @@ async function processJob(job: Job<ExecutionJobData>): Promise<void> {
       durationMs,
     );
   } catch (error) {
+    const failedLogs = result?.nodeLogs ?? [];
     await db
       .update(workflowExecutions)
       .set({
         status: "failed",
         errorMessage: (error as Error).message,
+        nodeLogs: failedLogs.length > 500 ? failedLogs.slice(-500) : failedLogs,
         completedAt: new Date(),
         durationMs: 0,
       })
