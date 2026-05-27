@@ -1,28 +1,9 @@
-import type { WorkflowDSL, WorkflowNode, WorkflowEdge, NodeType } from "./types";
+import type { WorkflowDSL, WorkflowNode, WorkflowEdge } from "./types";
 
 export interface ValidationError {
   field: string;
   message: string;
 }
-
-const CONTROL_NODES: NodeType[] = [
-  "start",
-  "end",
-  "condition",
-  "switch",
-  "loop",
-  "parallel",
-  "delay",
-];
-const ACTION_NODES: NodeType[] = [
-  "http_request",
-  "database",
-  "email",
-  "variable",
-  "point_read",
-  "point_write",
-];
-const VALID_NODE_TYPES = new Set([...CONTROL_NODES, ...ACTION_NODES]);
 
 function hasEdgeTo(nodeId: string, edges: WorkflowEdge[]): boolean {
   return edges.some((e) => e.target === nodeId);
@@ -65,14 +46,7 @@ export function validateDsl(dsl: WorkflowDSL, strict = false): ValidationError[]
   const errors: ValidationError[] = [];
   const { nodes, edges } = dsl;
 
-  // 1. Node type validation
-  for (const node of nodes) {
-    if (!VALID_NODE_TYPES.has(node.type)) {
-      errors.push({ field: `nodes.${node.id}.type`, message: `Invalid node type: ${node.type}` });
-    }
-  }
-
-  // 2. Unique node IDs
+  // 1. Unique node IDs
   const nodeIds = new Set<string>();
   for (const node of nodes) {
     if (nodeIds.has(node.id)) {
@@ -81,7 +55,7 @@ export function validateDsl(dsl: WorkflowDSL, strict = false): ValidationError[]
     nodeIds.add(node.id);
   }
 
-  // 3. Edge references exist
+  // 2. Edge references exist
   for (const edge of edges) {
     if (!nodeIds.has(edge.source)) {
       errors.push({
@@ -97,7 +71,7 @@ export function validateDsl(dsl: WorkflowDSL, strict = false): ValidationError[]
     }
   }
 
-  // 4. Exactly one start node
+  // 3. Exactly one start node
   const startNodes = nodes.filter((n) => n.type === "start");
   if (startNodes.length === 0) {
     errors.push({ field: "nodes", message: "Workflow must have exactly one 'start' node" });
@@ -108,7 +82,7 @@ export function validateDsl(dsl: WorkflowDSL, strict = false): ValidationError[]
     });
   }
 
-  // 5. At least one end node
+  // 4. At least one end node
   const endNodes = nodes.filter((n) => n.type === "end");
   if (endNodes.length === 0) {
     errors.push({ field: "nodes", message: "Workflow must have at least one 'end' node" });
@@ -118,7 +92,7 @@ export function validateDsl(dsl: WorkflowDSL, strict = false): ValidationError[]
     return errors;
   }
 
-  // 6. Connectivity (strict only)
+  // 5. Connectivity (strict only)
   for (const node of nodes) {
     if (node.type !== "start" && !hasEdgeTo(node.id, edges)) {
       errors.push({
@@ -134,7 +108,7 @@ export function validateDsl(dsl: WorkflowDSL, strict = false): ValidationError[]
     }
   }
 
-  // 7. Condition node labels (strict only)
+  // 6. Condition node labels (strict only)
   for (const node of nodes.filter((n) => n.type === "condition")) {
     const outgoing = getOutgoingEdges(node.id, edges);
     const labels = new Set(outgoing.map((e) => e.label));
@@ -152,7 +126,7 @@ export function validateDsl(dsl: WorkflowDSL, strict = false): ValidationError[]
     }
   }
 
-  // 8. Switch node labels (strict only)
+  // 7. Switch node labels (strict only)
   for (const node of nodes.filter((n) => n.type === "switch")) {
     const cases = (node.config.cases as Array<{ value: string }> | undefined) ?? [];
     const caseValues = new Set(cases.map((c) => String(c.value)));
@@ -174,7 +148,7 @@ export function validateDsl(dsl: WorkflowDSL, strict = false): ValidationError[]
     }
   }
 
-  // 9. Loop node body validation (recursive, strict only)
+  // 8. Loop node body validation (recursive, strict only)
   for (const node of nodes.filter((n) => n.type === "loop")) {
     const body = node.config.body as { nodes?: WorkflowNode[]; edges?: WorkflowEdge[] } | undefined;
     if (body?.nodes && body.edges) {
@@ -212,7 +186,7 @@ export function validateDsl(dsl: WorkflowDSL, strict = false): ValidationError[]
     }
   }
 
-  // 10. Parallel node branch validation (strict only)
+  // 9. Parallel node branch validation (strict only)
   for (const node of nodes.filter((n) => n.type === "parallel")) {
     const branches = node.config.branches as
       | Array<{ nodes?: WorkflowNode[]; edges?: WorkflowEdge[] }>
@@ -241,7 +215,7 @@ export function validateDsl(dsl: WorkflowDSL, strict = false): ValidationError[]
     }
   }
 
-  // 11. Cycle detection (strict only)
+  // 10. Cycle detection (strict only)
   if (startNodes.length === 1) {
     const visited = new Set<string>();
     const recStack = new Set<string>();

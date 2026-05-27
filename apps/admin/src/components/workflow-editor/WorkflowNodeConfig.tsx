@@ -59,7 +59,10 @@ export function WorkflowNodeConfig({
 }: WorkflowNodeConfigProps) {
   const config = (selectedNode.data.config as Record<string, unknown>) ?? {};
   const nodeDef = getNodeDef(selectedNodeType);
-  const isPointNode = selectedNodeType === "point_read" || selectedNodeType === "point_write";
+  const schemaProperties = (nodeDef?.schema as Record<string, unknown>)?.properties as
+    | Record<string, unknown>
+    | undefined;
+  const isPointNode = !!schemaProperties && "pointName" in schemaProperties;
   const nodeColor = nodeDef?.color ?? "#94a3b8";
 
   const [copied, setCopied] = useState(false);
