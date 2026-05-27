@@ -16,7 +16,7 @@ import {
 import type { Node, Edge } from "@xyflow/react";
 import { NodeConfigPanel } from "./NodeConfigPanel";
 import type { NodeDefinition } from "@/api/nodes";
-import type { EnvVar } from "../types";
+import type { EnvVar } from "./types";
 
 interface WorkflowNodeConfigProps {
   selectedNode: Node;
