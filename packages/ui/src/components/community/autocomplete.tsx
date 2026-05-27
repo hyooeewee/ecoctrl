@@ -46,13 +46,14 @@ function Autocomplete({ children, ...props }: AutocompleteProps) {
 function AutocompleteInput({
   children,
   ref,
+  className,
   ...props
 }: ComponentProps<typeof AutocompletePrimitive.Input>) {
   const { anchorRef } = useAnchorRef();
   useImperativeHandle(ref, () => anchorRef.current!, [anchorRef]);
   return (
-    <InputGroup ref={anchorRef}>
-      <AutocompletePrimitive.Input render={InputGroupInput} {...props} />
+    <InputGroup ref={anchorRef} className={className}>
+      <AutocompletePrimitive.Input render={InputGroupInput} className={className} {...props} />
       {children}
     </InputGroup>
   );
