@@ -120,6 +120,16 @@ export default function Models() {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
 
+  // Point edit state
+  const [pointEditOpen, setPointEditOpen] = useState(false);
+  const [editingPointId, setEditingPointId] = useState<string | null>(null);
+  const [editPointCode, setEditPointCode] = useState("");
+  const [editPointName, setEditPointName] = useState("");
+  const [editPointType, setEditPointType] = useState("");
+  const [editPointDescription, setEditPointDescription] = useState("");
+  const [editPointError, setEditPointError] = useState("");
+  const [isSavingPoint, setIsSavingPoint] = useState(false);
+
   // Objects tab state
   const [objectSorting, setObjectSorting] = useState<SortingState>([]);
   const [objectColumnFilters, setObjectColumnFilters] = useState<ColumnFiltersState>([]);
@@ -345,6 +355,72 @@ export default function Models() {
       try {
         await objectsApi.delete(id);
         await fetchObjects();
+        setConfirmOpen(false);
+      } catch (err) {
+        console.error(err);
+        toast.error("删除失败，请重试");
+      }
+    };
+    setConfirmOpen(true);
+  };
+
+  // Point edit functions
+  const resetPointForm = () => {
+    setEditingPointId(null);
+    setEditPointCode("");
+    setEditPointName("");
+    setEditPointType("");
+    setEditPointDescription("");
+    setEditPointError("");
+  };
+
+  const openEditPointDialog = (point: Point) => {
+    setEditingPointId(point.id);
+    setEditPointCode(point.code ?? "");
+    setEditPointName(point.name ?? "");
+    setEditPointType(point.type ?? "");
+    setEditPointDescription(point.description ?? "");
+    setEditPointError("");
+    setPointEditOpen(true);
+  };
+
+  const validatePointForm = (): boolean => {
+    if (!editPointCode.trim() || !editPointType.trim()) {
+      setEditPointError("请填写编码和类型");
+      return false;
+    }
+    setEditPointError("");
+    return true;
+  };
+
+  const handleUpdatePoint = async () => {
+    if (!editingPointId) return;
+    if (!validatePointForm()) return;
+    setIsSavingPoint(true);
+    try {
+      await pointsApi.update(editingPointId, {
+        code: editPointCode.trim(),
+        name: editPointName.trim() || null,
+        type: editPointType.trim(),
+        description: editPointDescription.trim() || null,
+      });
+      setPointEditOpen(false);
+      resetPointForm();
+      await fetchPoints();
+    } catch (err) {
+      setEditPointError(err instanceof Error ? err.message : "保存失败，请重试");
+    } finally {
+      setIsSavingPoint(false);
+    }
+  };
+
+  const handleDeletePoint = (id: string, name: string) => {
+    setConfirmTitle("确认删除");
+    setConfirmDesc(`确定要删除点位 "${name}" 吗？此操作不可撤销。`);
+    confirmActionRef.current = async () => {
+      try {
+        await pointsApi.delete(id);
+        await fetchPoints();
         setConfirmOpen(false);
       } catch (err) {
         console.error(err);
@@ -606,6 +682,39 @@ export default function Models() {
             >
               {row.getValue("modelName")}
             </button>
+          );
+        },
+      },
+      {
+        id: "actions",
+        header: () => <span className="text-right block">操作</span>,
+        cell: ({ row }) => {
+          const point = row.original;
+          return (
+            <div className="text-right">
+              <AppButton
+                level="secondary"
+                size="icon-sm"
+                className="h-7 w-7 mr-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openEditPointDialog(point);
+                }}
+              >
+                <Pencil size={14} />
+              </AppButton>
+              <AppButton
+                level="danger"
+                size="icon-sm"
+                className="h-7 w-7"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeletePoint(point.id, point.name ?? point.code);
+                }}
+              >
+                <Trash2 size={14} />
+              </AppButton>
+            </div>
           );
         },
       },
@@ -1499,6 +1608,119 @@ export default function Models() {
                   <Upload size={16} />
                   确认导入
                 </>
+              )}
+            </AppButton>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Point Dialog */}
+      <Dialog
+        open={pointEditOpen}
+        onOpenChange={(open) => {
+          setPointEditOpen(open);
+          if (!open) resetPointForm();
+        }}
+      >
+        <DialogContent className="max-h-[90vh] max-w-lg flex flex-col gap-0 p-0">
+          <DialogHeader className="px-6 pt-6 pb-4">
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <Pencil size={18} />
+              编辑点位
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-6">
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label
+                    htmlFor="edit-point-code"
+                    className="text-sm font-medium text-foreground mb-1.5 block"
+                  >
+                    编码
+                  </label>
+                  <Input
+                    id="edit-point-code"
+                    value={editPointCode}
+                    onChange={(e) => setEditPointCode(e.target.value)}
+                    placeholder="请输入编码"
+                    className="h-10"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="edit-point-type"
+                    className="text-sm font-medium text-foreground mb-1.5 block"
+                  >
+                    点位类型
+                  </label>
+                  <Input
+                    id="edit-point-type"
+                    value={editPointType}
+                    onChange={(e) => setEditPointType(e.target.value)}
+                    placeholder="请输入类型"
+                    className="h-10"
+                  />
+                </div>
+              </div>
+              <div>
+                <label
+                  htmlFor="edit-point-name"
+                  className="text-sm font-medium text-foreground mb-1.5 block"
+                >
+                  点位名称
+                </label>
+                <Input
+                  id="edit-point-name"
+                  value={editPointName}
+                  onChange={(e) => setEditPointName(e.target.value)}
+                  placeholder="请输入点位名称（可选）"
+                  className="h-10"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="edit-point-description"
+                  className="text-sm font-medium text-foreground mb-1.5 block"
+                >
+                  描述
+                </label>
+                <Input
+                  id="edit-point-description"
+                  value={editPointDescription}
+                  onChange={(e) => setEditPointDescription(e.target.value)}
+                  placeholder="请输入描述（可选）"
+                  className="h-10"
+                />
+              </div>
+            </div>
+
+            {editPointError && (
+              <div className="rounded-lg border-l-4 border-red-500 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {editPointError}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="border-t border-border px-6 py-4 flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setPointEditOpen(false)} className="h-10 px-5">
+              取消
+            </Button>
+            <AppButton
+              level="action"
+              onClick={handleUpdatePoint}
+              disabled={!editPointCode.trim() || !editPointType.trim() || isSavingPoint}
+              className="h-10 px-5 gap-2"
+            >
+              {isSavingPoint ? (
+                <>
+                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  保存中...
+                </>
+              ) : (
+                <>保存</>
               )}
             </AppButton>
           </div>
