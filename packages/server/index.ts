@@ -24,6 +24,7 @@ import databasePlugin from "@/plugins/database";
 import rateLimitPlugin from "@/plugins/rateLimit";
 import apiRoutes from "@/routes";
 import { initQueue, stopQueue } from "@/queue/pgboss";
+import { startWorker } from "@/queue/worker";
 import { triggerEngine } from "@/engine/trigger";
 import { syncSmtpFromEnv } from "@/repositories/platformConfig";
 import { env } from "@/lib/env";
@@ -213,9 +214,10 @@ await notifyListener.start("sse_events", (event) => {
 });
 fastify.log.info("PostgreSQL NOTIFY listener started on channel 'sse_events'");
 
-// Initialize pg-boss queue and sync schedule triggers
+// Initialize pg-boss queue, sync schedule triggers, and start job worker
 await initQueue();
 await triggerEngine.syncSchedules();
+await startWorker();
 
 const PORT = Number(env.PORT) || 3000;
 const HOST = env.HOST || "0.0.0.0";
