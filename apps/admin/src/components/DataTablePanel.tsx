@@ -103,6 +103,12 @@ export interface DataTablePanelProps<TData = unknown> {
   onPageSizeChange?: (size: number) => void;
   getRowClassName?: (row: TData) => string;
   onRowClick?: (row: TData) => void;
+  // Manual pagination (server-side)
+  manualPagination?: boolean;
+  pageCount?: number;
+  rowCount?: number;
+  pagination?: { pageIndex: number; pageSize: number };
+  onPaginationChange?: (pagination: { pageIndex: number; pageSize: number }) => void;
 }
 
 export function DataTablePanel<TData>({
@@ -129,12 +135,25 @@ export function DataTablePanel<TData>({
   onPageSizeChange,
   getRowClassName,
   onRowClick,
+  manualPagination = false,
+  pageCount,
+  rowCount,
+  pagination: controlledPagination,
+  onPaginationChange,
 }: DataTablePanelProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = React.useState("");
   const [rowSelection, setRowSelection] = React.useState<Record<string, boolean>>({});
   const [searchExpanded, setSearchExpanded] = React.useState(false);
+  const [internalPagination, setInternalPagination] = React.useState({
+    pageIndex: 0,
+    pageSize: pageSizeOptions[0] ?? 10,
+  });
+
+  const effectivePagination = manualPagination
+    ? (controlledPagination ?? { pageIndex: 0, pageSize: pageSizeOptions[0] ?? 10 })
+    : internalPagination;
 
   const allColumns = React.useMemo(() => {
     if (enableRowSelection) {
@@ -147,12 +166,23 @@ export function DataTablePanel<TData>({
     data,
     columns: allColumns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    getPaginationRowModel: manualPagination ? undefined : getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    manualPagination,
+    pageCount: manualPagination ? pageCount : undefined,
+    rowCount: manualPagination ? rowCount : undefined,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
+    onPaginationChange: (updater) => {
+      const next = typeof updater === "function" ? updater(effectivePagination) : updater;
+      if (manualPagination) {
+        onPaginationChange?.(next);
+      } else {
+        setInternalPagination(next);
+      }
+    },
     onRowSelectionChange: (updater) => {
       const next = typeof updater === "function" ? updater(rowSelection) : updater;
       setRowSelection(next);
@@ -166,6 +196,7 @@ export function DataTablePanel<TData>({
       columnFilters,
       globalFilter,
       rowSelection,
+      pagination: effectivePagination,
     },
   });
 
@@ -190,7 +221,9 @@ export function DataTablePanel<TData>({
   const currentPage = table.getState().pagination.pageIndex + 1;
   const totalPages = table.getPageCount();
   const pages = getPageNumbers(currentPage, totalPages);
-  const filteredCount = table.getFilteredRowModel().rows.length;
+  const filteredCount = manualPagination
+    ? (rowCount ?? data.length)
+    : table.getFilteredRowModel().rows.length;
   const pageSize = table.getState().pagination.pageSize;
 
   const hasSelection = enableRowSelection && Object.keys(rowSelection).some((k) => rowSelection[k]);
