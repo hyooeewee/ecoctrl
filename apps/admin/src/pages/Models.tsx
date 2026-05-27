@@ -86,6 +86,7 @@ export default function Models() {
   const [editFile, setEditFile] = useState<File | null>(null);
   const [editFileDeleted, setEditFileDeleted] = useState(false);
   const [editCode, setEditCode] = useState("");
+  const [editDescription, setEditDescription] = useState("");
 
   // Objects tab state
   const [objects, setObjects] = useState<BusinessObject[]>([]);
@@ -96,7 +97,8 @@ export default function Models() {
   const [selectedModelId, setSelectedModelId] = useState("");
   const [objectError, setObjectError] = useState("");
   const [isCreatingObject, setIsCreatingObject] = useState(false);
-  const [editingObjectUuid, setEditingObjectUuid] = useState<string | null>(null);
+  const [objectDescription, setObjectDescription] = useState("");
+  const [editingObjectId, setEditingObjectId] = useState<string | null>(null);
 
   // Import dialog state
   const [importOpen, setImportOpen] = useState(false);
@@ -119,6 +121,20 @@ export default function Models() {
 
   // Objects tab state
   const [objectSorting, setObjectSorting] = useState<SortingState>([]);
+  const [objectColumnFilters, setObjectColumnFilters] = useState<ColumnFiltersState>([]);
+  const [objectGlobalFilter, setObjectGlobalFilter] = useState("");
+
+  // Cross-tab navigation
+  const [pendingNav, setPendingNav] = useState<{
+    tab: "models" | "objects" | "points";
+    objectsFilterModelId?: string;
+    pointsFilterObjectId?: string;
+    pointsFilterModelId?: string;
+    highlightModelId?: string;
+    highlightObjectId?: string;
+  } | null>(null);
+  const [highlightedModelId, setHighlightedModelId] = useState<string | null>(null);
+  const [highlightedObjectId, setHighlightedObjectId] = useState<string | null>(null);
 
   const activeTab = useAppStore((state) => state.modelsTab);
   const setActiveTab = useAppStore((state) => state.setModelsTab);
@@ -194,33 +210,76 @@ export default function Models() {
     }
   }, [activeTab, fetchPoints]);
 
+  // Apply pending navigation when tab switches
+  useEffect(() => {
+    if (!pendingNav || pendingNav.tab !== activeTab) return;
+
+    if (activeTab === "objects" && pendingNav.objectsFilterModelId) {
+      const model = models.find((m) => m.id === pendingNav.objectsFilterModelId);
+      if (model) {
+        setObjectColumnFilters([{ id: "modelName", value: model.name ?? model.code ?? "" }]);
+      }
+    }
+
+    if (activeTab === "points") {
+      const newFilters: ColumnFiltersState = [];
+      if (pendingNav.pointsFilterObjectId) {
+        const obj = objects.find((o) => o.id === pendingNav.pointsFilterObjectId);
+        if (obj) {
+          newFilters.push({ id: "objectName", value: obj.name ?? obj.code ?? "" });
+        }
+      }
+      if (pendingNav.pointsFilterModelId) {
+        const model = models.find((m) => m.id === pendingNav.pointsFilterModelId);
+        if (model) {
+          newFilters.push({ id: "modelName", value: model.name ?? model.code ?? "" });
+        }
+      }
+      if (newFilters.length > 0) {
+        setColumnFilters(newFilters);
+      }
+    }
+
+    if (pendingNav.highlightModelId) {
+      setHighlightedModelId(pendingNav.highlightModelId);
+      setTimeout(() => setHighlightedModelId(null), 3000);
+    }
+    if (pendingNav.highlightObjectId) {
+      setHighlightedObjectId(pendingNav.highlightObjectId);
+      setTimeout(() => setHighlightedObjectId(null), 3000);
+    }
+
+    setPendingNav(null);
+  }, [activeTab, pendingNav, models, objects]);
+
   const resetObjectForm = () => {
     setObjectId("");
     setObjectName("");
+    setObjectDescription("");
     setSelectedModelId("");
     setObjectError("");
-    setEditingObjectUuid(null);
+    setEditingObjectId(null);
   };
 
   const buildObjectPayload = (): {
-    id: string;
+    code: string;
     name: string;
+    description: string;
     modelId: string;
-    modelName: string;
   } => {
-    const model = models.find((m) => m.id === selectedModelId)!;
     return {
-      id: objectId.trim(),
+      code: objectId.trim().toUpperCase(),
       name: objectName.trim(),
+      description: objectDescription.trim(),
       modelId: selectedModelId,
-      modelName: model.name,
     };
   };
 
   const openEditObjectDialog = (obj: BusinessObject) => {
-    setEditingObjectUuid(obj.uuid);
-    setObjectId(obj.id ?? "");
+    setEditingObjectId(obj.id);
+    setObjectId(obj.code ?? "");
     setObjectName(obj.name ?? "");
+    setObjectDescription(obj.description ?? "");
     setSelectedModelId(obj.modelId ?? "");
     setObjectError("");
     setObjectOpen(true);
@@ -228,11 +287,11 @@ export default function Models() {
 
   const validateObjectForm = (): boolean => {
     if (!objectId.trim() || !objectName.trim() || !selectedModelId) {
-      setObjectError("请填写对象ID、名称并选择模型");
+      setObjectError("请填写编码、名称并选择模型");
       return false;
     }
     if (!/^\d{4}$/.test(objectId.trim())) {
-      setObjectError("设备编号必须为4位数字");
+      setObjectError("编码必须为4位数字");
       return false;
     }
     const model = models.find((m) => m.id === selectedModelId);
@@ -261,13 +320,13 @@ export default function Models() {
   };
 
   const handleUpdateObject = async () => {
-    if (!editingObjectUuid) return;
+    if (!editingObjectId) return;
     if (!validateObjectForm()) return;
     setIsCreatingObject(true);
     setObjectError("");
     try {
       const payload = buildObjectPayload();
-      await objectsApi.update(editingObjectUuid, payload);
+      await objectsApi.update(editingObjectId, payload);
       setObjectOpen(false);
       resetObjectForm();
       await fetchObjects();
@@ -278,12 +337,12 @@ export default function Models() {
     }
   };
 
-  const handleDeleteObject = (uuid: string, name: string) => {
+  const handleDeleteObject = (id: string, name: string) => {
     setConfirmTitle("确认删除");
     setConfirmDesc(`确定要删除业务对象 "${name}" 吗？此操作不可撤销。`);
     confirmActionRef.current = async () => {
       try {
-        await objectsApi.delete(uuid);
+        await objectsApi.delete(id);
         await fetchObjects();
         setConfirmOpen(false);
       } catch (err) {
@@ -357,6 +416,7 @@ export default function Models() {
     setEditName(model.name ?? "");
     setEditVersion(model.version ?? "");
     setEditCode(model.code ?? "");
+    setEditDescription(model.description ?? "");
     setEditFileDeleted(false);
     setEditError("");
     setEditOpen(true);
@@ -380,6 +440,7 @@ export default function Models() {
     setEditFile(null);
     setEditFileDeleted(false);
     setEditCode("");
+    setEditDescription("");
   };
 
   const handleSaveEdit = async () => {
@@ -396,11 +457,13 @@ export default function Models() {
         name: string;
         version: string;
         code: string;
+        description?: string | null;
         fileUrl?: string | null;
       } = {
         name: editName.trim(),
         version: editVersion.trim() || "v1.0",
         code: editCode.toUpperCase(),
+        description: editDescription.trim() || null,
       };
 
       // If current file was deleted, send fileUrl: null
@@ -429,11 +492,19 @@ export default function Models() {
   const existingCodes = [...new Set(models.map((m) => m.code).filter(Boolean))];
 
   const pointColumns = useMemo<
-    ColumnDef<Point & { propCount: number; objectName: string; modelName: string }>[]
+    ColumnDef<
+      Point & {
+        propCount: number;
+        objectId: string;
+        modelId: string;
+        objectName: string;
+        modelName: string;
+      }
+    >[]
   >(
     () => [
       {
-        accessorKey: "pointType",
+        accessorKey: "type",
         header: ({ column }) => (
           <Button
             variant="ghost"
@@ -443,20 +514,20 @@ export default function Models() {
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         ),
-        cell: ({ row }) => <span className="font-mono text-xs">{row.getValue("pointType")}</span>,
+        cell: ({ row }) => <span className="font-mono text-xs">{row.getValue("type")}</span>,
       },
       {
-        accessorKey: "pointNo",
+        accessorKey: "code",
         header: ({ column }) => (
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           >
-            点位编号
+            编码
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         ),
-        cell: ({ row }) => <span className="font-mono text-xs">{row.getValue("pointNo")}</span>,
+        cell: ({ row }) => <span className="font-mono text-xs">{row.getValue("code")}</span>,
       },
       {
         accessorKey: "name",
@@ -490,13 +561,25 @@ export default function Models() {
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           >
-            所属对象
+            关联对象
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         ),
-        cell: ({ row }) => (
-          <span className="text-muted-foreground">{row.getValue("objectName")}</span>
-        ),
+        cell: ({ row }) => {
+          const objId = row.original.objectId;
+          return (
+            <button
+              className="text-left text-primary hover:underline cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                setPendingNav({ tab: "objects", highlightObjectId: objId });
+                setActiveTab("objects");
+              }}
+            >
+              {row.getValue("objectName")}
+            </button>
+          );
+        },
       },
       {
         accessorKey: "modelName",
@@ -505,22 +588,43 @@ export default function Models() {
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           >
-            所属模型
+            关联模型
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         ),
+        cell: ({ row }) => {
+          const mId = row.original.modelId;
+          return (
+            <button
+              className="text-left text-primary hover:underline cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                setPendingNav({ tab: "models", highlightModelId: mId });
+                setActiveTab("models");
+              }}
+            >
+              {row.getValue("modelName")}
+            </button>
+          );
+        },
       },
     ],
-    [],
+    [setActiveTab],
   );
 
   const pointsTableData = useMemo(() => {
-    return allPoints.map((p) => ({
-      ...p,
-      propCount: p.props.length,
-      objectName: objects.find((o) => o.id === p.objectId)?.name ?? p.objectId,
-      modelName: models.find((m) => m.id === p.modelId)?.name ?? p.modelId,
-    }));
+    return allPoints.map((p) => {
+      const obj = objects.find((o) => o.id === p.objectId);
+      const model = models.find((m) => m.id === p.modelId);
+      return {
+        ...p,
+        propCount: p.props.length,
+        objectId: p.objectId,
+        modelId: p.modelId,
+        objectName: obj?.name ?? obj?.code ?? p.objectId,
+        modelName: model?.name ?? model?.code ?? p.modelId,
+      };
+    });
   }, [allPoints, objects, models]);
 
   const table = useReactTable({
@@ -540,20 +644,30 @@ export default function Models() {
     },
   });
 
-  const objectColumns = useMemo<ColumnDef<BusinessObject>[]>(
+  const objectsTableData = useMemo(() => {
+    return objects.map((o) => {
+      const model = models.find((m) => m.id === o.modelId);
+      return {
+        ...o,
+        modelName: model?.name ?? model?.code ?? o.modelId,
+      };
+    });
+  }, [objects, models]);
+
+  const objectColumns = useMemo<ColumnDef<BusinessObject & { modelName: string }>[]>(
     () => [
       {
-        accessorKey: "id",
+        accessorKey: "code",
         header: ({ column }) => (
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           >
-            设备编号
+            编码
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         ),
-        cell: ({ row }) => <span className="font-mono text-xs">{row.getValue("id")}</span>,
+        cell: ({ row }) => <span className="font-mono text-xs">{row.getValue("code") || "-"}</span>,
       },
       {
         accessorKey: "name",
@@ -578,9 +692,21 @@ export default function Models() {
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         ),
-        cell: ({ row }) => (
-          <span className="text-muted-foreground">{row.getValue("modelName")}</span>
-        ),
+        cell: ({ row }) => {
+          const modelId = row.original.modelId;
+          return (
+            <button
+              className="text-left text-primary hover:underline cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                setPendingNav({ tab: "models", highlightModelId: modelId });
+                setActiveTab("models");
+              }}
+            >
+              {row.getValue("modelName")}
+            </button>
+          );
+        },
       },
       {
         id: "actions",
@@ -606,7 +732,7 @@ export default function Models() {
                 className="h-7 w-7"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDeleteObject(obj.uuid, obj.name);
+                  handleDeleteObject(obj.id, obj.name);
                 }}
               >
                 <Trash2 size={14} />
@@ -616,18 +742,23 @@ export default function Models() {
         },
       },
     ],
-    [],
+    [setActiveTab],
   );
 
   const objectsTable = useReactTable({
-    data: objects,
+    data: objectsTableData,
     columns: objectColumns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
     onSortingChange: setObjectSorting,
+    onColumnFiltersChange: setObjectColumnFilters,
+    onGlobalFilterChange: setObjectGlobalFilter,
     state: {
       sorting: objectSorting,
+      columnFilters: objectColumnFilters,
+      globalFilter: objectGlobalFilter,
     },
   });
 
@@ -686,7 +817,7 @@ export default function Models() {
                   {models.map((model) => (
                     <Card
                       key={model.id}
-                      className="group relative cursor-pointer transition-colors hover:border-blue-200 pt-0"
+                      className={`group relative cursor-pointer transition-colors hover:border-blue-200 pt-0 ${highlightedModelId === model.id ? "ring-2 ring-blue-400 border-blue-400" : ""}`}
                     >
                       <div
                         className="border-border/50 relative flex aspect-video items-center justify-center overflow-hidden border-b bg-muted"
@@ -743,12 +874,23 @@ export default function Models() {
                           <Pencil size={14} />
                         </AppButton>
                       </div>
-                      <CardContent className="px-4 py-3">
+                      <CardContent
+                        className="px-4 py-3 cursor-pointer"
+                        onClick={() => {
+                          setPendingNav({ tab: "objects", objectsFilterModelId: model.id });
+                          setActiveTab("objects");
+                        }}
+                      >
                         <TruncatedText
                           text={model.name}
                           className="block text-sm font-semibold"
                           showTooltip={false}
                         />
+                        {model.code && (
+                          <span className="mt-0.5 block text-xs font-mono text-muted-foreground">
+                            {model.code}
+                          </span>
+                        )}
                         <p className="mt-1 text-xs text-nowrap text-muted-foreground">
                           {model.version} / {model.format} / {model.size}
                         </p>
@@ -807,41 +949,78 @@ export default function Models() {
                   </AppButton>
                 </div>
               ) : (
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      {objectsTable.getHeaderGroups().map((headerGroup) => (
-                        <TableRow key={headerGroup.id}>
-                          {headerGroup.headers.map((header) => (
-                            <TableHead key={header.id}>
-                              {header.isPlaceholder
-                                ? null
-                                : flexRender(header.column.columnDef.header, header.getContext())}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableHeader>
-                    <TableBody>
-                      {objectsTable.getRowModel().rows.map((row) => (
-                        <TableRow
-                          key={row.id}
-                          className="cursor-pointer"
-                          onClick={() => {
-                            setColumnFilters([{ id: "modelName", value: row.original.modelName }]);
-                            setActiveTab("points");
-                          }}
-                        >
-                          {row.getVisibleCells().map((cell) => (
-                            <TableCell key={cell.id}>
-                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                <>
+                  <div className="flex flex-wrap items-center gap-3 py-4">
+                    <Input
+                      placeholder="筛选对象..."
+                      value={objectGlobalFilter}
+                      onChange={(e) => setObjectGlobalFilter(e.target.value)}
+                      className="max-w-sm"
+                    />
+                    <Select
+                      value={
+                        (objectsTable.getColumn("modelName")?.getFilterValue() as string) ?? ""
+                      }
+                      onValueChange={(v) => {
+                        objectsTable.getColumn("modelName")?.setFilterValue(v || undefined);
+                      }}
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="关联模型">
+                          {(objectsTable.getColumn("modelName")?.getFilterValue() as
+                            | string
+                            | undefined) ?? "关联模型"}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">全部模型</SelectItem>
+                        {models.map((m) => (
+                          <SelectItem key={m.id} value={m.name}>
+                            {m.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        {objectsTable.getHeaderGroups().map((headerGroup) => (
+                          <TableRow key={headerGroup.id}>
+                            {headerGroup.headers.map((header) => (
+                              <TableHead key={header.id}>
+                                {header.isPlaceholder
+                                  ? null
+                                  : flexRender(header.column.columnDef.header, header.getContext())}
+                              </TableHead>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableHeader>
+                      <TableBody>
+                        {objectsTable.getRowModel().rows.map((row) => (
+                          <TableRow
+                            key={row.id}
+                            className={`cursor-pointer ${highlightedObjectId === row.original.id ? "bg-blue-50" : ""}`}
+                            onClick={() => {
+                              setPendingNav({
+                                tab: "points",
+                                pointsFilterObjectId: row.original.id,
+                              });
+                              setActiveTab("points");
+                            }}
+                          >
+                            {row.getVisibleCells().map((cell) => (
+                              <TableCell key={cell.id}>
+                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
             </CardContent>
             <div className="shrink-0 border-t px-6 py-3 flex items-center justify-between">
@@ -925,15 +1104,37 @@ export default function Models() {
                       className="max-w-sm"
                     />
                     <Select
+                      value={(table.getColumn("objectName")?.getFilterValue() as string) ?? ""}
+                      onValueChange={(v) => {
+                        table.getColumn("objectName")?.setFilterValue(v || undefined);
+                      }}
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="关联对象">
+                          {(table.getColumn("objectName")?.getFilterValue() as
+                            | string
+                            | undefined) ?? "关联对象"}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">全部对象</SelectItem>
+                        {objects.map((o) => (
+                          <SelectItem key={o.id} value={o.name ?? o.code}>
+                            {o.name ?? o.code}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
                       value={(table.getColumn("modelName")?.getFilterValue() as string) ?? ""}
                       onValueChange={(v) => {
                         table.getColumn("modelName")?.setFilterValue(v || undefined);
                       }}
                     >
                       <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="所属模型">
+                        <SelectValue placeholder="关联模型">
                           {(table.getColumn("modelName")?.getFilterValue() as string | undefined) ??
-                            "所属模型"}
+                            "关联模型"}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
@@ -1024,8 +1225,8 @@ export default function Models() {
         <DialogContent className="max-h-[90vh] max-w-lg flex flex-col gap-0 p-0">
           <DialogHeader className="px-6 pt-6 pb-4">
             <DialogTitle className="flex items-center gap-2 text-lg">
-              {editingObjectUuid ? <Pencil size={18} /> : <Plus size={18} />}
-              {editingObjectUuid ? "编辑业务对象" : "新增业务对象"}
+              {editingObjectId ? <Pencil size={18} /> : <Plus size={18} />}
+              {editingObjectId ? "编辑业务对象" : "新增业务对象"}
             </DialogTitle>
           </DialogHeader>
 
@@ -1056,7 +1257,7 @@ export default function Models() {
                     htmlFor="object-id"
                     className="text-sm font-medium text-foreground mb-1.5 block"
                   >
-                    设备编号
+                    编码
                   </label>
                   <Input
                     id="object-id"
@@ -1083,6 +1284,21 @@ export default function Models() {
                   />
                 </div>
               </div>
+              <div>
+                <label
+                  htmlFor="object-description"
+                  className="text-sm font-medium text-foreground mb-1.5 block"
+                >
+                  描述
+                </label>
+                <Input
+                  id="object-description"
+                  value={objectDescription}
+                  onChange={(e) => setObjectDescription(e.target.value)}
+                  placeholder="请输入描述（可选）"
+                  className="h-10"
+                />
+              </div>
             </div>
 
             {objectError && (
@@ -1100,7 +1316,7 @@ export default function Models() {
             <AppButton
               level="action"
               onClick={() => {
-                if (editingObjectUuid) {
+                if (editingObjectId) {
                   handleUpdateObject();
                 } else {
                   handleCreateObject();
@@ -1114,12 +1330,12 @@ export default function Models() {
               {isCreatingObject ? (
                 <>
                   <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  {editingObjectUuid ? "保存中..." : "创建中..."}
+                  {editingObjectId ? "保存中..." : "创建中..."}
                 </>
               ) : (
                 <>
-                  {editingObjectUuid ? <Pencil size={16} /> : <Plus size={16} />}
-                  {editingObjectUuid ? "保存修改" : "确认创建"}
+                  {editingObjectId ? <Pencil size={16} /> : <Plus size={16} />}
+                  {editingObjectId ? "保存修改" : "确认创建"}
                 </>
               )}
             </AppButton>
@@ -1234,6 +1450,21 @@ export default function Models() {
                   </AutocompletePopup>
                 </Autocomplete>
                 <p className="text-xs text-muted-foreground mt-1.5">1 位大写字母，如 C</p>
+              </div>
+              <div>
+                <label
+                  htmlFor="edit-description"
+                  className="text-sm font-medium text-foreground mb-1.5 block"
+                >
+                  描述（可选）
+                </label>
+                <Input
+                  id="edit-description"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder="请输入模型描述"
+                  className="h-10"
+                />
               </div>
             </div>
 
