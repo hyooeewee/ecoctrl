@@ -1,5 +1,6 @@
-import { X, Trash2, AlertTriangle, Play, Copy, Check, Hash } from "lucide-react";
+import { X, Trash2, AlertTriangle, Play, Copy, Check, Hash, Braces } from "lucide-react";
 import { useState, useCallback } from "react";
+import { ExpressionRefHelper, type UpstreamNodeInfo } from "./NodeConfigPanel";
 import { Button } from "@ecoctrl/ui/button";
 import { Input } from "@ecoctrl/ui/input";
 import { Label } from "@ecoctrl/ui/label";
@@ -96,6 +97,31 @@ export function WorkflowNodeConfig({
   }
 
   const upstreamNodes = getAllAncestors(selectedNode.id, edges, nodes);
+
+  // Resolve upstream node info for expression reference helper
+  const resolvedUpstream: UpstreamNodeInfo[] = upstreamNodes.map((node) => {
+    const nodeType = (node.data.type as string) || "";
+    const nodeLabel = (node.data.label as string) || node.id;
+    const def = getNodeDef(nodeType);
+    const outputSchema = (def?.schema as Record<string, unknown>)?.outputs as
+      | { properties?: Record<string, unknown> }
+      | undefined;
+    const outputKeys = outputSchema?.properties ? Object.keys(outputSchema.properties) : ["value"];
+    return { id: node.id, label: nodeLabel, outputKeys };
+  });
+
+  const envVarsForHelper = (envVars ?? []).map((v) => ({ key: v.key, type: v.type }));
+
+  const insertExprToPointName = useCallback(
+    (expr: string) => {
+      const current = (config?.pointName as string) ?? "";
+      const next = current ? `${current}${expr}` : expr;
+      updateNodeData(selectedNode.id, {
+        config: { ...config, pointName: next },
+      });
+    },
+    [config, selectedNode.id, updateNodeData],
+  );
 
   return (
     <div className="flex w-[320px] shrink-0 flex-col border-l bg-white dark:bg-zinc-900">
@@ -203,18 +229,26 @@ export function WorkflowNodeConfig({
               {/* Point nodes - special combobox for point names */}
               {isPointNode && (
                 <div className="space-y-1.5">
-                  <Label className="flex items-center gap-2 text-sm text-foreground">
-                    测点名称
-                    {(() => {
-                      const name = (config?.pointName as string) ?? "";
-                      return name && !pointNames.includes(name) ? (
-                        <span className="inline-flex items-center gap-1 rounded-sm bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:bg-amber-950/60">
-                          <AlertTriangle size={10} />
-                          未找到
-                        </span>
-                      ) : null;
-                    })()}
-                  </Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-2 text-sm text-foreground">
+                      测点名称
+                      {(() => {
+                        const name = (config?.pointName as string) ?? "";
+                        return name && !pointNames.includes(name) ? (
+                          <span className="inline-flex items-center gap-1 rounded-sm bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:bg-amber-950/60">
+                            <AlertTriangle size={10} />
+                            未找到
+                          </span>
+                        ) : null;
+                      })()}
+                    </Label>
+                    <ExpressionRefHelper
+                      upstreamNodes={resolvedUpstream}
+                      envVars={envVarsForHelper}
+                      onSelect={insertExprToPointName}
+                      triggerClassName="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground/40 hover:bg-muted hover:text-muted-foreground"
+                    />
+                  </div>
                   <Combobox
                     value={(config?.pointName as string) || null}
                     inputValue={(config?.pointName as string) || ""}
