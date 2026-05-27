@@ -85,11 +85,11 @@ function buildCandidates(
   );
 
   for (const v of envVars.filter((v) => v.type !== "secret")) {
-    candidates.push({ label: `var.${v.key}`, value: `{{var.${v.key}}}`, category: "环境变量" });
+    candidates.push({ label: `env.${v.key}`, value: `{{env.${v.key}}}`, category: "环境变量" });
   }
 
   for (const v of envVars.filter((v) => v.type === "secret")) {
-    candidates.push({ label: `secret.${v.key}`, value: `{{secret.${v.key}}}`, category: "密钥" });
+    candidates.push({ label: `secrets.${v.key}`, value: `{{secrets.${v.key}}}`, category: "密钥" });
   }
 
   for (const node of upstreamNodes) {
@@ -160,10 +160,12 @@ function ExpressionRefHelper({
   upstreamNodes,
   envVars,
   onSelect,
+  triggerClassName,
 }: {
   upstreamNodes: UpstreamNodeInfo[];
   envVars: Array<{ key: string; type: string }>;
   onSelect: (expr: string) => void;
+  triggerClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -205,7 +207,10 @@ function ExpressionRefHelper({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
-        className="absolute right-1.5 top-1/2 -translate-y-1/2 flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/40 opacity-0 transition-all hover:bg-muted hover:text-muted-foreground group-hover/input:opacity-100 [&[data-popup-open]]:opacity-100"
+        className={
+          triggerClassName ??
+          "absolute right-1.5 top-1/2 -translate-y-1/2 flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/40 opacity-0 transition-all hover:bg-muted hover:text-muted-foreground group-hover/input:opacity-100 [&[data-popup-open]]:opacity-100"
+        }
         onClick={(e) => e.stopPropagation()}
       >
         <Braces size={13} />
@@ -222,11 +227,11 @@ function ExpressionRefHelper({
             )}
             {renderSection(
               "环境变量",
-              nonSecretVars.map((v) => ({ label: v.key, expr: `{{var.${v.key}}}` })),
+              nonSecretVars.map((v) => ({ label: v.key, expr: `{{env.${v.key}}}` })),
             )}
             {renderSection(
               "密钥",
-              secretVars.map((v) => ({ label: v.key, expr: `{{secret.${v.key}}}` })),
+              secretVars.map((v) => ({ label: v.key, expr: `{{secrets.${v.key}}}` })),
             )}
             {upstreamNodes.length > 0 &&
               upstreamNodes.map((node) => (
@@ -606,6 +611,9 @@ function SchemaField({
 // ========================================
 // Main Panel Component
 // ========================================
+
+export { ExpressionRefHelper };
+export type { UpstreamNodeInfo };
 
 export function NodeConfigPanel({
   currentConfig,
