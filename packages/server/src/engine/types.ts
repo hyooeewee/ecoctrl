@@ -36,24 +36,7 @@ export interface WorkflowTrigger {
   config: TriggerConfig;
 }
 
-export type NodeType =
-  // Control nodes
-  | "start"
-  | "end"
-  | "condition"
-  | "switch"
-  | "loop"
-  | "parallel"
-  | "delay"
-  // Action nodes
-  | "http_request"
-  | "database"
-  | "email"
-  | "variable"
-  | "point_read"
-  | "point_write"
-  // Plugin nodes (any string)
-  | string;
+export type NodeType = string;
 
 export interface ErrorHandler {
   action: "retry" | "skip" | "abort" | "goto";
@@ -64,7 +47,7 @@ export interface ErrorHandler {
 
 export interface WorkflowNode {
   id: string;
-  type: NodeType | string;
+  type: string;
   name: string;
   config: Record<string, unknown>;
   onError?: ErrorHandler;

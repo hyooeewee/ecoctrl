@@ -5,26 +5,11 @@ export interface WorkflowTrigger {
   config: Record<string, unknown>;
 }
 
-export type NodeType =
-  | "start"
-  | "end"
-  | "condition"
-  | "switch"
-  | "loop"
-  | "parallel"
-  | "delay"
-  | "http_request"
-  | "database"
-  | "email"
-  | "variable"
-  | "point_read"
-  | "point_write"
-  // Plugin nodes (any string)
-  | string;
+export type NodeType = string;
 
 export interface WorkflowNode {
   id: string;
-  type: NodeType | string;
+  type: string;
   name: string;
   config: Record<string, unknown>;
   onError?: {
@@ -107,8 +92,6 @@ export interface WorkflowExecution {
   createdAt: string;
 }
 
-export type DynamicNodeType = string;
-
 export interface PluginNodeDefinition {
   id: string;
   name: string;
@@ -119,7 +102,7 @@ export interface PluginNodeDefinition {
 }
 
 export interface ComponentItem {
-  type: NodeType;
+  type: string;
   label: string;
   description: string;
   iconSvg?: string; // SVG string from plugin node API

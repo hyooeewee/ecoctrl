@@ -16,7 +16,7 @@ import { flushSync } from "react-dom";
 import { workflowsApi } from "@/api/workflows";
 import { pointsApi } from "@/api/points";
 import { nodesApi } from "@/api/nodes";
-import type { WorkflowDSL, WorkflowListItem, EnvVar, ComponentCategory, NodeType } from "../types";
+import type { WorkflowDSL, WorkflowListItem, EnvVar, ComponentCategory } from "../types";
 import { dslToReactFlow, getDefaultSettings } from "../transform";
 import { autoLayout } from "../layout";
 import { usePluginNodes } from "./usePluginNodes";
@@ -217,7 +217,7 @@ export function useWorkflowCanvas({ workflowId, onBack }: UseWorkflowCanvasOptio
         groups.set(catId, { id: catId, label, items: [] });
       }
       groups.get(catId)!.items.push({
-        type: plugin.id as NodeType,
+        type: plugin.id as string,
         label: plugin.name,
         description: plugin.description || "",
         iconSvg: plugin.icon,
