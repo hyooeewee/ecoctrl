@@ -32,7 +32,19 @@ function getValueFromPath(path: string, ctx: ExecutionContext): unknown {
     let value: unknown = ctx.triggerData;
     for (const key of keys) {
       if (value == null) return "";
-      value = (value as Record<string, unknown>)[key];
+      const arrayMatch = key.match(/^(.+)\[(\d+)\]$/);
+      if (arrayMatch) {
+        const propName = arrayMatch[1]!;
+        const index = parseInt(arrayMatch[2]!, 10);
+        value = (value as Record<string, unknown>)[propName];
+        if (Array.isArray(value)) {
+          value = value[index];
+        } else {
+          return "";
+        }
+      } else {
+        value = (value as Record<string, unknown>)[key];
+      }
     }
     return value ?? "";
   }
@@ -50,10 +62,24 @@ function getValueFromPath(path: string, ctx: ExecutionContext): unknown {
     const outputs = ctx.nodeOutputs.get(nodeId);
     if (outputs) {
       let value: unknown = outputs[outputKey];
-      // Deep path: nodeId.outputKey.subKey
+      // Deep path: nodeId.outputKey.subKey or nodeId.outputKey.arr[0].subKey
       for (let i = 2; i < parts.length; i++) {
         if (value == null) return "";
-        value = (value as Record<string, unknown>)[parts[i]!];
+        const segment = parts[i]!;
+        // Support array index syntax: arr[0], arr[1], etc.
+        const arrayMatch = segment.match(/^(.+)\[(\d+)\]$/);
+        if (arrayMatch) {
+          const propName = arrayMatch[1]!;
+          const index = parseInt(arrayMatch[2]!, 10);
+          value = (value as Record<string, unknown>)[propName];
+          if (Array.isArray(value)) {
+            value = value[index];
+          } else {
+            return "";
+          }
+        } else {
+          value = (value as Record<string, unknown>)[segment];
+        }
       }
       return value ?? "";
     }
