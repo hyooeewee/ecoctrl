@@ -90,7 +90,14 @@ async function executeNode(
     log.status = "failed";
     log.completedAt = new Date().toISOString();
     log.durationMs = Date.now() - startTime;
-    log.error = (error as Error).message;
+
+    const originalMsg = (error as Error).message;
+    log.error = [
+      `Node [${node.type}] "${node.name}" (id=${node.id}) failed`,
+      `Error: ${originalMsg}`,
+      `Context: workflow=${state.workflowId}, execution=${state.executionId}`,
+    ].join("\n");
+
     state.failed.add(node.id);
     if (callbacks.onNodeLog) {
       await callbacks.onNodeLog(log);

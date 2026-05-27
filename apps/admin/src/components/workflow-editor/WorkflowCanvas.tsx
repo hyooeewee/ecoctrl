@@ -21,15 +21,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuShortcut,
-} from "@ecoctrl/ui/context-menu";
-import { Kbd } from "@ecoctrl/ui/kbd";
-
 import { PluginNodesContext } from "./nodes-context";
 import { useColorMode } from "@/hooks/useColorMode";
 import { useAppStore } from "@/store/appStore";
@@ -200,162 +191,175 @@ export default function WorkflowCanvas({ workflowId, onBack, onDirtyChange }: Wo
               </PluginNodesContext.Provider>
 
               {/* Context menu */}
-              <ContextMenu
-                open={canvas.contextMenu.visible}
-                onOpenChange={(open) =>
-                  canvas.setContextMenu((prev) => ({ ...prev, visible: open }))
-                }
-              >
-                <ContextMenuContent
-                  className="w-52"
-                  anchor={() => {
-                    const wrapper = canvas.reactFlowWrapper.current;
-                    const x = wrapper
-                      ? wrapper.getBoundingClientRect().left + canvas.contextMenu.x
-                      : canvas.contextMenu.x;
-                    const y = wrapper
-                      ? wrapper.getBoundingClientRect().top + canvas.contextMenu.y
-                      : canvas.contextMenu.y;
-                    return {
-                      getBoundingClientRect() {
-                        return DOMRect.fromRect({ x, y, width: 0, height: 0 });
-                      },
-                    };
-                  }}
-                  align="start"
-                  side="right"
-                  sideOffset={0}
-                >
-                  {canvas.contextMenu.target === "node" && (
-                    <>
-                      <ContextMenuItem
-                        onClick={() => {
-                          const selected = canvas.nodesRef.current.filter((n) =>
-                            canvas.selectedNodeIds.includes(n.id),
-                          );
-                          if (selected.length > 0) {
-                            canvas.copiedNodesRef.current = selected;
-                            toast.success(`已复制 ${selected.length} 个节点`);
-                          }
+              {canvas.contextMenu.visible && (
+                <>
+                  {/* Backdrop to close on outside click */}
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => canvas.setContextMenu((prev) => ({ ...prev, visible: false }))}
+                  />
+                  <div
+                    className="absolute z-50 w-52 overflow-hidden rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg"
+                    style={{ left: canvas.contextMenu.x, top: canvas.contextMenu.y }}
+                  >
+                    {canvas.contextMenu.target === "node" && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const selected = canvas.nodesRef.current.filter((n) =>
+                              canvas.selectedNodeIds.includes(n.id),
+                            );
+                            if (selected.length > 0) {
+                              canvas.copiedNodesRef.current = selected;
+                              toast.success(`已复制 ${selected.length} 个节点`);
+                            }
+                            canvas.setContextMenu((prev) => ({ ...prev, visible: false }));
+                          }}
+                          className="flex w-full cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors select-none hover:bg-accent hover:text-accent-foreground"
+                        >
+                          <Copy size={14} />
+                          <span className="flex-1 text-left">复制</span>
+                          <span className="flex items-center gap-0.5">
+                            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded border bg-muted px-1 text-[10px]">
+                              Ctrl
+                            </span>
+                            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded border bg-muted px-1 text-[10px]">
+                              C
+                            </span>
+                          </span>
+                        </button>
+                        <div className="my-1 h-px bg-border" />
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const copied = canvas.copiedNodesRef.current;
+                        if (copied.length === 0) {
                           canvas.setContextMenu((prev) => ({ ...prev, visible: false }));
-                        }}
-                      >
-                        <Copy size={14} />
-                        复制
-                        <ContextMenuShortcut>
-                          <Kbd className="h-5 min-w-5 px-1 text-[10px]">Ctrl</Kbd>
-                          <Kbd className="h-5 min-w-5 px-1 text-[10px]">C</Kbd>
-                        </ContextMenuShortcut>
-                      </ContextMenuItem>
-                      <ContextMenuSeparator />
-                    </>
-                  )}
-                  <ContextMenuItem
-                    onClick={() => {
-                      const copied = canvas.copiedNodesRef.current;
-                      if (copied.length === 0) {
+                          return;
+                        }
+                        const idMap = new Map<string, string>();
+                        const newNodes = copied.map((n) => {
+                          const newId = `${n.type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+                          idMap.set(n.id, newId);
+                          return {
+                            ...n,
+                            id: newId,
+                            position: { x: n.position.x + 30, y: n.position.y + 30 },
+                            selected: false,
+                          };
+                        });
+                        const newEdges = canvas.edges
+                          .filter((edge) => idMap.has(edge.source) && idMap.has(edge.target))
+                          .map((edge) => ({
+                            ...edge,
+                            id: `e-${idMap.get(edge.source)}-${idMap.get(edge.target)}-${Date.now()}`,
+                            source: idMap.get(edge.source)!,
+                            target: idMap.get(edge.target)!,
+                          }));
+                        canvas.setIsDirty(true);
+                        canvas._pushHistory(canvas.nodesRef.current, canvas.edges);
+                        canvas.setNodes((nds) => [...nds, ...newNodes]);
+                        if (newEdges.length > 0) canvas.setEdges((eds) => [...eds, ...newEdges]);
+                        toast.success(`已粘贴 ${copied.length} 个节点`);
                         canvas.setContextMenu((prev) => ({ ...prev, visible: false }));
-                        return;
-                      }
-                      const idMap = new Map<string, string>();
-                      const newNodes = copied.map((n) => {
-                        const newId = `${n.type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-                        idMap.set(n.id, newId);
-                        return {
-                          ...n,
-                          id: newId,
-                          position: { x: n.position.x + 30, y: n.position.y + 30 },
-                          selected: false,
-                        };
-                      });
-                      const newEdges = canvas.edges
-                        .filter((edge) => idMap.has(edge.source) && idMap.has(edge.target))
-                        .map((edge) => ({
-                          ...edge,
-                          id: `e-${idMap.get(edge.source)}-${idMap.get(edge.target)}-${Date.now()}`,
-                          source: idMap.get(edge.source)!,
-                          target: idMap.get(edge.target)!,
-                        }));
-                      canvas.setIsDirty(true);
-                      canvas._pushHistory(canvas.nodesRef.current, canvas.edges);
-                      canvas.setNodes((nds) => [...nds, ...newNodes]);
-                      if (newEdges.length > 0) canvas.setEdges((eds) => [...eds, ...newEdges]);
-                      toast.success(`已粘贴 ${copied.length} 个节点`);
-                      canvas.setContextMenu((prev) => ({ ...prev, visible: false }));
-                    }}
-                  >
-                    <Braces size={14} />
-                    粘贴
-                    <ContextMenuShortcut>
-                      <Kbd className="h-5 min-w-5 px-1 text-[10px]">Ctrl</Kbd>
-                      <Kbd className="h-5 min-w-5 px-1 text-[10px]">V</Kbd>
-                    </ContextMenuShortcut>
-                  </ContextMenuItem>
-                  {canvas.contextMenu.target === "node" && canvas.selectedNodeIds.length > 0 && (
-                    <>
-                      <ContextMenuSeparator />
-                      <ContextMenuItem
-                        variant="destructive"
-                        onClick={() => {
-                          canvas.setIsDirty(true);
-                          canvas._pushHistory(canvas.nodesRef.current, canvas.edges);
-                          canvas.setNodes((nds) =>
-                            nds.filter((n) => !canvas.selectedNodeIds.includes(n.id)),
-                          );
-                          canvas.setEdges((eds) =>
-                            eds.filter(
-                              (e) =>
-                                !canvas.selectedNodeIds.includes(e.source) &&
-                                !canvas.selectedNodeIds.includes(e.target),
-                            ),
-                          );
+                      }}
+                      className="flex w-full cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors select-none hover:bg-accent hover:text-accent-foreground"
+                    >
+                      <Braces size={14} />
+                      <span className="flex-1 text-left">粘贴</span>
+                      <span className="flex items-center gap-0.5">
+                        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded border bg-muted px-1 text-[10px]">
+                          Ctrl
+                        </span>
+                        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded border bg-muted px-1 text-[10px]">
+                          V
+                        </span>
+                      </span>
+                    </button>
+                    {canvas.contextMenu.target === "node" && canvas.selectedNodeIds.length > 0 && (
+                      <>
+                        <div className="my-1 h-px bg-border" />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            canvas.setIsDirty(true);
+                            canvas._pushHistory(canvas.nodesRef.current, canvas.edges);
+                            canvas.setNodes((nds) =>
+                              nds.filter((n) => !canvas.selectedNodeIds.includes(n.id)),
+                            );
+                            canvas.setEdges((eds) =>
+                              eds.filter(
+                                (e) =>
+                                  !canvas.selectedNodeIds.includes(e.source) &&
+                                  !canvas.selectedNodeIds.includes(e.target),
+                              ),
+                            );
+                            canvas.setSelectedNodeIds([]);
+                            canvas.setContextMenu((prev) => ({ ...prev, visible: false }));
+                          }}
+                          className="flex w-full cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-rose-600 outline-none transition-colors select-none hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30"
+                        >
+                          <Trash2 size={14} />
+                          <span className="flex-1 text-left">删除</span>
+                          <span className="flex items-center gap-0.5">
+                            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded border bg-muted px-1 text-[10px]">
+                              Del
+                            </span>
+                          </span>
+                        </button>
+                      </>
+                    )}
+                    <div className="my-1 h-px bg-border" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const allIds = canvas.nodesRef.current.map((n) => n.id);
+                        canvas.setSelectedNodeIds(allIds);
+                        canvas.setNodes((nds) => nds.map((n) => ({ ...n, selected: true })));
+                        canvas.setContextMenu((prev) => ({ ...prev, visible: false }));
+                      }}
+                      className="flex w-full cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors select-none hover:bg-accent hover:text-accent-foreground"
+                    >
+                      <Copy size={14} />
+                      <span className="flex-1 text-left">全选</span>
+                      <span className="flex items-center gap-0.5">
+                        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded border bg-muted px-1 text-[10px]">
+                          Ctrl
+                        </span>
+                        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded border bg-muted px-1 text-[10px]">
+                          A
+                        </span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={canvas.historyIndexRef.current <= 0}
+                      onClick={() => {
+                        canvas.undo(canvas.setNodes, canvas.setEdges, () => {
                           canvas.setSelectedNodeIds([]);
-                          canvas.setContextMenu((prev) => ({ ...prev, visible: false }));
-                        }}
-                      >
-                        <Trash2 size={14} />
-                        删除
-                        <ContextMenuShortcut>
-                          <Kbd className="h-5 min-w-5 px-1 text-[10px]">Del</Kbd>
-                        </ContextMenuShortcut>
-                      </ContextMenuItem>
-                    </>
-                  )}
-                  <ContextMenuSeparator />
-                  <ContextMenuItem
-                    onClick={() => {
-                      const allIds = canvas.nodesRef.current.map((n) => n.id);
-                      canvas.setSelectedNodeIds(allIds);
-                      canvas.setNodes((nds) => nds.map((n) => ({ ...n, selected: true })));
-                      canvas.setContextMenu((prev) => ({ ...prev, visible: false }));
-                    }}
-                  >
-                    <Copy size={14} />
-                    全选
-                    <ContextMenuShortcut>
-                      <Kbd className="h-5 min-w-5 px-1 text-[10px]">Ctrl</Kbd>
-                      <Kbd className="h-5 min-w-5 px-1 text-[10px]">A</Kbd>
-                    </ContextMenuShortcut>
-                  </ContextMenuItem>
-                  <ContextMenuItem
-                    disabled={canvas.historyIndexRef.current <= 0}
-                    onClick={() => {
-                      canvas.undo(canvas.setNodes, canvas.setEdges, () => {
-                        canvas.setSelectedNodeIds([]);
-                        toast.success("已撤销");
-                      });
-                      canvas.setContextMenu((prev) => ({ ...prev, visible: false }));
-                    }}
-                  >
-                    <Undo2 size={14} />
-                    撤销
-                    <ContextMenuShortcut>
-                      <Kbd className="h-5 min-w-5 px-1 text-[10px]">Ctrl</Kbd>
-                      <Kbd className="h-5 min-w-5 px-1 text-[10px]">Z</Kbd>
-                    </ContextMenuShortcut>
-                  </ContextMenuItem>
-                </ContextMenuContent>
-              </ContextMenu>
+                          toast.success("已撤销");
+                        });
+                        canvas.setContextMenu((prev) => ({ ...prev, visible: false }));
+                      }}
+                      className="flex w-full cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors select-none hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
+                    >
+                      <Undo2 size={14} />
+                      <span className="flex-1 text-left">撤销</span>
+                      <span className="flex items-center gap-0.5">
+                        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded border bg-muted px-1 text-[10px]">
+                          Ctrl
+                        </span>
+                        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded border bg-muted px-1 text-[10px]">
+                          Z
+                        </span>
+                      </span>
+                    </button>
+                  </div>
+                </>
+              )}
 
               {/* Handle click node picker popup */}
               {canvas.handleMenu && (

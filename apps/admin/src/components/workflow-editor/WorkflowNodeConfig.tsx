@@ -30,6 +30,36 @@ interface NodeLogEntry {
   error?: string;
 }
 
+function CopyErrorButton({ error }: { error: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(error).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }, [error]);
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className="flex items-center gap-1 text-[10px] text-red-400 transition-colors hover:text-red-600"
+    >
+      {copied ? (
+        <>
+          <Check size={10} />
+          <span>已复制</span>
+        </>
+      ) : (
+        <>
+          <Copy size={10} />
+          <span>复制</span>
+        </>
+      )}
+    </button>
+  );
+}
+
 interface WorkflowNodeConfigProps {
   selectedNode: Node;
   selectedNodeType: string;
@@ -453,8 +483,14 @@ export function WorkflowNodeConfig({
                         </span>
                       </div>
                       {log.error && (
-                        <div className="rounded bg-red-50 p-2 text-[11px] text-red-700">
-                          {log.error}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-medium text-red-600">错误</span>
+                            <CopyErrorButton error={log.error} />
+                          </div>
+                          <div className="rounded bg-red-50 p-2 text-[11px] text-red-700 whitespace-pre-wrap">
+                            {log.error}
+                          </div>
                         </div>
                       )}
                       {log.output && Object.keys(log.output).length > 0 && (

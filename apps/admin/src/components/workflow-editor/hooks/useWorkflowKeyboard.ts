@@ -23,6 +23,11 @@ interface UseWorkflowKeyboardOptions {
 function isInputFocused(): boolean {
   const el = document.activeElement;
   if (!el) return false;
+  // If user has text selected anywhere, allow default copy behavior
+  const selection = window.getSelection();
+  if (selection && selection.toString().trim().length > 0) {
+    return true;
+  }
   return (
     el instanceof HTMLInputElement ||
     el instanceof HTMLTextAreaElement ||
