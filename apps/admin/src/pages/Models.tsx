@@ -118,6 +118,17 @@ export default function Models() {
   const [editPointError, setEditPointError] = useState("");
   const [isSavingPoint, setIsSavingPoint] = useState(false);
 
+  // Point create state
+  const [pointCreateOpen, setPointCreateOpen] = useState(false);
+  const [createPointModelId, setCreatePointModelId] = useState("");
+  const [createPointObjectId, setCreatePointObjectId] = useState("");
+  const [createPointType, setCreatePointType] = useState("");
+  const [createPointCode, setCreatePointCode] = useState("");
+  const [createPointName, setCreatePointName] = useState("");
+  const [createPointDescription, setCreatePointDescription] = useState("");
+  const [createPointError, setCreatePointError] = useState("");
+  const [isCreatingPoint, setIsCreatingPoint] = useState(false);
+
   // Objects tab state
   const [selectedObjectIds, setSelectedObjectIds] = useState<string[]>([]);
   const [objectSearch, setObjectSearch] = useState("");
@@ -415,6 +426,71 @@ export default function Models() {
       }
     };
     setConfirmOpen(true);
+  };
+
+  // Point create functions
+  const resetCreatePointForm = () => {
+    setCreatePointModelId("");
+    setCreatePointObjectId("");
+    setCreatePointType("");
+    setCreatePointCode("");
+    setCreatePointName("");
+    setCreatePointDescription("");
+    setCreatePointError("");
+  };
+
+  const openCreatePointDialog = () => {
+    resetCreatePointForm();
+    setPointCreateOpen(true);
+  };
+
+  const validateCreatePointForm = (): boolean => {
+    if (!createPointObjectId.trim()) {
+      setCreatePointError("请选择模型对象");
+      return false;
+    }
+    if (!createPointCode.trim() || !createPointType.trim()) {
+      setCreatePointError("请填写编码和类型");
+      return false;
+    }
+    const duplicate = allPoints.find(
+      (p) =>
+        p.objectId === createPointObjectId &&
+        p.type === createPointType.trim() &&
+        p.code === createPointCode.trim(),
+    );
+    if (duplicate) {
+      setCreatePointError(
+        `该对象下已存在类型为 "${createPointType.trim()}" 且编码为 "${createPointCode.trim()}" 的点位`,
+      );
+      return false;
+    }
+    setCreatePointError("");
+    return true;
+  };
+
+  const handleCreatePoint = async () => {
+    if (!validateCreatePointForm()) return;
+    setIsCreatingPoint(true);
+    try {
+      await pointsApi.create({
+        objectId: createPointObjectId,
+        modelId: createPointModelId,
+        code: createPointCode.trim(),
+        name: createPointName.trim() || null,
+        type: createPointType.trim(),
+        description: createPointDescription.trim() || null,
+        props: [],
+        values: {},
+      });
+      setPointCreateOpen(false);
+      resetCreatePointForm();
+      await fetchPoints();
+    } catch (err) {
+      setCreatePointError(err instanceof Error ? err.message : "创建失败，请重试");
+    } finally {
+      setIsCreatingPoint(false);
+    }
   };
 
   const handleBatchDeleteObjects = () => {
@@ -754,6 +830,10 @@ export default function Models() {
     });
   }, [allPoints, objects, models]);
 
+  const existingPointTypes = useMemo(() => {
+    return [...new Set(allPoints.map((p) => p.type).filter(Boolean))];
+  }, [allPoints]);
+
   const objectsTableData = useMemo(() => {
     return objects.map((o) => {
       const model = models.find((m) => m.id === o.modelId);
@@ -1075,34 +1155,60 @@ export default function Models() {
             loading={pointsLoading}
             emptyIcon={<Braces className="h-12 w-12 text-muted-foreground/40" />}
             emptyTitle="暂无点位数据"
-            emptyDescription="点击右上角「导入点位」按钮导入。"
+            emptyDescription="点击「新建点位」或「导入点位」按钮添加点位。"
             emptyAction={
-              <AppButton
-                level="action"
-                size="lg"
-                className="mt-4 gap-2"
-                onClick={() => {
-                  resetImport();
-                  setImportOpen(true);
-                }}
-              >
-                <Upload size={16} />
-                导入点位
-              </AppButton>
+              <div className="flex items-center gap-2 mt-4">
+                <AppButton
+                  level="action"
+                  size="lg"
+                  className="gap-2"
+                  onClick={() => {
+                    openCreatePointDialog();
+                  }}
+                >
+                  <Plus size={16} />
+                  新建点位
+                </AppButton>
+                <AppButton
+                  level="secondary"
+                  size="lg"
+                  className="gap-2"
+                  onClick={() => {
+                    resetImport();
+                    setImportOpen(true);
+                  }}
+                >
+                  <Upload size={16} />
+                  导入点位
+                </AppButton>
+              </div>
             }
             action={
-              <AppButton
-                level="action"
-                size="lg"
-                className="gap-2"
-                onClick={() => {
-                  resetImport();
-                  setImportOpen(true);
-                }}
-              >
-                <Upload size={16} />
-                导入点位
-              </AppButton>
+              <div className="flex items-center gap-2">
+                <AppButton
+                  level="action"
+                  size="lg"
+                  className="gap-2"
+                  onClick={() => {
+                    openCreatePointDialog();
+                  }}
+                >
+                  <Plus size={16} />
+                  新建点位
+                </AppButton>
+                <AppButton
+                  level="secondary"
+                  size="lg"
+                  className="gap-2"
+                  onClick={() => {
+                    resetImport();
+                    setImportOpen(true);
+                  }}
+                >
+                  <Upload size={16} />
+                  导入点位
+                </AppButton>
+              </div>
             }
             data={pointsTableData}
             columns={pointColumns}
@@ -1159,7 +1265,7 @@ export default function Models() {
               <div>
                 <label className="text-sm font-medium text-foreground mb-1.5 block">选择模型</label>
                 <Select value={selectedModelId} onValueChange={(v) => setSelectedModelId(v ?? "")}>
-                  <SelectTrigger className="w-full h-10">
+                  <SelectTrigger className="w-full h-10 py-0">
                     <SelectValue placeholder="请选择模型" className="truncate">
                       {selectedModelId
                         ? (models.find((m) => m.id === selectedModelId)?.name ?? "请选择模型")
@@ -1341,7 +1447,7 @@ export default function Models() {
                   />
                 </div>
               </div>
-              <div>
+              <div className="[&_[data-slot=input-group]]:h-10">
                 <label
                   htmlFor="edit-device-type"
                   className="text-sm font-medium text-foreground mb-1.5 block"
@@ -1600,6 +1706,210 @@ export default function Models() {
                 </>
               ) : (
                 <>保存</>
+              )}
+            </AppButton>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Point Dialog */}
+      <Dialog
+        open={pointCreateOpen}
+        onOpenChange={(open) => {
+          setPointCreateOpen(open);
+          if (!open) resetCreatePointForm();
+        }}
+      >
+        <DialogContent className="max-h-[90vh] max-w-lg flex flex-col gap-0 p-0">
+          <DialogHeader className="px-6 pt-6 pb-4">
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <Plus size={18} />
+              新建点位
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-6">
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">选择模型</label>
+                <Select
+                  value={createPointModelId}
+                  onValueChange={(v) => {
+                    setCreatePointModelId(v ?? "");
+                    setCreatePointObjectId("");
+                  }}
+                >
+                  <SelectTrigger className="w-full h-10 py-0">
+                    <SelectValue placeholder="请选择模型">
+                      {createPointModelId
+                        ? (models.find((m) => m.id === createPointModelId)?.name ?? "请选择模型")
+                        : "请选择模型"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {models.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        <span className="block truncate">{m.name ?? m.code ?? m.id}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">选择对象</label>
+                <Select
+                  value={createPointObjectId}
+                  onValueChange={(v) => {
+                    const oid = v ?? "";
+                    setCreatePointObjectId(oid);
+                    if (oid) {
+                      const obj = objects.find((o) => o.id === oid);
+                      if (obj?.modelId) {
+                        setCreatePointModelId(obj.modelId);
+                      }
+                    }
+                  }}
+                  disabled={!createPointModelId}
+                >
+                  <SelectTrigger className="w-full h-10 py-0">
+                    <SelectValue placeholder="请选择对象">
+                      {createPointObjectId
+                        ? (objects.find((o) => o.id === createPointObjectId)?.name ??
+                          objects.find((o) => o.id === createPointObjectId)?.code ??
+                          "请选择对象")
+                        : "请选择对象"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {objects
+                      .filter((o) => !createPointModelId || o.modelId === createPointModelId)
+                      .map((o) => (
+                        <SelectItem key={o.id} value={o.id}>
+                          <span className="block truncate">{o.name ?? o.code ?? o.id}</span>
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="[&_[data-slot=input-group]]:h-10">
+                  <label
+                    htmlFor="create-point-type"
+                    className="text-sm font-medium text-foreground mb-1.5 block"
+                  >
+                    点位类型
+                  </label>
+                  <Autocomplete
+                    value={createPointType}
+                    onValueChange={(v: string) => setCreatePointType(v)}
+                    items={existingPointTypes}
+                    openOnInputClick
+                    filter={() => true}
+                  >
+                    <AutocompleteInput
+                      id="create-point-type"
+                      placeholder="请输入或选择类型"
+                      aria-hidden={false}
+                      className="h-10"
+                    >
+                      <AutocompleteTrigger />
+                    </AutocompleteInput>
+                    <AutocompletePopup className="z-[100]">
+                      <AutocompleteList>
+                        {(type: string) => (
+                          <AutocompleteItem key={type} value={type}>
+                            {type}
+                          </AutocompleteItem>
+                        )}
+                      </AutocompleteList>
+                    </AutocompletePopup>
+                  </Autocomplete>
+                </div>
+                <div>
+                  <label
+                    htmlFor="create-point-code"
+                    className="text-sm font-medium text-foreground mb-1.5 block"
+                  >
+                    编码
+                  </label>
+                  <Input
+                    id="create-point-code"
+                    value={createPointCode}
+                    onChange={(e) => setCreatePointCode(e.target.value)}
+                    placeholder="请输入编码"
+                    className="h-10"
+                  />
+                </div>
+              </div>
+              <div>
+                <label
+                  htmlFor="create-point-name"
+                  className="text-sm font-medium text-foreground mb-1.5 block"
+                >
+                  点位名称
+                </label>
+                <Input
+                  id="create-point-name"
+                  value={createPointName}
+                  onChange={(e) => setCreatePointName(e.target.value)}
+                  placeholder="请输入点位名称（可选）"
+                  className="h-10"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="create-point-description"
+                  className="text-sm font-medium text-foreground mb-1.5 block"
+                >
+                  描述
+                </label>
+                <Input
+                  id="create-point-description"
+                  value={createPointDescription}
+                  onChange={(e) => setCreatePointDescription(e.target.value)}
+                  placeholder="请输入描述（可选）"
+                  className="h-10"
+                />
+              </div>
+            </div>
+
+            {createPointError && (
+              <div className="rounded-lg border-l-4 border-red-500 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {createPointError}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="border-t border-border px-6 py-4 flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setPointCreateOpen(false)}
+              className="h-10 px-5"
+            >
+              取消
+            </Button>
+            <AppButton
+              level="action"
+              onClick={handleCreatePoint}
+              disabled={
+                !createPointObjectId ||
+                !createPointCode.trim() ||
+                !createPointType.trim() ||
+                isCreatingPoint
+              }
+              className="h-10 px-5 gap-2"
+            >
+              {isCreatingPoint ? (
+                <>
+                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  创建中...
+                </>
+              ) : (
+                <>
+                  <Plus size={16} />
+                  确认创建
+                </>
               )}
             </AppButton>
           </div>
