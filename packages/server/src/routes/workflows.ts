@@ -69,6 +69,26 @@ const workflowBodySchema = z.object({
         label: z.string().optional(),
       }),
     ),
+    envVars: z
+      .array(
+        z.object({
+          key: z.string(),
+          value: z.unknown(),
+          type: z.enum(["string", "number", "secret", "boolean"]),
+          description: z.string().optional(),
+        }),
+      )
+      .optional(),
+    settings: z
+      .object({
+        autoSave: z
+          .object({
+            enabled: z.boolean().optional(),
+            intervalSeconds: z.number().optional(),
+          })
+          .optional(),
+      })
+      .optional(),
   }),
 });
 
