@@ -418,9 +418,7 @@ export function VariableEditor({
       {/* Description */}
       <div className="shrink-0 px-4 pt-3 pb-0">
         <p className="text-xs text-muted-foreground">{description}</p>
-        {jsonError && (
-          <span className="mt-1 block text-xs text-rose-500">{jsonError}</span>
-        )}
+        {jsonError && <span className="mt-1 block text-xs text-rose-500">{jsonError}</span>}
       </div>
 
       {/* Content */}
@@ -446,10 +444,7 @@ export function VariableEditor({
               size="sm"
               className="w-full"
               onClick={() =>
-                setItems([
-                  ...items,
-                  { key: `VAR_${items.length + 1}`, value: "", type: "string" },
-                ])
+                setItems([...items, { key: `VAR_${items.length + 1}`, value: "", type: "string" }])
               }
             >
               {addButtonText}
