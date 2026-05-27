@@ -18,6 +18,18 @@ import { NodeConfigPanel } from "./NodeConfigPanel";
 import type { NodeDefinition } from "@/api/nodes";
 import type { EnvVar } from "./types";
 
+interface NodeLogEntry {
+  nodeId: string;
+  nodeName: string;
+  nodeType: string;
+  status: string;
+  startedAt?: string;
+  completedAt?: string;
+  durationMs?: number;
+  output?: Record<string, unknown>;
+  error?: string;
+}
+
 interface WorkflowNodeConfigProps {
   selectedNode: Node;
   selectedNodeType: string;
@@ -36,6 +48,11 @@ interface WorkflowNodeConfigProps {
   nodes: Node[];
   edges: Edge[];
   envVars?: EnvVar[];
+  testResult?: {
+    status: string;
+    error?: string;
+    nodeLogs: NodeLogEntry[];
+  } | null;
 }
 
 export function WorkflowNodeConfig({
@@ -56,6 +73,7 @@ export function WorkflowNodeConfig({
   nodes,
   edges,
   envVars,
+  testResult,
 }: WorkflowNodeConfigProps) {
   const config = (selectedNode.data.config as Record<string, unknown>) ?? {};
   const nodeDef = getNodeDef(selectedNodeType);
@@ -395,9 +413,59 @@ export function WorkflowNodeConfig({
         </TabsContent>
 
         <TabsContent value="history" className="mt-0 flex-1">
-          <div className="flex h-[calc(100vh-180px)] flex-col items-center justify-center gap-2 p-4">
-            <div className="text-muted-foreground text-sm">暂无执行历史</div>
-          </div>
+          <ScrollArea className="h-[calc(100vh-180px)]">
+            <div className="p-4 space-y-3">
+              {!testResult?.nodeLogs || testResult.nodeLogs.length === 0 ? (
+                <div className="flex h-32 flex-col items-center justify-center gap-2">
+                  <div className="text-muted-foreground text-sm">暂无执行历史</div>
+                  <div className="text-muted-foreground text-xs">
+                    点击工具栏的调试按钮运行工作流后查看
+                  </div>
+                </div>
+              ) : (
+                testResult.nodeLogs
+                  .filter((log) => log.nodeId === selectedNode.id)
+                  .map((log) => (
+                    <div key={log.nodeId} className="rounded border bg-card p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`inline-block h-2 w-2 rounded-full ${
+                            log.status === "completed"
+                              ? "bg-green-500"
+                              : log.status === "failed"
+                                ? "bg-red-500"
+                                : log.status === "running"
+                                  ? "bg-amber-500"
+                                  : "bg-muted-foreground"
+                          }`}
+                        />
+                        <span className="text-xs font-medium">{log.nodeName}</span>
+                        <span className="text-[10px] text-muted-foreground ml-auto">
+                          {log.durationMs !== undefined ? `${log.durationMs}ms` : "--"}
+                        </span>
+                      </div>
+                      {log.error && (
+                        <div className="rounded bg-red-50 p-2 text-[11px] text-red-700">
+                          {log.error}
+                        </div>
+                      )}
+                      {log.output && Object.keys(log.output).length > 0 && (
+                        <pre className="font-mono text-[10px] bg-muted p-2 rounded overflow-auto max-h-48">
+                          <code>{JSON.stringify(log.output, null, 2)}</code>
+                        </pre>
+                      )}
+                    </div>
+                  ))
+              )}
+              {testResult?.nodeLogs &&
+                testResult.nodeLogs.filter((log) => log.nodeId === selectedNode.id).length === 0 &&
+                testResult.nodeLogs.length > 0 && (
+                  <div className="flex h-32 flex-col items-center justify-center gap-2">
+                    <div className="text-muted-foreground text-sm">该节点在本次调试中未执行</div>
+                  </div>
+                )}
+            </div>
+          </ScrollArea>
         </TabsContent>
       </Tabs>
     </div>

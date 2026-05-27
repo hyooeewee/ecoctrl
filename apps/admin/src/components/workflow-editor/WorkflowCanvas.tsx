@@ -415,6 +415,7 @@ export default function WorkflowCanvas({ workflowId, onBack, onDirtyChange }: Wo
             nodes={canvas.nodes}
             edges={canvas.edges}
             envVars={canvas.envVars}
+            testResult={canvas.testResult}
           />
         )}
       </div>
