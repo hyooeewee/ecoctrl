@@ -411,6 +411,7 @@ export default function WorkflowCanvas({ workflowId, onBack, onDirtyChange }: Wo
             canDelete={canvas.canDelete}
             onDeleteNode={canvas.handleDeleteNode}
             onDuplicateNode={canvas.handleDuplicateNode}
+            onTestNode={canvas.handleTestNode}
             onClose={() => canvas.setRightPanelOpen(false)}
             nodes={canvas.nodes}
             edges={canvas.edges}
