@@ -1,14 +1,23 @@
 import * as React from "react";
 
 import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@ecoctrl/ui/pagination";
+  useReactTable,
+  getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  getFilteredRowModel,
+  flexRender,
+  type ColumnDef,
+  type SortingState,
+  type ColumnFiltersState,
+} from "@tanstack/react-table";
+import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+
+import { Button } from "@ecoctrl/ui/button";
+import { Checkbox } from "@ecoctrl/ui/checkbox";
+import { Input } from "@ecoctrl/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ecoctrl/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ecoctrl/ui/table";
 
 // ========================================
 // Pagination
@@ -35,122 +44,231 @@ function getPageNumbers(currentPage: number, totalPages: number): (number | "ell
   return [1, "ellipsis", currentPage - 1, currentPage, currentPage + 1, "ellipsis", totalPages];
 }
 
-interface TablePaginationProps {
-  table: {
-    getState: () => { pagination: { pageIndex: number; pageSize: number } };
-    getPageCount: () => number;
-    getCanPreviousPage: () => boolean;
-    getCanNextPage: () => boolean;
-    previousPage: () => void;
-    nextPage: () => void;
-    setPageIndex: (index: number) => void;
-    getFilteredRowModel: () => { rows: unknown[] };
+// ========================================
+// Selection Column
+// ========================================
+
+function createSelectionColumn<TData>(): ColumnDef<TData, any> {
+  return {
+    id: "select",
+    header: ({ table }) => (
+      <Checkbox
+        checked={
+          table.getIsAllPageRowsSelected()
+            ? true
+            : table.getIsSomePageRowsSelected()
+              ? "indeterminate"
+              : false
+        }
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false,
   };
-}
-
-export function TablePagination({ table }: TablePaginationProps) {
-  const currentPage = table.getState().pagination.pageIndex + 1;
-  const totalPages = table.getPageCount();
-  const pages = getPageNumbers(currentPage, totalPages);
-
-  return (
-    <Pagination className="mx-0 w-auto">
-      <PaginationContent>
-        <PaginationItem>
-          <PaginationPrevious
-            text="上一页"
-            onClick={(e: React.MouseEvent) => {
-              e.preventDefault();
-              if (table.getCanPreviousPage()) table.previousPage();
-            }}
-            className={!table.getCanPreviousPage() ? "pointer-events-none opacity-50" : ""}
-          />
-        </PaginationItem>
-        {pages.map((page, i) =>
-          page === "ellipsis" ? (
-            <PaginationItem key={`ellipsis-${i}`}>
-              <PaginationEllipsis />
-            </PaginationItem>
-          ) : (
-            <PaginationItem key={page}>
-              <PaginationLink
-                isActive={page === currentPage}
-                onClick={(e: React.MouseEvent) => {
-                  e.preventDefault();
-                  table.setPageIndex(page - 1);
-                }}
-              >
-                {page}
-              </PaginationLink>
-            </PaginationItem>
-          ),
-        )}
-        <PaginationItem>
-          <PaginationNext
-            text="下一页"
-            onClick={(e: React.MouseEvent) => {
-              e.preventDefault();
-              if (table.getCanNextPage()) table.nextPage();
-            }}
-            className={!table.getCanNextPage() ? "pointer-events-none opacity-50" : ""}
-          />
-        </PaginationItem>
-      </PaginationContent>
-    </Pagination>
-  );
 }
 
 // ========================================
 // DataTablePanel
 // ========================================
 
-export interface DataTablePanelProps {
+export interface DataTablePanelProps<TData = unknown> {
   title: string;
   description: string;
   action?: React.ReactNode;
-  loading: boolean;
+  loading?: boolean;
   loadingText?: string;
   emptyIcon: React.ReactNode;
   emptyTitle: string;
   emptyDescription: string;
   emptyAction?: React.ReactNode;
-  children: React.ReactNode;
-  rowCount: number;
-  paginationTable?: TablePaginationProps["table"];
+  data: TData[];
+  columns: ColumnDef<TData, any>[];
+  getRowId?: (row: TData) => string;
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
+  searchPlaceholder?: string;
+  enableRowSelection?: boolean;
+  selectedRowIds?: string[];
+  onSelectionChange?: (ids: string[]) => void;
+  batchActions?: React.ReactNode;
+  pageSizeOptions?: number[];
+  onPageSizeChange?: (size: number) => void;
+  getRowClassName?: (row: TData) => string;
+  onRowClick?: (row: TData) => void;
 }
 
-export function DataTablePanel({
+export function DataTablePanel<TData>({
   title,
   description,
   action,
-  loading,
+  loading = false,
   loadingText = "加载中...",
   emptyIcon,
   emptyTitle,
   emptyDescription,
   emptyAction,
-  children,
-  rowCount,
-  paginationTable,
-}: DataTablePanelProps) {
+  data,
+  columns,
+  getRowId,
+  searchValue,
+  onSearchChange,
+  searchPlaceholder = "搜索...",
+  enableRowSelection = false,
+  selectedRowIds,
+  onSelectionChange,
+  batchActions,
+  pageSizeOptions = [10, 50, 200],
+  onPageSizeChange,
+  getRowClassName,
+  onRowClick,
+}: DataTablePanelProps<TData>) {
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [globalFilter, setGlobalFilter] = React.useState("");
+  const [rowSelection, setRowSelection] = React.useState<Record<string, boolean>>({});
+  const [searchExpanded, setSearchExpanded] = React.useState(false);
+
+  const allColumns = React.useMemo(() => {
+    if (enableRowSelection) {
+      return [createSelectionColumn<TData>(), ...columns];
+    }
+    return columns;
+  }, [columns, enableRowSelection]);
+
+  const table = useReactTable({
+    data,
+    columns: allColumns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
+    onRowSelectionChange: (updater) => {
+      const next = typeof updater === "function" ? updater(rowSelection) : updater;
+      setRowSelection(next);
+      if (onSelectionChange) {
+        onSelectionChange(Object.keys(next).filter((k) => next[k]));
+      }
+    },
+    getRowId,
+    state: {
+      sorting,
+      columnFilters,
+      globalFilter,
+      rowSelection,
+    },
+  });
+
+  // Sync external search value
+  React.useEffect(() => {
+    if (searchValue !== undefined && searchValue !== globalFilter) {
+      setGlobalFilter(searchValue);
+    }
+  }, [searchValue]);
+
+  // Sync external selectedRowIds
+  React.useEffect(() => {
+    if (selectedRowIds !== undefined) {
+      const map: Record<string, boolean> = {};
+      for (const id of selectedRowIds) {
+        map[id] = true;
+      }
+      setRowSelection(map);
+    }
+  }, [selectedRowIds]);
+
+  const currentPage = table.getState().pagination.pageIndex + 1;
+  const totalPages = table.getPageCount();
+  const pages = getPageNumbers(currentPage, totalPages);
+  const filteredCount = table.getFilteredRowModel().rows.length;
+  const pageSize = table.getState().pagination.pageSize;
+
+  const hasSelection = enableRowSelection && Object.keys(rowSelection).some((k) => rowSelection[k]);
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
+      {/* Header */}
       <div className="shrink-0 px-6 pb-4">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
             <h3 className="text-lg font-semibold leading-none tracking-tight">{title}</h3>
             <p className="mt-1.5 text-sm text-muted-foreground">{description}</p>
           </div>
-          {action}
+
+          <div className="flex items-center gap-3">
+            {/* Search - desktop */}
+            {onSearchChange && (
+              <>
+                <div className="relative hidden sm:block">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder={searchPlaceholder}
+                    value={globalFilter}
+                    onChange={(e) => {
+                      setGlobalFilter(e.target.value);
+                      onSearchChange(e.target.value);
+                    }}
+                    className="h-9 w-56 pl-9 text-sm"
+                  />
+                </div>
+                {/* Search - mobile toggle */}
+                <div className="sm:hidden">
+                  {searchExpanded ? (
+                    <div className="relative flex items-center">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder={searchPlaceholder}
+                        value={globalFilter}
+                        onChange={(e) => {
+                          setGlobalFilter(e.target.value);
+                          onSearchChange(e.target.value);
+                        }}
+                        className="h-9 w-40 pl-9 text-sm"
+                        autoFocus
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="ml-1 h-8 w-8"
+                        onClick={() => setSearchExpanded(false)}
+                      >
+                        ×
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="h-9 w-9"
+                      onClick={() => setSearchExpanded(true)}
+                    >
+                      <Search className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </>
+            )}
+            {action}
+          </div>
         </div>
       </div>
 
+      {/* Body */}
       <div className="flex-1 overflow-auto px-6">
         {loading ? (
           <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
             {loadingText}
           </div>
-        ) : rowCount === 0 ? (
+        ) : filteredCount === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted py-20">
             {emptyIcon}
             <h3 className="mt-4 text-sm font-semibold text-foreground">{emptyTitle}</h3>
@@ -158,14 +276,120 @@ export function DataTablePanel({
             {emptyAction}
           </div>
         ) : (
-          children
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <TableHead key={header.id}>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(header.column.columnDef.header, header.getContext())}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                    className={getRowClassName ? getRowClassName(row.original) : undefined}
+                    onClick={() => onRowClick?.(row.original)}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </div>
 
-      {rowCount > 0 && paginationTable && (
-        <div className="shrink-0 px-6 py-3 flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">共 {rowCount} 条</div>
-          <TablePagination table={paginationTable} />
+      {/* Footer */}
+      {filteredCount > 0 && (
+        <div className="shrink-0 px-6 py-3 flex items-center justify-between gap-4">
+          {/* Left: batch actions */}
+          <div className="flex items-center gap-3 min-w-0">
+            {batchActions && (
+              <div className={hasSelection ? "" : "pointer-events-none opacity-50"}>
+                {batchActions}
+              </div>
+            )}
+          </div>
+
+          {/* Center-Left: page size + total */}
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            {onPageSizeChange && (
+              <Select
+                value={String(pageSize)}
+                onValueChange={(v) => {
+                  const size = Number(v);
+                  table.setPageSize(size);
+                  onPageSizeChange(size);
+                }}
+              >
+                <SelectTrigger className="h-8 w-[100px] text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {pageSizeOptions.map((opt) => (
+                    <SelectItem key={opt} value={String(opt)}>
+                      每页 {opt} 条
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <span>共 {filteredCount} 条</span>
+          </div>
+
+          {/* Right: pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon-sm"
+                className="h-8 w-8"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              {pages.map((page, i) =>
+                page === "ellipsis" ? (
+                  <span key={`ellipsis-${i}`} className="px-2 text-sm text-muted-foreground">
+                    ...
+                  </span>
+                ) : (
+                  <Button
+                    key={page}
+                    variant={page === currentPage ? "default" : "outline"}
+                    size="icon-sm"
+                    className="h-8 w-8 text-xs"
+                    onClick={() => table.setPageIndex(page - 1)}
+                  >
+                    {page}
+                  </Button>
+                ),
+              )}
+              <Button
+                variant="outline"
+                size="icon-sm"
+                className="h-8 w-8"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

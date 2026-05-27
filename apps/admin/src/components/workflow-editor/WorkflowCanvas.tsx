@@ -33,10 +33,11 @@ import { WorkflowDialogs } from "./WorkflowDialogs";
 interface WorkflowCanvasProps {
   workflowId: string | null;
   onBack: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
-export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasProps) {
-  const canvas = useWorkflowCanvas({ workflowId, onBack });
+export default function WorkflowCanvas({ workflowId, onBack, onDirtyChange }: WorkflowCanvasProps) {
+  const canvas = useWorkflowCanvas({ workflowId, onBack, onDirtyChange });
 
   const theme = useAppStore((s) => s.preferencesOverride.theme ?? "system");
   const colorMode = useColorMode(theme);

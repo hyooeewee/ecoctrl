@@ -13,6 +13,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@ecoctrl/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@ecoctrl/ui/sheet";
 import { PREDEFINED_TAGS } from "./constants";
 import type { EnvVar, WorkflowSettings } from "./types";
 import { useState, useRef } from "react";
@@ -654,13 +655,13 @@ export function WorkflowDialogs({
         </Dialog>
       )}
 
-      {/* Settings dialog */}
-      <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>设置</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
+      {/* Settings sheet */}
+      <Sheet open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
+        <SheetContent side="right" className="w-80 sm:w-96">
+          <SheetHeader>
+            <SheetTitle>设置</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 space-y-4 py-6">
             <div className="flex items-center justify-between">
               <Label className="text-sm">自动保存</Label>
               <Switch
@@ -695,7 +696,7 @@ export function WorkflowDialogs({
               </div>
             )}
           </div>
-          <DialogFooter>
+          <SheetFooter>
             <Button variant="outline" onClick={() => setShowSettingsDialog(false)}>
               取消
             </Button>
@@ -707,9 +708,9 @@ export function WorkflowDialogs({
             >
               确认
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </>
   );
 }

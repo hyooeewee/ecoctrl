@@ -35,9 +35,10 @@ import { CATEGORY_LABELS } from "../constants";
 interface UseWorkflowCanvasOptions {
   workflowId: string | null;
   onBack: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
-export function useWorkflowCanvas({ workflowId, onBack }: UseWorkflowCanvasOptions) {
+export function useWorkflowCanvas({ workflowId, onBack, onDirtyChange }: UseWorkflowCanvasOptions) {
   // ----------------------------------------
   // ReactFlow state
   // ----------------------------------------
@@ -813,6 +814,11 @@ export function useWorkflowCanvas({ workflowId, onBack }: UseWorkflowCanvasOptio
         // silently fail
       });
   }, []);
+
+  // Report dirty state to parent
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   // Warn before closing tab with unsaved changes
   useEffect(() => {

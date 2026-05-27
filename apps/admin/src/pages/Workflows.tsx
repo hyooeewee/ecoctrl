@@ -1,16 +1,4 @@
-import {
-  Plus,
-  Pencil,
-  Trash2,
-  Play,
-  Loader2,
-  Workflow,
-  History,
-  Search,
-  X,
-  Wifi,
-  WifiOff,
-} from "lucide-react";
+import { Plus, Pencil, Trash2, Play, Loader2, Workflow, History, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   useReactTable,
@@ -24,7 +12,7 @@ import {
   type ColumnFiltersState,
 } from "@tanstack/react-table";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ecoctrl/ui/table";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@ecoctrl/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoctrl/ui/card";
@@ -82,11 +70,63 @@ export default function Workflows() {
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
   const [recentExecutions, setRecentExecutions] = useState<SseWorkflowExecution[]>([]);
   const [selectedExecutionId, setSelectedExecutionId] = useState<string | null>(null);
-  const [executionLogOpen, setExecutionLogOpen] = useState(false);
 
   const activeTab = useAppStore((state) => state.workflowsTab);
   const setActiveTab = useAppStore((state) => state.setWorkflowsTab);
+  const appActiveTab = useAppStore((state) => state.activeTab);
+  const setAppActiveTab = useAppStore((state) => state.setActiveTab);
   const sseStatus = useSseStore((state) => state.status);
+
+  const [canvasDirty, setCanvasDirty] = useState(false);
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<{
+    appTab: string;
+    subTab: string;
+  } | null>(null);
+
+  const prevAppTabRef = useRef(appActiveTab);
+  const prevSubTabRef = useRef(activeTab);
+
+  // Close execution log when switching sub-tabs
+  useEffect(() => {
+    if (selectedExecutionId) {
+      setSelectedExecutionId(null);
+    }
+  }, [activeTab]);
+
+  // Intercept navigation while canvas has unsaved changes
+  useEffect(() => {
+    if (!editingWorkflowId) {
+      prevAppTabRef.current = appActiveTab;
+      prevSubTabRef.current = activeTab;
+      return;
+    }
+    const appChanged = appActiveTab !== prevAppTabRef.current;
+    const subChanged = activeTab !== prevSubTabRef.current;
+    if (!appChanged && !subChanged) return;
+
+    if (!canvasDirty) {
+      // No changes — close canvas directly and allow navigation
+      setEditingWorkflowId(null);
+      prevAppTabRef.current = appActiveTab;
+      prevSubTabRef.current = activeTab;
+      return;
+    }
+
+    // Has changes — intercept and show confirmation dialog
+    setPendingNavigation({ appTab: appActiveTab, subTab: activeTab });
+    if (appChanged) setAppActiveTab(prevAppTabRef.current);
+    if (subChanged) setActiveTab(prevSubTabRef.current);
+    setShowLeaveDialog(true);
+  }, [
+    appActiveTab,
+    activeTab,
+    editingWorkflowId,
+    canvasDirty,
+    setEditingWorkflowId,
+    setActiveTab,
+    setAppActiveTab,
+  ]);
 
   const [runningExecutions, setRunningExecutions] = useState<Record<string, SseWorkflowExecution>>(
     {},
@@ -217,6 +257,30 @@ export default function Workflows() {
     setEditingWorkflowId(null);
     fetchWorkflows();
   }, [fetchWorkflows]);
+
+  const closeExecutionLog = useCallback(() => {
+    setSelectedExecutionId(null);
+  }, []);
+
+  const handleLeaveConfirm = useCallback(() => {
+    setShowLeaveDialog(false);
+    if (pendingNavigation) {
+      setEditingWorkflowId(null);
+      setCanvasDirty(false);
+      if (pendingNavigation.appTab !== appActiveTab) {
+        setAppActiveTab(pendingNavigation.appTab);
+      }
+      if (pendingNavigation.subTab !== activeTab) {
+        setActiveTab(pendingNavigation.subTab);
+      }
+      setPendingNavigation(null);
+    }
+  }, [pendingNavigation, appActiveTab, activeTab]);
+
+  const handleLeaveCancel = useCallback(() => {
+    setShowLeaveDialog(false);
+    setPendingNavigation(null);
+  }, []);
 
   const columns = useMemo<ColumnDef<WorkflowListItem>[]>(
     () => [
@@ -368,239 +432,268 @@ export default function Workflows() {
     },
   });
 
-  // Full-screen editor overlay
-  if (editingWorkflowId) {
-    return <WorkflowCanvas workflowId={editingWorkflowId} onBack={closeEditor} />;
-  }
-
   return (
     <div className="flex h-full flex-col overflow-hidden p-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full flex-col">
         <TabsContent value="workflows" className="mt-0 flex h-full flex-col">
-          <Card className="flex h-full flex-col overflow-hidden">
-            <CardHeader className="shrink-0 pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Workflow size={18} />
-                    工作流
-                  </CardTitle>
-                  <CardDescription>管理工作流定义与触发配置</CardDescription>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={`h-2 w-2 rounded-full ${
-                        sseStatus === "connected"
-                          ? "bg-green-500"
-                          : sseStatus === "connecting"
-                            ? "bg-yellow-500 animate-pulse"
-                            : sseStatus === "error"
-                              ? "bg-red-500"
-                              : "bg-gray-400"
-                      }`}
-                    />
-                    <span className="text-muted-foreground text-xs">
-                      {sseStatus === "connected"
-                        ? "实时已连接"
-                        : sseStatus === "connecting"
-                          ? "连接中..."
-                          : sseStatus === "error"
-                            ? "连接错误"
-                            : "未连接"}
-                    </span>
+          {editingWorkflowId ? (
+            <WorkflowCanvas
+              workflowId={editingWorkflowId}
+              onBack={closeEditor}
+              onDirtyChange={setCanvasDirty}
+            />
+          ) : (
+            <Card className="flex h-full flex-col overflow-hidden">
+              <CardHeader className="shrink-0 pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Workflow size={18} />
+                      工作流
+                    </CardTitle>
+                    <CardDescription>管理工作流定义与触发配置</CardDescription>
                   </div>
-                  <Button onClick={openCreate}>
-                    <Plus size={16} className="mr-1.5" />
-                    新建工作流
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-auto">
-              <div className="mb-4 flex items-center gap-2">
-                <div className="relative flex-1 max-w-sm">
-                  <Search
-                    size={14}
-                    className="text-muted-foreground absolute top-1/2 left-2.5 -translate-y-1/2"
-                  />
-                  <Input
-                    placeholder="搜索名称或标识符..."
-                    value={globalFilter}
-                    onChange={(e) => setGlobalFilter(e.target.value)}
-                    className="pl-8"
-                  />
-                  {globalFilter && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-1/2 right-1 h-6 w-6 -translate-y-1/2"
-                      onClick={() => setGlobalFilter("")}
-                    >
-                      <X size={12} />
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`h-2 w-2 rounded-full ${
+                          sseStatus === "connected"
+                            ? "bg-green-500"
+                            : sseStatus === "connecting"
+                              ? "bg-yellow-500 animate-pulse"
+                              : sseStatus === "error"
+                                ? "bg-red-500"
+                                : "bg-gray-400"
+                        }`}
+                      />
+                      <span className="text-muted-foreground text-xs">
+                        {sseStatus === "connected"
+                          ? "实时已连接"
+                          : sseStatus === "connecting"
+                            ? "连接中..."
+                            : sseStatus === "error"
+                              ? "连接错误"
+                              : "未连接"}
+                      </span>
+                    </div>
+                    <Button onClick={openCreate}>
+                      <Plus size={16} className="mr-1.5" />
+                      新建工作流
                     </Button>
-                  )}
+                  </div>
                 </div>
-              </div>
-
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    {table.getHeaderGroups().map((hg) => (
-                      <TableRow key={hg.id}>
-                        {hg.headers.map((h) => (
-                          <TableHead key={h.id}>
-                            {h.isPlaceholder
-                              ? null
-                              : flexRender(h.column.columnDef.header, h.getContext())}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableHeader>
-                  <TableBody>
-                    {loading ? (
-                      <TableRow>
-                        <TableCell colSpan={columns.length} className="h-32 text-center">
-                          <Loader2 size={20} className="animate-spin mx-auto" />
-                        </TableCell>
-                      </TableRow>
-                    ) : table.getRowModel().rows.length === 0 ? (
-                      <TableRow>
-                        <TableCell
-                          colSpan={columns.length}
-                          className="h-32 text-center text-muted-foreground"
-                        >
-                          暂无工作流，点击右上角新建
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      table.getRowModel().rows.map((row) => (
-                        <TableRow
-                          key={row.id}
-                          className="cursor-pointer"
-                          onClick={() => openEditor(row.original.id)}
-                        >
-                          {row.getVisibleCells().map((cell) => (
-                            <TableCell key={cell.id}>
-                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))
+              </CardHeader>
+              <CardContent className="flex-1 overflow-auto">
+                <div className="mb-4 flex items-center gap-2">
+                  <div className="relative flex-1 max-w-sm">
+                    <Search
+                      size={14}
+                      className="text-muted-foreground absolute top-1/2 left-2.5 -translate-y-1/2"
+                    />
+                    <Input
+                      placeholder="搜索名称或标识符..."
+                      value={globalFilter}
+                      onChange={(e) => setGlobalFilter(e.target.value)}
+                      className="pl-8"
+                    />
+                    {globalFilter && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-1/2 right-1 h-6 w-6 -translate-y-1/2"
+                        onClick={() => setGlobalFilter("")}
+                      >
+                        <X size={12} />
+                      </Button>
                     )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-            <div className="shrink-0 border-t px-6 py-3 flex items-center justify-between">
-              <div className="text-muted-foreground text-sm">共 {total} 条</div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                >
-                  上一页
-                </Button>
-                <span className="text-muted-foreground text-sm">
-                  第 {pageIndex + 1} / {Math.max(1, Math.ceil(total / pageSize))} 页
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                >
-                  下一页
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="executions" className="mt-0 flex h-full flex-col">
-          <Card className="flex h-full flex-col overflow-hidden">
-            <CardHeader className="shrink-0 pb-3">
-              <CardTitle className="flex items-center gap-2">
-                <History size={18} />
-                执行记录
-              </CardTitle>
-              <CardDescription>最近 50 条工作流执行记录（实时更新）</CardDescription>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-auto">
-              {recentExecutions.length === 0 ? (
-                <div className="flex h-full flex-col items-center justify-center gap-4">
-                  <History size={48} className="text-muted-foreground/30" />
-                  <p className="text-muted-foreground">暂无执行记录</p>
+                  </div>
                 </div>
-              ) : (
+
                 <div className="rounded-md border">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead>工作流 ID</TableHead>
-                        <TableHead>执行 ID</TableHead>
-                        <TableHead>状态</TableHead>
-                        <TableHead>耗时</TableHead>
-                        <TableHead>时间</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {recentExecutions.map((exec) => (
-                        <TableRow
-                          key={exec.executionId}
-                          className="cursor-pointer"
-                          onClick={() => {
-                            setSelectedExecutionId(exec.executionId);
-                            setExecutionLogOpen(true);
-                          }}
-                        >
-                          <TableCell className="font-mono text-xs">
-                            {exec.workflowId.slice(0, 8)}
-                          </TableCell>
-                          <TableCell className="font-mono text-xs">
-                            {exec.executionId.slice(0, 8)}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                exec.status === "completed"
-                                  ? "default"
-                                  : exec.status === "failed"
-                                    ? "destructive"
-                                    : exec.status === "running"
-                                      ? "secondary"
-                                      : "outline"
-                              }
-                              className={exec.status === "running" ? "animate-pulse" : ""}
-                            >
-                              {exec.status === "completed"
-                                ? "已完成"
-                                : exec.status === "failed"
-                                  ? "失败"
-                                  : exec.status === "running"
-                                    ? "运行中"
-                                    : "待定"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
-                            {exec.durationMs ? `${exec.durationMs}ms` : "-"}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
-                            {new Date(exec.timestamp).toLocaleString("zh-CN")}
-                          </TableCell>
+                      {table.getHeaderGroups().map((hg) => (
+                        <TableRow key={hg.id}>
+                          {hg.headers.map((h) => (
+                            <TableHead key={h.id}>
+                              {h.isPlaceholder
+                                ? null
+                                : flexRender(h.column.columnDef.header, h.getContext())}
+                            </TableHead>
+                          ))}
                         </TableRow>
                       ))}
+                    </TableHeader>
+                    <TableBody>
+                      {loading ? (
+                        <TableRow>
+                          <TableCell colSpan={columns.length} className="h-32 text-center">
+                            <Loader2 size={20} className="animate-spin mx-auto" />
+                          </TableCell>
+                        </TableRow>
+                      ) : table.getRowModel().rows.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={columns.length}
+                            className="h-32 text-center text-muted-foreground"
+                          >
+                            暂无工作流，点击右上角新建
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        table.getRowModel().rows.map((row) => (
+                          <TableRow
+                            key={row.id}
+                            className="cursor-pointer"
+                            onClick={() => openEditor(row.original.id)}
+                          >
+                            {row.getVisibleCells().map((cell) => (
+                              <TableCell key={cell.id}>
+                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+              <div className="shrink-0 border-t px-6 py-3 flex items-center justify-between">
+                <div className="text-muted-foreground text-sm">共 {total} 条</div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => table.previousPage()}
+                    disabled={!table.getCanPreviousPage()}
+                  >
+                    上一页
+                  </Button>
+                  <span className="text-muted-foreground text-sm">
+                    第 {pageIndex + 1} / {Math.max(1, Math.ceil(total / pageSize))} 页
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => table.nextPage()}
+                    disabled={!table.getCanNextPage()}
+                  >
+                    下一页
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="executions" className="mt-0 flex h-full flex-col">
+          {selectedExecutionId ? (
+            <ExecutionLogViewer
+              workflowId={
+                recentExecutions.find((e) => e.executionId === selectedExecutionId)?.workflowId ??
+                ""
+              }
+              executionId={selectedExecutionId}
+              onBack={closeExecutionLog}
+            />
+          ) : (
+            <Card className="flex h-full flex-col overflow-hidden">
+              <CardHeader className="shrink-0 pb-3">
+                <CardTitle className="flex items-center gap-2">
+                  <History size={18} />
+                  执行记录
+                </CardTitle>
+                <CardDescription>最近 50 条工作流执行记录（实时更新）</CardDescription>
+              </CardHeader>
+              <CardContent className="flex-1 overflow-auto">
+                {recentExecutions.length === 0 ? (
+                  <div className="flex h-full flex-col items-center justify-center gap-4">
+                    <History size={48} className="text-muted-foreground/30" />
+                    <p className="text-muted-foreground">暂无执行记录</p>
+                  </div>
+                ) : (
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>工作流 ID</TableHead>
+                          <TableHead>执行 ID</TableHead>
+                          <TableHead>状态</TableHead>
+                          <TableHead>耗时</TableHead>
+                          <TableHead>时间</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {recentExecutions.map((exec) => (
+                          <TableRow
+                            key={exec.executionId}
+                            className="cursor-pointer"
+                            onClick={() => setSelectedExecutionId(exec.executionId)}
+                          >
+                            <TableCell className="font-mono text-xs">
+                              {exec.workflowId.slice(0, 8)}
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">
+                              {exec.executionId.slice(0, 8)}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  exec.status === "completed"
+                                    ? "default"
+                                    : exec.status === "failed"
+                                      ? "destructive"
+                                      : exec.status === "running"
+                                        ? "secondary"
+                                        : "outline"
+                                }
+                                className={exec.status === "running" ? "animate-pulse" : ""}
+                              >
+                                {exec.status === "completed"
+                                  ? "已完成"
+                                  : exec.status === "failed"
+                                    ? "失败"
+                                    : exec.status === "running"
+                                      ? "运行中"
+                                      : "待定"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {exec.durationMs ? `${exec.durationMs}ms` : "-"}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {new Date(exec.timestamp).toLocaleString("zh-CN")}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
+
+      {/* Leave canvas without saving confirmation */}
+      <Dialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>确认离开</DialogTitle>
+            <DialogDescription>有未保存的修改，离开后将丢失。是否继续？</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleLeaveCancel}>
+              留在当前页面
+            </Button>
+            <Button variant="destructive" onClick={handleLeaveConfirm}>
+              离开
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirm Dialog */}
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
@@ -619,16 +712,6 @@ export default function Workflows() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Execution Log Viewer */}
-      <ExecutionLogViewer
-        workflowId={
-          recentExecutions.find((e) => e.executionId === selectedExecutionId)?.workflowId ?? ""
-        }
-        executionId={selectedExecutionId}
-        open={executionLogOpen}
-        onOpenChange={setExecutionLogOpen}
-      />
     </div>
   );
 }
