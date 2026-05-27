@@ -661,7 +661,7 @@ export function WorkflowDialogs({
           <SheetHeader>
             <SheetTitle>设置</SheetTitle>
           </SheetHeader>
-          <div className="flex-1 space-y-4 py-6">
+          <div className="flex-1 space-y-4 px-6 py-6">
             <div className="flex items-center justify-between">
               <Label className="text-sm">自动保存</Label>
               <Switch
