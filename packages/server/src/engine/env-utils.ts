@@ -16,10 +16,6 @@ export function splitEnvVars(dsl: WorkflowDSL): {
   for (const v of dsl.envVars) {
     if (v.type === "secret") {
       secrets[v.key] = String(v.value ?? "");
-    } else if (v.type === "env") {
-      // env type: value is the server env var name
-      const serverEnvName = String(v.value ?? "");
-      env[v.key] = serverEnvName ? (process.env[serverEnvName] ?? "") : "";
     } else {
       env[v.key] = String(v.value ?? "");
     }

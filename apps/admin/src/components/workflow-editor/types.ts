@@ -45,7 +45,7 @@ export interface WorkflowEdge {
   label?: string;
 }
 
-export type EnvVarType = "string" | "number" | "secret" | "boolean" | "env";
+export type EnvVarType = "string" | "number" | "secret" | "boolean";
 
 export interface EnvVar {
   key: string;

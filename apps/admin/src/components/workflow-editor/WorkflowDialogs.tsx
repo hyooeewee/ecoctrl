@@ -1,4 +1,4 @@
-import { X, Trash2, Eye, EyeOff, Braces } from "lucide-react";
+import { X, Trash2, Eye, EyeOff, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@ecoctrl/ui/button";
 import { Input } from "@ecoctrl/ui/input";
 import { Label } from "@ecoctrl/ui/label";
@@ -15,7 +15,7 @@ import {
 } from "@ecoctrl/ui/dialog";
 import { PREDEFINED_TAGS } from "./constants";
 import type { EnvVar, WorkflowSettings } from "./types";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Editor } from "@monaco-editor/react";
 
 interface WorkflowDialogsProps {
@@ -64,8 +64,6 @@ function EnvVarRow({
   setEnvVars,
   visibleSecrets,
   setVisibleSecrets,
-  jsonMode,
-  onToggleJsonMode,
 }: {
   ev: EnvVar;
   idx: number;
@@ -73,33 +71,9 @@ function EnvVarRow({
   setEnvVars: (v: EnvVar[]) => void;
   visibleSecrets: Set<string>;
   setVisibleSecrets: (v: Set<string>) => void;
-  jsonMode: boolean;
-  onToggleJsonMode: (idx: number) => void;
 }) {
-  const [jsonError, setJsonError] = useState("");
-
   const updateValue = (val: unknown) => {
     setEnvVars(envVars.map((v, i) => (i === idx ? { ...v, value: val } : v)));
-  };
-
-  const getJsonString = (): string => {
-    try {
-      return JSON.stringify(ev.value ?? "", null, 2);
-    } catch {
-      return String(ev.value ?? "");
-    }
-  };
-
-  const handleJsonChange = (value: string | undefined) => {
-    const str = value ?? "";
-    try {
-      JSON.parse(str);
-      setJsonError("");
-      updateValue(str);
-    } catch {
-      setJsonError("JSON 格式错误");
-      updateValue(str);
-    }
   };
 
   const inputBase = "h-8 text-xs";
@@ -116,28 +90,7 @@ function EnvVarRow({
           className={`${inputBase} w-[120px]`}
         />
 
-        {jsonMode ? (
-          <div className="flex-1 space-y-1">
-            <div className="h-[120px] overflow-hidden rounded-md border">
-              <Editor
-                height="120px"
-                language="json"
-                value={getJsonString()}
-                onChange={handleJsonChange}
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 12,
-                  lineNumbers: "off",
-                  scrollBeyondLastLine: false,
-                  automaticLayout: true,
-                  tabSize: 2,
-                  formatOnPaste: true,
-                }}
-              />
-            </div>
-            {jsonError && <p className="text-[10px] text-rose-500">{jsonError}</p>}
-          </div>
-        ) : ev.type === "boolean" ? (
+        {ev.type === "boolean" ? (
           <Switch
             checked={ev.value as boolean}
             onCheckedChange={(checked) => updateValue(checked)}
@@ -153,12 +106,39 @@ function EnvVarRow({
             placeholder="值"
             className={`${inputBase} flex-1`}
           />
+        ) : ev.type === "secret" ? (
+          <div className="relative flex-1">
+            <Input
+              type="text"
+              value={ev.value as string}
+              onChange={(e) => updateValue(e.target.value)}
+              placeholder="值"
+              className={`${inputBase} w-full pr-10`}
+              style={
+                {
+                  WebkitTextSecurity: visibleSecrets.has(ev.key) ? "none" : "disc",
+                } as React.CSSProperties
+              }
+            />
+            <button
+              type="button"
+              onClick={() => {
+                const next = new Set(visibleSecrets);
+                if (next.has(ev.key)) next.delete(ev.key);
+                else next.add(ev.key);
+                setVisibleSecrets(next);
+              }}
+              className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2"
+            >
+              {visibleSecrets.has(ev.key) ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+          </div>
         ) : (
           <Input
-            type={ev.type === "secret" && !visibleSecrets.has(ev.key) ? "password" : "text"}
+            type="text"
             value={ev.value as string}
             onChange={(e) => updateValue(e.target.value)}
-            placeholder={ev.type === "env" ? "环境变量名（如 DATABASE_URL）" : "值"}
+            placeholder="值"
             className={`${inputBase} flex-1`}
           />
         )}
@@ -185,34 +165,7 @@ function EnvVarRow({
           <option value="number">number</option>
           <option value="secret">secret</option>
           <option value="boolean">boolean</option>
-          <option value="env">env</option>
         </select>
-
-        {ev.type === "secret" && !jsonMode && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => {
-              const next = new Set(visibleSecrets);
-              if (next.has(ev.key)) next.delete(ev.key);
-              else next.add(ev.key);
-              setVisibleSecrets(next);
-            }}
-          >
-            {visibleSecrets.has(ev.key) ? <EyeOff size={14} /> : <Eye size={14} />}
-          </Button>
-        )}
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className={`h-8 w-8 ${jsonMode ? "text-primary" : "text-muted-foreground"}`}
-          title={jsonMode ? "退出 JSON 模式" : "JSON 编辑模式"}
-          onClick={() => onToggleJsonMode(idx)}
-        >
-          <Braces size={14} />
-        </Button>
 
         <Button
           variant="ghost"
@@ -257,18 +210,85 @@ export function WorkflowDialogs({
   setSettings,
   setIsDirty,
 }: WorkflowDialogsProps) {
-  const [jsonModes, setJsonModes] = useState<Set<number>>(new Set());
+  // Env vars dialog: global form/json mode
+  const [envVarMode, setEnvVarMode] = useState<"form" | "json">("form");
+  const [envVarsJson, setEnvVarsJson] = useState("");
+  const [envVarJsonError, setEnvVarJsonError] = useState("");
+  const [envVarFullscreen, setEnvVarFullscreen] = useState(false);
+  const [jsonShowSecrets, setJsonShowSecrets] = useState(false);
+  const editorRef = useRef<
+    Parameters<NonNullable<React.ComponentProps<typeof Editor>["onMount"]>>[0] | null
+  >(null);
 
-  const toggleJsonMode = (idx: number) => {
-    setJsonModes((prev) => {
-      const next = new Set(prev);
-      if (next.has(idx)) {
-        next.delete(idx);
-      } else {
-        next.add(idx);
+  const syncFormToJson = () => {
+    try {
+      setEnvVarsJson(JSON.stringify(envVars, null, 2));
+      setEnvVarJsonError("");
+    } catch {
+      setEnvVarsJson("");
+    }
+  };
+
+  const syncJsonToForm = (): string | undefined => {
+    if (!envVarsJson.trim()) return;
+    try {
+      const parsed = JSON.parse(envVarsJson) as EnvVar[];
+      if (!Array.isArray(parsed)) return "JSON 必须为数组格式";
+      setEnvVars(parsed);
+      setEnvVarJsonError("");
+    } catch (e) {
+      return e instanceof Error ? e.message : "JSON 格式错误";
+    }
+  };
+
+  const handleConfirmEnvVars = () => {
+    if (envVarMode === "json") {
+      const err = syncJsonToForm();
+      if (err) {
+        setEnvVarJsonError(err);
+        return;
       }
-      return next;
-    });
+    }
+    setIsDirty(true);
+    setShowEnvVarsDialog(false);
+    setEnvVarMode("form");
+    setEnvVarsJson("");
+    setEnvVarJsonError("");
+  };
+
+  const handleOpenChange = (open: boolean) => {
+    setShowEnvVarsDialog(open);
+    if (!open) {
+      setEnvVarMode("form");
+      setEnvVarsJson("");
+      setEnvVarJsonError("");
+      setEnvVarFullscreen(false);
+      setJsonShowSecrets(false);
+    }
+  };
+
+  const getDisplayJson = (): string => {
+    if (jsonShowSecrets || !envVarsJson.trim()) return envVarsJson;
+    try {
+      const parsed = JSON.parse(envVarsJson) as EnvVar[];
+      if (!Array.isArray(parsed)) return envVarsJson;
+      const masked = parsed.map((item) =>
+        item.type === "secret" ? { ...item, value: "***" } : item,
+      );
+      return JSON.stringify(masked, null, 2);
+    } catch {
+      return envVarsJson;
+    }
+  };
+
+  const editorOptions: React.ComponentProps<typeof Editor>["options"] = {
+    minimap: { enabled: false },
+    fontSize: 13,
+    lineNumbers: "on",
+    scrollBeyondLastLine: false,
+    automaticLayout: true,
+    tabSize: 2,
+    formatOnPaste: true,
   };
 
   return (
@@ -411,60 +431,228 @@ export function WorkflowDialogs({
       </Dialog>
 
       {/* Env vars dialog */}
-      <Dialog open={showEnvVarsDialog} onOpenChange={setShowEnvVarsDialog}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>环境变量</DialogTitle>
-            <DialogDescription>
-              定义工作流中可引用的变量，如 {"{{ var.API_KEY }}"} 或 {"{{ secret.TOKEN }}"}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            {envVars.length === 0 && (
-              <div className="text-muted-foreground py-4 text-center text-sm">暂无环境变量</div>
-            )}
-            {envVars.map((ev, idx) => (
-              <EnvVarRow
-                key={idx}
-                ev={ev}
-                idx={idx}
-                envVars={envVars}
-                setEnvVars={setEnvVars}
-                visibleSecrets={visibleSecrets}
-                setVisibleSecrets={setVisibleSecrets}
-                jsonMode={jsonModes.has(idx)}
-                onToggleJsonMode={toggleJsonMode}
-              />
-            ))}
+      {envVarFullscreen ? (
+        <div className="fixed inset-0 z-50 flex flex-col bg-background">
+          <div className="flex items-center justify-between border-b px-4 py-2">
+            <div className="flex items-center gap-2">
+              <Button
+                variant={envVarMode === "form" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => {
+                  const err = syncJsonToForm();
+                  if (err) {
+                    setEnvVarJsonError(err);
+                    return;
+                  }
+                  setEnvVarMode("form");
+                }}
+              >
+                表单
+              </Button>
+              <Button
+                variant={envVarMode === "json" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => {
+                  syncFormToJson();
+                  setEnvVarMode("json");
+                }}
+              >
+                JSON
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                title={jsonShowSecrets ? "隐藏密钥" : "显示密钥"}
+                onClick={() => setJsonShowSecrets((v) => !v)}
+              >
+                {jsonShowSecrets ? <EyeOff size={14} /> : <Eye size={14} />}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => {
+                  setEnvVarFullscreen(false);
+                  setShowEnvVarsDialog(true);
+                }}
+              >
+                <Minimize2 size={14} />
+                退出全屏
+              </Button>
+            </div>
+          </div>
+          <div className="flex-1 min-h-0">
+            <Editor
+              height="100%"
+              language="json"
+              value={getDisplayJson()}
+              onChange={(v) => setEnvVarsJson(v ?? "")}
+              onMount={(editor) => {
+                editorRef.current = editor;
+              }}
+              options={{ ...editorOptions, readOnly: !jsonShowSecrets }}
+            />
+          </div>
+          {envVarJsonError && (
+            <div className="px-6 py-2 border-t border-red-200 bg-red-50 text-sm text-red-700">
+              {envVarJsonError}
+            </div>
+          )}
+          <div className="flex justify-end gap-3 px-6 py-4 border-t border-border">
             <Button
               variant="outline"
-              size="sm"
-              className="w-full"
-              onClick={() =>
-                setEnvVars([
-                  ...envVars,
-                  { key: `VAR_${envVars.length + 1}`, value: "", type: "string" },
-                ])
-              }
+              onClick={() => {
+                setEnvVarFullscreen(false);
+                setShowEnvVarsDialog(false);
+                setEnvVarMode("form");
+                setEnvVarsJson("");
+                setEnvVarJsonError("");
+                setJsonShowSecrets(false);
+              }}
+              className="h-10 px-5"
             >
-              + 添加变量
-            </Button>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEnvVarsDialog(false)}>
               取消
             </Button>
-            <Button
-              onClick={() => {
-                setIsDirty(true);
-                setShowEnvVarsDialog(false);
-              }}
-            >
+            <Button onClick={handleConfirmEnvVars} className="h-10 px-5">
               确认
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </div>
+      ) : (
+        <Dialog open={showEnvVarsDialog} onOpenChange={handleOpenChange}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>环境变量</DialogTitle>
+              <DialogDescription>
+                定义工作流中可引用的变量，如 {"{{ var.API_KEY }}"} 或 {"{{ secret.TOKEN }}"}
+              </DialogDescription>
+            </DialogHeader>
+
+            {/* Mode toggle */}
+            <div className="flex items-center justify-between px-0 py-0">
+              <div className="flex items-center gap-1">
+                <Button
+                  variant={envVarMode === "form" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => {
+                    if (envVarMode === "json") {
+                      const err = syncJsonToForm();
+                      if (err) {
+                        setEnvVarJsonError(err);
+                        return;
+                      }
+                    }
+                    setEnvVarMode("form");
+                  }}
+                >
+                  表单
+                </Button>
+                <Button
+                  variant={envVarMode === "json" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => {
+                    if (envVarMode === "form") {
+                      syncFormToJson();
+                    }
+                    setEnvVarMode("json");
+                  }}
+                >
+                  JSON
+                </Button>
+              </div>
+              {envVarJsonError && <span className="text-xs text-rose-500">{envVarJsonError}</span>}
+            </div>
+
+            <div className="space-y-3 py-2">
+              {envVarMode === "form" ? (
+                <>
+                  {envVars.length === 0 && (
+                    <div className="text-muted-foreground py-4 text-center text-sm">
+                      暂无环境变量
+                    </div>
+                  )}
+                  {envVars.map((ev, idx) => (
+                    <EnvVarRow
+                      key={idx}
+                      ev={ev}
+                      idx={idx}
+                      envVars={envVars}
+                      setEnvVars={setEnvVars}
+                      visibleSecrets={visibleSecrets}
+                      setVisibleSecrets={setVisibleSecrets}
+                    />
+                  ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() =>
+                      setEnvVars([
+                        ...envVars,
+                        { key: `VAR_${envVars.length + 1}`, value: "", type: "string" },
+                      ])
+                    }
+                  >
+                    + 添加变量
+                  </Button>
+                </>
+              ) : (
+                <div className="rounded-xl border border-border overflow-hidden">
+                  <div className="flex items-center justify-between border-b px-2 py-1">
+                    <span className="text-xs text-muted-foreground">JSON 编辑</span>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        title={jsonShowSecrets ? "隐藏密钥" : "显示密钥"}
+                        onClick={() => setJsonShowSecrets((v) => !v)}
+                      >
+                        {jsonShowSecrets ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        title="全屏编辑"
+                        onClick={() => {
+                          setShowEnvVarsDialog(false);
+                          setEnvVarFullscreen(true);
+                        }}
+                      >
+                        <Maximize2 size={14} />
+                      </Button>
+                    </div>
+                  </div>
+                  <Editor
+                    height="320px"
+                    language="json"
+                    value={getDisplayJson()}
+                    onChange={(v) => {
+                      setEnvVarsJson(v ?? "");
+                      setEnvVarJsonError("");
+                    }}
+                    onMount={(editor) => {
+                      editorRef.current = editor;
+                    }}
+                    options={{ ...editorOptions, readOnly: !jsonShowSecrets }}
+                  />
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => handleOpenChange(false)}>
+                取消
+              </Button>
+              <Button onClick={handleConfirmEnvVars}>确认</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Settings dialog */}
       <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
