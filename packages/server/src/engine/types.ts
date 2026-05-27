@@ -85,6 +85,12 @@ export interface WorkflowDSL {
   trigger: WorkflowTrigger;
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
+  envVars?: Array<{
+    key: string;
+    value: unknown;
+    type: "string" | "number" | "secret" | "boolean";
+    description?: string;
+  }>;
 }
 
 export interface ExecutionContext {
@@ -92,6 +98,7 @@ export interface ExecutionContext {
   variables: Map<string, unknown>;
   nodeOutputs: Map<string, Record<string, unknown>>;
   env: Record<string, string>;
+  secrets: Record<string, string>;
 }
 
 export interface NodeLogEntry {

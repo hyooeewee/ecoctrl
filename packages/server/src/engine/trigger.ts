@@ -4,7 +4,8 @@ import { workflows, workflowExecutions } from "@/schemas/workflows";
 import { getBoss, publishExecution, scheduleWorkflow, unscheduleWorkflow } from "@/queue/pgboss";
 import { evaluateBoolean } from "./expr";
 import { buildVars } from "./template";
-import type { ExecutionContext } from "./types";
+import { splitEnvVars, mergeServerEnv } from "./env-utils";
+import type { ExecutionContext, WorkflowDSL } from "./types";
 
 function getEnvVars(): Record<string, string> {
   const allowed = [
@@ -67,6 +68,7 @@ export const triggerEngine = {
     for (const workflow of rows) {
       const dsl = (workflow.publishedDsl ?? workflow.dsl) as {
         trigger?: { type: string; config?: Record<string, unknown> };
+        envVars?: WorkflowDSL["envVars"];
       };
       if (dsl.trigger?.type !== "state_change") continue;
 
@@ -113,11 +115,13 @@ export const triggerEngine = {
 
       // Evaluate condition if present
       if (config.condition) {
+        const { env: workflowEnv, secrets } = splitEnvVars(dsl as WorkflowDSL);
         const ctx: ExecutionContext = {
           triggerData,
           variables: new Map(),
           nodeOutputs: new Map(),
-          env: getEnvVars(),
+          env: mergeServerEnv(getEnvVars(), workflowEnv),
+          secrets,
         };
         const vars = buildVars(ctx);
         try {
@@ -142,6 +146,7 @@ export const triggerEngine = {
     for (const workflow of rows) {
       const dsl = (workflow.publishedDsl ?? workflow.dsl) as {
         trigger?: { type: string; config?: Record<string, unknown> };
+        envVars?: WorkflowDSL["envVars"];
       };
       if (dsl.trigger?.type !== "event") continue;
 
@@ -151,11 +156,13 @@ export const triggerEngine = {
       const triggerData = { ...payload, event: eventName, source: "event" };
 
       if (config.condition) {
+        const { env: workflowEnv, secrets } = splitEnvVars(dsl as WorkflowDSL);
         const ctx: ExecutionContext = {
           triggerData,
           variables: new Map(),
           nodeOutputs: new Map(),
-          env: getEnvVars(),
+          env: mergeServerEnv(getEnvVars(), workflowEnv),
+          secrets,
         };
         const vars = buildVars(ctx);
         try {

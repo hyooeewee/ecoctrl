@@ -413,6 +413,7 @@ export default function WorkflowCanvas({ workflowId, onBack }: WorkflowCanvasPro
             onClose={() => canvas.setRightPanelOpen(false)}
             nodes={canvas.nodes}
             edges={canvas.edges}
+            envVars={canvas.envVars}
           />
         )}
       </div>

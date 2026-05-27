@@ -177,6 +177,7 @@ export async function executeWorkflow(
   dsl: WorkflowDSL,
   triggerData: Record<string, unknown>,
   envVars: Record<string, string>,
+  secrets: Record<string, string> = {},
   registry: PluginRegistry | null = null,
   dryRun = false,
   workflowId = "unknown",
@@ -188,6 +189,7 @@ export async function executeWorkflow(
     variables: new Map(),
     nodeOutputs: new Map(),
     env: envVars,
+    secrets,
   };
 
   const state: InternalExecutionState = {

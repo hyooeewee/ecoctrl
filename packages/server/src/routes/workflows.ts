@@ -15,6 +15,7 @@ import {
 import { triggerEngine } from "@/engine/trigger";
 import { validateDsl } from "@/engine/validator";
 import { executeWorkflow } from "@/engine/executor";
+import { splitEnvVars, mergeServerEnv } from "@/engine/env-utils";
 import type { WorkflowDSL } from "@/engine/types";
 
 async function getUserRole(userId: string): Promise<string> {
@@ -266,7 +267,7 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
       const body = (request.body as { data?: Record<string, unknown> }) ?? {};
       const dsl = workflow.publishedDsl ?? workflow.dsl;
 
-      const envVars: Record<string, string> = {};
+      const serverEnv: Record<string, string> = {};
       const allowed = [
         "SMTP_HOST",
         "SMTP_PORT",
@@ -279,13 +280,17 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
       ];
       for (const key of allowed) {
         const value = process.env[key];
-        if (value) envVars[key] = value;
+        if (value) serverEnv[key] = value;
       }
 
+      const { env: workflowEnv, secrets } = splitEnvVars(dsl as WorkflowDSL);
+      const mergedEnv = mergeServerEnv(serverEnv, workflowEnv);
+
       const result = await executeWorkflow(
-        dsl,
+        dsl as WorkflowDSL,
         { ...body.data, source: "test" },
-        envVars,
+        mergedEnv,
+        secrets,
         (request.server as any).pluginRegistry,
         true,
         id,

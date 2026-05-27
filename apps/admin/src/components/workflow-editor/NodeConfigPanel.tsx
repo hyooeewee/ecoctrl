@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@ecoctrl/ui/textarea";
 import { Popover, PopoverTrigger, PopoverContent } from "@ecoctrl/ui/popover";
 import type { NodeDefinition } from "@/api/nodes";
+import type { EnvVar } from "../types";
 
 // ========================================
 // JSON Schema Form Types
@@ -43,6 +44,7 @@ interface NodeConfigPanelProps {
   schema: Record<string, unknown>;
   skipFields?: string[];
   upstreamNodes?: Node[];
+  envVars?: EnvVar[];
   getNodeDef?: (type: string) => NodeDefinition | null;
   onChange: (config: Record<string, unknown>) => void;
 }
@@ -85,14 +87,49 @@ function FieldDescription({ text }: { text?: string }) {
 
 function ExpressionRefHelper({
   upstreamNodes,
+  envVars,
   onSelect,
 }: {
   upstreamNodes: UpstreamNodeInfo[];
+  envVars: Array<{ key: string; type: string }>;
   onSelect: (expr: string) => void;
 }) {
   const [open, setOpen] = useState(false);
 
-  if (upstreamNodes.length === 0) return null;
+  const nonSecretVars = envVars.filter((v) => v.type !== "secret");
+  const secretVars = envVars.filter((v) => v.type === "secret");
+
+  const builtinFns = [
+    { key: "now()", desc: "当前时间" },
+    { key: "uuid()", desc: "随机UUID" },
+  ];
+
+  const renderSection = (title: string, items: Array<{ label: string; expr: string }>) => {
+    if (items.length === 0) return null;
+    return (
+      <div className="space-y-0.5">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+          {title}
+        </p>
+        <div className="flex flex-wrap gap-1">
+          {items.map(({ label, expr }) => (
+            <button
+              key={expr}
+              type="button"
+              className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-mono text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+              onClick={() => {
+                onSelect(expr);
+                setOpen(false);
+              }}
+            >
+              <ChevronRight size={9} />
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -102,36 +139,52 @@ function ExpressionRefHelper({
       >
         <Braces size={13} />
       </PopoverTrigger>
-      <PopoverContent align="end" side="bottom" sideOffset={6} className="w-64 p-3">
+      <PopoverContent align="end" side="bottom" sideOffset={6} className="w-72 p-3">
         <div className="space-y-2">
           <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
             插入引用
           </p>
-          <div className="space-y-1.5 max-h-[240px] overflow-y-auto">
-            {upstreamNodes.map((node) => (
-              <div key={node.id} className="space-y-0.5">
-                <p className="truncate text-xs font-medium text-foreground/70">{node.label}</p>
-                <div className="flex flex-wrap gap-1 pl-2">
-                  {node.outputKeys.map((key) => {
-                    const expr = `{{${node.id}.${key}}}`;
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-mono text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-                        onClick={() => {
-                          onSelect(expr);
-                          setOpen(false);
-                        }}
-                      >
-                        <ChevronRight size={9} />
-                        {key}
-                      </button>
-                    );
-                  })}
+          <div className="space-y-2 max-h-[320px] overflow-y-auto">
+            {renderSection(
+              "内置函数",
+              builtinFns.map((fn) => ({ label: fn.key, expr: `{{${fn.key}}}` })),
+            )}
+            {renderSection(
+              "环境变量",
+              nonSecretVars.map((v) => ({ label: v.key, expr: `{{env.${v.key}}}` })),
+            )}
+            {renderSection(
+              "密钥",
+              secretVars.map((v) => ({ label: v.key, expr: `{{secrets.${v.key}}}` })),
+            )}
+            {upstreamNodes.length > 0 &&
+              upstreamNodes.map((node) => (
+                <div key={node.id} className="space-y-0.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                    节点输出
+                  </p>
+                  <p className="truncate text-xs font-medium text-foreground/70">{node.label}</p>
+                  <div className="flex flex-wrap gap-1 pl-2">
+                    {node.outputKeys.map((key) => {
+                      const expr = `{{${node.id}.${key}}}`;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-mono text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                          onClick={() => {
+                            onSelect(expr);
+                            setOpen(false);
+                          }}
+                        >
+                          <ChevronRight size={9} />
+                          {key}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         </div>
       </PopoverContent>
@@ -157,6 +210,7 @@ function SchemaField({
   value,
   required,
   upstreamNodes,
+  envVars,
   onChange,
 }: {
   name: string;
@@ -164,6 +218,7 @@ function SchemaField({
   value: unknown;
   required: boolean;
   upstreamNodes: UpstreamNodeInfo[];
+  envVars: Array<{ key: string; type: string }>;
   onChange: (val: unknown) => void;
 }) {
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
@@ -189,10 +244,9 @@ function SchemaField({
     [value, onChange],
   );
 
-  const refHelper =
-    upstreamNodes.length > 0 ? (
-      <ExpressionRefHelper upstreamNodes={upstreamNodes} onSelect={insertExpr} />
-    ) : null;
+  const refHelper = (
+    <ExpressionRefHelper upstreamNodes={upstreamNodes} envVars={envVars} onSelect={insertExpr} />
+  );
   const label = prop.title ?? name;
   const description = prop.description;
   const inputId = `field-${name}`;
@@ -313,6 +367,7 @@ export function NodeConfigPanel({
   schema,
   skipFields,
   upstreamNodes,
+  envVars,
   getNodeDef,
   onChange,
 }: NodeConfigPanelProps) {
@@ -321,6 +376,8 @@ export function NodeConfigPanel({
   const typedSchema = schema as JsonSchema;
   const properties = typedSchema.properties ?? {};
   const requiredSet = new Set(typedSchema.required ?? []);
+
+  const envVarsForHelper = (envVars ?? []).map((v) => ({ key: v.key, type: v.type }));
 
   // Resolve upstream node info for expression references
   const resolvedUpstream: UpstreamNodeInfo[] = (upstreamNodes ?? []).map((node) => {
@@ -378,6 +435,7 @@ export function NodeConfigPanel({
           value={formData[key] ?? prop.default}
           required={requiredSet.has(key)}
           upstreamNodes={resolvedUpstream}
+          envVars={envVarsForHelper}
           onChange={(val) => handleFieldChange(key, val)}
         />
       ))}

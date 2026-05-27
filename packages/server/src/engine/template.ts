@@ -9,6 +9,11 @@ function getValueFromPath(path: string, ctx: ExecutionContext): unknown {
     return ctx.env[path.slice(4)] ?? "";
   }
 
+  // secrets.SECRET_NAME
+  if (path.startsWith("secrets.")) {
+    return ctx.secrets[path.slice(8)] ?? "";
+  }
+
   // now() or uuid()
   if (path === "now()") {
     return new Date().toISOString();
