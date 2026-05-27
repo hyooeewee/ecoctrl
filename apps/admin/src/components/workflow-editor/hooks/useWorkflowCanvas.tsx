@@ -89,6 +89,7 @@ export function useWorkflowCanvas({ workflowId, onBack, onDirtyChange }: UseWork
   const [editDescription, setEditDescription] = useState("");
   const [showEnvVarsDialog, setShowEnvVarsDialog] = useState(false);
   const [visibleSecrets, setVisibleSecrets] = useState<Set<string>>(new Set());
+  const [envVarFullscreen, setEnvVarFullscreen] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
 
   // ----------------------------------------
@@ -938,6 +939,8 @@ export function useWorkflowCanvas({ workflowId, onBack, onDirtyChange }: UseWork
     setShowEnvVarsDialog,
     visibleSecrets,
     setVisibleSecrets,
+    envVarFullscreen,
+    setEnvVarFullscreen,
     showSettingsDialog,
     setShowSettingsDialog,
     tagInputRef,

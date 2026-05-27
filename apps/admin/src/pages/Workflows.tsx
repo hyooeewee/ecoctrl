@@ -433,7 +433,7 @@ export default function Workflows() {
   });
 
   return (
-    <div className="flex h-full flex-col overflow-hidden p-6">
+    <div className="flex h-full flex-col overflow-hidden">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full flex-col">
         <TabsContent value="workflows" className="mt-0 flex h-full flex-col">
           {editingWorkflowId ? (
@@ -443,147 +443,149 @@ export default function Workflows() {
               onDirtyChange={setCanvasDirty}
             />
           ) : (
-            <Card className="flex h-full flex-col overflow-hidden">
-              <CardHeader className="shrink-0 pb-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Workflow size={18} />
-                      工作流
-                    </CardTitle>
-                    <CardDescription>管理工作流定义与触发配置</CardDescription>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className={`h-2 w-2 rounded-full ${
-                          sseStatus === "connected"
-                            ? "bg-green-500"
-                            : sseStatus === "connecting"
-                              ? "bg-yellow-500 animate-pulse"
-                              : sseStatus === "error"
-                                ? "bg-red-500"
-                                : "bg-gray-400"
-                        }`}
-                      />
-                      <span className="text-muted-foreground text-xs">
-                        {sseStatus === "connected"
-                          ? "实时已连接"
-                          : sseStatus === "connecting"
-                            ? "连接中..."
-                            : sseStatus === "error"
-                              ? "连接错误"
-                              : "未连接"}
-                      </span>
+            <div className="h-full p-6">
+              <Card className="flex h-full flex-col overflow-hidden">
+                <CardHeader className="shrink-0 pb-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Workflow size={18} />
+                        工作流
+                      </CardTitle>
+                      <CardDescription>管理工作流定义与触发配置</CardDescription>
                     </div>
-                    <Button onClick={openCreate}>
-                      <Plus size={16} className="mr-1.5" />
-                      新建工作流
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`h-2 w-2 rounded-full ${
+                            sseStatus === "connected"
+                              ? "bg-green-500"
+                              : sseStatus === "connecting"
+                                ? "bg-yellow-500 animate-pulse"
+                                : sseStatus === "error"
+                                  ? "bg-red-500"
+                                  : "bg-gray-400"
+                          }`}
+                        />
+                        <span className="text-muted-foreground text-xs">
+                          {sseStatus === "connected"
+                            ? "实时已连接"
+                            : sseStatus === "connecting"
+                              ? "连接中..."
+                              : sseStatus === "error"
+                                ? "连接错误"
+                                : "未连接"}
+                        </span>
+                      </div>
+                      <Button onClick={openCreate}>
+                        <Plus size={16} className="mr-1.5" />
+                        新建工作流
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-1 overflow-auto">
+                  <div className="mb-4 flex items-center gap-2">
+                    <div className="relative flex-1 max-w-sm">
+                      <Search
+                        size={14}
+                        className="text-muted-foreground absolute top-1/2 left-2.5 -translate-y-1/2"
+                      />
+                      <Input
+                        placeholder="搜索名称或标识符..."
+                        value={globalFilter}
+                        onChange={(e) => setGlobalFilter(e.target.value)}
+                        className="pl-8"
+                      />
+                      {globalFilter && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute top-1/2 right-1 h-6 w-6 -translate-y-1/2"
+                          onClick={() => setGlobalFilter("")}
+                        >
+                          <X size={12} />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        {table.getHeaderGroups().map((hg) => (
+                          <TableRow key={hg.id}>
+                            {hg.headers.map((h) => (
+                              <TableHead key={h.id}>
+                                {h.isPlaceholder
+                                  ? null
+                                  : flexRender(h.column.columnDef.header, h.getContext())}
+                              </TableHead>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableHeader>
+                      <TableBody>
+                        {loading ? (
+                          <TableRow>
+                            <TableCell colSpan={columns.length} className="h-32 text-center">
+                              <Loader2 size={20} className="animate-spin mx-auto" />
+                            </TableCell>
+                          </TableRow>
+                        ) : table.getRowModel().rows.length === 0 ? (
+                          <TableRow>
+                            <TableCell
+                              colSpan={columns.length}
+                              className="h-32 text-center text-muted-foreground"
+                            >
+                              暂无工作流，点击右上角新建
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          table.getRowModel().rows.map((row) => (
+                            <TableRow
+                              key={row.id}
+                              className="cursor-pointer"
+                              onClick={() => openEditor(row.original.id)}
+                            >
+                              {row.getVisibleCells().map((cell) => (
+                                <TableCell key={cell.id}>
+                                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+                <div className="shrink-0 border-t px-6 py-3 flex items-center justify-between">
+                  <div className="text-muted-foreground text-sm">共 {total} 条</div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => table.previousPage()}
+                      disabled={!table.getCanPreviousPage()}
+                    >
+                      上一页
+                    </Button>
+                    <span className="text-muted-foreground text-sm">
+                      第 {pageIndex + 1} / {Math.max(1, Math.ceil(total / pageSize))} 页
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => table.nextPage()}
+                      disabled={!table.getCanNextPage()}
+                    >
+                      下一页
                     </Button>
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent className="flex-1 overflow-auto">
-                <div className="mb-4 flex items-center gap-2">
-                  <div className="relative flex-1 max-w-sm">
-                    <Search
-                      size={14}
-                      className="text-muted-foreground absolute top-1/2 left-2.5 -translate-y-1/2"
-                    />
-                    <Input
-                      placeholder="搜索名称或标识符..."
-                      value={globalFilter}
-                      onChange={(e) => setGlobalFilter(e.target.value)}
-                      className="pl-8"
-                    />
-                    {globalFilter && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute top-1/2 right-1 h-6 w-6 -translate-y-1/2"
-                        onClick={() => setGlobalFilter("")}
-                      >
-                        <X size={12} />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      {table.getHeaderGroups().map((hg) => (
-                        <TableRow key={hg.id}>
-                          {hg.headers.map((h) => (
-                            <TableHead key={h.id}>
-                              {h.isPlaceholder
-                                ? null
-                                : flexRender(h.column.columnDef.header, h.getContext())}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableHeader>
-                    <TableBody>
-                      {loading ? (
-                        <TableRow>
-                          <TableCell colSpan={columns.length} className="h-32 text-center">
-                            <Loader2 size={20} className="animate-spin mx-auto" />
-                          </TableCell>
-                        </TableRow>
-                      ) : table.getRowModel().rows.length === 0 ? (
-                        <TableRow>
-                          <TableCell
-                            colSpan={columns.length}
-                            className="h-32 text-center text-muted-foreground"
-                          >
-                            暂无工作流，点击右上角新建
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        table.getRowModel().rows.map((row) => (
-                          <TableRow
-                            key={row.id}
-                            className="cursor-pointer"
-                            onClick={() => openEditor(row.original.id)}
-                          >
-                            {row.getVisibleCells().map((cell) => (
-                              <TableCell key={cell.id}>
-                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-              <div className="shrink-0 border-t px-6 py-3 flex items-center justify-between">
-                <div className="text-muted-foreground text-sm">共 {total} 条</div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
-                  >
-                    上一页
-                  </Button>
-                  <span className="text-muted-foreground text-sm">
-                    第 {pageIndex + 1} / {Math.max(1, Math.ceil(total / pageSize))} 页
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
-                  >
-                    下一页
-                  </Button>
-                </div>
-              </div>
-            </Card>
+              </Card>
+            </div>
           )}
         </TabsContent>
 
