@@ -15,6 +15,7 @@ import {
 import type { Node, Edge } from "@xyflow/react";
 import { NodeConfigPanel } from "./NodeConfigPanel";
 import type { NodeDefinition } from "@/api/nodes";
+import type { EnvVar } from "../types";
 
 interface WorkflowNodeConfigProps {
   selectedNode: Node;
@@ -33,6 +34,7 @@ interface WorkflowNodeConfigProps {
   onClose: () => void;
   nodes: Node[];
   edges: Edge[];
+  envVars?: EnvVar[];
 }
 
 export function WorkflowNodeConfig({
@@ -52,6 +54,7 @@ export function WorkflowNodeConfig({
   onClose,
   nodes,
   edges,
+  envVars,
 }: WorkflowNodeConfigProps) {
   const config = (selectedNode.data.config as Record<string, unknown>) ?? {};
   const nodeDef = getNodeDef(selectedNodeType);
@@ -236,6 +239,7 @@ export function WorkflowNodeConfig({
                   schema={nodeDef.schema ?? {}}
                   skipFields={isPointNode ? ["pointName"] : undefined}
                   upstreamNodes={upstreamNodes}
+                  envVars={envVars}
                   getNodeDef={getNodeDef}
                   onChange={(newConfig) =>
                     updateNodeData(selectedNode.id, {

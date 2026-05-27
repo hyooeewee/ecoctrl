@@ -4,6 +4,7 @@ import { db } from "@/config/database";
 import { workflowExecutions } from "@/schemas/workflows";
 import { findWorkflowById } from "@/repositories/workflows";
 import { executeWorkflow } from "@/engine/executor";
+import { splitEnvVars, mergeServerEnv } from "@/engine/env-utils";
 import { PluginRegistry } from "@/engine/plugin-registry";
 import { getPluginStorage } from "@/storage";
 import { getLogger } from "@/lib/logger";
@@ -53,7 +54,12 @@ async function processJob(job: Job<ExecutionJobData>): Promise<void> {
       nodes: unknown[];
       edges: unknown[];
       trigger: unknown;
+      envVars?: Array<{ key: string; value: unknown; type: string }>;
     };
+
+    const { env: workflowEnv, secrets } = splitEnvVars(dsl as Parameters<typeof splitEnvVars>[0]);
+    const mergedEnv = mergeServerEnv(getEnvVars(), workflowEnv);
+
     const startTime = Date.now();
     const result = await executeWorkflow(
       {
@@ -64,9 +70,11 @@ async function processJob(job: Job<ExecutionJobData>): Promise<void> {
         },
         nodes: dsl.nodes as Parameters<typeof executeWorkflow>[0]["nodes"],
         edges: dsl.edges as Parameters<typeof executeWorkflow>[0]["edges"],
+        envVars: (dsl as Parameters<typeof splitEnvVars>[0]).envVars,
       },
       triggerData,
-      getEnvVars(),
+      mergedEnv,
+      secrets,
       pluginRegistry,
       false,
       workflowId,
