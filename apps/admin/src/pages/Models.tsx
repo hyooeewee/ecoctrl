@@ -14,28 +14,17 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@ecoctrl/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoctrl/ui/card";
 import {
-  Autocomplete,
-  AutocompleteInput,
-  AutocompleteItem,
-  AutocompleteList,
-  AutocompletePopup,
-  AutocompleteTrigger,
-} from "@ecoctrl/ui/autocomplete";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
 } from "@ecoctrl/ui/dialog";
-import { Input } from "@ecoctrl/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ecoctrl/ui/select";
 import { Tabs, TabsContent } from "@ecoctrl/ui/tabs";
 
 import AppButton from "@/components/AppButton";
 import { DataTableColumnHeader } from "@/components/DataTableColumnHeader";
 import { DataTablePanel } from "@/components/DataTablePanel";
-import ModelFileZone from "@/components/ModelFileZone";
 import TruncatedText from "@/components/TruncatedText";
 import { useAppStore } from "@/store/appStore";
 import { resolveAssetUrl } from "@/lib/url";
@@ -46,15 +35,10 @@ import { pointsApi } from "../api/points";
 import { toast } from "sonner";
 import ModelViewer from "../components/ModelViewer";
 import ModelUploadWizard from "@/components/ModelUploadWizard";
-
-const ACCEPTED_FORMATS = ".glb,.gltf,.zip,.obj,.fbx";
-const FORMAT_MAP: Record<string, string> = {
-  glb: "GLB",
-  gltf: "GLTF",
-  zip: "GLTF (zip)",
-  obj: "OBJ",
-  fbx: "FBX",
-};
+import { PointCreateEditDialog } from "@/components/models/dialogs/PointCreateEditDialog";
+import { ObjectCreateEditDialog } from "@/components/models/dialogs/ObjectCreateEditDialog";
+import { ModelImportDialog } from "@/components/models/dialogs/ModelImportDialog";
+import { ModelEditDialog } from "@/components/models/dialogs/ModelEditDialog";
 
 const CARD_PREVIEW_FORMATS = new Set(["GLB", "GLTF", "GLTF (zip)"]);
 
@@ -68,33 +52,16 @@ export default function Models() {
 
   // Edit dialog state
   const [editOpen, setEditOpen] = useState(false);
-  const [editModelId, setEditModelId] = useState("");
-  const [editName, setEditName] = useState("");
-  const [editVersion, setEditVersion] = useState("");
-  const [editError, setEditError] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-  const [editFile, setEditFile] = useState<File | null>(null);
-  const [editFileDeleted, setEditFileDeleted] = useState(false);
-  const [editCode, setEditCode] = useState("");
-  const [editDescription, setEditDescription] = useState("");
+  const [editingModel, setEditingModel] = useState<DataModel | null>(null);
 
   // Objects tab state
   const [objects, setObjects] = useState<BusinessObject[]>([]);
   const [objectsLoading, setObjectsLoading] = useState(false);
   const [objectOpen, setObjectOpen] = useState(false);
-  const [objectId, setObjectId] = useState("");
-  const [objectName, setObjectName] = useState("");
-  const [selectedModelId, setSelectedModelId] = useState("");
-  const [objectError, setObjectError] = useState("");
-  const [isCreatingObject, setIsCreatingObject] = useState(false);
-  const [objectDescription, setObjectDescription] = useState("");
-  const [editingObjectId, setEditingObjectId] = useState<string | null>(null);
+  const [editingObject, setEditingObject] = useState<BusinessObject | null>(null);
 
   // Import dialog state
   const [importOpen, setImportOpen] = useState(false);
-  const [importFile, setImportFile] = useState<File | null>(null);
-  const [importError, setImportError] = useState("");
-  const [isImporting, setIsImporting] = useState(false);
 
   // Confirm dialog state
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -108,26 +75,9 @@ export default function Models() {
   const [selectedPointIds, setSelectedPointIds] = useState<string[]>([]);
   const [pointSearch, setPointSearch] = useState("");
 
-  // Point edit state
-  const [pointEditOpen, setPointEditOpen] = useState(false);
-  const [editingPointId, setEditingPointId] = useState<string | null>(null);
-  const [editPointCode, setEditPointCode] = useState("");
-  const [editPointName, setEditPointName] = useState("");
-  const [editPointType, setEditPointType] = useState("");
-  const [editPointDescription, setEditPointDescription] = useState("");
-  const [editPointError, setEditPointError] = useState("");
-  const [isSavingPoint, setIsSavingPoint] = useState(false);
-
-  // Point create state
-  const [pointCreateOpen, setPointCreateOpen] = useState(false);
-  const [createPointModelId, setCreatePointModelId] = useState("");
-  const [createPointObjectId, setCreatePointObjectId] = useState("");
-  const [createPointType, setCreatePointType] = useState("");
-  const [createPointCode, setCreatePointCode] = useState("");
-  const [createPointName, setCreatePointName] = useState("");
-  const [createPointDescription, setCreatePointDescription] = useState("");
-  const [createPointError, setCreatePointError] = useState("");
-  const [isCreatingPoint, setIsCreatingPoint] = useState(false);
+  // Point dialog state (create / edit)
+  const [pointDialogOpen, setPointDialogOpen] = useState(false);
+  const [editingPoint, setEditingPoint] = useState<Point | null>(null);
 
   // Objects tab state
   const [selectedObjectIds, setSelectedObjectIds] = useState<string[]>([]);
@@ -261,89 +211,9 @@ export default function Models() {
     setPendingNav(null);
   }, [activeTab, pendingNav, models, objects]);
 
-  const resetObjectForm = () => {
-    setObjectId("");
-    setObjectName("");
-    setObjectDescription("");
-    setSelectedModelId("");
-    setObjectError("");
-    setEditingObjectId(null);
-  };
-
-  const buildObjectPayload = (): {
-    code: string;
-    name: string;
-    description: string;
-    modelId: string;
-  } => {
-    return {
-      code: objectId.trim().toUpperCase(),
-      name: objectName.trim(),
-      description: objectDescription.trim(),
-      modelId: selectedModelId,
-    };
-  };
-
   const openEditObjectDialog = (obj: BusinessObject) => {
-    setEditingObjectId(obj.id);
-    setObjectId(obj.code ?? "");
-    setObjectName(obj.name ?? "");
-    setObjectDescription(obj.description ?? "");
-    setSelectedModelId(obj.modelId ?? "");
-    setObjectError("");
+    setEditingObject(obj);
     setObjectOpen(true);
-  };
-
-  const validateObjectForm = (): boolean => {
-    if (!objectId.trim() || !objectName.trim() || !selectedModelId) {
-      setObjectError("请填写编码、名称并选择模型");
-      return false;
-    }
-    if (!/^\d{4}$/.test(objectId.trim())) {
-      setObjectError("编码必须为4位数字");
-      return false;
-    }
-    const model = models.find((m) => m.id === selectedModelId);
-    if (!model) {
-      setObjectError("所选模型不存在");
-      return false;
-    }
-    return true;
-  };
-
-  const handleCreateObject = async () => {
-    if (!validateObjectForm()) return;
-    setIsCreatingObject(true);
-    setObjectError("");
-    try {
-      const payload = buildObjectPayload();
-      await objectsApi.create(payload);
-      setObjectOpen(false);
-      resetObjectForm();
-      await fetchObjects();
-    } catch (err) {
-      setObjectError(err instanceof Error ? err.message : "创建失败，请重试");
-    } finally {
-      setIsCreatingObject(false);
-    }
-  };
-
-  const handleUpdateObject = async () => {
-    if (!editingObjectId) return;
-    if (!validateObjectForm()) return;
-    setIsCreatingObject(true);
-    setObjectError("");
-    try {
-      const payload = buildObjectPayload();
-      await objectsApi.update(editingObjectId, payload);
-      setObjectOpen(false);
-      resetObjectForm();
-      await fetchObjects();
-    } catch (err) {
-      setObjectError(err instanceof Error ? err.message : "保存失败，请重试");
-    } finally {
-      setIsCreatingObject(false);
-    }
   };
 
   const handleDeleteObject = (id: string, name: string) => {
@@ -362,54 +232,9 @@ export default function Models() {
     setConfirmOpen(true);
   };
 
-  // Point edit functions
-  const resetPointForm = () => {
-    setEditingPointId(null);
-    setEditPointCode("");
-    setEditPointName("");
-    setEditPointType("");
-    setEditPointDescription("");
-    setEditPointError("");
-  };
-
   const openEditPointDialog = (point: Point) => {
-    setEditingPointId(point.id);
-    setEditPointCode(point.code ?? "");
-    setEditPointName(point.name ?? "");
-    setEditPointType(point.type ?? "");
-    setEditPointDescription(point.description ?? "");
-    setEditPointError("");
-    setPointEditOpen(true);
-  };
-
-  const validatePointForm = (): boolean => {
-    if (!editPointCode.trim() || !editPointType.trim()) {
-      setEditPointError("请填写编码和类型");
-      return false;
-    }
-    setEditPointError("");
-    return true;
-  };
-
-  const handleUpdatePoint = async () => {
-    if (!editingPointId) return;
-    if (!validatePointForm()) return;
-    setIsSavingPoint(true);
-    try {
-      await pointsApi.update(editingPointId, {
-        code: editPointCode.trim(),
-        name: editPointName.trim() || null,
-        type: editPointType.trim(),
-        description: editPointDescription.trim() || null,
-      });
-      setPointEditOpen(false);
-      resetPointForm();
-      await fetchPoints();
-    } catch (err) {
-      setEditPointError(err instanceof Error ? err.message : "保存失败，请重试");
-    } finally {
-      setIsSavingPoint(false);
-    }
+    setEditingPoint(point);
+    setPointDialogOpen(true);
   };
 
   const handleDeletePoint = (id: string, name: string) => {
@@ -426,71 +251,6 @@ export default function Models() {
       }
     };
     setConfirmOpen(true);
-  };
-
-  // Point create functions
-  const resetCreatePointForm = () => {
-    setCreatePointModelId("");
-    setCreatePointObjectId("");
-    setCreatePointType("");
-    setCreatePointCode("");
-    setCreatePointName("");
-    setCreatePointDescription("");
-    setCreatePointError("");
-  };
-
-  const openCreatePointDialog = () => {
-    resetCreatePointForm();
-    setPointCreateOpen(true);
-  };
-
-  const validateCreatePointForm = (): boolean => {
-    if (!createPointObjectId.trim()) {
-      setCreatePointError("请选择模型对象");
-      return false;
-    }
-    if (!createPointCode.trim() || !createPointType.trim()) {
-      setCreatePointError("请填写编码和类型");
-      return false;
-    }
-    const duplicate = allPoints.find(
-      (p) =>
-        p.objectId === createPointObjectId &&
-        p.type === createPointType.trim() &&
-        p.code === createPointCode.trim(),
-    );
-    if (duplicate) {
-      setCreatePointError(
-        `该对象下已存在类型为 "${createPointType.trim()}" 且编码为 "${createPointCode.trim()}" 的点位`,
-      );
-      return false;
-    }
-    setCreatePointError("");
-    return true;
-  };
-
-  const handleCreatePoint = async () => {
-    if (!validateCreatePointForm()) return;
-    setIsCreatingPoint(true);
-    try {
-      await pointsApi.create({
-        objectId: createPointObjectId,
-        modelId: createPointModelId,
-        code: createPointCode.trim(),
-        name: createPointName.trim() || null,
-        type: createPointType.trim(),
-        description: createPointDescription.trim() || null,
-        props: [],
-        values: {},
-      });
-      setPointCreateOpen(false);
-      resetCreatePointForm();
-      await fetchPoints();
-    } catch (err) {
-      setCreatePointError(err instanceof Error ? err.message : "创建失败，请重试");
-    } finally {
-      setIsCreatingPoint(false);
-    }
   };
 
   const handleBatchDeleteObjects = () => {
@@ -531,47 +291,6 @@ export default function Models() {
     setConfirmOpen(true);
   };
 
-  // Import dialog functions
-  const handleImportFileSelect = (file: File) => {
-    const ext = file.name.split(".").pop()?.toLowerCase();
-    if (ext !== "json" && ext !== "csv" && ext !== "xlsx") {
-      setImportError(`不支持的格式: .${ext}，请上传 .json、.csv 或 .xlsx 文件`);
-      return;
-    }
-    setImportFile(file);
-    setImportError("");
-  };
-
-  const resetImport = () => {
-    setImportFile(null);
-    setImportError("");
-  };
-
-  const handleImport = async () => {
-    if (!importFile) return;
-
-    setIsImporting(true);
-    setImportError("");
-    try {
-      const result = await modelsApi.importPoints(importFile);
-      setImportOpen(false);
-      resetImport();
-      await fetchModels();
-      await fetchObjects();
-      await fetchPoints();
-      toast.success(
-        `导入成功：创建 ${result.createdModels} 个模型，` +
-          `创建 ${result.createdObjects} 个对象，` +
-          `创建 ${result.createdPoints} 个点位，` +
-          `跳过 ${result.skippedPoints} 个已存在点位。`,
-      );
-    } catch (err) {
-      setImportError(err instanceof Error ? err.message : "导入失败，请重试");
-    } finally {
-      setIsImporting(false);
-    }
-  };
-
   const handleDelete = (id: string, name: string) => {
     setConfirmTitle("确认删除");
     setConfirmDesc(`确定要删除模型 "${name}" 吗？此操作不可撤销。`);
@@ -586,85 +305,6 @@ export default function Models() {
       }
     };
     setConfirmOpen(true);
-  };
-
-  // Edit dialog functions
-  const openEditDialog = (model: DataModel) => {
-    setEditModelId(model.id);
-    setEditName(model.name ?? "");
-    setEditVersion(model.version ?? "");
-    setEditCode(model.code ?? "");
-    setEditDescription(model.description ?? "");
-    setEditFileDeleted(false);
-    setEditError("");
-    setEditOpen(true);
-  };
-
-  const handleEditFileSelect = (file: File) => {
-    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
-    if (!FORMAT_MAP[ext]) {
-      setEditError(`不支持的格式: .${ext}，请上传 ${ACCEPTED_FORMATS} 文件`);
-      return;
-    }
-    setEditFile(file);
-    setEditError("");
-  };
-
-  const resetEditForm = () => {
-    setEditModelId("");
-    setEditName("");
-    setEditVersion("");
-    setEditError("");
-    setEditFile(null);
-    setEditFileDeleted(false);
-    setEditCode("");
-    setEditDescription("");
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editModelId || !editName.trim()) return;
-    if (!editCode.trim()) {
-      setEditError("编码不能为空");
-      return;
-    }
-
-    setIsSaving(true);
-    setEditError("");
-    try {
-      const updatePayload: {
-        name: string;
-        version: string;
-        code: string;
-        description?: string | null;
-        fileUrl?: string | null;
-      } = {
-        name: editName.trim(),
-        version: editVersion.trim() || "v1.0",
-        code: editCode.toUpperCase(),
-        description: editDescription.trim() || null,
-      };
-
-      // If current file was deleted, send fileUrl: null
-      if (editFileDeleted) {
-        updatePayload.fileUrl = null;
-      }
-
-      // 1. Update metadata
-      await modelsApi.update(editModelId, updatePayload);
-
-      // 2. Replace file if selected (only when not deleted)
-      if (editFile && !editFileDeleted) {
-        await modelsApi.replaceFile(editModelId, editFile);
-      }
-
-      setEditOpen(false);
-      resetEditForm();
-      await fetchModels();
-    } catch (err) {
-      setEditError(err instanceof Error ? err.message : "保存失败，请重试");
-    } finally {
-      setIsSaving(false);
-    }
   };
 
   const existingCodes = [...new Set(models.map((m) => m.code).filter(Boolean))];
@@ -829,10 +469,6 @@ export default function Models() {
       };
     });
   }, [allPoints, objects, models]);
-
-  const existingPointTypes = useMemo(() => {
-    return [...new Set(allPoints.map((p) => p.type).filter(Boolean))];
-  }, [allPoints]);
 
   const objectsTableData = useMemo(() => {
     return objects.map((o) => {
@@ -1043,7 +679,8 @@ export default function Models() {
                           className="absolute top-2 right-2 z-10 h-8 w-8 rounded-full border bg-background/80 opacity-0 shadow-sm backdrop-blur-sm transition-opacity group-hover:opacity-100 hover:bg-background hover:text-blue-600"
                           onClick={(e) => {
                             e.stopPropagation();
-                            openEditDialog(model);
+                            setEditingModel(model);
+                            setEditOpen(true);
                           }}
                         >
                           <Pencil size={14} />
@@ -1092,7 +729,7 @@ export default function Models() {
                 size="lg"
                 className="mt-4 gap-2"
                 onClick={() => {
-                  resetObjectForm();
+                  setEditingObject(null);
                   setObjectOpen(true);
                 }}
               >
@@ -1106,7 +743,7 @@ export default function Models() {
                 size="lg"
                 className="gap-2"
                 onClick={() => {
-                  resetObjectForm();
+                  setEditingObject(null);
                   setObjectOpen(true);
                 }}
               >
@@ -1163,7 +800,8 @@ export default function Models() {
                   size="lg"
                   className="gap-2"
                   onClick={() => {
-                    openCreatePointDialog();
+                    setEditingPoint(null);
+                    setPointDialogOpen(true);
                   }}
                 >
                   <Plus size={16} />
@@ -1173,10 +811,7 @@ export default function Models() {
                   level="secondary"
                   size="lg"
                   className="gap-2"
-                  onClick={() => {
-                    resetImport();
-                    setImportOpen(true);
-                  }}
+                  onClick={() => setImportOpen(true)}
                 >
                   <Upload size={16} />
                   导入点位
@@ -1190,7 +825,8 @@ export default function Models() {
                   size="lg"
                   className="gap-2"
                   onClick={() => {
-                    openCreatePointDialog();
+                    setEditingPoint(null);
+                    setPointDialogOpen(true);
                   }}
                 >
                   <Plus size={16} />
@@ -1200,10 +836,7 @@ export default function Models() {
                   level="secondary"
                   size="lg"
                   className="gap-2"
-                  onClick={() => {
-                    resetImport();
-                    setImportOpen(true);
-                  }}
+                  onClick={() => setImportOpen(true)}
                 >
                   <Upload size={16} />
                   导入点位
@@ -1244,677 +877,50 @@ export default function Models() {
         onSuccess={handleUploadSuccess}
       />
 
-      {/* Create / Edit Object Dialog */}
-      <Dialog
+      <ObjectCreateEditDialog
         open={objectOpen}
         onOpenChange={(open) => {
           setObjectOpen(open);
-          if (!open) resetObjectForm();
+          if (!open) setEditingObject(null);
         }}
-      >
-        <DialogContent className="max-h-[90vh] max-w-lg flex flex-col gap-0 p-0">
-          <DialogHeader className="px-6 pt-6 pb-4">
-            <DialogTitle className="flex items-center gap-2 text-lg">
-              {editingObjectId ? <Pencil size={18} /> : <Plus size={18} />}
-              {editingObjectId ? "编辑业务对象" : "新增业务对象"}
-            </DialogTitle>
-          </DialogHeader>
+        models={models}
+        editingObject={editingObject}
+        onSuccess={fetchObjects}
+      />
 
-          <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-6">
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-foreground mb-1.5 block">选择模型</label>
-                <Select value={selectedModelId} onValueChange={(v) => setSelectedModelId(v ?? "")}>
-                  <SelectTrigger className="w-full h-10 py-0">
-                    <SelectValue placeholder="请选择模型" className="truncate">
-                      {selectedModelId
-                        ? (models.find((m) => m.id === selectedModelId)?.name ?? "请选择模型")
-                        : "请选择模型"}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {models.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>
-                        <span className="block truncate">{m.name}</span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label
-                    htmlFor="object-id"
-                    className="text-sm font-medium text-foreground mb-1.5 block"
-                  >
-                    编码
-                  </label>
-                  <Input
-                    id="object-id"
-                    value={objectId}
-                    onChange={(e) => setObjectId(e.target.value)}
-                    placeholder="4位数字"
-                    maxLength={4}
-                    className="h-10 text-center font-mono"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="object-name"
-                    className="text-sm font-medium text-foreground mb-1.5 block"
-                  >
-                    对象名称
-                  </label>
-                  <Input
-                    id="object-name"
-                    value={objectName}
-                    onChange={(e) => setObjectName(e.target.value)}
-                    placeholder="请输入对象名称"
-                    className="h-10"
-                  />
-                </div>
-              </div>
-              <div>
-                <label
-                  htmlFor="object-description"
-                  className="text-sm font-medium text-foreground mb-1.5 block"
-                >
-                  描述
-                </label>
-                <Input
-                  id="object-description"
-                  value={objectDescription}
-                  onChange={(e) => setObjectDescription(e.target.value)}
-                  placeholder="请输入描述（可选）"
-                  className="h-10"
-                />
-              </div>
-            </div>
-
-            {objectError && (
-              <div className="rounded-lg border-l-4 border-red-500 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {objectError}
-              </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="border-t border-border px-6 py-4 flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setObjectOpen(false)} className="h-10 px-5">
-              取消
-            </Button>
-            <AppButton
-              level="action"
-              onClick={() => {
-                if (editingObjectId) {
-                  handleUpdateObject();
-                } else {
-                  handleCreateObject();
-                }
-              }}
-              disabled={
-                !objectId.trim() || !objectName.trim() || !selectedModelId || isCreatingObject
-              }
-              className="h-10 px-5 gap-2"
-            >
-              {isCreatingObject ? (
-                <>
-                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  {editingObjectId ? "保存中..." : "创建中..."}
-                </>
-              ) : (
-                <>
-                  {editingObjectId ? <Pencil size={16} /> : <Plus size={16} />}
-                  {editingObjectId ? "保存修改" : "确认创建"}
-                </>
-              )}
-            </AppButton>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Dialog */}
-      <Dialog
+      <ModelEditDialog
         open={editOpen}
         onOpenChange={(open) => {
           setEditOpen(open);
-          if (!open) resetEditForm();
+          if (!open) setEditingModel(null);
         }}
-      >
-        <DialogContent className="max-h-[90vh] max-w-lg flex flex-col gap-0 p-0">
-          <DialogHeader className="px-6 pt-6 pb-4">
-            <DialogTitle className="flex items-center gap-2 text-lg">
-              <Pencil size={18} />
-              编辑模型
-            </DialogTitle>
-          </DialogHeader>
+        model={editingModel}
+        existingCodes={existingCodes}
+        onSuccess={fetchModels}
+      />
 
-          <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-6">
-            {/* Replace file zone */}
-            <div>
-              <label className="text-sm font-medium text-foreground mb-2 block">
-                替换模型文件（可选）
-              </label>
-              {(() => {
-                const model = models.find((m) => m.id === editModelId);
-                const existingInfo =
-                  editFileDeleted || !model?.fileUrl
-                    ? null
-                    : { name: model.name, size: model.size, format: model.format };
-                return (
-                  <ModelFileZone
-                    file={editFile}
-                    existingInfo={existingInfo}
-                    onFileSelect={handleEditFileSelect}
-                    onFileClear={() => setEditFile(null)}
-                    onDeleteExisting={() => setEditFileDeleted(true)}
-                  />
-                );
-              })()}
-            </div>
-
-            {/* Basic info */}
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label
-                    htmlFor="edit-name"
-                    className="text-sm font-medium text-foreground mb-1.5 block"
-                  >
-                    模型名称
-                  </label>
-                  <Input
-                    id="edit-name"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    placeholder="请输入模型名称"
-                    className="h-10"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="edit-version"
-                    className="text-sm font-medium text-foreground mb-1.5 block"
-                  >
-                    版本（可选）
-                  </label>
-                  <Input
-                    id="edit-version"
-                    value={editVersion}
-                    onChange={(e) => setEditVersion(e.target.value)}
-                    placeholder="v1.0"
-                    className="h-10"
-                  />
-                </div>
-              </div>
-              <div className="[&_[data-slot=input-group]]:h-10">
-                <label
-                  htmlFor="edit-device-type"
-                  className="text-sm font-medium text-foreground mb-1.5 block"
-                >
-                  编码
-                </label>
-                <Autocomplete
-                  value={editCode}
-                  onValueChange={(v: string) => setEditCode(v.toUpperCase())}
-                  items={existingCodes}
-                  openOnInputClick
-                  filter={() => true}
-                >
-                  <AutocompleteInput
-                    placeholder="1位字符，如 C"
-                    maxLength={1}
-                    aria-hidden={false}
-                    className="h-10"
-                  >
-                    <AutocompleteTrigger />
-                  </AutocompleteInput>
-                  <AutocompletePopup className="z-[100]">
-                    <AutocompleteList>
-                      {(type: string) => (
-                        <AutocompleteItem key={type} value={type}>
-                          {type}
-                        </AutocompleteItem>
-                      )}
-                    </AutocompleteList>
-                  </AutocompletePopup>
-                </Autocomplete>
-                <p className="text-xs text-muted-foreground mt-1.5">1 位大写字母，如 C</p>
-              </div>
-              <div>
-                <label
-                  htmlFor="edit-description"
-                  className="text-sm font-medium text-foreground mb-1.5 block"
-                >
-                  描述（可选）
-                </label>
-                <Input
-                  id="edit-description"
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  placeholder="请输入模型描述"
-                  className="h-10"
-                />
-              </div>
-            </div>
-
-            {editError && (
-              <div className="rounded-lg border-l-4 border-red-500 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {editError}
-              </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="border-t border-border px-6 py-4 flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setEditOpen(false)} className="h-10 px-5">
-              取消
-            </Button>
-            <AppButton
-              level="action"
-              onClick={handleSaveEdit}
-              disabled={!editName.trim() || !editCode.trim() || isSaving}
-              className="h-10 px-5 gap-2"
-            >
-              {isSaving ? (
-                <>
-                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  保存中...
-                </>
-              ) : (
-                <>
-                  <Pencil size={16} />
-                  确认保存
-                </>
-              )}
-            </AppButton>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Import Dialog */}
-      <Dialog
+      <ModelImportDialog
         open={importOpen}
-        onOpenChange={(open) => {
-          setImportOpen(open);
-          if (!open) resetImport();
+        onOpenChange={setImportOpen}
+        onSuccess={async () => {
+          await fetchModels();
+          await fetchObjects();
+          await fetchPoints();
         }}
-      >
-        <DialogContent className="max-h-[90vh] max-w-lg flex flex-col gap-0 p-0">
-          <DialogHeader className="px-6 pt-6 pb-4">
-            <DialogTitle className="flex items-center gap-2 text-lg">
-              <Upload size={18} />
-              导入点位
-            </DialogTitle>
-          </DialogHeader>
+      />
 
-          <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-6">
-            <div>
-              <label className="text-sm font-medium text-foreground mb-2 block">导入文件</label>
-              <ModelFileZone
-                file={importFile}
-                onFileSelect={handleImportFileSelect}
-                onFileClear={() => {
-                  setImportFile(null);
-                  setImportError("");
-                }}
-                acceptedFormats=".json,.csv,.xlsx"
-              />
-              <p className="text-xs text-muted-foreground mt-1.5">
-                支持 .json、.csv 或 .xlsx 格式。.xlsx 将按"设备名称"列自动分组创建模型和对象。
-              </p>
-            </div>
-
-            {importError && (
-              <div className="rounded-lg border-l-4 border-red-500 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {importError}
-              </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="border-t border-border px-6 py-4 flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setImportOpen(false)} className="h-10 px-5">
-              取消
-            </Button>
-            <AppButton
-              level="action"
-              onClick={handleImport}
-              disabled={!importFile || isImporting}
-              className="h-10 px-5 gap-2"
-            >
-              {isImporting ? (
-                <>
-                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  导入中...
-                </>
-              ) : (
-                <>
-                  <Upload size={16} />
-                  确认导入
-                </>
-              )}
-            </AppButton>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Point Dialog */}
-      <Dialog
-        open={pointEditOpen}
+      <PointCreateEditDialog
+        open={pointDialogOpen}
         onOpenChange={(open) => {
-          setPointEditOpen(open);
-          if (!open) resetPointForm();
+          setPointDialogOpen(open);
+          if (!open) setEditingPoint(null);
         }}
-      >
-        <DialogContent className="max-h-[90vh] max-w-lg flex flex-col gap-0 p-0">
-          <DialogHeader className="px-6 pt-6 pb-4">
-            <DialogTitle className="flex items-center gap-2 text-lg">
-              <Pencil size={18} />
-              编辑点位
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-6">
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label
-                    htmlFor="edit-point-code"
-                    className="text-sm font-medium text-foreground mb-1.5 block"
-                  >
-                    编码
-                  </label>
-                  <Input
-                    id="edit-point-code"
-                    value={editPointCode}
-                    onChange={(e) => setEditPointCode(e.target.value)}
-                    placeholder="请输入编码"
-                    className="h-10"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="edit-point-type"
-                    className="text-sm font-medium text-foreground mb-1.5 block"
-                  >
-                    点位类型
-                  </label>
-                  <Input
-                    id="edit-point-type"
-                    value={editPointType}
-                    onChange={(e) => setEditPointType(e.target.value)}
-                    placeholder="请输入类型"
-                    className="h-10"
-                  />
-                </div>
-              </div>
-              <div>
-                <label
-                  htmlFor="edit-point-name"
-                  className="text-sm font-medium text-foreground mb-1.5 block"
-                >
-                  点位名称
-                </label>
-                <Input
-                  id="edit-point-name"
-                  value={editPointName}
-                  onChange={(e) => setEditPointName(e.target.value)}
-                  placeholder="请输入点位名称（可选）"
-                  className="h-10"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="edit-point-description"
-                  className="text-sm font-medium text-foreground mb-1.5 block"
-                >
-                  描述
-                </label>
-                <Input
-                  id="edit-point-description"
-                  value={editPointDescription}
-                  onChange={(e) => setEditPointDescription(e.target.value)}
-                  placeholder="请输入描述（可选）"
-                  className="h-10"
-                />
-              </div>
-            </div>
-
-            {editPointError && (
-              <div className="rounded-lg border-l-4 border-red-500 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {editPointError}
-              </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="border-t border-border px-6 py-4 flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setPointEditOpen(false)} className="h-10 px-5">
-              取消
-            </Button>
-            <AppButton
-              level="action"
-              onClick={handleUpdatePoint}
-              disabled={!editPointCode.trim() || !editPointType.trim() || isSavingPoint}
-              className="h-10 px-5 gap-2"
-            >
-              {isSavingPoint ? (
-                <>
-                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  保存中...
-                </>
-              ) : (
-                <>保存</>
-              )}
-            </AppButton>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Create Point Dialog */}
-      <Dialog
-        open={pointCreateOpen}
-        onOpenChange={(open) => {
-          setPointCreateOpen(open);
-          if (!open) resetCreatePointForm();
-        }}
-      >
-        <DialogContent className="max-h-[90vh] max-w-lg flex flex-col gap-0 p-0">
-          <DialogHeader className="px-6 pt-6 pb-4">
-            <DialogTitle className="flex items-center gap-2 text-lg">
-              <Plus size={18} />
-              新建点位
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-6">
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-foreground mb-1.5 block">选择模型</label>
-                <Select
-                  value={createPointModelId}
-                  onValueChange={(v) => {
-                    setCreatePointModelId(v ?? "");
-                    setCreatePointObjectId("");
-                  }}
-                >
-                  <SelectTrigger className="w-full h-10 py-0">
-                    <SelectValue placeholder="请选择模型">
-                      {createPointModelId
-                        ? (models.find((m) => m.id === createPointModelId)?.name ?? "请选择模型")
-                        : "请选择模型"}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {models.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>
-                        <span className="block truncate">{m.name ?? m.code ?? m.id}</span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-foreground mb-1.5 block">选择对象</label>
-                <Select
-                  value={createPointObjectId}
-                  onValueChange={(v) => {
-                    const oid = v ?? "";
-                    setCreatePointObjectId(oid);
-                    if (oid) {
-                      const obj = objects.find((o) => o.id === oid);
-                      if (obj?.modelId) {
-                        setCreatePointModelId(obj.modelId);
-                      }
-                    }
-                  }}
-                  disabled={!createPointModelId}
-                >
-                  <SelectTrigger className="w-full h-10 py-0">
-                    <SelectValue placeholder="请选择对象">
-                      {createPointObjectId
-                        ? (objects.find((o) => o.id === createPointObjectId)?.name ??
-                          objects.find((o) => o.id === createPointObjectId)?.code ??
-                          "请选择对象")
-                        : "请选择对象"}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {objects
-                      .filter((o) => !createPointModelId || o.modelId === createPointModelId)
-                      .map((o) => (
-                        <SelectItem key={o.id} value={o.id}>
-                          <span className="block truncate">{o.name ?? o.code ?? o.id}</span>
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="[&_[data-slot=input-group]]:h-10">
-                  <label
-                    htmlFor="create-point-type"
-                    className="text-sm font-medium text-foreground mb-1.5 block"
-                  >
-                    点位类型
-                  </label>
-                  <Autocomplete
-                    value={createPointType}
-                    onValueChange={(v: string) => setCreatePointType(v)}
-                    items={existingPointTypes}
-                    openOnInputClick
-                    filter={() => true}
-                  >
-                    <AutocompleteInput
-                      id="create-point-type"
-                      placeholder="请输入或选择类型"
-                      aria-hidden={false}
-                      className="h-10"
-                    >
-                      <AutocompleteTrigger />
-                    </AutocompleteInput>
-                    <AutocompletePopup className="z-[100]">
-                      <AutocompleteList>
-                        {(type: string) => (
-                          <AutocompleteItem key={type} value={type}>
-                            {type}
-                          </AutocompleteItem>
-                        )}
-                      </AutocompleteList>
-                    </AutocompletePopup>
-                  </Autocomplete>
-                </div>
-                <div>
-                  <label
-                    htmlFor="create-point-code"
-                    className="text-sm font-medium text-foreground mb-1.5 block"
-                  >
-                    编码
-                  </label>
-                  <Input
-                    id="create-point-code"
-                    value={createPointCode}
-                    onChange={(e) => setCreatePointCode(e.target.value)}
-                    placeholder="请输入编码"
-                    className="h-10"
-                  />
-                </div>
-              </div>
-              <div>
-                <label
-                  htmlFor="create-point-name"
-                  className="text-sm font-medium text-foreground mb-1.5 block"
-                >
-                  点位名称
-                </label>
-                <Input
-                  id="create-point-name"
-                  value={createPointName}
-                  onChange={(e) => setCreatePointName(e.target.value)}
-                  placeholder="请输入点位名称（可选）"
-                  className="h-10"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="create-point-description"
-                  className="text-sm font-medium text-foreground mb-1.5 block"
-                >
-                  描述
-                </label>
-                <Input
-                  id="create-point-description"
-                  value={createPointDescription}
-                  onChange={(e) => setCreatePointDescription(e.target.value)}
-                  placeholder="请输入描述（可选）"
-                  className="h-10"
-                />
-              </div>
-            </div>
-
-            {createPointError && (
-              <div className="rounded-lg border-l-4 border-red-500 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {createPointError}
-              </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="border-t border-border px-6 py-4 flex justify-end gap-3">
-            <Button
-              variant="outline"
-              onClick={() => setPointCreateOpen(false)}
-              className="h-10 px-5"
-            >
-              取消
-            </Button>
-            <AppButton
-              level="action"
-              onClick={handleCreatePoint}
-              disabled={
-                !createPointObjectId ||
-                !createPointCode.trim() ||
-                !createPointType.trim() ||
-                isCreatingPoint
-              }
-              className="h-10 px-5 gap-2"
-            >
-              {isCreatingPoint ? (
-                <>
-                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  创建中...
-                </>
-              ) : (
-                <>
-                  <Plus size={16} />
-                  确认创建
-                </>
-              )}
-            </AppButton>
-          </div>
-        </DialogContent>
-      </Dialog>
+        models={models}
+        objects={objects}
+        allPoints={allPoints}
+        editingPoint={editingPoint}
+        onSuccess={fetchPoints}
+      />
 
       {/* Preview Dialog */}
       <Dialog open={!!previewModel} onOpenChange={(open) => !open && setPreviewModel(null)}>
