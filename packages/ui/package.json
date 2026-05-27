@@ -54,6 +54,10 @@
       "types": "./src/components/ui/field.tsx",
       "import": "./src/components/ui/field.tsx"
     },
+    "./hover-card": {
+      "types": "./src/components/ui/hover-card.tsx",
+      "import": "./src/components/ui/hover-card.tsx"
+    },
     "./input": {
       "types": "./src/components/ui/input.tsx",
       "import": "./src/components/ui/input.tsx"
