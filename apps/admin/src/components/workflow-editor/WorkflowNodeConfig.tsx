@@ -1,5 +1,5 @@
 import { X, Trash2, AlertTriangle, Play, Copy, Check, Hash, Braces } from "lucide-react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { ExpressionRefHelper, type UpstreamNodeInfo } from "./NodeConfigPanel";
 import { Button } from "@ecoctrl/ui/button";
 import { Input } from "@ecoctrl/ui/input";
@@ -70,6 +70,39 @@ export function WorkflowNodeConfig({
     });
   }, [selectedNode.id]);
 
+  // Resizable panel width
+  const [panelWidth, setPanelWidth] = useState(320);
+  const isDraggingRef = useRef(false);
+
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      isDraggingRef.current = true;
+      const startX = e.clientX;
+      const startWidth = panelWidth;
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        const delta = startX - moveEvent.clientX;
+        const next = Math.min(600, Math.max(260, startWidth + delta));
+        setPanelWidth(next);
+      };
+
+      const handleMouseUp = () => {
+        isDraggingRef.current = false;
+        window.removeEventListener("mousemove", handleMouseMove);
+        window.removeEventListener("mouseup", handleMouseUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      };
+
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+    },
+    [panelWidth],
+  );
+
   // Resolve ALL ancestor nodes (recursive) for expression references
   function getAllAncestors(nodeId: string, edges: Edge[], nodes: Node[]): Node[] {
     const revAdj = new Map<string, string[]>();
@@ -124,7 +157,17 @@ export function WorkflowNodeConfig({
   );
 
   return (
-    <div className="flex w-[320px] shrink-0 flex-col border-l bg-white dark:bg-zinc-900">
+    <div
+      className="relative flex shrink-0 flex-col border-l bg-white dark:bg-zinc-900"
+      style={{ width: panelWidth }}
+    >
+      {/* Resize handle */}
+      <div
+        className="absolute -left-1.5 top-0 bottom-0 z-50 w-3 cursor-col-resize"
+        onMouseDown={handleResizeStart}
+      >
+        <div className="mx-auto h-full w-px bg-transparent transition-colors hover:bg-primary/40" />
+      </div>
       {/* Header */}
       <div className="flex items-center justify-between border-b px-4 py-3">
         <div className="flex items-center gap-2.5 min-w-0">
