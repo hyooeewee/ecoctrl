@@ -63,6 +63,13 @@ export interface WorkflowEdge {
   label?: string;
 }
 
+export interface WorkflowSettings {
+  autoSave?: {
+    enabled?: boolean;
+    intervalSeconds?: number;
+  };
+}
+
 export interface WorkflowDSL {
   version: "1.0";
   trigger: WorkflowTrigger;
@@ -74,6 +81,7 @@ export interface WorkflowDSL {
     type: "string" | "number" | "secret" | "boolean";
     description?: string;
   }>;
+  settings?: WorkflowSettings;
 }
 
 export interface ExecutionContext {
