@@ -11,6 +11,7 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   useReactTable,
   getCoreRowModel,
@@ -47,6 +48,7 @@ import type { SseWorkflowExecution } from "@/types/sse";
 import { workflowsApi } from "@/api/workflows";
 import type { WorkflowListItem } from "@/components/workflow-editor/types";
 import { WorkflowCanvas } from "@/components/workflow-editor";
+import ExecutionLogViewer from "@/components/ExecutionLogViewer";
 
 const TRIGGER_LABELS: Record<string, string> = {
   state_change: "状态变更",
@@ -79,6 +81,8 @@ export default function Workflows() {
   const [triggerLoadingId, setTriggerLoadingId] = useState<string | null>(null);
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
   const [recentExecutions, setRecentExecutions] = useState<SseWorkflowExecution[]>([]);
+  const [selectedExecutionId, setSelectedExecutionId] = useState<string | null>(null);
+  const [executionLogOpen, setExecutionLogOpen] = useState(false);
 
   const activeTab = useAppStore((state) => state.workflowsTab);
   const setActiveTab = useAppStore((state) => state.setWorkflowsTab);
@@ -153,11 +157,15 @@ export default function Workflows() {
     }
   }, [deletingId]);
 
-  const handleTrigger = useCallback(async (e: React.MouseEvent, id: string) => {
+  const handleTrigger = useCallback(async (e: React.MouseEvent, workflow: WorkflowListItem) => {
     e.stopPropagation();
-    setTriggerLoadingId(id);
+    if (!workflow.hasPublishedVersion) {
+      toast.error("请先发布工作流再执行");
+      return;
+    }
+    setTriggerLoadingId(workflow.id);
     try {
-      await workflowsApi.trigger(id);
+      await workflowsApi.trigger(workflow.id);
     } catch {
       // silently fail
     } finally {
@@ -293,7 +301,7 @@ export default function Workflows() {
               variant="ghost"
               size="icon"
               className="h-8 w-8"
-              onClick={(e) => handleTrigger(e, row.original.id)}
+              onClick={(e) => handleTrigger(e, row.original)}
               disabled={triggerLoadingId === row.original.id}
               title="手动触发"
             >
@@ -524,7 +532,14 @@ export default function Workflows() {
                     </TableHeader>
                     <TableBody>
                       {recentExecutions.map((exec) => (
-                        <TableRow key={exec.executionId}>
+                        <TableRow
+                          key={exec.executionId}
+                          className="cursor-pointer"
+                          onClick={() => {
+                            setSelectedExecutionId(exec.executionId);
+                            setExecutionLogOpen(true);
+                          }}
+                        >
                           <TableCell className="font-mono text-xs">
                             {exec.workflowId.slice(0, 8)}
                           </TableCell>
@@ -587,6 +602,16 @@ export default function Workflows() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Execution Log Viewer */}
+      <ExecutionLogViewer
+        workflowId={
+          recentExecutions.find((e) => e.executionId === selectedExecutionId)?.workflowId ?? ""
+        }
+        executionId={selectedExecutionId}
+        open={executionLogOpen}
+        onOpenChange={setExecutionLogOpen}
+      />
     </div>
   );
 }

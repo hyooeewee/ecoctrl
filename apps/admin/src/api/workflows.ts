@@ -55,4 +55,7 @@ export const workflowsApi = {
     get<PaginatedResult<unknown>>(`/workflows/${id}/executions`, {
       params: { page: String(page), pageSize: String(pageSize) },
     }),
+
+  getExecution: (workflowId: string, executionId: string) =>
+    get<WorkflowExecution>(`/workflows/${workflowId}/executions/${executionId}`),
 };

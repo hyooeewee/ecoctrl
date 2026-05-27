@@ -24,6 +24,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@ecoctrl/ui/button";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@ecoctrl/ui/pagination";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoctrl/ui/card";
 import {
   Autocomplete,
@@ -67,6 +76,92 @@ const FORMAT_MAP: Record<string, string> = {
 };
 
 const CARD_PREVIEW_FORMATS = new Set(["GLB", "GLTF", "GLTF (zip)"]);
+
+function getPageNumbers(currentPage: number, totalPages: number): (number | "ellipsis")[] {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+  if (currentPage <= 4) {
+    return [1, 2, 3, 4, 5, "ellipsis", totalPages];
+  }
+  if (currentPage >= totalPages - 3) {
+    return [
+      1,
+      "ellipsis",
+      totalPages - 4,
+      totalPages - 3,
+      totalPages - 2,
+      totalPages - 1,
+      totalPages,
+    ];
+  }
+  return [1, "ellipsis", currentPage - 1, currentPage, currentPage + 1, "ellipsis", totalPages];
+}
+
+interface TablePaginationProps {
+  table: {
+    getState: () => { pagination: { pageIndex: number; pageSize: number } };
+    getPageCount: () => number;
+    getCanPreviousPage: () => boolean;
+    getCanNextPage: () => boolean;
+    previousPage: () => void;
+    nextPage: () => void;
+    setPageIndex: (index: number) => void;
+    getFilteredRowModel: () => { rows: unknown[] };
+  };
+}
+
+function TablePagination({ table }: TablePaginationProps) {
+  const currentPage = table.getState().pagination.pageIndex + 1;
+  const totalPages = table.getPageCount();
+  const pages = getPageNumbers(currentPage, totalPages);
+
+  return (
+    <Pagination>
+      <PaginationContent>
+        <PaginationItem>
+          <PaginationPrevious
+            text="上一页"
+            onClick={(e: React.MouseEvent) => {
+              e.preventDefault();
+              if (table.getCanPreviousPage()) table.previousPage();
+            }}
+            className={!table.getCanPreviousPage() ? "pointer-events-none opacity-50" : ""}
+          />
+        </PaginationItem>
+        {pages.map((page, i) =>
+          page === "ellipsis" ? (
+            <PaginationItem key={`ellipsis-${i}`}>
+              <PaginationEllipsis />
+            </PaginationItem>
+          ) : (
+            <PaginationItem key={page}>
+              <PaginationLink
+                isActive={page === currentPage}
+                onClick={(e: React.MouseEvent) => {
+                  e.preventDefault();
+                  table.setPageIndex(page - 1);
+                }}
+              >
+                {page}
+              </PaginationLink>
+            </PaginationItem>
+          ),
+        )}
+        <PaginationItem>
+          <PaginationNext
+            text="下一页"
+            onClick={(e: React.MouseEvent) => {
+              e.preventDefault();
+              if (table.getCanNextPage()) table.nextPage();
+            }}
+            className={!table.getCanNextPage() ? "pointer-events-none opacity-50" : ""}
+          />
+        </PaginationItem>
+      </PaginationContent>
+    </Pagination>
+  );
+}
 
 export default function Models() {
   const [models, setModels] = useState<DataModel[]>([]);
@@ -1030,24 +1125,7 @@ export default function Models() {
               <div className="text-sm text-muted-foreground">
                 共 {objectsTable.getFilteredRowModel().rows.length} 条
               </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => objectsTable.previousPage()}
-                  disabled={!objectsTable.getCanPreviousPage()}
-                >
-                  上一页
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => objectsTable.nextPage()}
-                  disabled={!objectsTable.getCanNextPage()}
-                >
-                  下一页
-                </Button>
-              </div>
+              <TablePagination table={objectsTable} />
             </div>
           </Card>
         </TabsContent>
@@ -1188,24 +1266,7 @@ export default function Models() {
               <div className="text-sm text-muted-foreground">
                 共 {table.getFilteredRowModel().rows.length} 条
               </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                >
-                  上一页
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                >
-                  下一页
-                </Button>
-              </div>
+              <TablePagination table={table} />
             </div>
           </Card>
         </TabsContent>

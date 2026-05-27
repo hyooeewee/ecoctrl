@@ -22,10 +22,12 @@ export function SseProvider({ children }: { children: ReactNode }) {
     const removeWorkflow = onWorkflowExecution((exec) => {
       if (exec.status === "completed") {
         toast.success("Workflow completed", {
+          id: `workflow-completed-${exec.executionId}`,
           description: `Execution ${exec.executionId.slice(0, 8)} finished`,
         });
       } else if (exec.status === "failed") {
         toast.error("Workflow failed", {
+          id: `workflow-failed-${exec.executionId}`,
           description: exec.errorMessage || `Execution ${exec.executionId.slice(0, 8)} failed`,
         });
       }
