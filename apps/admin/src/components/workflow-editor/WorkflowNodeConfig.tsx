@@ -69,11 +69,33 @@ export function WorkflowNodeConfig({
     });
   }, [selectedNode.id]);
 
-  // Resolve upstream nodes for the expression reference helper
-  const upstreamNodes = edges
-    .filter((e) => e.target === selectedNode.id)
-    .map((e) => nodes.find((n) => n.id === e.source))
-    .filter((n): n is Node => !!n);
+  // Resolve ALL ancestor nodes (recursive) for expression references
+  function getAllAncestors(nodeId: string, edges: Edge[], nodes: Node[]): Node[] {
+    const revAdj = new Map<string, string[]>();
+    for (const e of edges) {
+      if (!revAdj.has(e.target)) revAdj.set(e.target, []);
+      revAdj.get(e.target)!.push(e.source);
+    }
+
+    const ancestorIds = new Set<string>();
+    const queue = [nodeId];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      for (const sourceId of revAdj.get(current) ?? []) {
+        if (!ancestorIds.has(sourceId)) {
+          ancestorIds.add(sourceId);
+          queue.push(sourceId);
+        }
+      }
+    }
+
+    const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+    return Array.from(ancestorIds)
+      .map((id) => nodeMap.get(id))
+      .filter((n): n is Node => !!n);
+  }
+
+  const upstreamNodes = getAllAncestors(selectedNode.id, edges, nodes);
 
   return (
     <div className="flex w-[320px] shrink-0 flex-col border-l bg-white dark:bg-zinc-900">

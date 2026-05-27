@@ -4,14 +4,14 @@ import { evaluateExpression } from "./expr";
 const TEMPLATE_REGEX = /\{\{([^}]+)\}\}/g;
 
 function getValueFromPath(path: string, ctx: ExecutionContext): unknown {
-  // env.VAR_NAME
-  if (path.startsWith("env.")) {
+  // var.VAR_NAME (workflow variables)
+  if (path.startsWith("var.")) {
     return ctx.env[path.slice(4)] ?? "";
   }
 
-  // secrets.SECRET_NAME
-  if (path.startsWith("secrets.")) {
-    return ctx.secrets[path.slice(8)] ?? "";
+  // secret.SECRET_NAME
+  if (path.startsWith("secret.")) {
+    return ctx.secrets[path.slice(7)] ?? "";
   }
 
   // now() or uuid()

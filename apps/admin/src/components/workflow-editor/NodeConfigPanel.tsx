@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { Braces, ChevronRight } from "lucide-react";
 import type { Node } from "@xyflow/react";
 import { Label } from "@ecoctrl/ui/label";
@@ -53,6 +53,77 @@ interface UpstreamNodeInfo {
   id: string;
   label: string;
   outputKeys: string[];
+}
+
+// ========================================
+// Inline Autocomplete Helpers
+// ========================================
+
+interface Candidate {
+  label: string;
+  value: string;
+  category: string;
+}
+
+interface AutocompleteState {
+  active: boolean;
+  startPos: number;
+  query: string;
+  selectedIndex: number;
+  candidates: Candidate[];
+}
+
+function buildCandidates(
+  upstreamNodes: UpstreamNodeInfo[],
+  envVars: Array<{ key: string; type: string }>,
+): Candidate[] {
+  const candidates: Candidate[] = [];
+
+  candidates.push(
+    { label: "now()", value: "{{now()}}", category: "内置函数" },
+    { label: "uuid()", value: "{{uuid()}}", category: "内置函数" },
+  );
+
+  for (const v of envVars.filter((v) => v.type !== "secret")) {
+    candidates.push({ label: `var.${v.key}`, value: `{{var.${v.key}}}`, category: "环境变量" });
+  }
+
+  for (const v of envVars.filter((v) => v.type === "secret")) {
+    candidates.push({ label: `secret.${v.key}`, value: `{{secret.${v.key}}}`, category: "密钥" });
+  }
+
+  for (const node of upstreamNodes) {
+    for (const key of node.outputKeys) {
+      candidates.push({
+        label: `${node.id}.${key}`,
+        value: `{{${node.id}.${key}}}`,
+        category: `节点: ${node.label}`,
+      });
+    }
+  }
+
+  return candidates;
+}
+
+function getAutocompleteContext(
+  value: string,
+  cursorPos: number,
+): { start: number; query: string } | null {
+  const beforeCursor = value.slice(0, cursorPos);
+  const lastOpen = beforeCursor.lastIndexOf("{{");
+  if (lastOpen === -1) return null;
+
+  const between = value.slice(lastOpen + 2, cursorPos);
+  // If there's a }} between {{ and cursor, this {{ is closed
+  if (between.includes("}}")) return null;
+
+  return { start: lastOpen, query: between.trim() };
+}
+
+function getExpressionEnd(value: string, startPos: number): number {
+  const searchFrom = startPos + 2;
+  const endPos = value.indexOf("}}", searchFrom);
+  return endPos === -1 ? value.length : endPos + 2;
 }
 
 // ========================================
@@ -151,11 +222,11 @@ function ExpressionRefHelper({
             )}
             {renderSection(
               "环境变量",
-              nonSecretVars.map((v) => ({ label: v.key, expr: `{{env.${v.key}}}` })),
+              nonSecretVars.map((v) => ({ label: v.key, expr: `{{var.${v.key}}}` })),
             )}
             {renderSection(
               "密钥",
-              secretVars.map((v) => ({ label: v.key, expr: `{{secrets.${v.key}}}` })),
+              secretVars.map((v) => ({ label: v.key, expr: `{{secret.${v.key}}}` })),
             )}
             {upstreamNodes.length > 0 &&
               upstreamNodes.map((node) => (
@@ -222,6 +293,34 @@ function SchemaField({
   onChange: (val: unknown) => void;
 }) {
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const [auto, setAuto] = useState<AutocompleteState>({
+    active: false,
+    startPos: 0,
+    query: "",
+    selectedIndex: 0,
+    candidates: [],
+  });
+
+  const allCandidates = useMemo(
+    () => buildCandidates(upstreamNodes, envVars),
+    [upstreamNodes, envVars],
+  );
+
+  // Click outside to close dropdown
+  useEffect(() => {
+    if (!auto.active) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (inputRef.current?.contains(target) || dropdownRef.current?.contains(target)) {
+        return;
+      }
+      setAuto((prev) => ({ ...prev, active: false }));
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [auto.active]);
 
   const insertExpr = useCallback(
     (expr: string) => {
@@ -244,9 +343,151 @@ function SchemaField({
     [value, onChange],
   );
 
+  const selectCandidate = useCallback(
+    (candidate: Candidate) => {
+      const el = inputRef.current;
+      if (!el) return;
+
+      const endPos = getExpressionEnd(el.value, auto.startPos);
+      const before = el.value.slice(0, auto.startPos);
+      const after = el.value.slice(endPos);
+      const newValue = before + candidate.value + after;
+      onChange(newValue);
+
+      setAuto((prev) => ({ ...prev, active: false }));
+
+      requestAnimationFrame(() => {
+        el.focus();
+        const newCursorPos = before.length + candidate.value.length;
+        el.setSelectionRange(newCursorPos, newCursorPos);
+      });
+    },
+    [auto.startPos, onChange],
+  );
+
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      const newValue = e.target.value;
+      const cursorPos = e.target.selectionStart ?? newValue.length;
+      const prevValue = value === undefined || value === null ? "" : String(value);
+
+      // Detect {{ insertion and auto-close with }}
+      if (
+        cursorPos >= 2 &&
+        newValue.slice(cursorPos - 2, cursorPos) === "{{" &&
+        newValue.length > prevValue.length &&
+        !prevValue.slice(0, cursorPos).endsWith("{{")
+      ) {
+        const withBraces = newValue.slice(0, cursorPos) + "}}" + newValue.slice(cursorPos);
+        onChange(withBraces);
+
+        requestAnimationFrame(() => {
+          const el = inputRef.current;
+          if (el) {
+            el.focus();
+            el.setSelectionRange(cursorPos, cursorPos);
+          }
+        });
+
+        setAuto({
+          active: true,
+          startPos: cursorPos - 2,
+          query: "",
+          selectedIndex: 0,
+          candidates: allCandidates,
+        });
+        return;
+      }
+
+      onChange(newValue);
+
+      const ctx = getAutocompleteContext(newValue, cursorPos);
+      if (ctx) {
+        const filtered = allCandidates.filter((c) =>
+          c.label.toLowerCase().includes(ctx.query.toLowerCase()),
+        );
+        setAuto({
+          active: true,
+          startPos: ctx.start,
+          query: ctx.query,
+          selectedIndex: 0,
+          candidates: filtered,
+        });
+      } else {
+        setAuto((prev) => ({ ...prev, active: false }));
+      }
+    },
+    [value, onChange, allCandidates],
+  );
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (!auto.active) return;
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setAuto((prev) => ({
+          ...prev,
+          selectedIndex:
+            prev.candidates.length > 0 ? (prev.selectedIndex + 1) % prev.candidates.length : 0,
+        }));
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setAuto((prev) => ({
+          ...prev,
+          selectedIndex:
+            prev.candidates.length > 0
+              ? (prev.selectedIndex - 1 + prev.candidates.length) % prev.candidates.length
+              : 0,
+        }));
+      } else if (e.key === "Enter") {
+        if (auto.candidates.length > 0) {
+          e.preventDefault();
+          selectCandidate(auto.candidates[auto.selectedIndex]!);
+        }
+      } else if (e.key === "Escape") {
+        setAuto((prev) => ({ ...prev, active: false }));
+      }
+    },
+    [auto.active, auto.candidates, auto.selectedIndex, selectCandidate],
+  );
+
   const refHelper = (
     <ExpressionRefHelper upstreamNodes={upstreamNodes} envVars={envVars} onSelect={insertExpr} />
   );
+
+  const renderAutocompleteDropdown = () => {
+    if (!auto.active) return null;
+    return (
+      <div
+        ref={dropdownRef}
+        className="absolute left-0 right-0 top-full z-50 mt-1 max-h-60 overflow-y-auto rounded-md border bg-popover shadow-md"
+      >
+        {auto.candidates.length === 0 ? (
+          <div className="px-2.5 py-2 text-xs text-muted-foreground">无匹配结果</div>
+        ) : (
+          auto.candidates.map((candidate, i) => (
+            <button
+              key={candidate.value}
+              type="button"
+              className={`flex w-full items-center justify-between px-2.5 py-1.5 text-xs transition-colors ${
+                i === auto.selectedIndex
+                  ? "bg-primary/10 text-primary"
+                  : "text-foreground hover:bg-muted"
+              }`}
+              onClick={() => selectCandidate(candidate)}
+            >
+              <span className="font-mono">{candidate.label}</span>
+              <span className="ml-2 shrink-0 text-[10px] text-muted-foreground">
+                {candidate.category}
+              </span>
+            </button>
+          ))
+        )}
+      </div>
+    );
+  };
+
   const label = prop.title ?? name;
   const description = prop.description;
   const inputId = `field-${name}`;
@@ -326,10 +567,12 @@ function SchemaField({
             value={value === undefined || value === null ? "" : String(value)}
             placeholder={prop.placeholder ?? `请输入 ${label}`}
             rows={4}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
             className={textareaBaseClasses + " pr-8"}
           />
           {refHelper}
+          {renderAutocompleteDropdown()}
         </div>
       </div>
     );
@@ -349,10 +592,12 @@ function SchemaField({
           placeholder={prop.placeholder ?? `请输入 ${label}`}
           minLength={prop.minLength}
           maxLength={prop.maxLength}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
           className={inputBaseClasses + " pr-8"}
         />
         {refHelper}
+        {renderAutocompleteDropdown()}
       </div>
     </div>
   );

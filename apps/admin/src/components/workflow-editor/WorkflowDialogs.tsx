@@ -1,4 +1,4 @@
-import { X, Trash2, Eye, EyeOff } from "lucide-react";
+import { X, Trash2, Eye, EyeOff, Braces } from "lucide-react";
 import { Button } from "@ecoctrl/ui/button";
 import { Input } from "@ecoctrl/ui/input";
 import { Label } from "@ecoctrl/ui/label";
@@ -15,6 +15,8 @@ import {
 } from "@ecoctrl/ui/dialog";
 import { PREDEFINED_TAGS } from "./constants";
 import type { EnvVar, WorkflowSettings } from "./types";
+import { useState } from "react";
+import { Editor } from "@monaco-editor/react";
 
 interface WorkflowDialogsProps {
   // Edit dialog
@@ -51,6 +53,180 @@ interface WorkflowDialogsProps {
   setIsDirty: (v: boolean) => void;
 }
 
+// ========================================
+// Env Var Row with JSON mode support
+// ========================================
+
+function EnvVarRow({
+  ev,
+  idx,
+  envVars,
+  setEnvVars,
+  visibleSecrets,
+  setVisibleSecrets,
+  jsonMode,
+  onToggleJsonMode,
+}: {
+  ev: EnvVar;
+  idx: number;
+  envVars: EnvVar[];
+  setEnvVars: (v: EnvVar[]) => void;
+  visibleSecrets: Set<string>;
+  setVisibleSecrets: (v: Set<string>) => void;
+  jsonMode: boolean;
+  onToggleJsonMode: (idx: number) => void;
+}) {
+  const [jsonError, setJsonError] = useState("");
+
+  const updateValue = (val: unknown) => {
+    setEnvVars(envVars.map((v, i) => (i === idx ? { ...v, value: val } : v)));
+  };
+
+  const getJsonString = (): string => {
+    try {
+      return JSON.stringify(ev.value ?? "", null, 2);
+    } catch {
+      return String(ev.value ?? "");
+    }
+  };
+
+  const handleJsonChange = (value: string | undefined) => {
+    const str = value ?? "";
+    try {
+      JSON.parse(str);
+      setJsonError("");
+      updateValue(str);
+    } catch {
+      setJsonError("JSON 格式错误");
+      updateValue(str);
+    }
+  };
+
+  const inputBase = "h-8 text-xs";
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-start gap-2">
+        <Input
+          value={ev.key}
+          onChange={(e) =>
+            setEnvVars(envVars.map((v, i) => (i === idx ? { ...v, key: e.target.value } : v)))
+          }
+          placeholder="KEY"
+          className={`${inputBase} w-[120px]`}
+        />
+
+        {jsonMode ? (
+          <div className="flex-1 space-y-1">
+            <div className="h-[120px] overflow-hidden rounded-md border">
+              <Editor
+                height="120px"
+                language="json"
+                value={getJsonString()}
+                onChange={handleJsonChange}
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: 12,
+                  lineNumbers: "off",
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                  tabSize: 2,
+                  formatOnPaste: true,
+                }}
+              />
+            </div>
+            {jsonError && <p className="text-[10px] text-rose-500">{jsonError}</p>}
+          </div>
+        ) : ev.type === "boolean" ? (
+          <Switch
+            checked={ev.value as boolean}
+            onCheckedChange={(checked) => updateValue(checked)}
+          />
+        ) : ev.type === "number" ? (
+          <Input
+            type="number"
+            value={ev.value as number}
+            onChange={(e) => {
+              const val = e.target.value === "" ? "" : Number(e.target.value);
+              updateValue(val);
+            }}
+            placeholder="值"
+            className={`${inputBase} flex-1`}
+          />
+        ) : (
+          <Input
+            type={ev.type === "secret" && !visibleSecrets.has(ev.key) ? "password" : "text"}
+            value={ev.value as string}
+            onChange={(e) => updateValue(e.target.value)}
+            placeholder={ev.type === "env" ? "环境变量名（如 DATABASE_URL）" : "值"}
+            className={`${inputBase} flex-1`}
+          />
+        )}
+
+        <select
+          value={ev.type}
+          onChange={(e) =>
+            setEnvVars(
+              envVars.map((v, i) =>
+                i === idx
+                  ? {
+                      ...v,
+                      type: e.target.value as EnvVar["type"],
+                      value:
+                        e.target.value === "boolean" ? false : e.target.value === "number" ? 0 : "",
+                    }
+                  : v,
+              ),
+            )
+          }
+          className="h-8 rounded-md border bg-white px-2 text-xs dark:bg-zinc-950"
+        >
+          <option value="string">string</option>
+          <option value="number">number</option>
+          <option value="secret">secret</option>
+          <option value="boolean">boolean</option>
+          <option value="env">env</option>
+        </select>
+
+        {ev.type === "secret" && !jsonMode && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => {
+              const next = new Set(visibleSecrets);
+              if (next.has(ev.key)) next.delete(ev.key);
+              else next.add(ev.key);
+              setVisibleSecrets(next);
+            }}
+          >
+            {visibleSecrets.has(ev.key) ? <EyeOff size={14} /> : <Eye size={14} />}
+          </Button>
+        )}
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className={`h-8 w-8 ${jsonMode ? "text-primary" : "text-muted-foreground"}`}
+          title={jsonMode ? "退出 JSON 模式" : "JSON 编辑模式"}
+          onClick={() => onToggleJsonMode(idx)}
+        >
+          <Braces size={14} />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-rose-500"
+          onClick={() => setEnvVars(envVars.filter((_, i) => i !== idx))}
+        >
+          <Trash2 size={14} />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function WorkflowDialogs({
   showEditDialog,
   setShowEditDialog,
@@ -81,6 +257,20 @@ export function WorkflowDialogs({
   setSettings,
   setIsDirty,
 }: WorkflowDialogsProps) {
+  const [jsonModes, setJsonModes] = useState<Set<number>>(new Set());
+
+  const toggleJsonMode = (idx: number) => {
+    setJsonModes((prev) => {
+      const next = new Set(prev);
+      if (next.has(idx)) {
+        next.delete(idx);
+      } else {
+        next.add(idx);
+      }
+      return next;
+    });
+  };
+
   return (
     <>
       {/* Edit workflow info dialog */}
@@ -226,7 +416,7 @@ export function WorkflowDialogs({
           <DialogHeader>
             <DialogTitle>环境变量</DialogTitle>
             <DialogDescription>
-              定义工作流中可引用的变量，如 {"{{ env.API_KEY }}"}
+              定义工作流中可引用的变量，如 {"{{ var.API_KEY }}"} 或 {"{{ secret.TOKEN }}"}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
@@ -234,102 +424,17 @@ export function WorkflowDialogs({
               <div className="text-muted-foreground py-4 text-center text-sm">暂无环境变量</div>
             )}
             {envVars.map((ev, idx) => (
-              <div key={idx} className="flex items-start gap-2">
-                <Input
-                  value={ev.key}
-                  onChange={(e) =>
-                    setEnvVars(
-                      envVars.map((v, i) => (i === idx ? { ...v, key: e.target.value } : v)),
-                    )
-                  }
-                  placeholder="KEY"
-                  className="h-8 w-[120px] text-xs"
-                />
-                {ev.type === "boolean" ? (
-                  <Switch
-                    checked={ev.value as boolean}
-                    onCheckedChange={(checked) =>
-                      setEnvVars(envVars.map((v, i) => (i === idx ? { ...v, value: checked } : v)))
-                    }
-                  />
-                ) : ev.type === "number" ? (
-                  <Input
-                    type="number"
-                    value={ev.value as number}
-                    onChange={(e) =>
-                      setEnvVars(
-                        envVars.map((v, i) =>
-                          i === idx ? { ...v, value: Number(e.target.value) } : v,
-                        ),
-                      )
-                    }
-                    placeholder="值"
-                    className="h-8 flex-1 text-xs"
-                  />
-                ) : (
-                  <Input
-                    type={ev.type === "secret" && !visibleSecrets.has(ev.key) ? "password" : "text"}
-                    value={ev.value as string}
-                    onChange={(e) =>
-                      setEnvVars(
-                        envVars.map((v, i) => (i === idx ? { ...v, value: e.target.value } : v)),
-                      )
-                    }
-                    placeholder="值"
-                    className="h-8 flex-1 text-xs"
-                  />
-                )}
-                <select
-                  value={ev.type}
-                  onChange={(e) =>
-                    setEnvVars(
-                      envVars.map((v, i) =>
-                        i === idx
-                          ? {
-                              ...v,
-                              type: e.target.value as EnvVar["type"],
-                              value:
-                                e.target.value === "boolean"
-                                  ? false
-                                  : e.target.value === "number"
-                                    ? 0
-                                    : "",
-                            }
-                          : v,
-                      ),
-                    )
-                  }
-                  className="h-8 rounded-md border bg-white px-2 text-xs dark:bg-zinc-950"
-                >
-                  <option value="string">string</option>
-                  <option value="number">number</option>
-                  <option value="secret">secret</option>
-                  <option value="boolean">boolean</option>
-                </select>
-                {ev.type === "secret" && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => {
-                      const next = new Set(visibleSecrets);
-                      if (next.has(ev.key)) next.delete(ev.key);
-                      else next.add(ev.key);
-                      setVisibleSecrets(next);
-                    }}
-                  >
-                    {visibleSecrets.has(ev.key) ? <EyeOff size={14} /> : <Eye size={14} />}
-                  </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-rose-500"
-                  onClick={() => setEnvVars(envVars.filter((_, i) => i !== idx))}
-                >
-                  <Trash2 size={14} />
-                </Button>
-              </div>
+              <EnvVarRow
+                key={idx}
+                ev={ev}
+                idx={idx}
+                envVars={envVars}
+                setEnvVars={setEnvVars}
+                visibleSecrets={visibleSecrets}
+                setVisibleSecrets={setVisibleSecrets}
+                jsonMode={jsonModes.has(idx)}
+                onToggleJsonMode={toggleJsonMode}
+              />
             ))}
             <Button
               variant="outline"
