@@ -216,3 +216,23 @@ export async function findWorkflowExecutions(
 
   return { items: rows, total };
 }
+
+export async function findRecentExecutions(
+  userId: string,
+  userRole: string,
+  limit: number,
+): Promise<(typeof workflowExecutions.$inferSelect)[]> {
+  const whereClause =
+    userRole === "super_admin" ? undefined : eq(workflowExecutions.userId, userId);
+
+  const query = db
+    .select()
+    .from(workflowExecutions)
+    .orderBy(desc(workflowExecutions.createdAt))
+    .limit(limit);
+
+  if (whereClause) {
+    return query.where(whereClause);
+  }
+  return query;
+}

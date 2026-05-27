@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@ecoctrl/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@ecoctrl/ui/dialog";
 import { Badge } from "@ecoctrl/ui/badge";
 import { Separator } from "@ecoctrl/ui/separator";
 import {
@@ -176,15 +176,15 @@ export default function ExecutionLogViewer({
   const isFailed = execution?.status === "failed";
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:w-[640px] sm:max-w-[640px] p-0 flex flex-col">
-        <SheetHeader className="px-5 py-4 border-b shrink-0">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="inset-0 w-full h-full max-w-none translate-x-0 translate-y-0 p-0 gap-0 rounded-none border-0 flex flex-col">
+        <DialogHeader className="px-5 py-4 border-b shrink-0">
           <div className="flex items-center gap-3">
             <Terminal size={16} className="text-muted-foreground" />
-            <SheetTitle className="text-sm font-medium">执行详情</SheetTitle>
+            <DialogTitle className="text-sm font-medium">执行详情</DialogTitle>
           </div>
           {execution && (
-            <SheetDescription className="mt-2">
+            <div className="mt-2">
               <div className="flex items-center gap-3 flex-wrap">
                 <span className="font-mono text-[10px] text-muted-foreground">
                   #{execution.id?.slice(0, 8)}
@@ -205,9 +205,9 @@ export default function ExecutionLogViewer({
                   <span className="text-[11px]">{execution.errorMessage}</span>
                 </div>
               )}
-            </SheetDescription>
+            </div>
           )}
-        </SheetHeader>
+        </DialogHeader>
 
         <div className="flex-1 overflow-auto">
           {loading && (
@@ -254,7 +254,7 @@ export default function ExecutionLogViewer({
             </>
           )}
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
