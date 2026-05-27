@@ -62,6 +62,10 @@
       "types": "./src/components/ui/hover-card.tsx",
       "import": "./src/components/ui/hover-card.tsx"
     },
+    "./indeterminate-checkbox": {
+      "types": "./src/components/community/indeterminate-checkbox.tsx",
+      "import": "./src/components/community/indeterminate-checkbox.tsx"
+    },
     "./input": {
       "types": "./src/components/ui/input.tsx",
       "import": "./src/components/ui/input.tsx"
