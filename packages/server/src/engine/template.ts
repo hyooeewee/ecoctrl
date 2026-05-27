@@ -68,8 +68,8 @@ export function resolveTemplate(value: unknown, ctx: ExecutionContext): unknown 
     const fullMatch = value.match(/^\{\{(.+)\}\}$/);
     if (fullMatch) {
       const inner = fullMatch[1]!.trim();
-      // If it looks like an expression (contains operators), evaluate it
-      if (/[+\-*/%><=!&|?:]/.test(inner)) {
+      // If it looks like an expression (operators surrounded by spaces), evaluate it
+      if (/ (?:[+\-*/%><=!&|?:]) /.test(inner)) {
         const vars: Record<string, unknown> = {};
         ctx.variables.forEach((v, k) => {
           vars[k] = v;
