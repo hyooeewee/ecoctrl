@@ -529,7 +529,7 @@ function SchemaField({
     return (
       <div
         ref={dropdownRef}
-        className="absolute left-0 right-0 top-full z-50 mt-1 max-h-60 overflow-y-auto rounded-md border bg-popover shadow-md"
+        className="absolute left-0 top-full z-50 mt-1 max-h-60 w-max min-w-full overflow-y-auto rounded-md border bg-popover shadow-md"
       >
         {auto.candidates.length === 0 ? (
           <div className="px-2.5 py-2 text-xs text-muted-foreground">无匹配结果</div>
@@ -538,15 +538,15 @@ function SchemaField({
             <button
               key={candidate.value}
               type="button"
-              className={`flex w-full items-center justify-between px-2.5 py-1.5 text-xs transition-colors ${
+              className={`flex w-full items-center gap-3 px-2.5 py-1.5 text-xs transition-colors ${
                 i === auto.selectedIndex
                   ? "bg-primary/10 text-primary"
                   : "text-foreground hover:bg-muted"
               }`}
               onClick={() => selectCandidate(candidate)}
             >
-              <span className="font-mono">{candidate.label}</span>
-              <span className="ml-2 shrink-0 text-[10px] text-muted-foreground">
+              <span className="truncate font-mono">{candidate.label}</span>
+              <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
                 {candidate.category}
               </span>
             </button>
