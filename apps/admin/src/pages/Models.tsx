@@ -24,15 +24,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@ecoctrl/ui/button";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@ecoctrl/ui/pagination";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@ecoctrl/ui/card";
 import {
   Autocomplete,
@@ -54,6 +45,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent } from "@ecoctrl/ui/tabs";
 
 import AppButton from "@/components/AppButton";
+import { DataTablePanel } from "@/components/DataTablePanel";
 import ModelFileZone from "@/components/ModelFileZone";
 import TruncatedText from "@/components/TruncatedText";
 import { useAppStore } from "@/store/appStore";
@@ -76,92 +68,6 @@ const FORMAT_MAP: Record<string, string> = {
 };
 
 const CARD_PREVIEW_FORMATS = new Set(["GLB", "GLTF", "GLTF (zip)"]);
-
-function getPageNumbers(currentPage: number, totalPages: number): (number | "ellipsis")[] {
-  if (totalPages <= 7) {
-    return Array.from({ length: totalPages }, (_, i) => i + 1);
-  }
-  if (currentPage <= 4) {
-    return [1, 2, 3, 4, 5, "ellipsis", totalPages];
-  }
-  if (currentPage >= totalPages - 3) {
-    return [
-      1,
-      "ellipsis",
-      totalPages - 4,
-      totalPages - 3,
-      totalPages - 2,
-      totalPages - 1,
-      totalPages,
-    ];
-  }
-  return [1, "ellipsis", currentPage - 1, currentPage, currentPage + 1, "ellipsis", totalPages];
-}
-
-interface TablePaginationProps {
-  table: {
-    getState: () => { pagination: { pageIndex: number; pageSize: number } };
-    getPageCount: () => number;
-    getCanPreviousPage: () => boolean;
-    getCanNextPage: () => boolean;
-    previousPage: () => void;
-    nextPage: () => void;
-    setPageIndex: (index: number) => void;
-    getFilteredRowModel: () => { rows: unknown[] };
-  };
-}
-
-function TablePagination({ table }: TablePaginationProps) {
-  const currentPage = table.getState().pagination.pageIndex + 1;
-  const totalPages = table.getPageCount();
-  const pages = getPageNumbers(currentPage, totalPages);
-
-  return (
-    <Pagination>
-      <PaginationContent>
-        <PaginationItem>
-          <PaginationPrevious
-            text="上一页"
-            onClick={(e: React.MouseEvent) => {
-              e.preventDefault();
-              if (table.getCanPreviousPage()) table.previousPage();
-            }}
-            className={!table.getCanPreviousPage() ? "pointer-events-none opacity-50" : ""}
-          />
-        </PaginationItem>
-        {pages.map((page, i) =>
-          page === "ellipsis" ? (
-            <PaginationItem key={`ellipsis-${i}`}>
-              <PaginationEllipsis />
-            </PaginationItem>
-          ) : (
-            <PaginationItem key={page}>
-              <PaginationLink
-                isActive={page === currentPage}
-                onClick={(e: React.MouseEvent) => {
-                  e.preventDefault();
-                  table.setPageIndex(page - 1);
-                }}
-              >
-                {page}
-              </PaginationLink>
-            </PaginationItem>
-          ),
-        )}
-        <PaginationItem>
-          <PaginationNext
-            text="下一页"
-            onClick={(e: React.MouseEvent) => {
-              e.preventDefault();
-              if (table.getCanNextPage()) table.nextPage();
-            }}
-            className={!table.getCanNextPage() ? "pointer-events-none opacity-50" : ""}
-          />
-        </PaginationItem>
-      </PaginationContent>
-    </Pagination>
-  );
-}
 
 export default function Models() {
   const [models, setModels] = useState<DataModel[]>([]);
@@ -998,277 +904,240 @@ export default function Models() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="objects" className="mt-0 flex h-full flex-col">
-          <Card className="flex h-full flex-col overflow-hidden border-none shadow-sm">
-            <CardHeader className="shrink-0 px-6 pb-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>业务对象</CardTitle>
-                  <CardDescription>基于模型创建业务对象实例，为点位属性赋值。</CardDescription>
-                </div>
-                <AppButton
-                  level="action"
-                  className="gap-2"
-                  onClick={() => {
-                    resetObjectForm();
-                    setObjectOpen(true);
+        <TabsContent value="objects" className="mt-0 flex h-full flex-col overflow-hidden">
+          <DataTablePanel
+            title="业务对象"
+            description="基于模型创建业务对象实例，为点位属性赋值。"
+            loading={objectsLoading}
+            emptyIcon={<Layers className="h-12 w-12 text-muted-foreground/40" />}
+            emptyTitle="暂无业务对象"
+            emptyDescription="点击右上角「新增对象」按钮创建。"
+            emptyAction={
+              <AppButton
+                level="action"
+                className="mt-4 gap-2"
+                onClick={() => {
+                  resetObjectForm();
+                  setObjectOpen(true);
+                }}
+              >
+                <Plus size={16} />
+                新增对象
+              </AppButton>
+            }
+            action={
+              <AppButton
+                level="action"
+                className="gap-2"
+                onClick={() => {
+                  resetObjectForm();
+                  setObjectOpen(true);
+                }}
+              >
+                <Plus size={16} />
+                新增对象
+              </AppButton>
+            }
+            rowCount={objectsTable.getFilteredRowModel().rows.length}
+            paginationTable={objectsTable}
+          >
+            <>
+              <div className="flex flex-wrap items-center gap-3 py-4">
+                <Input
+                  placeholder="筛选对象..."
+                  value={objectGlobalFilter}
+                  onChange={(e) => setObjectGlobalFilter(e.target.value)}
+                  className="max-w-sm"
+                />
+                <Select
+                  value={(objectsTable.getColumn("modelName")?.getFilterValue() as string) ?? ""}
+                  onValueChange={(v) => {
+                    objectsTable.getColumn("modelName")?.setFilterValue(v || undefined);
                   }}
                 >
-                  <Plus size={16} />
-                  新增对象
-                </AppButton>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="关联模型">
+                      {(objectsTable.getColumn("modelName")?.getFilterValue() as
+                        | string
+                        | undefined) ?? "关联模型"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">全部模型</SelectItem>
+                    {models.map((m) => {
+                      const label = m.name ?? m.code ?? "";
+                      return (
+                        <SelectItem key={m.id} value={label}>
+                          {label}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
               </div>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-auto px-6">
-              {objectsLoading ? (
-                <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
-                  加载中...
-                </div>
-              ) : objects.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted py-20">
-                  <Layers className="h-12 w-12 text-muted-foreground/40" />
-                  <h3 className="mt-4 text-sm font-semibold text-foreground">暂无业务对象</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    点击右上角"新增对象"按钮创建。
-                  </p>
-                  <AppButton
-                    level="action"
-                    className="mt-4 gap-2"
-                    onClick={() => {
-                      resetObjectForm();
-                      setObjectOpen(true);
-                    }}
-                  >
-                    <Plus size={16} />
-                    新增对象
-                  </AppButton>
-                </div>
-              ) : (
-                <>
-                  <div className="flex flex-wrap items-center gap-3 py-4">
-                    <Input
-                      placeholder="筛选对象..."
-                      value={objectGlobalFilter}
-                      onChange={(e) => setObjectGlobalFilter(e.target.value)}
-                      className="max-w-sm"
-                    />
-                    <Select
-                      value={
-                        (objectsTable.getColumn("modelName")?.getFilterValue() as string) ?? ""
-                      }
-                      onValueChange={(v) => {
-                        objectsTable.getColumn("modelName")?.setFilterValue(v || undefined);
-                      }}
-                    >
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="关联模型">
-                          {(objectsTable.getColumn("modelName")?.getFilterValue() as
-                            | string
-                            | undefined) ?? "关联模型"}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">全部模型</SelectItem>
-                        {models.map((m) => {
-                          const label = m.name ?? m.code ?? "";
-                          return (
-                            <SelectItem key={m.id} value={label}>
-                              {label}
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        {objectsTable.getHeaderGroups().map((headerGroup) => (
-                          <TableRow key={headerGroup.id}>
-                            {headerGroup.headers.map((header) => (
-                              <TableHead key={header.id}>
-                                {header.isPlaceholder
-                                  ? null
-                                  : flexRender(header.column.columnDef.header, header.getContext())}
-                              </TableHead>
-                            ))}
-                          </TableRow>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    {objectsTable.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <TableHead key={header.id}>
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(header.column.columnDef.header, header.getContext())}
+                          </TableHead>
                         ))}
-                      </TableHeader>
-                      <TableBody>
-                        {objectsTable.getRowModel().rows.map((row) => (
-                          <TableRow
-                            key={row.id}
-                            className={`cursor-pointer ${highlightedObjectId === row.original.id ? "bg-blue-50" : ""}`}
-                            onClick={() => {
-                              setPendingNav({
-                                tab: "points",
-                                pointsFilterObjectId: row.original.id,
-                              });
-                              setActiveTab("points");
-                            }}
-                          >
-                            {row.getVisibleCells().map((cell) => (
-                              <TableCell key={cell.id}>
-                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                              </TableCell>
-                            ))}
-                          </TableRow>
+                      </TableRow>
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {objectsTable.getRowModel().rows.map((row) => (
+                      <TableRow
+                        key={row.id}
+                        className={`cursor-pointer ${highlightedObjectId === row.original.id ? "bg-blue-50" : ""}`}
+                        onClick={() => {
+                          setPendingNav({
+                            tab: "points",
+                            pointsFilterObjectId: row.original.id,
+                          });
+                          setActiveTab("points");
+                        }}
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
                         ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </>
-              )}
-            </CardContent>
-            <div className="shrink-0 border-t px-6 py-3 flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">
-                共 {objectsTable.getFilteredRowModel().rows.length} 条
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
-              <TablePagination table={objectsTable} />
-            </div>
-          </Card>
+            </>
+          </DataTablePanel>
         </TabsContent>
 
-        <TabsContent value="points" className="mt-0 flex h-full flex-col">
-          <Card className="flex h-full flex-col overflow-hidden border-none shadow-sm">
-            <CardHeader className="shrink-0 px-6 pb-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>点位信息</CardTitle>
-                  <CardDescription>查看所有数据模型中的点位定义信息。</CardDescription>
-                </div>
-                <AppButton
-                  level="action"
-                  className="gap-2"
-                  onClick={() => {
-                    resetImport();
-                    setImportOpen(true);
+        <TabsContent value="points" className="mt-0 flex h-full flex-col overflow-hidden">
+          <DataTablePanel
+            title="点位信息"
+            description="查看所有数据模型中的点位定义信息。"
+            loading={pointsLoading}
+            emptyIcon={<Braces className="h-12 w-12 text-muted-foreground/40" />}
+            emptyTitle="暂无点位数据"
+            emptyDescription="点击右上角「导入点位」按钮导入。"
+            emptyAction={
+              <AppButton
+                level="action"
+                className="mt-4 gap-2"
+                onClick={() => {
+                  resetImport();
+                  setImportOpen(true);
+                }}
+              >
+                <Upload size={16} />
+                导入点位
+              </AppButton>
+            }
+            action={
+              <AppButton
+                level="action"
+                className="gap-2"
+                onClick={() => {
+                  resetImport();
+                  setImportOpen(true);
+                }}
+              >
+                <Upload size={16} />
+                导入点位
+              </AppButton>
+            }
+            rowCount={table.getFilteredRowModel().rows.length}
+            paginationTable={table}
+          >
+            <>
+              <div className="flex flex-wrap items-center gap-3 py-4">
+                <Input
+                  placeholder="筛选点位..."
+                  value={globalFilter}
+                  onChange={(e) => setGlobalFilter(e.target.value)}
+                  className="max-w-sm"
+                />
+                <Select
+                  value={(table.getColumn("objectName")?.getFilterValue() as string) ?? ""}
+                  onValueChange={(v) => {
+                    table.getColumn("objectName")?.setFilterValue(v || undefined);
                   }}
                 >
-                  <Upload size={16} />
-                  导入点位
-                </AppButton>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="关联对象">
+                      {(table.getColumn("objectName")?.getFilterValue() as string | undefined) ??
+                        "关联对象"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">全部对象</SelectItem>
+                    {objects.map((o) => (
+                      <SelectItem key={o.id} value={o.name ?? o.code}>
+                        {o.name ?? o.code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={(table.getColumn("modelName")?.getFilterValue() as string) ?? ""}
+                  onValueChange={(v) => {
+                    table.getColumn("modelName")?.setFilterValue(v || undefined);
+                  }}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="关联模型">
+                      {(table.getColumn("modelName")?.getFilterValue() as string | undefined) ??
+                        "关联模型"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">全部模型</SelectItem>
+                    {models.map((m) => {
+                      const label = m.name ?? m.code ?? "";
+                      return (
+                        <SelectItem key={m.id} value={label}>
+                          {label}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
               </div>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-auto px-6">
-              {pointsLoading ? (
-                <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
-                  加载中...
-                </div>
-              ) : table.getRowModel().rows.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted py-20">
-                  <Braces className="h-12 w-12 text-muted-foreground/40" />
-                  <h3 className="mt-4 text-sm font-semibold text-foreground">暂无点位数据</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    点击右上角"导入点位"按钮导入。
-                  </p>
-                  <AppButton
-                    level="action"
-                    className="mt-4 gap-2"
-                    onClick={() => {
-                      resetImport();
-                      setImportOpen(true);
-                    }}
-                  >
-                    <Upload size={16} />
-                    导入点位
-                  </AppButton>
-                </div>
-              ) : (
-                <>
-                  <div className="flex flex-wrap items-center gap-3 py-4">
-                    <Input
-                      placeholder="筛选点位..."
-                      value={globalFilter}
-                      onChange={(e) => setGlobalFilter(e.target.value)}
-                      className="max-w-sm"
-                    />
-                    <Select
-                      value={(table.getColumn("objectName")?.getFilterValue() as string) ?? ""}
-                      onValueChange={(v) => {
-                        table.getColumn("objectName")?.setFilterValue(v || undefined);
-                      }}
-                    >
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="关联对象">
-                          {(table.getColumn("objectName")?.getFilterValue() as
-                            | string
-                            | undefined) ?? "关联对象"}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">全部对象</SelectItem>
-                        {objects.map((o) => (
-                          <SelectItem key={o.id} value={o.name ?? o.code}>
-                            {o.name ?? o.code}
-                          </SelectItem>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <TableHead key={header.id}>
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(header.column.columnDef.header, header.getContext())}
+                          </TableHead>
                         ))}
-                      </SelectContent>
-                    </Select>
-                    <Select
-                      value={(table.getColumn("modelName")?.getFilterValue() as string) ?? ""}
-                      onValueChange={(v) => {
-                        table.getColumn("modelName")?.setFilterValue(v || undefined);
-                      }}
-                    >
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="关联模型">
-                          {(table.getColumn("modelName")?.getFilterValue() as string | undefined) ??
-                            "关联模型"}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">全部模型</SelectItem>
-                        {models.map((m) => {
-                          const label = m.name ?? m.code ?? "";
-                          return (
-                            <SelectItem key={m.id} value={label}>
-                              {label}
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        {table.getHeaderGroups().map((headerGroup) => (
-                          <TableRow key={headerGroup.id}>
-                            {headerGroup.headers.map((header) => (
-                              <TableHead key={header.id}>
-                                {header.isPlaceholder
-                                  ? null
-                                  : flexRender(header.column.columnDef.header, header.getContext())}
-                              </TableHead>
-                            ))}
-                          </TableRow>
+                      </TableRow>
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {table.getRowModel().rows.map((row) => (
+                      <TableRow key={row.id}>
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
                         ))}
-                      </TableHeader>
-                      <TableBody>
-                        {table.getRowModel().rows.map((row) => (
-                          <TableRow key={row.id}>
-                            {row.getVisibleCells().map((cell) => (
-                              <TableCell key={cell.id}>
-                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </>
-              )}
-            </CardContent>
-            <div className="shrink-0 border-t px-6 py-3 flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">
-                共 {table.getFilteredRowModel().rows.length} 条
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
-              <TablePagination table={table} />
-            </div>
-          </Card>
+            </>
+          </DataTablePanel>
         </TabsContent>
       </Tabs>
 

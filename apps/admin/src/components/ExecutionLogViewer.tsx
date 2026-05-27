@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@ecoctrl/ui/dialog";
 import { Badge } from "@ecoctrl/ui/badge";
-import { Separator } from "@ecoctrl/ui/separator";
+import { Button } from "@ecoctrl/ui/button";
 import {
   CheckCircle2,
   XCircle,
@@ -12,15 +11,15 @@ import {
   Clock,
   Terminal,
   AlertTriangle,
+  ArrowLeft,
 } from "lucide-react";
 import { workflowsApi } from "@/api/workflows";
 import type { WorkflowExecution } from "@/components/workflow-editor/types";
 
 interface ExecutionLogViewerProps {
   workflowId: string;
-  executionId: string | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  executionId: string;
+  onBack: () => void;
 }
 
 function StatusIcon({ status }: { status: string }) {
@@ -145,19 +144,13 @@ function NodeLogItem({
 export default function ExecutionLogViewer({
   workflowId,
   executionId,
-  open,
-  onOpenChange,
+  onBack,
 }: ExecutionLogViewerProps) {
   const [execution, setExecution] = useState<WorkflowExecution | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open || !executionId) {
-      setExecution(null);
-      return;
-    }
-
     setLoading(true);
     setError(null);
     workflowsApi
@@ -171,90 +164,88 @@ export default function ExecutionLogViewer({
       .finally(() => {
         setLoading(false);
       });
-  }, [open, executionId, workflowId]);
+  }, [executionId, workflowId]);
 
   const isFailed = execution?.status === "failed";
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="inset-0 w-full h-full max-w-none translate-x-0 translate-y-0 p-0 gap-0 rounded-none border-0 flex flex-col">
-        <DialogHeader className="px-5 py-4 border-b shrink-0">
-          <div className="flex items-center gap-3">
-            <Terminal size={16} className="text-muted-foreground" />
-            <DialogTitle className="text-sm font-medium">执行详情</DialogTitle>
+    <div className="flex h-full flex-col bg-background">
+      {/* Header */}
+      <div className="shrink-0 px-5 py-4 border-b flex items-center gap-3">
+        <Button variant="ghost" size="icon-sm" onClick={onBack} title="返回">
+          <ArrowLeft size={16} />
+        </Button>
+        <Terminal size={16} className="text-muted-foreground" />
+        <span className="text-sm font-medium">执行详情</span>
+        {execution && (
+          <div className="ml-auto flex items-center gap-3 flex-wrap">
+            <span className="font-mono text-[10px] text-muted-foreground">
+              #{execution.id?.slice(0, 8)}
+            </span>
+            <StatusBadge status={execution.status} />
+            {execution.durationMs !== null && execution.durationMs !== undefined && (
+              <span className="text-[10px] text-muted-foreground">
+                耗时 {execution.durationMs}ms
+              </span>
+            )}
+            <span className="text-[10px] text-muted-foreground">
+              {new Date(execution.createdAt).toLocaleString("zh-CN")}
+            </span>
           </div>
-          {execution && (
-            <div className="mt-2">
-              <div className="flex items-center gap-3 flex-wrap">
-                <span className="font-mono text-[10px] text-muted-foreground">
-                  #{execution.id?.slice(0, 8)}
-                </span>
-                <StatusBadge status={execution.status} />
-                {execution.durationMs !== null && execution.durationMs !== undefined && (
-                  <span className="text-[10px] text-muted-foreground">
-                    耗时 {execution.durationMs}ms
-                  </span>
-                )}
-                <span className="text-[10px] text-muted-foreground">
-                  {new Date(execution.createdAt).toLocaleString("zh-CN")}
-                </span>
-              </div>
-              {execution.errorMessage && (
-                <div className="mt-2 flex items-start gap-2 rounded bg-red-50 p-2 text-red-700">
-                  <AlertTriangle size={12} className="mt-0.5 shrink-0" />
-                  <span className="text-[11px]">{execution.errorMessage}</span>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogHeader>
+        )}
+      </div>
 
-        <div className="flex-1 overflow-auto">
-          {loading && (
-            <div className="flex h-32 items-center justify-center">
-              <Loader2 size={20} className="animate-spin text-muted-foreground" />
-            </div>
-          )}
-          {error && (
-            <div className="flex h-32 items-center justify-center text-sm text-red-500">
-              {error}
-            </div>
-          )}
-          {!loading && !error && execution && (
-            <>
-              {execution.triggerData && (
-                <div className="px-5 py-3 border-b">
-                  <p className="text-[11px] font-medium text-muted-foreground mb-1.5">触发数据</p>
-                  <pre className="font-mono text-[10px] bg-muted p-2.5 rounded overflow-auto max-h-48">
-                    <code>{JSON.stringify(execution.triggerData, null, 2)}</code>
-                  </pre>
-                </div>
-              )}
-
-              <div className="px-5 py-2.5 border-b bg-accent/30">
-                <p className="text-[11px] font-medium">节点执行日志</p>
-              </div>
-
-              {execution.nodeLogs && execution.nodeLogs.length > 0 ? (
-                execution.nodeLogs.map((log) => (
-                  <NodeLogItem key={log.nodeId} log={log} isFailed={isFailed} />
-                ))
-              ) : (
-                <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
-                  暂无节点日志
-                </div>
-              )}
-
-              {execution.result && Object.keys(execution.result).length > 0 && (
-                <div className="px-5 py-3 border-t">
-                  <p className="text-[11px] font-medium text-muted-foreground mb-1.5">执行结果</p>
-                  <JsonBlock data={execution.result} />
-                </div>
-              )}
-            </>
-          )}
+      {execution?.errorMessage && (
+        <div className="shrink-0 px-5 py-2 flex items-start gap-2 bg-red-50 text-red-700 border-b">
+          <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+          <span className="text-[11px]">{execution.errorMessage}</span>
         </div>
-      </DialogContent>
-    </Dialog>
+      )}
+
+      {/* Body */}
+      <div className="flex-1 overflow-auto">
+        {loading && (
+          <div className="flex h-32 items-center justify-center">
+            <Loader2 size={20} className="animate-spin text-muted-foreground" />
+          </div>
+        )}
+        {error && (
+          <div className="flex h-32 items-center justify-center text-sm text-red-500">{error}</div>
+        )}
+        {!loading && !error && execution && (
+          <>
+            {execution.triggerData && (
+              <div className="px-5 py-3 border-b">
+                <p className="text-[11px] font-medium text-muted-foreground mb-1.5">触发数据</p>
+                <pre className="font-mono text-[10px] bg-muted p-2.5 rounded overflow-auto max-h-48">
+                  <code>{JSON.stringify(execution.triggerData, null, 2)}</code>
+                </pre>
+              </div>
+            )}
+
+            <div className="px-5 py-2.5 border-b bg-accent/30">
+              <p className="text-[11px] font-medium">节点执行日志</p>
+            </div>
+
+            {execution.nodeLogs && execution.nodeLogs.length > 0 ? (
+              execution.nodeLogs.map((log) => (
+                <NodeLogItem key={log.nodeId} log={log} isFailed={isFailed} />
+              ))
+            ) : (
+              <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
+                暂无节点日志
+              </div>
+            )}
+
+            {execution.result && Object.keys(execution.result).length > 0 && (
+              <div className="px-5 py-3 border-t">
+                <p className="text-[11px] font-medium text-muted-foreground mb-1.5">执行结果</p>
+                <JsonBlock data={execution.result} />
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
   );
 }
