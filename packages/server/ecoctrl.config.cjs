@@ -33,37 +33,5 @@ module.exports = {
       out_file: "./logs/out.log",
       merge_logs: true,
     },
-    {
-      name: "ecoctrl-worker",
-      script: "worker.mjs",
-      interpreter: "node",
-      exec_mode: "cluster",
-      instances: 2,
-      autorestart: true,
-      watch: false,
-
-      vizion: false,
-      pmx: false,
-      source_map_support: false,
-
-      max_memory_restart: "512M",
-      node_args: "--max-old-space-size=512",
-
-      max_restarts: 5,
-      min_uptime: "10s",
-      restart_delay: 3000,
-
-      kill_timeout: 5000,
-
-      env: {
-        NODE_ENV: "production",
-      },
-
-      env_file: "./.env.local",
-      log_date_format: "YYYY-MM-DD HH:mm:ss",
-      error_file: "./logs/worker-err.log",
-      out_file: "./logs/worker-out.log",
-      merge_logs: true,
-    },
   ],
 };
