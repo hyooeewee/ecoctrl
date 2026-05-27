@@ -219,9 +219,9 @@ export default function Models() {
 
   const openEditObjectDialog = (obj: BusinessObject) => {
     setEditingObjectUuid(obj.uuid);
-    setObjectId(obj.id);
-    setObjectName(obj.name);
-    setSelectedModelId(obj.modelId);
+    setObjectId(obj.id ?? "");
+    setObjectName(obj.name ?? "");
+    setSelectedModelId(obj.modelId ?? "");
     setObjectError("");
     setObjectOpen(true);
   };
@@ -354,9 +354,9 @@ export default function Models() {
   // Edit dialog functions
   const openEditDialog = (model: DataModel) => {
     setEditModelId(model.id);
-    setEditName(model.name);
-    setEditVersion(model.version);
-    setEditCode(model.code);
+    setEditName(model.name ?? "");
+    setEditVersion(model.version ?? "");
+    setEditCode(model.code ?? "");
     setEditFileDeleted(false);
     setEditError("");
     setEditOpen(true);
