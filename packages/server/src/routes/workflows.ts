@@ -1,8 +1,9 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "@/config/database";
 import { users } from "@/schemas/users";
+import { workflowExecutions } from "@/schemas/workflows";
 import {
   findManyWorkflows,
   findWorkflowById,
@@ -354,6 +355,39 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
       const pageSize = Math.min(100, Math.max(1, Number(query.pageSize ?? 20)));
       const result = await findWorkflowExecutions(id, page, pageSize);
       return reply.send(result);
+    },
+  );
+
+  // Get single execution detail
+  fastify.get(
+    "/:id/executions/:executionId",
+    {
+      schema: {
+        tags: ["Workflows"],
+        summary: "Get workflow execution detail",
+        params: z.object({ id: z.string().uuid(), executionId: z.string().uuid() }),
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const payload = request.user as { userId: string };
+      const { id, executionId } = request.params as { id: string; executionId: string };
+      const role = await getUserRole(payload.userId);
+
+      if (!(await checkWorkflowAccess(id, payload.userId, role))) {
+        return reply.status(403).send({ error: "Forbidden" });
+      }
+
+      const rows = await db
+        .select()
+        .from(workflowExecutions)
+        .where(and(eq(workflowExecutions.workflowId, id), eq(workflowExecutions.id, executionId)))
+        .limit(1);
+
+      if (rows.length === 0) {
+        return reply.status(404).send({ error: "Execution not found" });
+      }
+
+      return reply.send(rows[0]);
     },
   );
 }

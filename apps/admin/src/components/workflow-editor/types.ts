@@ -64,6 +64,7 @@ export interface WorkflowListItem {
   triggerType: string;
   tags?: string[];
   version: number;
+  hasPublishedVersion: boolean;
   createdAt: string;
   updatedAt: string;
 }

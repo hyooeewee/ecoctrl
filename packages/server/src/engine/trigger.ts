@@ -1,6 +1,7 @@
 import { eq, and } from "drizzle-orm";
 import { db } from "@/config/database";
 import { workflows, workflowExecutions } from "@/schemas/workflows";
+import { findWorkflowById } from "@/repositories/workflows";
 import { getBoss, publishExecution, scheduleWorkflow, unscheduleWorkflow } from "@/queue/pgboss";
 import { evaluateBoolean } from "./expr";
 import { buildVars } from "./template";
@@ -183,6 +184,13 @@ export const triggerEngine = {
     userId: string,
     payload: Record<string, unknown>,
   ): Promise<string> {
+    const workflow = await findWorkflowById(workflowId);
+    if (!workflow) {
+      throw new Error("Workflow not found");
+    }
+    if (!workflow.publishedDsl) {
+      throw new Error("Workflow has not been published. Please publish before triggering.");
+    }
     return createExecutionAndPublish(workflowId, userId, { ...payload, source: "manual" });
   },
 

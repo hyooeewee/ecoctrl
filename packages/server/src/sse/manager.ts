@@ -50,11 +50,12 @@ export class SSEManager {
   private serialize(event: SSEEvent): string {
     const lines: string[] = [];
     if (event.id) lines.push(`id: ${event.id}`);
-    lines.push(`event: ${event.type}`);
-    const data =
-      typeof event.payload === "object" && event.payload !== null
-        ? { ...event.payload, _timestamp: event.timestamp }
-        : { value: event.payload, _timestamp: event.timestamp };
+    // Nest payload so front-end SSEMessage parser can read msg.payload
+    const data = {
+      type: event.type,
+      payload: event.payload,
+      _timestamp: event.timestamp,
+    };
     lines.push(`data: ${JSON.stringify(data)}`);
     lines.push("");
     return lines.join("\n") + "\n";

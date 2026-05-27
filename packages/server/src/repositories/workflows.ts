@@ -12,6 +12,7 @@ export interface WorkflowListItem {
   triggerType: string;
   tags: string[];
   version: number;
+  hasPublishedVersion: boolean;
   createdAt: Date | null;
   updatedAt: Date | null;
 }
@@ -50,6 +51,7 @@ export async function findManyWorkflows(
       description: workflows.description,
       enabled: workflows.enabled,
       dsl: workflows.dsl,
+      publishedDsl: workflows.publishedDsl,
       version: workflows.version,
       createdAt: workflows.createdAt,
       updatedAt: workflows.updatedAt,
@@ -64,6 +66,7 @@ export async function findManyWorkflows(
     ...r,
     triggerType: (r.dsl as { trigger?: { type: string } }).trigger?.type ?? "manual",
     tags: (r.dsl as { trigger?: { config?: { tags?: string[] } } }).trigger?.config?.tags ?? [],
+    hasPublishedVersion: r.publishedDsl !== null,
   }));
 
   return { items, total };
