@@ -16,7 +16,7 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@ecoctrl/ui/sheet";
 import { PREDEFINED_TAGS } from "./constants";
 import type { EnvVar, WorkflowSettings } from "./types";
-import { EnvVarEditor } from "./EnvVarEditor";
+import { VariableEditor } from "./VariableEditor";
 
 interface WorkflowDialogsProps {
   // Edit dialog
@@ -237,9 +237,9 @@ export function WorkflowDialogs({
         }}
       >
         <DialogContent className="flex flex-col p-0 sm:max-w-lg" showCloseButton={false}>
-          <EnvVarEditor
-            envVars={envVars}
-            setEnvVars={setEnvVars}
+          <VariableEditor
+            items={envVars}
+            setItems={setEnvVars}
             visibleSecrets={visibleSecrets}
             setVisibleSecrets={setVisibleSecrets}
             setIsDirty={setIsDirty}
