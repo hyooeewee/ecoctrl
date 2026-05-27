@@ -29,7 +29,7 @@ import { WorkflowLibrary } from "./WorkflowLibrary";
 import { WorkflowTestPanel } from "./WorkflowTestPanel";
 import { WorkflowNodeConfig } from "./WorkflowNodeConfig";
 import { WorkflowDialogs } from "./WorkflowDialogs";
-import { EnvVarEditor } from "./EnvVarEditor";
+import { VariableEditor } from "./VariableEditor";
 
 interface WorkflowCanvasProps {
   workflowId: string | null;
@@ -53,35 +53,37 @@ export default function WorkflowCanvas({ workflowId, onBack, onDirtyChange }: Wo
 
   return (
     <div className="flex h-full flex-col">
-      <WorkflowToolbar
-        workflowName={canvas.workflowName}
-        isPublished={canvas.isPublished}
-        isDirty={canvas.isDirty}
-        editingName={canvas.editingName}
-        editedName={canvas.editedName}
-        saving={canvas.saving}
-        publishing={canvas.publishing}
-        testing={canvas.testing}
-        autoSaveStatus={canvas.autoSaveStatus}
-        workflowId={workflowId}
-        onBack={canvas.handleBack}
-        onNameClick={canvas.handleNameClick}
-        onNameCommit={canvas.handleNameCommit}
-        onNameCancel={canvas.handleNameCancel}
-        onNameChange={canvas.setEditedName}
-        onNameKeyDown={canvas.handleNameKeyDown}
-        onEditDialog={canvas.handleOpenEditDialog}
-        onTestRun={canvas.handleTestRun}
-        onSave={canvas.handleSave}
-        onPublish={canvas.handlePublish}
-        onEnvVars={() => canvas.setShowEnvVarsDialog(true)}
-        onSettings={() => canvas.setShowSettingsDialog(true)}
-      />
+      {!canvas.envVarFullscreen && (
+        <WorkflowToolbar
+          workflowName={canvas.workflowName}
+          isPublished={canvas.isPublished}
+          isDirty={canvas.isDirty}
+          editingName={canvas.editingName}
+          editedName={canvas.editedName}
+          saving={canvas.saving}
+          publishing={canvas.publishing}
+          testing={canvas.testing}
+          autoSaveStatus={canvas.autoSaveStatus}
+          workflowId={workflowId}
+          onBack={canvas.handleBack}
+          onNameClick={canvas.handleNameClick}
+          onNameCommit={canvas.handleNameCommit}
+          onNameCancel={canvas.handleNameCancel}
+          onNameChange={canvas.setEditedName}
+          onNameKeyDown={canvas.handleNameKeyDown}
+          onEditDialog={canvas.handleOpenEditDialog}
+          onTestRun={canvas.handleTestRun}
+          onSave={canvas.handleSave}
+          onPublish={canvas.handlePublish}
+          onEnvVars={() => canvas.setShowEnvVarsDialog(true)}
+          onSettings={() => canvas.setShowSettingsDialog(true)}
+        />
+      )}
 
       {canvas.envVarFullscreen ? (
-        <EnvVarEditor
-          envVars={canvas.envVars}
-          setEnvVars={canvas.setEnvVars}
+        <VariableEditor
+          items={canvas.envVars}
+          setItems={canvas.setEnvVars}
           visibleSecrets={canvas.visibleSecrets}
           setVisibleSecrets={canvas.setVisibleSecrets}
           setIsDirty={canvas.setIsDirty}
