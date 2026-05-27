@@ -7,20 +7,8 @@ import {
   Plus,
   Pencil,
   Braces,
-  ArrowUpDown,
 } from "lucide-react";
-import {
-  useReactTable,
-  getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  getFilteredRowModel,
-  flexRender,
-  type ColumnDef,
-  type SortingState,
-  type ColumnFiltersState,
-} from "@tanstack/react-table";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ecoctrl/ui/table";
+import { type ColumnDef } from "@tanstack/react-table";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@ecoctrl/ui/button";
@@ -45,6 +33,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent } from "@ecoctrl/ui/tabs";
 
 import AppButton from "@/components/AppButton";
+import { DataTableColumnHeader } from "@/components/DataTableColumnHeader";
 import { DataTablePanel } from "@/components/DataTablePanel";
 import ModelFileZone from "@/components/ModelFileZone";
 import TruncatedText from "@/components/TruncatedText";
@@ -116,9 +105,8 @@ export default function Models() {
   // Points tab state
   const [allPoints, setAllPoints] = useState<Point[]>([]);
   const [pointsLoading, setPointsLoading] = useState(false);
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [globalFilter, setGlobalFilter] = useState("");
+  const [selectedPointIds, setSelectedPointIds] = useState<string[]>([]);
+  const [pointSearch, setPointSearch] = useState("");
 
   // Point edit state
   const [pointEditOpen, setPointEditOpen] = useState(false);
@@ -131,9 +119,8 @@ export default function Models() {
   const [isSavingPoint, setIsSavingPoint] = useState(false);
 
   // Objects tab state
-  const [objectSorting, setObjectSorting] = useState<SortingState>([]);
-  const [objectColumnFilters, setObjectColumnFilters] = useState<ColumnFiltersState>([]);
-  const [objectGlobalFilter, setObjectGlobalFilter] = useState("");
+  const [selectedObjectIds, setSelectedObjectIds] = useState<string[]>([]);
+  const [objectSearch, setObjectSearch] = useState("");
 
   // Cross-tab navigation
   const [pendingNav, setPendingNav] = useState<{
@@ -228,26 +215,26 @@ export default function Models() {
     if (activeTab === "objects" && pendingNav.objectsFilterModelId) {
       const model = models.find((m) => m.id === pendingNav.objectsFilterModelId);
       if (model) {
-        setObjectColumnFilters([{ id: "modelName", value: model.name ?? model.code ?? "" }]);
+        setObjectSearch(model.name ?? model.code ?? "");
       }
     }
 
     if (activeTab === "points") {
-      const newFilters: ColumnFiltersState = [];
+      const terms: string[] = [];
       if (pendingNav.pointsFilterObjectId) {
         const obj = objects.find((o) => o.id === pendingNav.pointsFilterObjectId);
         if (obj) {
-          newFilters.push({ id: "objectName", value: obj.name ?? obj.code ?? "" });
+          terms.push(obj.name ?? obj.code ?? "");
         }
       }
       if (pendingNav.pointsFilterModelId) {
         const model = models.find((m) => m.id === pendingNav.pointsFilterModelId);
         if (model) {
-          newFilters.push({ id: "modelName", value: model.name ?? model.code ?? "" });
+          terms.push(model.name ?? model.code ?? "");
         }
       }
-      if (newFilters.length > 0) {
-        setColumnFilters(newFilters);
+      if (terms.length > 0) {
+        setPointSearch(terms.join(" "));
       }
     }
 
@@ -430,6 +417,44 @@ export default function Models() {
     setConfirmOpen(true);
   };
 
+  const handleBatchDeleteObjects = () => {
+    if (selectedObjectIds.length === 0) return;
+    setConfirmTitle("确认批量删除");
+    setConfirmDesc(`确定要删除选中的 ${selectedObjectIds.length} 个业务对象吗？此操作不可撤销。`);
+    confirmActionRef.current = async () => {
+      try {
+        await Promise.all(selectedObjectIds.map((id) => objectsApi.delete(id)));
+        setSelectedObjectIds([]);
+        await fetchObjects();
+        setConfirmOpen(false);
+        toast.success("批量删除成功");
+      } catch (err) {
+        console.error(err);
+        toast.error("批量删除失败，请重试");
+      }
+    };
+    setConfirmOpen(true);
+  };
+
+  const handleBatchDeletePoints = () => {
+    if (selectedPointIds.length === 0) return;
+    setConfirmTitle("确认批量删除");
+    setConfirmDesc(`确定要删除选中的 ${selectedPointIds.length} 个点位吗？此操作不可撤销。`);
+    confirmActionRef.current = async () => {
+      try {
+        await Promise.all(selectedPointIds.map((id) => pointsApi.delete(id)));
+        setSelectedPointIds([]);
+        await fetchPoints();
+        setConfirmOpen(false);
+        toast.success("批量删除成功");
+      } catch (err) {
+        console.error(err);
+        toast.error("批量删除失败，请重试");
+      }
+    };
+    setConfirmOpen(true);
+  };
+
   // Import dialog functions
   const handleImportFileSelect = (file: File) => {
     const ext = file.name.split(".").pop()?.toLowerCase();
@@ -583,64 +608,55 @@ export default function Models() {
       {
         accessorKey: "type",
         header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            点位类型
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
+          <DataTableColumnHeader
+            column={column}
+            title="点位类型"
+            enableFiltering
+            filterPlaceholder="筛选类型..."
+          />
         ),
         cell: ({ row }) => <span className="font-mono text-xs">{row.getValue("type")}</span>,
+        filterFn: "includesString",
       },
       {
         accessorKey: "code",
         header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            编码
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
+          <DataTableColumnHeader
+            column={column}
+            title="编码"
+            enableFiltering
+            filterPlaceholder="筛选编码..."
+          />
         ),
         cell: ({ row }) => <span className="font-mono text-xs">{row.getValue("code")}</span>,
+        filterFn: "includesString",
       },
       {
         accessorKey: "name",
         header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            点位名称
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
+          <DataTableColumnHeader
+            column={column}
+            title="点位名称"
+            enableFiltering
+            filterPlaceholder="筛选名称..."
+          />
         ),
         cell: ({ row }) => row.getValue("name") || "-",
+        filterFn: "includesString",
       },
       {
         accessorKey: "propCount",
-        header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            属性数量
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        ),
+        header: ({ column }) => <DataTableColumnHeader column={column} title="属性数量" />,
       },
       {
         accessorKey: "objectName",
         header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            关联对象
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
+          <DataTableColumnHeader
+            column={column}
+            title="关联对象"
+            enableFiltering
+            filterPlaceholder="筛选对象..."
+          />
         ),
         cell: ({ row }) => {
           const objId = row.original.objectId;
@@ -657,18 +673,19 @@ export default function Models() {
             </button>
           );
         },
+        filterFn: "includesString",
       },
       {
         accessorKey: "modelName",
         header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            关联模型
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
+          <DataTableColumnHeader
+            column={column}
+            title="关联模型"
+            enableFiltering
+            filterPlaceholder="筛选模型..."
+          />
         ),
+        filterFn: "includesString",
         cell: ({ row }) => {
           const mId = row.original.modelId;
           return (
@@ -737,23 +754,6 @@ export default function Models() {
     });
   }, [allPoints, objects, models]);
 
-  const table = useReactTable({
-    data: pointsTableData,
-    columns: pointColumns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    onGlobalFilterChange: setGlobalFilter,
-    state: {
-      sorting,
-      columnFilters,
-      globalFilter,
-    },
-  });
-
   const objectsTableData = useMemo(() => {
     return objects.map((o) => {
       const model = models.find((m) => m.id === o.modelId);
@@ -769,39 +769,39 @@ export default function Models() {
       {
         accessorKey: "code",
         header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            编码
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
+          <DataTableColumnHeader
+            column={column}
+            title="编码"
+            enableFiltering
+            filterPlaceholder="筛选编码..."
+          />
         ),
         cell: ({ row }) => <span className="font-mono text-xs">{row.getValue("code") || "-"}</span>,
+        filterFn: "includesString",
       },
       {
         accessorKey: "name",
         header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            对象名称
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
+          <DataTableColumnHeader
+            column={column}
+            title="对象名称"
+            enableFiltering
+            filterPlaceholder="筛选名称..."
+          />
         ),
+        filterFn: "includesString",
       },
       {
         accessorKey: "modelName",
         header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            关联模型
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
+          <DataTableColumnHeader
+            column={column}
+            title="关联模型"
+            enableFiltering
+            filterPlaceholder="筛选模型..."
+          />
         ),
+        filterFn: "includesString",
         cell: ({ row }) => {
           const modelId = row.original.modelId;
           return (
@@ -854,23 +854,6 @@ export default function Models() {
     ],
     [setActiveTab],
   );
-
-  const objectsTable = useReactTable({
-    data: objectsTableData,
-    columns: objectColumns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onSortingChange: setObjectSorting,
-    onColumnFiltersChange: setObjectColumnFilters,
-    onGlobalFilterChange: setObjectGlobalFilter,
-    state: {
-      sorting: objectSorting,
-      columnFilters: objectColumnFilters,
-      globalFilter: objectGlobalFilter,
-    },
-  });
 
   return (
     <div className="flex h-full flex-col overflow-hidden p-6">
@@ -1047,83 +1030,38 @@ export default function Models() {
                 新增对象
               </AppButton>
             }
-            rowCount={objectsTable.getFilteredRowModel().rows.length}
-            paginationTable={objectsTable}
-          >
-            <>
-              <div className="flex flex-wrap items-center gap-3 py-4">
-                <Input
-                  placeholder="筛选对象..."
-                  value={objectGlobalFilter}
-                  onChange={(e) => setObjectGlobalFilter(e.target.value)}
-                  className="max-w-sm"
-                />
-                <Select
-                  value={(objectsTable.getColumn("modelName")?.getFilterValue() as string) ?? ""}
-                  onValueChange={(v) => {
-                    objectsTable.getColumn("modelName")?.setFilterValue(v || undefined);
-                  }}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="关联模型">
-                      {(objectsTable.getColumn("modelName")?.getFilterValue() as
-                        | string
-                        | undefined) ?? "关联模型"}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">全部模型</SelectItem>
-                    {models.map((m) => {
-                      const label = m.name ?? m.code ?? "";
-                      return (
-                        <SelectItem key={m.id} value={label}>
-                          {label}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    {objectsTable.getHeaderGroups().map((headerGroup) => (
-                      <TableRow key={headerGroup.id}>
-                        {headerGroup.headers.map((header) => (
-                          <TableHead key={header.id}>
-                            {header.isPlaceholder
-                              ? null
-                              : flexRender(header.column.columnDef.header, header.getContext())}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableHeader>
-                  <TableBody>
-                    {objectsTable.getRowModel().rows.map((row) => (
-                      <TableRow
-                        key={row.id}
-                        className={`cursor-pointer ${highlightedObjectId === row.original.id ? "bg-blue-50" : ""}`}
-                        onClick={() => {
-                          setPendingNav({
-                            tab: "points",
-                            pointsFilterObjectId: row.original.id,
-                          });
-                          setActiveTab("points");
-                        }}
-                      >
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id}>
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </>
-          </DataTablePanel>
+            data={objectsTableData}
+            columns={objectColumns}
+            getRowId={(row) => row.id}
+            enableRowSelection
+            selectedRowIds={selectedObjectIds}
+            onSelectionChange={setSelectedObjectIds}
+            batchActions={
+              <AppButton
+                level="danger"
+                size="sm"
+                className="gap-2"
+                onClick={handleBatchDeleteObjects}
+              >
+                <Trash2 size={14} />
+                批量删除
+              </AppButton>
+            }
+            searchValue={objectSearch}
+            onSearchChange={setObjectSearch}
+            searchPlaceholder="筛选对象..."
+            pageSizeOptions={[10, 50, 200]}
+            getRowClassName={(row) =>
+              highlightedObjectId === row.id ? "bg-blue-50 cursor-pointer" : "cursor-pointer"
+            }
+            onRowClick={(row) => {
+              setPendingNav({
+                tab: "points",
+                pointsFilterObjectId: row.id,
+              });
+              setActiveTab("points");
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="points" className="mt-0 flex h-full flex-col overflow-hidden">
@@ -1160,93 +1098,28 @@ export default function Models() {
                 导入点位
               </AppButton>
             }
-            rowCount={table.getFilteredRowModel().rows.length}
-            paginationTable={table}
-          >
-            <>
-              <div className="flex flex-wrap items-center gap-3 py-4">
-                <Input
-                  placeholder="筛选点位..."
-                  value={globalFilter}
-                  onChange={(e) => setGlobalFilter(e.target.value)}
-                  className="max-w-sm"
-                />
-                <Select
-                  value={(table.getColumn("objectName")?.getFilterValue() as string) ?? ""}
-                  onValueChange={(v) => {
-                    table.getColumn("objectName")?.setFilterValue(v || undefined);
-                  }}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="关联对象">
-                      {(table.getColumn("objectName")?.getFilterValue() as string | undefined) ??
-                        "关联对象"}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">全部对象</SelectItem>
-                    {objects.map((o) => (
-                      <SelectItem key={o.id} value={o.name ?? o.code}>
-                        {o.name ?? o.code}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={(table.getColumn("modelName")?.getFilterValue() as string) ?? ""}
-                  onValueChange={(v) => {
-                    table.getColumn("modelName")?.setFilterValue(v || undefined);
-                  }}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="关联模型">
-                      {(table.getColumn("modelName")?.getFilterValue() as string | undefined) ??
-                        "关联模型"}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">全部模型</SelectItem>
-                    {models.map((m) => {
-                      const label = m.name ?? m.code ?? "";
-                      return (
-                        <SelectItem key={m.id} value={label}>
-                          {label}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                      <TableRow key={headerGroup.id}>
-                        {headerGroup.headers.map((header) => (
-                          <TableHead key={header.id}>
-                            {header.isPlaceholder
-                              ? null
-                              : flexRender(header.column.columnDef.header, header.getContext())}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableHeader>
-                  <TableBody>
-                    {table.getRowModel().rows.map((row) => (
-                      <TableRow key={row.id}>
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id}>
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </>
-          </DataTablePanel>
+            data={pointsTableData}
+            columns={pointColumns}
+            getRowId={(row) => row.id}
+            enableRowSelection
+            selectedRowIds={selectedPointIds}
+            onSelectionChange={setSelectedPointIds}
+            batchActions={
+              <AppButton
+                level="danger"
+                size="sm"
+                className="gap-2"
+                onClick={handleBatchDeletePoints}
+              >
+                <Trash2 size={14} />
+                批量删除
+              </AppButton>
+            }
+            searchValue={pointSearch}
+            onSearchChange={setPointSearch}
+            searchPlaceholder="筛选点位..."
+            pageSizeOptions={[10, 50, 200]}
+          />
         </TabsContent>
       </Tabs>
 

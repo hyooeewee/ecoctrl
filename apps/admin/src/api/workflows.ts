@@ -1,5 +1,9 @@
 import { get, post, put, del } from "./request";
-import type { WorkflowListItem, WorkflowDSL } from "@/components/workflow-editor/types";
+import type {
+  WorkflowListItem,
+  WorkflowDSL,
+  WorkflowExecution,
+} from "@/components/workflow-editor/types";
 
 export interface WorkflowCreateBody {
   slug: string;

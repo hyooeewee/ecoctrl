@@ -61,7 +61,8 @@ async function processJob(job: Job<ExecutionJobData>): Promise<void> {
     const mergedEnv = mergeServerEnv(getEnvVars(), workflowEnv);
 
     const startTime = Date.now();
-    const result = await executeWorkflow(
+    let result: Awaited<ReturnType<typeof executeWorkflow>> | undefined;
+    result = await executeWorkflow(
       {
         version: "1.0",
         trigger: dsl.trigger as {
