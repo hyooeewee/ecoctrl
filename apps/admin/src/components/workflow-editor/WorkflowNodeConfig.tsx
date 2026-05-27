@@ -357,27 +357,19 @@ export function WorkflowNodeConfig({
             <div className="space-y-6 px-4 py-5">
               {/* Point nodes - special combobox for point names */}
               {isPointNode && (
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label className="flex items-center gap-2 text-sm text-foreground">
-                      测点名称
-                      {(() => {
-                        const name = (config?.pointName as string) ?? "";
-                        return name && !pointNames.includes(name) ? (
-                          <span className="inline-flex items-center gap-1 rounded-sm bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:bg-amber-950/60">
-                            <AlertTriangle size={10} />
-                            未找到
-                          </span>
-                        ) : null;
-                      })()}
-                    </Label>
-                    <ExpressionRefHelper
-                      upstreamNodes={resolvedUpstream}
-                      envVars={envVarsForHelper}
-                      onSelect={insertExprToPointName}
-                      triggerClassName="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground/40 hover:bg-muted hover:text-muted-foreground"
-                    />
-                  </div>
+                <div className="space-y-1.5 group/input">
+                  <Label className="flex items-center gap-2 text-sm text-foreground">
+                    测点名称
+                    {(() => {
+                      const name = (config?.pointName as string) ?? "";
+                      return name && !pointNames.includes(name) ? (
+                        <span className="inline-flex items-center gap-1 rounded-sm bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:bg-amber-950/60">
+                          <AlertTriangle size={10} />
+                          未找到
+                        </span>
+                      ) : null;
+                    })()}
+                  </Label>
                   <Combobox
                     value={(config?.pointName as string) || null}
                     inputValue={(config?.pointName as string) || ""}
@@ -404,7 +396,14 @@ export function WorkflowNodeConfig({
                       className="h-9 w-full border-0 bg-zinc-50 has-[[data-slot=input-group-control]:focus-visible]:bg-white has-[[data-slot=input-group-control]:focus-visible]:ring-1 has-[[data-slot=input-group-control]:focus-visible]:ring-primary/50 dark:bg-zinc-800/60 dark:has-[[data-slot=input-group-control]:focus-visible]:bg-zinc-800"
                       showTrigger
                       showClear
-                    />
+                    >
+                      <ExpressionRefHelper
+                        upstreamNodes={resolvedUpstream}
+                        envVars={envVarsForHelper}
+                        onSelect={insertExprToPointName}
+                        triggerClassName="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground/40 hover:bg-muted hover:text-muted-foreground transition-colors"
+                      />
+                    </ComboboxInput>
                     <ComboboxContent>
                       <ComboboxList>
                         {filteredPointNames.map((name) => (

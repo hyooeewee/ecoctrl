@@ -1,12 +1,11 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
-import { Braces, ChevronDown, ChevronRight, Info } from "lucide-react";
+import { Braces, ChevronRight, Info } from "lucide-react";
 import type { Node } from "@xyflow/react";
 import { Label } from "@ecoctrl/ui/label";
 import { Input } from "@ecoctrl/ui/input";
 import { Switch } from "@ecoctrl/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ecoctrl/ui/select";
 import { Textarea } from "@ecoctrl/ui/textarea";
-import { Popover, PopoverTrigger, PopoverContent } from "@ecoctrl/ui/popover";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@ecoctrl/ui/hover-card";
 import type { NodeDefinition } from "@/api/nodes";
 import type { EnvVar } from "./types";
@@ -168,43 +167,6 @@ function ExpressionRefHelper({
   onSelect: (expr: string) => void;
   triggerClassName?: string;
 }) {
-  const [open, setOpen] = useState(false);
-
-  const nonSecretVars = envVars.filter((v) => v.type !== "secret");
-  const secretVars = envVars.filter((v) => v.type === "secret");
-
-  const builtinFns = [
-    { key: "now()", desc: "当前时间" },
-    { key: "uuid()", desc: "随机UUID" },
-  ];
-
-  const renderSection = (title: string, items: Array<{ label: string; expr: string }>) => {
-    if (items.length === 0) return null;
-    return (
-      <div className="space-y-0.5">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-          {title}
-        </p>
-        <div className="flex flex-wrap gap-1">
-          {items.map(({ label, expr }) => (
-            <button
-              key={expr}
-              type="button"
-              className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-mono text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-              onClick={() => {
-                onSelect(expr);
-                setOpen(false);
-              }}
-            >
-              <ChevronRight size={9} />
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
   const isInline = !!triggerClassName;
 
   return (
@@ -219,8 +181,9 @@ function ExpressionRefHelper({
       <button
         type="button"
         className={
-          triggerClassName ??
-          "flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/40 opacity-0 transition-all hover:bg-muted hover:text-muted-foreground group-hover/input:opacity-100"
+          triggerClassName
+            ? triggerClassName + " opacity-0 group-hover/input:opacity-100 transition-all"
+            : "flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/40 opacity-0 transition-all hover:bg-muted hover:text-muted-foreground group-hover/input:opacity-100"
         }
         onClick={(e) => {
           e.stopPropagation();
@@ -230,77 +193,9 @@ function ExpressionRefHelper({
         <Braces size={13} />
       </button>
 
-      {/* Dropdown browse — only in inline mode (Combobox fields without autocomplete) */}
-      {isInline && (
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger
-            render={
-              <button
-                type="button"
-                className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground/40 hover:bg-muted hover:text-muted-foreground transition-colors"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <ChevronDown size={10} />
-              </button>
-            }
-          />
-          <PopoverContent align="end" side="bottom" sideOffset={6} className="w-72 p-3">
-            <div className="space-y-2">
-              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                插入引用
-              </p>
-              <div className="space-y-2 max-h-[320px] overflow-y-auto">
-                {renderSection(
-                  "内置函数",
-                  builtinFns.map((fn) => ({ label: fn.key, expr: `{{${fn.key}}}` })),
-                )}
-                {renderSection(
-                  "环境变量",
-                  nonSecretVars.map((v) => ({ label: v.key, expr: `{{var.${v.key}}}` })),
-                )}
-                {renderSection(
-                  "密钥",
-                  secretVars.map((v) => ({ label: v.key, expr: `{{secret.${v.key}}}` })),
-                )}
-                {upstreamNodes.length > 0 &&
-                  upstreamNodes.map((node) => (
-                    <div key={node.id} className="space-y-0.5">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                        节点输出
-                      </p>
-                      <p className="truncate text-xs font-medium text-foreground/70">
-                        {node.label}
-                      </p>
-                      <div className="flex flex-wrap gap-1 pl-2">
-                        {node.outputKeys.map((key) => {
-                          const expr = `{{${node.id}.${key}}}`;
-                          return (
-                            <button
-                              key={key}
-                              type="button"
-                              className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-mono text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-                              onClick={() => {
-                                onSelect(expr);
-                                setOpen(false);
-                              }}
-                            >
-                              <ChevronRight size={9} />
-                              {key}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
-      )}
-
       <HoverCard>
         <HoverCardTrigger>
-          <span className="flex h-5 w-5 shrink-0 cursor-help items-center justify-center rounded text-muted-foreground/40 hover:bg-muted hover:text-muted-foreground transition-colors">
+          <span className="flex h-5 w-5 shrink-0 cursor-help items-center justify-center rounded text-muted-foreground/40 opacity-0 transition-all hover:bg-muted hover:text-muted-foreground group-hover/input:opacity-100">
             <Info size={11} />
           </span>
         </HoverCardTrigger>
@@ -366,23 +261,35 @@ const textareaBaseClasses =
   "focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:bg-white " +
   "transition-colors resize-y dark:bg-zinc-800/60 dark:focus-visible:bg-zinc-800";
 
-function SchemaField({
-  name,
-  prop,
-  value,
-  required,
-  upstreamNodes,
-  envVars,
-  onChange,
-}: {
-  name: string;
-  prop: JsonSchemaProperty;
-  value: unknown;
-  required: boolean;
+// ========================================
+// Expression Input (autocomplete as input variant)
+// ========================================
+
+interface ExpressionInputProps {
+  value: string;
+  onChange: (val: string) => void;
+  placeholder?: string;
   upstreamNodes: UpstreamNodeInfo[];
   envVars: Array<{ key: string; type: string }>;
-  onChange: (val: unknown) => void;
-}) {
+  multiline?: boolean;
+  id?: string;
+  minLength?: number;
+  maxLength?: number;
+  rows?: number;
+}
+
+function ExpressionInput({
+  value,
+  onChange,
+  placeholder,
+  upstreamNodes,
+  envVars,
+  multiline = false,
+  id,
+  minLength,
+  maxLength,
+  rows = 4,
+}: ExpressionInputProps) {
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -425,7 +332,6 @@ function SchemaField({
         requestAnimationFrame(() => {
           el.focus();
           if (expr === "{{}}") {
-            // Place cursor between {{ and }} and trigger autocomplete
             el.setSelectionRange(start + 2, start + 2);
             setAuto({
               active: true,
@@ -439,8 +345,7 @@ function SchemaField({
           }
         });
       } else {
-        const cur = value === undefined || value === null ? "" : String(value);
-        onChange(cur + expr);
+        onChange(value + expr);
       }
     },
     [value, onChange, allCandidates],
@@ -472,7 +377,7 @@ function SchemaField({
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const newValue = e.target.value;
       const cursorPos = e.target.selectionStart ?? newValue.length;
-      const prevValue = value === undefined || value === null ? "" : String(value);
+      const prevValue = value;
 
       // Detect {{ insertion and auto-close with }}
       if (
@@ -555,11 +460,7 @@ function SchemaField({
     [auto.active, auto.candidates, auto.selectedIndex, selectCandidate],
   );
 
-  const refHelper = (
-    <ExpressionRefHelper upstreamNodes={upstreamNodes} envVars={envVars} onSelect={insertExpr} />
-  );
-
-  const renderAutocompleteDropdown = () => {
+  const renderDropdown = () => {
     if (!auto.active) return null;
     return (
       <div
@@ -591,9 +492,125 @@ function SchemaField({
     );
   };
 
+  const inputClasses = multiline ? textareaBaseClasses + " pr-8" : inputBaseClasses + " pr-8";
+
+  const InputComponent = multiline ? Textarea : Input;
+
+  return (
+    <div className="group/input relative">
+      <InputComponent
+        ref={inputRef as React.RefObject<HTMLInputElement & HTMLTextAreaElement>}
+        id={id}
+        type={multiline ? undefined : "text"}
+        value={value}
+        placeholder={placeholder}
+        minLength={minLength}
+        maxLength={maxLength}
+        rows={multiline ? rows : undefined}
+        onChange={handleInputChange}
+        onKeyDown={handleKeyDown}
+        className={inputClasses}
+      />
+
+      {/* Right-side helper buttons */}
+      <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+        {/* Insert {{}} */}
+        <button
+          type="button"
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/40 opacity-0 transition-all hover:bg-muted hover:text-muted-foreground group-hover/input:opacity-100"
+          onClick={(e) => {
+            e.stopPropagation();
+            insertExpr("{{}}");
+          }}
+        >
+          <Braces size={13} />
+        </button>
+
+        {/* Info hover card */}
+        <HoverCard>
+          <HoverCardTrigger>
+            <span className="flex h-5 w-5 shrink-0 cursor-help items-center justify-center rounded text-muted-foreground/40 opacity-0 transition-all hover:bg-muted hover:text-muted-foreground group-hover/input:opacity-100">
+              <Info size={11} />
+            </span>
+          </HoverCardTrigger>
+          <HoverCardContent
+            side="bottom"
+            align="end"
+            sideOffset={6}
+            className="flex w-[260px] flex-col items-start gap-2 px-3 py-2.5"
+          >
+            <p className="font-medium">引用语法</p>
+            <div className="grid gap-1.5 text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <code className="shrink-0 rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
+                  {"{{var.x}}"}
+                </code>
+                <span>环境变量</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <code className="shrink-0 rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
+                  {"{{secret.x}}"}
+                </code>
+                <span>密钥</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <code className="shrink-0 rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
+                  {"{{nodeId.key}}"}
+                </code>
+                <span>上游节点输出</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <code className="shrink-0 rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
+                  {"{{now()}}"}
+                </code>
+                <span>/</span>
+                <code className="shrink-0 rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
+                  {"{{uuid()}}"}
+                </code>
+                <span>内置函数</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <code className="shrink-0 rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
+                  {"{{ var.a + var.b }}"}
+                </code>
+                <span>表达式</span>
+              </div>
+            </div>
+            <p className="text-[10px] text-muted-foreground/70">输入 {"{{"} 触发自动补全</p>
+          </HoverCardContent>
+        </HoverCard>
+      </div>
+
+      {renderDropdown()}
+    </div>
+  );
+}
+
+// ========================================
+// Schema Form Field Renderer
+// ========================================
+
+function SchemaField({
+  name,
+  prop,
+  value,
+  required,
+  upstreamNodes,
+  envVars,
+  onChange,
+}: {
+  name: string;
+  prop: JsonSchemaProperty;
+  value: unknown;
+  required: boolean;
+  upstreamNodes: UpstreamNodeInfo[];
+  envVars: Array<{ key: string; type: string }>;
+  onChange: (val: unknown) => void;
+}) {
   const label = prop.title ?? name;
   const description = prop.description;
   const inputId = `field-${name}`;
+  const stringValue = value === undefined || value === null ? "" : String(value);
 
   // Boolean
   if (prop.type === "boolean") {
@@ -663,45 +680,35 @@ function SchemaField({
       <div className="space-y-1.5">
         <FieldLabel label={label} required={required} inputId={inputId} />
         <FieldDescription text={description} />
-        <div className="group/input relative">
-          <Textarea
-            ref={inputRef as React.RefObject<HTMLTextAreaElement>}
-            id={inputId}
-            value={value === undefined || value === null ? "" : String(value)}
-            placeholder={prop.placeholder ?? `请输入 ${label}`}
-            rows={4}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            className={textareaBaseClasses + " pr-8"}
-          />
-          {refHelper}
-          {renderAutocompleteDropdown()}
-        </div>
+        <ExpressionInput
+          id={inputId}
+          value={stringValue}
+          onChange={(v) => onChange(v)}
+          placeholder={prop.placeholder ?? `请输入 ${label}`}
+          upstreamNodes={upstreamNodes}
+          envVars={envVars}
+          multiline
+          rows={4}
+        />
       </div>
     );
   }
 
-  // Default: string input
+  // Default: string input (with built-in autocomplete)
   return (
     <div className="space-y-1.5">
       <FieldLabel label={label} required={required} inputId={inputId} />
       <FieldDescription text={description} />
-      <div className="group/input relative">
-        <Input
-          ref={inputRef as React.RefObject<HTMLInputElement>}
-          id={inputId}
-          type={prop.format === "password" ? "password" : "text"}
-          value={value === undefined || value === null ? "" : String(value)}
-          placeholder={prop.placeholder ?? `请输入 ${label}`}
-          minLength={prop.minLength}
-          maxLength={prop.maxLength}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          className={inputBaseClasses + " pr-8"}
-        />
-        {refHelper}
-        {renderAutocompleteDropdown()}
-      </div>
+      <ExpressionInput
+        id={inputId}
+        value={stringValue}
+        onChange={(v) => onChange(v)}
+        placeholder={prop.placeholder ?? `请输入 ${label}`}
+        upstreamNodes={upstreamNodes}
+        envVars={envVars}
+        minLength={prop.minLength}
+        maxLength={prop.maxLength}
+      />
     </div>
   );
 }
