@@ -1,4 +1,4 @@
-import { X, Trash2, AlertTriangle, Play, Copy, Check, Hash, Braces } from "lucide-react";
+import { X, Trash2, AlertTriangle, Play, Copy, Check } from "lucide-react";
 import { useState, useCallback, useRef } from "react";
 import { ExpressionRefHelper, type UpstreamNodeInfo } from "./NodeConfigPanel";
 import { Button } from "@ecoctrl/ui/button";
@@ -60,7 +60,7 @@ export function WorkflowNodeConfig({
   const config = (selectedNode.data.config as Record<string, unknown>) ?? {};
   const nodeDef = getNodeDef(selectedNodeType);
   const isPointNode = selectedNodeType === "point_read" || selectedNodeType === "point_write";
-  const nodeColor = (selectedNode.data.color as string) ?? "#94a3b8";
+  const nodeColor = nodeDef?.color ?? "#94a3b8";
 
   const [copied, setCopied] = useState(false);
   const handleCopyId = useCallback(() => {
@@ -69,6 +69,20 @@ export function WorkflowNodeConfig({
       setTimeout(() => setCopied(false), 1500);
     });
   }, [selectedNode.id]);
+
+  // Inline title editing in header
+  const [editingTitle, setEditingTitle] = useState(false);
+  const handleTitleClick = useCallback(() => {
+    setEditingTitle(true);
+  }, []);
+  const handleTitleBlur = useCallback(() => {
+    setEditingTitle(false);
+  }, []);
+  const handleTitleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      setEditingTitle(false);
+    }
+  }, []);
 
   // Resizable panel width
   const [panelWidth, setPanelWidth] = useState(320);
@@ -169,10 +183,11 @@ export function WorkflowNodeConfig({
         <div className="mx-auto h-full w-px bg-transparent transition-colors hover:bg-primary/40" />
       </div>
       {/* Header */}
-      <div className="flex items-center justify-between border-b px-4 py-3">
-        <div className="flex items-center gap-2.5 min-w-0">
+      <div className="grid grid-cols-[auto_1fr_auto] grid-rows-[auto_auto] items-center gap-x-3 border-b px-4 py-3">
+        {/* Left: Logo — spans both rows */}
+        <div className="row-span-2 flex items-center justify-center">
           <span
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
             style={{ backgroundColor: nodeColor }}
           >
             {nodeDef?.icon ? (
@@ -184,22 +199,31 @@ export function WorkflowNodeConfig({
               ((selectedNode.data.label as string)?.charAt(0)?.toUpperCase() ?? "N")
             )}
           </span>
-          <div className="flex min-w-0 flex-col">
-            <span className="truncate text-sm font-semibold">
+        </div>
+
+        {/* Center-top: Node Name (editable) */}
+        <div className="flex min-w-0 flex-col">
+          {editingTitle ? (
+            <Input
+              value={(selectedNode.data.label as string) ?? ""}
+              autoFocus
+              onChange={(e) => updateNodeData(selectedNode.id, { label: e.target.value })}
+              onBlur={handleTitleBlur}
+              onKeyDown={handleTitleKeyDown}
+              className="h-7 border-0 bg-transparent px-1.5 py-0 text-sm font-semibold focus-visible:ring-1 focus-visible:ring-primary/50"
+            />
+          ) : (
+            <span
+              className="truncate text-sm font-semibold cursor-pointer hover:text-primary transition-colors"
+              onClick={handleTitleClick}
+              title="点击编辑"
+            >
               {(selectedNode.data.label as string) ?? selectedNode.type}
             </span>
-            <button
-              type="button"
-              onClick={handleCopyId}
-              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
-              title="点击复制节点 ID"
-            >
-              <Hash size={9} />
-              <span className="font-mono">{selectedNode.id}</span>
-              {copied && <Check size={9} className="text-emerald-500" />}
-            </button>
-          </div>
+          )}
         </div>
+
+        {/* Right-top: Controls */}
         <div className="flex items-center gap-0.5">
           <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" title="测试运行">
             <Play size={13} />
@@ -227,6 +251,20 @@ export function WorkflowNodeConfig({
           <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={onClose}>
             <X size={14} />
           </Button>
+        </div>
+
+        {/* Bottom: ID — spans center + right columns */}
+        <div className="col-span-2 flex items-center gap-1 text-[10px] text-muted-foreground">
+          <span>ID:</span>
+          <span className="font-mono">{selectedNode.id}</span>
+          <button
+            type="button"
+            onClick={handleCopyId}
+            className="flex items-center justify-center transition-colors hover:text-foreground"
+            title="复制节点 ID"
+          >
+            {copied ? <Check size={9} className="text-emerald-500" /> : <Copy size={9} />}
+          </button>
         </div>
       </div>
 
@@ -258,17 +296,6 @@ export function WorkflowNodeConfig({
         <TabsContent value="config" className="mt-0 flex-1">
           <ScrollArea className="h-[calc(100vh-180px)]">
             <div className="space-y-6 px-4 py-5">
-              {/* Node Name - common to all nodes */}
-              <div className="space-y-1.5">
-                <Label className="flex items-center gap-2 text-sm text-foreground">节点名称</Label>
-                <Input
-                  value={(selectedNode.data.label as string) ?? ""}
-                  placeholder="请输入节点名称"
-                  onChange={(e) => updateNodeData(selectedNode.id, { label: e.target.value })}
-                  className="h-9 rounded-md border-0 bg-zinc-50 px-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:bg-white transition-colors dark:bg-zinc-800/60 dark:focus-visible:bg-zinc-800"
-                />
-              </div>
-
               {/* Point nodes - special combobox for point names */}
               {isPointNode && (
                 <div className="space-y-1.5">
@@ -314,7 +341,11 @@ export function WorkflowNodeConfig({
                       }
                     }}
                   >
-                    <ComboboxInput className="w-full" showTrigger showClear />
+                    <ComboboxInput
+                      className="h-9 w-full border-0 bg-zinc-50 has-[[data-slot=input-group-control]:focus-visible]:bg-white has-[[data-slot=input-group-control]:focus-visible]:ring-1 has-[[data-slot=input-group-control]:focus-visible]:ring-primary/50 dark:bg-zinc-800/60 dark:has-[[data-slot=input-group-control]:focus-visible]:bg-zinc-800"
+                      showTrigger
+                      showClear
+                    />
                     <ComboboxContent>
                       <ComboboxList>
                         {filteredPointNames.map((name) => (
