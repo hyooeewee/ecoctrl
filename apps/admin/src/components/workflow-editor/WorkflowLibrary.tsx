@@ -1,13 +1,5 @@
-import { useRef } from "react";
-import {
-  Search,
-  X,
-  ChevronRight,
-  ChevronDown,
-  ChevronLeft,
-  LayoutTemplate,
-  Upload,
-} from "lucide-react";
+import { useRef, useState, useCallback } from "react";
+import { Search, X, ChevronRight, ChevronDown, LayoutTemplate, Upload } from "lucide-react";
 import { Input } from "@ecoctrl/ui/input";
 import type { ComponentCategory } from "./types";
 
@@ -16,7 +8,6 @@ interface WorkflowLibraryProps {
   searchQuery: string;
   collapsedCategories: Set<string>;
   filteredCategories: ComponentCategory[];
-  onLibraryToggle: () => void;
   onSearchChange: (v: string) => void;
   onCategoryToggle: (id: string) => void;
   onDragStart: (e: React.DragEvent, type: string) => void;
@@ -30,7 +21,6 @@ export function WorkflowLibrary({
   searchQuery,
   collapsedCategories,
   filteredCategories,
-  onLibraryToggle,
   onSearchChange,
   onCategoryToggle,
   onDragStart,
@@ -39,10 +29,46 @@ export function WorkflowLibrary({
   uploading,
 }: WorkflowLibraryProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Resizable panel width
+  const [panelWidth, setPanelWidth] = useState(260);
+  const isDraggingRef = useRef(false);
+
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent) => {
+      if (!libraryOpen) return;
+      e.preventDefault();
+      isDraggingRef.current = true;
+      const startX = e.clientX;
+      const startWidth = panelWidth;
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        const delta = moveEvent.clientX - startX;
+        const next = Math.min(600, Math.max(180, startWidth + delta));
+        setPanelWidth(next);
+      };
+
+      const handleMouseUp = () => {
+        isDraggingRef.current = false;
+        window.removeEventListener("mousemove", handleMouseMove);
+        window.removeEventListener("mouseup", handleMouseUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      };
+
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+    },
+    [panelWidth, libraryOpen],
+  );
+
   return (
     <div className="relative flex">
       <div
-        className={`flex flex-col overflow-hidden border-r bg-zinc-50 transition-all duration-200 dark:bg-zinc-950 ${libraryOpen ? "w-[260px]" : "w-0 border-r-0"}`}
+        className={`flex flex-col overflow-hidden border-r bg-zinc-50 transition-all duration-200 dark:bg-zinc-950 ${libraryOpen ? "" : "w-0 border-r-0"}`}
+        style={libraryOpen ? { width: panelWidth } : undefined}
       >
         <div className="flex items-center justify-between border-b px-4 py-3">
           <h3 className="text-sm font-semibold">节点库</h3>
@@ -154,15 +180,15 @@ export function WorkflowLibrary({
         </div>
       </div>
 
-      {/* Collapse toggle */}
-      <button
-        type="button"
-        onClick={onLibraryToggle}
-        className={`absolute top-1/2 z-10 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full border bg-white shadow-sm transition-all duration-200 hover:bg-zinc-100 dark:bg-zinc-800 dark:border-zinc-700 ${libraryOpen ? "left-[252px]" : "left-0"}`}
-        title={libraryOpen ? "收起节点库" : "展开节点库"}
-      >
-        {libraryOpen ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
-      </button>
+      {/* Resize handle */}
+      {libraryOpen && (
+        <div
+          className="absolute right-0 top-0 bottom-0 z-50 w-3 cursor-col-resize"
+          onMouseDown={handleResizeStart}
+        >
+          <div className="mx-auto h-full w-px bg-transparent transition-colors hover:bg-primary/40" />
+        </div>
+      )}
     </div>
   );
 }
