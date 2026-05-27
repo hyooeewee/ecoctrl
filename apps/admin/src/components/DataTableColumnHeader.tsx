@@ -42,7 +42,7 @@ export function DataTableColumnHeader<TData>({
               <Button
                 variant="ghost"
                 size="icon-sm"
-                className={`h-7 w-7 ${filterValue ? "text-primary" : "text-muted-foreground"}`}
+                className={`h-8 w-8 ${filterValue ? "text-primary" : "text-muted-foreground"}`}
               >
                 <ListFilter size={14} />
               </Button>

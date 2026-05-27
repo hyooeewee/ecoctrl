@@ -15,6 +15,7 @@ import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@ecoctrl/ui/button";
 import { Checkbox } from "@ecoctrl/ui/checkbox";
+import { IndeterminateCheckbox } from "@ecoctrl/ui/indeterminate-checkbox";
 import { Input } from "@ecoctrl/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ecoctrl/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ecoctrl/ui/table";
@@ -52,7 +53,7 @@ function createSelectionColumn<TData>(): ColumnDef<TData, any> {
   return {
     id: "select",
     header: ({ table }) => (
-      <Checkbox
+      <IndeterminateCheckbox
         checked={
           table.getIsAllPageRowsSelected()
             ? true
@@ -217,7 +218,7 @@ export function DataTablePanel<TData>({
                       setGlobalFilter(e.target.value);
                       onSearchChange(e.target.value);
                     }}
-                    className="h-9 w-56 pl-9 text-sm"
+                    className="h-8 w-56 py-0 pl-9 text-sm"
                   />
                 </div>
                 {/* Search - mobile toggle */}
@@ -232,7 +233,7 @@ export function DataTablePanel<TData>({
                           setGlobalFilter(e.target.value);
                           onSearchChange(e.target.value);
                         }}
-                        className="h-9 w-40 pl-9 text-sm"
+                        className="h-8 w-40 py-0 pl-9 text-sm"
                         autoFocus
                       />
                       <Button
@@ -248,7 +249,7 @@ export function DataTablePanel<TData>({
                     <Button
                       variant="ghost"
                       size="icon-sm"
-                      className="h-9 w-9"
+                      className="h-8 w-8"
                       onClick={() => setSearchExpanded(true)}
                     >
                       <Search className="h-4 w-4" />
@@ -315,24 +316,25 @@ export function DataTablePanel<TData>({
       {/* Footer */}
       {filteredCount > 0 && (
         <div className="shrink-0 px-6 py-3 flex items-center justify-between gap-4">
-          {/* Left: batch actions */}
+          {/* Left: batch actions + total */}
           <div className="flex items-center gap-3 min-w-0">
             {batchActions && (
               <div className={hasSelection ? "" : "pointer-events-none opacity-50"}>
                 {batchActions}
               </div>
             )}
+            <span className="text-sm text-muted-foreground">共 {filteredCount} 条</span>
           </div>
 
-          {/* Center-Left: page size + total */}
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-            {onPageSizeChange && (
+          {/* Right: page size + pagination */}
+          <div className="flex items-center gap-3">
+            {pageSizeOptions.length > 0 && (
               <Select
                 value={String(pageSize)}
                 onValueChange={(v) => {
                   const size = Number(v);
                   table.setPageSize(size);
-                  onPageSizeChange(size);
+                  onPageSizeChange?.(size);
                 }}
               >
                 <SelectTrigger className="h-8 w-[100px] text-xs">
@@ -347,49 +349,46 @@ export function DataTablePanel<TData>({
                 </SelectContent>
               </Select>
             )}
-            <span>共 {filteredCount} 条</span>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  className="h-8 w-8"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                {pages.map((page, i) =>
+                  page === "ellipsis" ? (
+                    <span key={`ellipsis-${i}`} className="px-2 text-sm text-muted-foreground">
+                      ...
+                    </span>
+                  ) : (
+                    <Button
+                      key={page}
+                      variant={page === currentPage ? "default" : "outline"}
+                      size="icon-sm"
+                      className="h-8 w-8 text-xs"
+                      onClick={() => table.setPageIndex(page - 1)}
+                    >
+                      {page}
+                    </Button>
+                  ),
+                )}
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  className="h-8 w-8"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
-
-          {/* Right: pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="icon-sm"
-                className="h-8 w-8"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              {pages.map((page, i) =>
-                page === "ellipsis" ? (
-                  <span key={`ellipsis-${i}`} className="px-2 text-sm text-muted-foreground">
-                    ...
-                  </span>
-                ) : (
-                  <Button
-                    key={page}
-                    variant={page === currentPage ? "default" : "outline"}
-                    size="icon-sm"
-                    className="h-8 w-8 text-xs"
-                    onClick={() => table.setPageIndex(page - 1)}
-                  >
-                    {page}
-                  </Button>
-                ),
-              )}
-              <Button
-                variant="outline"
-                size="icon-sm"
-                className="h-8 w-8"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
         </div>
       )}
     </div>
