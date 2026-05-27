@@ -29,7 +29,56 @@ const ALLOWED_BINARY_OPS = new Set([
   "&&",
   "||",
 ]);
-const ALLOWED_FUNCTIONS = new Set(["now", "uuid", "parseInt", "parseFloat"]);
+const ALLOWED_FUNCTIONS = new Set([
+  "now",
+  "uuid",
+  "parseInt",
+  "parseFloat",
+  "String",
+  "Number",
+  "Boolean",
+]);
+
+// Safe methods that can be called on primitive objects
+const SAFE_METHODS = new Set([
+  "toString",
+  "toFixed",
+  "toPrecision",
+  "toLowerCase",
+  "toUpperCase",
+  "trim",
+  "slice",
+  "substring",
+  "split",
+  "replace",
+  "match",
+  "padStart",
+  "padEnd",
+  "includes",
+  "startsWith",
+  "endsWith",
+  "charAt",
+  "indexOf",
+  "lastIndexOf",
+  "concat",
+  "repeat",
+  "round",
+  "floor",
+  "ceil",
+  "abs",
+  "pow",
+  "sqrt",
+]);
+
+function toNumber(v: unknown): number {
+  if (typeof v === "number") return v;
+  if (typeof v === "string") {
+    const n = Number(v);
+    return Number.isNaN(n) ? 0 : n;
+  }
+  if (typeof v === "boolean") return v ? 1 : 0;
+  return 0;
+}
 
 function validateAst(node: jsep.Expression | null): void {
   if (!node) return;
@@ -39,12 +88,16 @@ function validateAst(node: jsep.Expression | null): void {
 
   if (node.type === "CallExpression") {
     const call = node as jsep.CallExpression;
-    if (call.callee.type !== "Identifier") {
-      throw new Error("Only direct function calls are allowed");
-    }
-    const name = (call.callee as jsep.Identifier).name;
-    if (!ALLOWED_FUNCTIONS.has(name)) {
-      throw new Error(`Forbidden function: ${name}`);
+    if (call.callee.type === "Identifier") {
+      const name = (call.callee as jsep.Identifier).name;
+      if (!ALLOWED_FUNCTIONS.has(name)) {
+        throw new Error(`Forbidden function: ${name}`);
+      }
+    } else if (call.callee.type === "MemberExpression") {
+      // Method calls are validated at evaluation time via SAFE_METHODS
+      validateAst(call.callee);
+    } else {
+      throw new Error("Only direct function calls or method calls are allowed");
     }
   }
 
@@ -106,21 +159,21 @@ function evaluateNode(node: jsep.Expression, vars: Record<string, unknown>): unk
         case "+":
           return (l as number) + (r as number);
         case "-":
-          return (l as number) - (r as number);
+          return toNumber(l) - toNumber(r);
         case "*":
-          return (l as number) * (r as number);
+          return toNumber(l) * toNumber(r);
         case "/":
-          return (l as number) / (r as number);
+          return toNumber(l) / toNumber(r);
         case "%":
-          return (l as number) % (r as number);
+          return toNumber(l) % toNumber(r);
         case ">":
-          return (l as number) > (r as number);
+          return toNumber(l) > toNumber(r);
         case "<":
-          return (l as number) < (r as number);
+          return toNumber(l) < toNumber(r);
         case ">=":
-          return (l as number) >= (r as number);
+          return toNumber(l) >= toNumber(r);
         case "<=":
-          return (l as number) <= (r as number);
+          return toNumber(l) <= toNumber(r);
         case "==":
           return l == r;
         case "===":
@@ -159,9 +212,39 @@ function evaluateNode(node: jsep.Expression, vars: Record<string, unknown>): unk
 
     case "CallExpression": {
       const { callee, arguments: args } = node as jsep.CallExpression;
-      const name = (callee as jsep.Identifier).name;
+
+      let obj: unknown;
+      let methodName: string;
+
+      if (callee.type === "MemberExpression") {
+        const member = callee as jsep.MemberExpression;
+        obj = evaluateNode(member.object, vars);
+        methodName = member.computed
+          ? String(evaluateNode(member.property, vars))
+          : (member.property as jsep.Identifier).name;
+      } else if (callee.type === "Identifier") {
+        obj = undefined;
+        methodName = (callee as jsep.Identifier).name;
+      } else {
+        throw new Error(`Unsupported callee type: ${callee.type}`);
+      }
+
       const evaluatedArgs = args.map((arg) => evaluateNode(arg, vars));
-      switch (name) {
+
+      if (obj !== undefined) {
+        // Method call
+        if (!SAFE_METHODS.has(methodName)) {
+          throw new Error(`Forbidden method: ${methodName}`);
+        }
+        const fn = (obj as Record<string, unknown>)[methodName];
+        if (typeof fn === "function") {
+          return (fn as (...args: unknown[]) => unknown).apply(obj, evaluatedArgs);
+        }
+        throw new Error(`Not a function: ${methodName}`);
+      }
+
+      // Direct function call
+      switch (methodName) {
         case "now":
           return new Date().toISOString();
         case "uuid": {
@@ -176,8 +259,14 @@ function evaluateNode(node: jsep.Expression, vars: Record<string, unknown>): unk
           return Number.parseInt(evaluatedArgs[0] as string, (evaluatedArgs[1] as number) ?? 10);
         case "parseFloat":
           return Number.parseFloat(evaluatedArgs[0] as string);
+        case "String":
+          return String(evaluatedArgs[0]);
+        case "Number":
+          return Number(evaluatedArgs[0]);
+        case "Boolean":
+          return Boolean(evaluatedArgs[0]);
         default:
-          throw new Error(`Unknown function: ${name}`);
+          throw new Error(`Unknown function: ${methodName}`);
       }
     }
 

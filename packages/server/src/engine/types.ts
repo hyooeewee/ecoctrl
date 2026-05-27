@@ -88,7 +88,7 @@ export interface WorkflowDSL {
   envVars?: Array<{
     key: string;
     value: unknown;
-    type: "string" | "number" | "secret" | "boolean" | "env";
+    type: "string" | "number" | "secret" | "boolean";
     description?: string;
   }>;
 }

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
-import { Braces, ChevronRight } from "lucide-react";
+import { Braces, ChevronRight, Info } from "lucide-react";
 import type { Node } from "@xyflow/react";
 import { Label } from "@ecoctrl/ui/label";
 import { Input } from "@ecoctrl/ui/input";
@@ -7,6 +7,7 @@ import { Switch } from "@ecoctrl/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ecoctrl/ui/select";
 import { Textarea } from "@ecoctrl/ui/textarea";
 import { Popover, PopoverTrigger, PopoverContent } from "@ecoctrl/ui/popover";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@ecoctrl/ui/tooltip";
 import type { NodeDefinition } from "@/api/nodes";
 import type { EnvVar } from "../types";
 
@@ -85,11 +86,11 @@ function buildCandidates(
   );
 
   for (const v of envVars.filter((v) => v.type !== "secret")) {
-    candidates.push({ label: `env.${v.key}`, value: `{{env.${v.key}}}`, category: "环境变量" });
+    candidates.push({ label: `var.${v.key}`, value: `{{var.${v.key}}}`, category: "环境变量" });
   }
 
   for (const v of envVars.filter((v) => v.type === "secret")) {
-    candidates.push({ label: `secrets.${v.key}`, value: `{{secrets.${v.key}}}`, category: "密钥" });
+    candidates.push({ label: `secret.${v.key}`, value: `{{secret.${v.key}}}`, category: "密钥" });
   }
 
   for (const node of upstreamNodes) {
@@ -204,67 +205,135 @@ function ExpressionRefHelper({
     );
   };
 
+  const isInline = !!triggerClassName;
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        className={
-          triggerClassName ??
-          "absolute right-1.5 top-1/2 -translate-y-1/2 flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/40 opacity-0 transition-all hover:bg-muted hover:text-muted-foreground group-hover/input:opacity-100 [&[data-popup-open]]:opacity-100"
-        }
-        onClick={(e) => e.stopPropagation()}
-      >
-        <Braces size={13} />
-      </PopoverTrigger>
-      <PopoverContent align="end" side="bottom" sideOffset={6} className="w-72 p-3">
-        <div className="space-y-2">
-          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-            插入引用
-          </p>
-          <div className="space-y-2 max-h-[320px] overflow-y-auto">
-            {renderSection(
-              "内置函数",
-              builtinFns.map((fn) => ({ label: fn.key, expr: `{{${fn.key}}}` })),
-            )}
-            {renderSection(
-              "环境变量",
-              nonSecretVars.map((v) => ({ label: v.key, expr: `{{env.${v.key}}}` })),
-            )}
-            {renderSection(
-              "密钥",
-              secretVars.map((v) => ({ label: v.key, expr: `{{secrets.${v.key}}}` })),
-            )}
-            {upstreamNodes.length > 0 &&
-              upstreamNodes.map((node) => (
-                <div key={node.id} className="space-y-0.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                    节点输出
-                  </p>
-                  <p className="truncate text-xs font-medium text-foreground/70">{node.label}</p>
-                  <div className="flex flex-wrap gap-1 pl-2">
-                    {node.outputKeys.map((key) => {
-                      const expr = `{{${node.id}.${key}}}`;
-                      return (
-                        <button
-                          key={key}
-                          type="button"
-                          className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-mono text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-                          onClick={() => {
-                            onSelect(expr);
-                            setOpen(false);
-                          }}
-                        >
-                          <ChevronRight size={9} />
-                          {key}
-                        </button>
-                      );
-                    })}
+    <div
+      className={
+        isInline
+          ? "flex items-center gap-0.5"
+          : "absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5"
+      }
+    >
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger
+          className={
+            triggerClassName ??
+            "flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/40 opacity-0 transition-all hover:bg-muted hover:text-muted-foreground group-hover/input:opacity-100 [&[data-popup-open]]:opacity-100"
+          }
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Braces size={13} />
+        </PopoverTrigger>
+        <PopoverContent align="end" side="bottom" sideOffset={6} className="w-72 p-3">
+          <div className="space-y-2">
+            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+              插入引用
+            </p>
+            <div className="space-y-2 max-h-[320px] overflow-y-auto">
+              {renderSection(
+                "内置函数",
+                builtinFns.map((fn) => ({ label: fn.key, expr: `{{${fn.key}}}` })),
+              )}
+              {renderSection(
+                "环境变量",
+                nonSecretVars.map((v) => ({ label: v.key, expr: `{{var.${v.key}}}` })),
+              )}
+              {renderSection(
+                "密钥",
+                secretVars.map((v) => ({ label: v.key, expr: `{{secret.${v.key}}}` })),
+              )}
+              {upstreamNodes.length > 0 &&
+                upstreamNodes.map((node) => (
+                  <div key={node.id} className="space-y-0.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                      节点输出
+                    </p>
+                    <p className="truncate text-xs font-medium text-foreground/70">{node.label}</p>
+                    <div className="flex flex-wrap gap-1 pl-2">
+                      {node.outputKeys.map((key) => {
+                        const expr = `{{${node.id}.${key}}}`;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-mono text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                            onClick={() => {
+                              onSelect(expr);
+                              setOpen(false);
+                            }}
+                          >
+                            <ChevronRight size={9} />
+                            {key}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+            </div>
           </div>
-        </div>
-      </PopoverContent>
-    </Popover>
+        </PopoverContent>
+      </Popover>
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground/40 hover:bg-muted hover:text-muted-foreground transition-colors"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Info size={11} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent
+            side="bottom"
+            align="end"
+            sideOffset={6}
+            className="max-w-[260px] space-y-1.5 text-xs"
+          >
+            <p className="font-medium">引用语法</p>
+            <div className="space-y-1 text-muted-foreground">
+              <p>
+                <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
+                  {"{{var.x}}"}
+                </code>{" "}
+                环境变量
+              </p>
+              <p>
+                <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
+                  {"{{secret.x}}"}
+                </code>{" "}
+                密钥
+              </p>
+              <p>
+                <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
+                  {"{{nodeId.key}}"}
+                </code>{" "}
+                上游节点输出
+              </p>
+              <p>
+                <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
+                  {"{{now()}}"}
+                </code>{" "}
+                /{" "}
+                <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
+                  {"{{uuid()}}"}
+                </code>{" "}
+                内置函数
+              </p>
+              <p>
+                <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
+                  {"{{ var.a + var.b }}"}
+                </code>{" "}
+                表达式
+              </p>
+            </div>
+            <p className="text-[10px] text-muted-foreground/70">输入 {"{{"} 触发自动补全</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
   );
 }
 
