@@ -75,4 +75,9 @@ export const workflowsApi = {
 
   getExecution: (workflowId: string, executionId: string) =>
     get<WorkflowExecution>(`/workflows/${workflowId}/executions/${executionId}`),
+
+  deleteExecution: (workflowId: string, executionId: string) =>
+    del<void>(`/workflows/${workflowId}/executions/${executionId}`),
+
+  deleteExecutions: (ids: string[]) => del<void>("/workflows/executions", { ids }),
 };

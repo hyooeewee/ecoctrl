@@ -1,4 +1,4 @@
-import { eq, and, desc, count } from "drizzle-orm";
+import { eq, and, desc, count, inArray } from "drizzle-orm";
 import { db } from "@/config/database";
 import { workflows, workflowExecutions } from "@/schemas/workflows";
 import type { WorkflowDSL } from "@/engine/types";
@@ -235,4 +235,13 @@ export async function findRecentExecutions(
     return query.where(whereClause);
   }
   return query;
+}
+
+export async function deleteExecution(id: string): Promise<void> {
+  await db.delete(workflowExecutions).where(eq(workflowExecutions.id, id));
+}
+
+export async function deleteManyExecutions(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  await db.delete(workflowExecutions).where(inArray(workflowExecutions.id, ids));
 }

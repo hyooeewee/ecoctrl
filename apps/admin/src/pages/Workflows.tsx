@@ -56,6 +56,12 @@ export default function Workflows() {
   const [recentExecutions, setRecentExecutions] = useState<SseWorkflowExecution[]>([]);
   const [selectedExecutionId, setSelectedExecutionId] = useState<string | null>(null);
 
+  // Execution deletion state
+  const [selectedExecutionIds, setSelectedExecutionIds] = useState<string[]>([]);
+  const [isExecutionDeleteOpen, setIsExecutionDeleteOpen] = useState(false);
+  const [deletingExecutionIds, setDeletingExecutionIds] = useState<string[]>([]);
+  const [executionDeleteLoading, setExecutionDeleteLoading] = useState(false);
+
   const activeTab = useAppStore((state) => state.workflowsTab);
   const setActiveTab = useAppStore((state) => state.setWorkflowsTab);
   const appActiveTab = useAppStore((state) => state.activeTab);
@@ -267,6 +273,31 @@ export default function Workflows() {
     setPendingNavigation(null);
   }, []);
 
+  const confirmDeleteExecutions = useCallback(async () => {
+    if (deletingExecutionIds.length === 0) return;
+    setExecutionDeleteLoading(true);
+    try {
+      if (deletingExecutionIds.length === 1) {
+        const exec = recentExecutions.find((e) => e.executionId === deletingExecutionIds[0]);
+        if (exec) {
+          await workflowsApi.deleteExecution(exec.workflowId, deletingExecutionIds[0]);
+        }
+      } else {
+        await workflowsApi.deleteExecutions(deletingExecutionIds);
+      }
+      setRecentExecutions((prev) =>
+        prev.filter((e) => !deletingExecutionIds.includes(e.executionId)),
+      );
+      setSelectedExecutionIds((prev) => prev.filter((id) => !deletingExecutionIds.includes(id)));
+      setIsExecutionDeleteOpen(false);
+    } catch {
+      // silently fail
+    } finally {
+      setExecutionDeleteLoading(false);
+      setDeletingExecutionIds([]);
+    }
+  }, [deletingExecutionIds, recentExecutions]);
+
   const workflowColumns = useMemo<ColumnDef<WorkflowListItem>[]>(
     () => [
       {
@@ -457,6 +488,25 @@ export default function Workflows() {
           </span>
         ),
       },
+      {
+        id: "actions",
+        header: "操作",
+        cell: ({ row }) => (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-destructive hover:text-destructive h-8 w-8"
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeletingExecutionIds([row.original.executionId]);
+              setIsExecutionDeleteOpen(true);
+            }}
+            title="删除"
+          >
+            <Trash2 size={14} />
+          </Button>
+        ),
+      },
     ],
     [],
   );
@@ -558,6 +608,24 @@ export default function Workflows() {
                 columns={executionColumns}
                 getRowId={(row) => row.executionId}
                 onRowClick={(row) => setSelectedExecutionId(row.executionId)}
+                enableRowSelection
+                selectedRowIds={selectedExecutionIds}
+                onSelectionChange={setSelectedExecutionIds}
+                batchActions={
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="h-8"
+                    onClick={() => {
+                      setDeletingExecutionIds(selectedExecutionIds);
+                      setIsExecutionDeleteOpen(true);
+                    }}
+                    disabled={selectedExecutionIds.length === 0}
+                  >
+                    <Trash2 size={14} className="mr-1.5" />
+                    批量删除 ({selectedExecutionIds.length})
+                  </Button>
+                }
                 pageSizeOptions={[10, 25, 50]}
               />
             </div>
@@ -596,6 +664,38 @@ export default function Workflows() {
             </Button>
             <Button variant="destructive" onClick={handleDelete}>
               删除
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Execution Delete Confirm Dialog */}
+      <Dialog open={isExecutionDeleteOpen} onOpenChange={setIsExecutionDeleteOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>确认删除</DialogTitle>
+            <DialogDescription>
+              {deletingExecutionIds.length > 1
+                ? `确定要删除选中的 ${deletingExecutionIds.length} 条执行记录吗？删除后不可恢复。`
+                : "删除后不可恢复，是否继续？"}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsExecutionDeleteOpen(false);
+                setDeletingExecutionIds([]);
+              }}
+            >
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteExecutions}
+              disabled={executionDeleteLoading}
+            >
+              {executionDeleteLoading ? <Loader2 size={14} className="animate-spin" /> : "删除"}
             </Button>
           </DialogFooter>
         </DialogContent>
