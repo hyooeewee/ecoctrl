@@ -7,7 +7,18 @@ import {
   BackgroundVariant,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { LayoutTemplate, Copy, Trash2, Undo2, Braces } from "lucide-react";
+import {
+  LayoutTemplate,
+  Copy,
+  Trash2,
+  Undo2,
+  Braces,
+  PanelLeft,
+  PanelBottom,
+  PanelRight,
+  Expand,
+  Shrink,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -104,7 +115,6 @@ export default function WorkflowCanvas({ workflowId, onBack, onDirtyChange }: Wo
             searchQuery={canvas.searchQuery}
             collapsedCategories={canvas.collapsedCategories}
             filteredCategories={canvas.filteredCategories}
-            onLibraryToggle={() => canvas.setLibraryOpen((v) => !v)}
             onSearchChange={canvas.setSearchQuery}
             onCategoryToggle={(id) =>
               canvas.setCollapsedCategories((prev) => {
@@ -410,6 +420,65 @@ export default function WorkflowCanvas({ workflowId, onBack, onDirtyChange }: Wo
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Panel toggle buttons */}
+            <div className="absolute top-2 right-2 z-10 flex items-center gap-1 rounded-md border bg-white/90 p-1 shadow-sm backdrop-blur-sm dark:bg-zinc-900/90 dark:border-zinc-700">
+              <button
+                type="button"
+                onClick={() => canvas.setLibraryOpen((v) => !v)}
+                className={`flex h-7 w-7 items-center justify-center rounded transition-colors ${canvas.libraryOpen ? "bg-zinc-100 text-foreground dark:bg-zinc-800" : "text-muted-foreground hover:bg-zinc-50 hover:text-foreground dark:hover:bg-zinc-800/50"}`}
+                title={canvas.libraryOpen ? "隐藏节点库" : "显示节点库"}
+              >
+                <PanelLeft size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={() => canvas.setTestLogOpen((v) => !v)}
+                disabled={!canvas.testResult}
+                className={`flex h-7 w-7 items-center justify-center rounded transition-colors ${!canvas.testResult ? "cursor-not-allowed text-zinc-300 dark:text-zinc-700" : canvas.testLogOpen ? "bg-zinc-100 text-foreground dark:bg-zinc-800" : "text-muted-foreground hover:bg-zinc-50 hover:text-foreground dark:hover:bg-zinc-800/50"}`}
+                title={canvas.testLogOpen ? "隐藏日志" : "显示日志"}
+              >
+                <PanelBottom size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={() => canvas.setRightPanelOpen((v) => !v)}
+                disabled={!canvas.selectedNode}
+                className={`flex h-7 w-7 items-center justify-center rounded transition-colors ${!canvas.selectedNode ? "cursor-not-allowed text-zinc-300 dark:text-zinc-700" : canvas.rightPanelOpen ? "bg-zinc-100 text-foreground dark:bg-zinc-800" : "text-muted-foreground hover:bg-zinc-50 hover:text-foreground dark:hover:bg-zinc-800/50"}`}
+                title={canvas.rightPanelOpen ? "隐藏配置面板" : "显示配置面板"}
+              >
+                <PanelRight size={16} />
+              </button>
+              {(() => {
+                const hasClosed =
+                  !canvas.libraryOpen ||
+                  (canvas.testResult && !canvas.testLogOpen) ||
+                  (canvas.selectedNode && !canvas.rightPanelOpen);
+                return (
+                  <>
+                    <div className="mx-0.5 h-4 w-px bg-zinc-200 dark:bg-zinc-700" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (hasClosed) {
+                          canvas.setLibraryOpen(true);
+                          if (canvas.testResult) canvas.setTestLogOpen(true);
+                          if (canvas.selectedNode) canvas.setRightPanelOpen(true);
+                        } else {
+                          canvas.setLibraryOpen(false);
+                          canvas.setTestLogOpen(false);
+                          canvas.setRightPanelOpen(false);
+                        }
+                      }}
+                      className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-zinc-50 hover:text-foreground dark:hover:bg-zinc-800/50"
+                      title={hasClosed ? "展开全部面板" : "收起全部面板"}
+                    >
+                      {hasClosed ? <Expand size={14} /> : <Shrink size={14} />}
+                    </button>
+                  </>
+                );
+              })()}
             </div>
 
             <WorkflowTestPanel

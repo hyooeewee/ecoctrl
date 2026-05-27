@@ -1,3 +1,4 @@
+import { useState, useCallback, useRef } from "react";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { Badge } from "@ecoctrl/ui/badge";
 import { ScrollArea } from "@ecoctrl/ui/scroll-area";
@@ -27,10 +28,54 @@ interface WorkflowTestPanelProps {
 export function WorkflowTestPanel({ testResult, testLogOpen, onToggle }: WorkflowTestPanelProps) {
   if (!testResult) return null;
 
+  // Resizable panel height
+  const [panelHeight, setPanelHeight] = useState(260);
+  const isDraggingRef = useRef(false);
+
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent) => {
+      if (!testLogOpen) return;
+      e.preventDefault();
+      isDraggingRef.current = true;
+      const startY = e.clientY;
+      const startHeight = panelHeight;
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        const delta = startY - moveEvent.clientY;
+        const next = Math.min(600, Math.max(120, startHeight + delta));
+        setPanelHeight(next);
+      };
+
+      const handleMouseUp = () => {
+        isDraggingRef.current = false;
+        window.removeEventListener("mousemove", handleMouseMove);
+        window.removeEventListener("mouseup", handleMouseUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      };
+
+      document.body.style.cursor = "row-resize";
+      document.body.style.userSelect = "none";
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+    },
+    [panelHeight, testLogOpen],
+  );
+
   return (
     <div
-      className={`border-t bg-white transition-all duration-300 dark:bg-zinc-900 ${testLogOpen ? "h-[260px]" : "h-10"}`}
+      className={`relative border-t bg-white transition-all duration-300 dark:bg-zinc-900 ${testLogOpen ? "" : "h-0 overflow-hidden border-t-0 opacity-0"}`}
+      style={testLogOpen ? { height: panelHeight } : undefined}
     >
+      {/* Resize handle */}
+      {testLogOpen && (
+        <div
+          className="absolute -top-1.5 left-0 right-0 z-50 h-3 cursor-row-resize"
+          onMouseDown={handleResizeStart}
+        >
+          <div className="mx-auto h-px w-full bg-transparent transition-colors hover:bg-primary/40" />
+        </div>
+      )}
       <button
         type="button"
         onClick={onToggle}
@@ -56,7 +101,7 @@ export function WorkflowTestPanel({ testResult, testLogOpen, onToggle }: Workflo
       </button>
 
       {testLogOpen && (
-        <ScrollArea className="h-[calc(260px-40px)]">
+        <ScrollArea style={{ height: panelHeight - 40 }}>
           <div className="space-y-1 p-3">
             {testResult.nodeLogs?.map((log, i) => (
               <div
