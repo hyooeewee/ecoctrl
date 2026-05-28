@@ -1,4 +1,4 @@
-import { X, Trash2, AlertTriangle, Play, Copy, Check } from "lucide-react";
+import { X, Trash2, AlertTriangle, Play, Copy, Check, LayoutTemplate } from "lucide-react";
 import { useState, useCallback, useRef } from "react";
 import { ExpressionRefHelper, type UpstreamNodeInfo } from "./NodeConfigPanel";
 import { Button } from "@ecoctrl/ui/button";
@@ -543,37 +543,21 @@ export function WorkflowNodeConfig({
           <ScrollArea className="h-[calc(100vh-180px)]">
             <div className="space-y-5 px-4 py-5">
               {/* Upstream */}
-              <div className="space-y-2">
-                <div className="text-xs font-medium text-muted-foreground">上游节点</div>
-                {parentNodes.length > 0 ? (
+              {parentNodes.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-xs font-medium text-muted-foreground">上游节点</div>
                   <div className="flex flex-col gap-1.5">
-                    {parentNodes.map((node) => {
-                      const pType = (node.data.type as string) || "";
-                      const pDef = getNodeDef(pType);
-                      const pColor = pDef?.color ?? "#94a3b8";
-                      return (
-                        <button
-                          key={node.id}
-                          type="button"
-                          onClick={() => onSelectNode?.(node)}
-                          className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm transition-colors hover:bg-muted"
-                          title={`${(node.data.label as string) ?? node.type} (${node.id})`}
-                        >
-                          <span
-                            className="inline-block h-2.5 w-2.5 rounded-full"
-                            style={{ backgroundColor: pColor }}
-                          />
-                          <span className="truncate">
-                            {(node.data.label as string) ?? node.type}
-                          </span>
-                        </button>
-                      );
-                    })}
+                    {parentNodes.map((node) => (
+                      <RelatedNodeCard
+                        key={node.id}
+                        node={node}
+                        getNodeDef={getNodeDef}
+                        onClick={() => onSelectNode?.(node)}
+                      />
+                    ))}
                   </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">无上游节点</p>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* Divider */}
               {parentNodes.length > 0 && childNodes.length > 0 && (
@@ -581,41 +565,81 @@ export function WorkflowNodeConfig({
               )}
 
               {/* Downstream */}
-              <div className="space-y-2">
-                <div className="text-xs font-medium text-muted-foreground">下游节点</div>
-                {childNodes.length > 0 ? (
+              {childNodes.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-xs font-medium text-muted-foreground">下游节点</div>
                   <div className="flex flex-col gap-1.5">
-                    {childNodes.map((node) => {
-                      const cType = (node.data.type as string) || "";
-                      const cDef = getNodeDef(cType);
-                      const cColor = cDef?.color ?? "#94a3b8";
-                      return (
-                        <button
-                          key={node.id}
-                          type="button"
-                          onClick={() => onSelectNode?.(node)}
-                          className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm transition-colors hover:bg-muted"
-                          title={`${(node.data.label as string) ?? node.type} (${node.id})`}
-                        >
-                          <span
-                            className="inline-block h-2.5 w-2.5 rounded-full"
-                            style={{ backgroundColor: cColor }}
-                          />
-                          <span className="truncate">
-                            {(node.data.label as string) ?? node.type}
-                          </span>
-                        </button>
-                      );
-                    })}
+                    {childNodes.map((node) => (
+                      <RelatedNodeCard
+                        key={node.id}
+                        node={node}
+                        getNodeDef={getNodeDef}
+                        onClick={() => onSelectNode?.(node)}
+                      />
+                    ))}
                   </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">无下游节点</p>
-                )}
-              </div>
+                </div>
+              )}
+
+              {/* Empty state */}
+              {parentNodes.length === 0 && childNodes.length === 0 && (
+                <p className="text-sm text-muted-foreground">无关联节点</p>
+              )}
             </div>
           </ScrollArea>
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+// ========================================
+// Related Node Card (used in "关联" tab)
+// ========================================
+
+function hexWithAlpha(hex: string, alpha: number): string {
+  const clean = hex.replace("#", "");
+  return `#${clean}${alpha.toString(16).padStart(2, "0")}`;
+}
+
+function RelatedNodeCard({
+  node,
+  getNodeDef,
+  onClick,
+}: {
+  node: Node;
+  getNodeDef?: (type: string) => NodeDefinition | null;
+  onClick: () => void;
+}) {
+  const nodeType = (node.data.type as string) || "";
+  const nodeLabel = (node.data.label as string) || node.type || "未知";
+  const def = getNodeDef?.(nodeType);
+  const color = def?.color ?? "#94a3b8";
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors hover:bg-muted"
+      title={`${nodeLabel} (${node.id})`}
+    >
+      {/* Node icon badge */}
+      <span
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+        style={{ backgroundColor: hexWithAlpha(color, 0x20), color }}
+      >
+        {def?.icon ? (
+          <div
+            dangerouslySetInnerHTML={{ __html: def.icon }}
+            className="flex h-4 w-4 items-center justify-center [&>svg]:h-full [&>svg]:w-full"
+          />
+        ) : (
+          <LayoutTemplate size={16} />
+        )}
+      </span>
+
+      {/* Node label */}
+      <span className="truncate text-sm font-medium">{nodeLabel}</span>
+    </button>
   );
 }
