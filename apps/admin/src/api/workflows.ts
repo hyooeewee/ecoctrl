@@ -80,4 +80,15 @@ export const workflowsApi = {
     del<void>(`/workflows/${workflowId}/executions/${executionId}`),
 
   deleteExecutions: (ids: string[]) => del<void>("/workflows/executions", { ids }),
+
+  export: async (id: string) => {
+    const wf = await workflowsApi.getById(id);
+    return {
+      slug: wf.slug,
+      name: wf.name,
+      description: wf.description ?? undefined,
+      enabled: wf.enabled,
+      dsl: wf.dsl,
+    };
+  },
 };

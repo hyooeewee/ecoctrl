@@ -1,4 +1,14 @@
-import { Plus, Pencil, Trash2, Play, Loader2, Workflow, History } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Play,
+  Loader2,
+  Workflow,
+  History,
+  Download,
+  Upload,
+} from "lucide-react";
 import { toast } from "sonner";
 import { type ColumnDef } from "@tanstack/react-table";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -221,6 +231,66 @@ export default function Workflows() {
     }
   }, []);
 
+  const handleExport = useCallback(async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    try {
+      const data = await workflowsApi.export(id);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${data.slug}.dsl`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("导出成功");
+    } catch {
+      toast.error("导出失败");
+    }
+  }, []);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImport = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const content = event.target?.result as string;
+        if (!content) return;
+
+        try {
+          const parsed = JSON.parse(content);
+          if (!parsed.dsl || !parsed.slug || !parsed.name) {
+            toast.error("无效的 DSL 文件");
+            return;
+          }
+
+          const uniqueSlug = `${parsed.slug}-${Date.now()}`;
+          const body = {
+            slug: uniqueSlug,
+            name: parsed.name,
+            description: parsed.description,
+            enabled: false,
+            dsl: parsed.dsl,
+          };
+
+          const { id } = await workflowsApi.create(body);
+          toast.success("导入成功");
+          fetchWorkflows();
+          setEditingWorkflowId(id);
+        } catch {
+          toast.error("导入失败：文件解析错误");
+        }
+
+        e.target.value = "";
+      };
+      reader.readAsText(file);
+    },
+    [fetchWorkflows],
+  );
+
   const openCreate = useCallback(async () => {
     const slug = `wf-${Date.now()}`;
     const dsl = {
@@ -398,6 +468,15 @@ export default function Workflows() {
               variant="ghost"
               size="icon"
               className="h-8 w-8"
+              onClick={(e) => handleExport(e, row.original.id)}
+              title="导出"
+            >
+              <Download size={14} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
               onClick={(e) => handleTrigger(e, row.original)}
               disabled={triggerLoadingId === row.original.id}
               title="手动触发"
@@ -425,7 +504,14 @@ export default function Workflows() {
         ),
       },
     ],
-    [handleToggleEnabled, handleTrigger, triggerLoadingId, openEditor, runningExecutions],
+    [
+      handleToggleEnabled,
+      handleTrigger,
+      triggerLoadingId,
+      openEditor,
+      runningExecutions,
+      handleExport,
+    ],
   );
 
   const executionColumns = useMemo<ColumnDef<SseWorkflowExecution>[]>(
@@ -557,6 +643,17 @@ export default function Workflows() {
                 action={
                   <div className="flex items-center gap-3">
                     {sseStatusIndicator}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".dsl"
+                      className="hidden"
+                      onChange={handleImport}
+                    />
+                    <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                      <Upload size={16} className="mr-1.5" />
+                      导入
+                    </Button>
                     <Button onClick={openCreate}>
                       <Plus size={16} className="mr-1.5" />
                       新建工作流
