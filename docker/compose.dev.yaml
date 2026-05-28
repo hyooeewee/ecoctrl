@@ -81,10 +81,8 @@ services:
       - ../docker/.env.local:/app/packages/server/.env.local:ro
     healthcheck:
       test:
-        - CMD
-        - curl
-        - -f
-        - http://localhost:3001/health
+        - CMD-SHELL
+        - wget -qO- http://127.0.0.1:3001/health > /dev/null || exit 1
       interval: 10s
       timeout: 5s
       retries: 3

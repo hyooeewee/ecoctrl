@@ -79,10 +79,8 @@ services:
       - ./ecoctrl/server_logs:/app/packages/server/logs
     healthcheck:
       test:
-        - CMD
-        - curl
-        - -f
-        - http://localhost:${SERVER_PORT}/health
+        - CMD-SHELL
+        - wget -qO- http://127.0.0.1:${SERVER_PORT}/health > /dev/null || exit 1
       interval: 10s
       timeout: 5s
       retries: 3
