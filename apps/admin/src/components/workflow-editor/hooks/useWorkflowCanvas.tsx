@@ -388,6 +388,19 @@ export function useWorkflowCanvas({ workflowId, onBack, onDirtyChange }: UseWork
     setActiveConfigTab("config");
   }, []);
 
+  const selectNode = useCallback(
+    (node: Node | null) => {
+      if (node) {
+        setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === node.id })));
+        setSelectedNode(node);
+      } else {
+        setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
+        setSelectedNode(null);
+      }
+    },
+    [setNodes],
+  );
+
   const onPaneClick = useCallback(() => {
     if (Date.now() - menuOpenedAtRef.current < 150) {
       return;
@@ -892,6 +905,7 @@ export function useWorkflowCanvas({ workflowId, onBack, onDirtyChange }: UseWork
     // Selection & panels
     selectedNode,
     setSelectedNode,
+    selectNode,
     rightPanelOpen,
     setRightPanelOpen,
     activeConfigTab,

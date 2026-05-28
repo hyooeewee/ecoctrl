@@ -510,8 +510,15 @@ export default function WorkflowCanvas({ workflowId, onBack, onDirtyChange }: Wo
               onTestNode={canvas.handleTestNode}
               onClose={() => canvas.setRightPanelOpen(false)}
               onSelectNode={(node) => {
-                canvas.setSelectedNode(node);
+                canvas.selectNode(node);
                 canvas.setRightPanelOpen(true);
+                requestAnimationFrame(() => {
+                  canvas.rfInstance?.fitView({
+                    nodes: [{ id: node.id }],
+                    padding: 0.3,
+                    duration: 400,
+                  });
+                });
               }}
               nodes={canvas.nodes}
               edges={canvas.edges}
