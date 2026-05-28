@@ -47,6 +47,7 @@ export async function executePluginNode(
     node.name,
     registry,
     dryRun,
+    node.config,
   );
 
   const result = await executeInSandbox(plugin.backendCode, sandboxCtx, api);

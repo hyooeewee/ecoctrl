@@ -40,6 +40,7 @@ module.exports = async function execute(ctx, api) {
   try {
     parsedBody = response.json();
   } catch {
+    api.log.warn(`[http_request] Response body is not valid JSON, returning raw body`);
     parsedBody = response.body;
   }
 

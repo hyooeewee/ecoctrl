@@ -31,7 +31,32 @@ export function createPluginApi(
   nodeName: string,
   registry: PluginRegistry | null,
   dryRun: boolean,
+  nodeConfig?: Record<string, unknown>,
 ): PluginApi {
+  const retryCount = Math.min(Number(nodeConfig?.retry ?? 0), 5);
+
+  function withRetry<T>(fn: () => Promise<T>, delayMs = 1000): Promise<T> {
+    if (retryCount <= 0) return fn();
+    let lastErr: unknown;
+    return (async () => {
+      for (let i = 0; i <= retryCount; i++) {
+        try {
+          return await fn();
+        } catch (err) {
+          lastErr = err;
+          if (i < retryCount) {
+            const delay = delayMs * (i + 1);
+            logger.warn(
+              `[retry] [${nodeName}] attempt ${i + 1}/${retryCount + 1} failed, retrying in ${delay}ms: ${(err as Error).message}`,
+            );
+            await new Promise((resolve) => setTimeout(resolve, delay));
+          }
+        }
+      }
+      throw lastErr;
+    })();
+  }
+
   return {
     variables: {
       get: (key: string) => ctx.variables.get(key),
@@ -41,29 +66,29 @@ export function createPluginApi(
     },
 
     http: {
-      get: async (url, options) => safeHttp("GET", url, options),
-      post: async (url, options) => safeHttp("POST", url, options),
-      put: async (url, options) => safeHttp("PUT", url, options),
-      patch: async (url, options) => safeHttp("PATCH", url, options),
-      delete: async (url, options) => safeHttp("DELETE", url, options),
+      get: async (url, options) => withRetry(() => safeHttp("GET", url, options)),
+      post: async (url, options) => withRetry(() => safeHttp("POST", url, options)),
+      put: async (url, options) => withRetry(() => safeHttp("PUT", url, options)),
+      patch: async (url, options) => withRetry(() => safeHttp("PATCH", url, options)),
+      delete: async (url, options) => withRetry(() => safeHttp("DELETE", url, options)),
     },
 
     iot: {
       readPoint: async (name: string) => {
-        const values = await readPointValues([name]);
+        const values = await withRetry(() => readPointValues([name]), 500);
         return values[name];
       },
       readPoints: async (names: string[]) => {
-        return readPointValues(names);
+        return withRetry(() => readPointValues(names), 500);
       },
       writePoint: async (name: string, value: unknown) => {
-        await writePointValues([{ pointId: name, value }]);
+        await withRetry(() => writePointValues([{ pointId: name, value }]), 500);
       },
       writePoints: async (points: Array<{ pointId: string; value: unknown }>) => {
-        await writePointValues(points);
+        await withRetry(() => writePointValues(points), 500);
       },
       forceWritePoint: async (name: string, value: unknown) => {
-        await forceWritePointValues([{ pointId: name, value }]);
+        await withRetry(() => forceWritePointValues([{ pointId: name, value }]), 500);
       },
       readPointHistory: async (
         name: string,
@@ -71,17 +96,17 @@ export function createPluginApi(
         endTime: string,
         interval?: number,
       ) => {
-        return readPointHistory([name], beginTime, endTime, interval);
+        return withRetry(() => readPointHistory([name], beginTime, endTime, interval), 500);
       },
       readPointProp: async (name: string, prop?: string) => {
-        const values = await readPointProperties([name], prop);
+        const values = await withRetry(() => readPointProperties([name], prop), 500);
         return values[name];
       },
       getAlarmConfigurations: async () => {
-        return getAlarmConfigurations();
+        return withRetry(() => getAlarmConfigurations(), 500);
       },
       getHistoricalAlarms: async (beginTime: string, endTime: string) => {
-        return getHistoricalAlarms(beginTime, endTime);
+        return withRetry(() => getHistoricalAlarms(beginTime, endTime), 500);
       },
     },
 
@@ -135,54 +160,54 @@ export function createPluginApi(
           `[SMTP] Config: host=${options.smtpHost}, port=${options.smtpPort}, secure=${useSecure}, requireTLS=${requireTLS}, user=${options.smtpUser}, from=${options.from || options.smtpUser}`,
         );
 
-        const transport = createTransport({
-          host: options.smtpHost,
-          port: options.smtpPort,
-          secure: useSecure,
-          requireTLS,
-          auth: { user: options.smtpUser, pass: options.smtpPass },
-          connectionTimeout: 15000,
-          greetingTimeout: 15000,
-          socketTimeout: 15000,
-          tls: { rejectUnauthorized: false, minVersion: "TLSv1" },
-        });
+        return withRetry(async () => {
+          const transport = createTransport({
+            host: options.smtpHost,
+            port: options.smtpPort,
+            secure: useSecure,
+            requireTLS,
+            auth: { user: options.smtpUser, pass: options.smtpPass },
+            connectionTimeout: 15000,
+            greetingTimeout: 15000,
+            socketTimeout: 15000,
+            tls: { rejectUnauthorized: false, minVersion: "TLSv1" },
+          });
 
-        try {
-          await transport.verify();
-          logger.info(
-            `[SMTP] Transport verified OK for ${options.smtpHost}:${options.smtpPort} (user=${options.smtpUser})`,
-          );
-        } catch (verifyErr) {
-          const err = verifyErr as Error & {
-            code?: string;
-            command?: string;
-            responseCode?: number;
-            response?: string;
+          try {
+            await transport.verify();
+            logger.info(
+              `[SMTP] Transport verified OK for ${options.smtpHost}:${options.smtpPort} (user=${options.smtpUser})`,
+            );
+          } catch (verifyErr) {
+            const err = verifyErr as Error & {
+              code?: string;
+              command?: string;
+              responseCode?: number;
+              response?: string;
+            };
+            logger.warn(
+              `[SMTP] Transport verify warning for ${options.smtpHost}:${options.smtpPort}: ${err.message} (code=${err.code}, command=${err.command}, responseCode=${err.responseCode}, response="${err.response}")`,
+            );
+            // Continue to sendMail — some servers fail verify but accept actual mail
+          }
+
+          const senderFrom = options.from || options.smtpUser;
+          const bodyType = options.bodyType || "text";
+          const mailOptions: Record<string, unknown> = {
+            from: senderFrom,
+            to: options.to.filter(Boolean),
+            subject: options.subject,
+            [bodyType === "html" ? "html" : "text"]: options.body,
           };
-          logger.warn(
-            `[SMTP] Transport verify warning for ${options.smtpHost}:${options.smtpPort}: ${err.message} (code=${err.code}, command=${err.command}, responseCode=${err.responseCode}, response="${err.response}")`,
+          if (options.cc) mailOptions.cc = options.cc;
+          if (options.bcc) mailOptions.bcc = options.bcc;
+          if (options.replyTo) mailOptions.replyTo = options.replyTo;
+
+          const recipients = options.to.filter(Boolean).join(", ");
+          logger.info(
+            `[SMTP] Sending mail from=${senderFrom} to=[${recipients}] subject="${options.subject}" bodyType=${bodyType} cc=${options.cc || "-"} bcc=${options.bcc || "-"} via ${options.smtpHost}:${options.smtpPort}`,
           );
-          // Continue to sendMail — some servers fail verify but accept actual mail
-        }
 
-        const senderFrom = options.from || options.smtpUser;
-        const bodyType = options.bodyType || "text";
-        const mailOptions: Record<string, unknown> = {
-          from: senderFrom,
-          to: options.to.filter(Boolean),
-          subject: options.subject,
-          [bodyType === "html" ? "html" : "text"]: options.body,
-        };
-        if (options.cc) mailOptions.cc = options.cc;
-        if (options.bcc) mailOptions.bcc = options.bcc;
-        if (options.replyTo) mailOptions.replyTo = options.replyTo;
-
-        const recipients = options.to.filter(Boolean).join(", ");
-        logger.info(
-          `[SMTP] Sending mail from=${senderFrom} to=[${recipients}] subject="${options.subject}" bodyType=${bodyType} cc=${options.cc || "-"} bcc=${options.bcc || "-"} via ${options.smtpHost}:${options.smtpPort}`,
-        );
-
-        try {
           const result = await transport.sendMail(mailOptions);
           logger.info(
             `[SMTP] Mail sent successfully: messageId=${result.messageId}, accepted=${result.accepted?.length ?? 0}, rejected=${result.rejected?.length ?? 0}, response="${result.response}"`,
@@ -194,17 +219,7 @@ export function createPluginApi(
             rejected: result.rejected,
             response: result.response,
           };
-        } catch (sendErr) {
-          const err = sendErr as Error & {
-            code?: string;
-            command?: string;
-            responseCode?: number;
-          };
-          logger.error(
-            `[SMTP] Mail send failed: ${err.message} (code=${err.code}, responseCode=${err.responseCode}, command=${err.command})`,
-          );
-          throw new Error(`邮件发送失败: ${err.message}`, { cause: sendErr });
-        }
+        }, 2000);
       },
     },
 
@@ -242,6 +257,30 @@ export function createPluginApi(
 
     utils: {
       sleep: (ms: number) => new Promise((resolve) => setTimeout(resolve, ms)),
+      retry: async <T>(
+        fn: () => Promise<T>,
+        options?: { maxRetries?: number; delayMs?: number; backoff?: boolean },
+      ): Promise<T> => {
+        const maxRetries = Math.max(0, Math.min(options?.maxRetries ?? 3, 10));
+        const baseDelay = options?.delayMs ?? 1000;
+        const useBackoff = options?.backoff ?? true;
+        let lastErr: unknown;
+        for (let i = 0; i <= maxRetries; i++) {
+          try {
+            return await fn();
+          } catch (err) {
+            lastErr = err;
+            if (i < maxRetries) {
+              const delay = useBackoff ? baseDelay * (i + 1) : baseDelay;
+              logger.warn(
+                `[retry] attempt ${i + 1}/${maxRetries + 1} failed, retrying in ${delay}ms: ${(err as Error).message}`,
+              );
+              await new Promise((resolve) => setTimeout(resolve, delay));
+            }
+          }
+        }
+        throw lastErr;
+      },
     },
 
     expr: {

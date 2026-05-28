@@ -11,6 +11,11 @@
     "value": {
       "title": "Value",
       "description": "Value to write. Use {{nodeId.value}} to reference upstream outputs, e.g. {{read_node.value}}"
+    },
+    "retry": {
+      "type": "number",
+      "title": "重试次数",
+      "default": 0
     }
   },
   "required": ["pointName", "value"]
