@@ -1,8 +1,26 @@
 module.exports = async function execute(ctx, api) {
   const pointName = String(ctx.config.pointName || "");
   if (!pointName) {
+    api.log.error("[point_read] missing required field 'pointName'");
     throw new Error("point_read node requires 'pointName'");
   }
-  const values = await api.iot.readPoints([pointName]);
-  return { value: values[pointName], pointName, values };
+
+  api.log.info(`[point_read] reading point: ${pointName}`);
+  let values;
+  try {
+    values = await api.iot.readPoints([pointName]);
+  } catch (err) {
+    api.log.error(`[point_read] failed to read point ${pointName}: ${err.message}`);
+    throw new Error(`读取测点 ${pointName} 失败: ${err.message}`, { cause: err });
+  }
+
+  const pointData = values?.ResultPointObjArr?.[0];
+  if (!pointData) {
+    api.log.error(`[point_read] point ${pointName} not found or returned empty data`);
+    throw new Error(`测点 ${pointName} 不存在或返回空数据`);
+  }
+
+  const value = pointData.value;
+  api.log.info(`[point_read] point ${pointName} = ${JSON.stringify(value)}`);
+  return { value, pointName, values };
 };

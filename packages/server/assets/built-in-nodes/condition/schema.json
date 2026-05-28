@@ -3,8 +3,9 @@
   "properties": {
     "expression": {
       "type": "string",
-      "title": "Expression",
-      "description": "e.g. temperature > 30"
+      "title": "表达式",
+      "description": "例如: temperature > 30"
     }
-  }
+  },
+  "required": ["expression"]
 }

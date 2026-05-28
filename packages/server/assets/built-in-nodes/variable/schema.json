@@ -3,11 +3,15 @@
   "properties": {
     "name": {
       "type": "string",
-      "title": "Variable Name"
+      "title": "变量名"
     },
     "value": {
       "type": "string",
-      "title": "Variable Value"
+      "title": "变量值"
+    },
+    "set": {
+      "type": "object",
+      "title": "批量设置 (JSON)"
     }
   }
 }
