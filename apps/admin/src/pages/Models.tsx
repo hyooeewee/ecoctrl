@@ -644,7 +644,7 @@ export default function Models() {
                           model.format &&
                           CARD_PREVIEW_FORMATS.has(model.format.toUpperCase()) ? (
                           <model-viewer
-                            src={resolveAssetUrl(model.fileUrl)}
+                            src={`/api/models/${model.id}/file`}
                             alt={model.name}
                             auto-rotate
                             interaction-prompt="none"
@@ -942,7 +942,7 @@ export default function Models() {
           <div className="flex-1 overflow-hidden bg-muted p-4">
             {previewModel ? (
               <ModelViewer
-                src={resolveAssetUrl(previewModel.fileUrl) ?? null}
+                src={`/api/models/${previewModel.id}/file`}
                 alt={previewModel.name}
                 format={previewModel.format}
               />
