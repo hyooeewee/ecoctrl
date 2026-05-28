@@ -31,6 +31,7 @@ export async function executeSubGraph(
     variables: parentContext.variables,
     nodeOutputs: new Map(),
     env: parentContext.env,
+    secrets: parentContext.secrets,
   };
 
   const state = {

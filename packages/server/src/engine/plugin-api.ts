@@ -13,7 +13,8 @@ import { evaluateExpression, evaluateBoolean } from "./expr";
 import { buildVars } from "./template";
 import { createTransport } from "nodemailer";
 import { db } from "@/config/database";
-import { sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
+import { workflows } from "@/schemas/workflows";
 import type { PluginRegistry } from "./plugin-registry";
 import { executeSubGraph } from "./sub-graph";
 import { emitEvent } from "@/lib/notifyTrigger";
@@ -127,11 +128,19 @@ export function createPluginApi(
           );
         }
 
+        const useSecure = options.smtpSecure ?? options.smtpPort === 465;
+        const requireTLS = !useSecure && options.smtpPort === 587;
+
         const transport = createTransport({
           host: options.smtpHost,
           port: options.smtpPort,
-          secure: options.smtpSecure ?? options.smtpPort === 465,
+          secure: useSecure,
+          requireTLS,
           auth: { user: options.smtpUser, pass: options.smtpPass },
+          connectionTimeout: 15000,
+          greetingTimeout: 15000,
+          socketTimeout: 15000,
+          tls: { rejectUnauthorized: false },
         });
 
         try {
@@ -351,6 +360,35 @@ export function createPluginApi(
           registry,
           dryRun,
         );
+      },
+      executeById: async (targetWorkflowId: string, triggerData?: Record<string, unknown>) => {
+        const rows = await db
+          .select({ publishedDsl: workflows.publishedDsl })
+          .from(workflows)
+          .where(eq(workflows.id, targetWorkflowId))
+          .limit(1);
+
+        if (rows.length === 0) {
+          throw new Error(`Workflow '${targetWorkflowId}' not found`);
+        }
+
+        const dsl = rows[0].publishedDsl;
+        if (!dsl) {
+          throw new Error(`Workflow '${targetWorkflowId}' has not been published`);
+        }
+
+        const { executeWorkflow } = await import("./executor");
+        const result = await executeWorkflow(
+          dsl as import("./types").WorkflowDSL,
+          triggerData ?? {},
+          ctx.env,
+          ((ctx as any).secrets as Record<string, string>) ?? {},
+          registry,
+          dryRun,
+          targetWorkflowId,
+        );
+
+        return result as import("./plugin-types").WorkflowExecutionResult;
       },
     },
   };

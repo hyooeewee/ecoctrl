@@ -45,7 +45,7 @@
       "title": "SMTP 服务器"
     },
     "smtpPort": {
-      "type": "integer",
+      "type": "number",
       "title": "SMTP 端口",
       "default": 587
     },
@@ -63,5 +63,5 @@
       "default": false
     }
   },
-  "required": ["to", "subject", "body"]
+  "required": ["to", "subject", "body", "smtpHost", "smtpPort", "smtpUser", "smtpPass"]
 }
