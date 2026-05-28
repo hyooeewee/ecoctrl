@@ -12,6 +12,8 @@ import {
   Terminal,
   AlertTriangle,
   ArrowLeft,
+  Copy,
+  Check,
 } from "lucide-react";
 import { workflowsApi } from "@/api/workflows";
 import type { WorkflowExecution } from "@/components/workflow-editor/types";
@@ -59,12 +61,38 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }, [text]);
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className="flex items-center gap-1 text-[10px] text-muted-foreground transition-colors hover:text-foreground"
+    >
+      {copied ? <Check size={10} className="text-emerald-500" /> : <Copy size={10} />}
+      <span>{copied ? "已复制" : "复制"}</span>
+    </button>
+  );
+}
+
 function JsonBlock({ data, title }: { data: unknown; title?: string }) {
   if (data === undefined || data === null) return null;
   const json = JSON.stringify(data, null, 2);
   return (
     <div className="mt-2">
-      {title && <p className="text-[10px] font-medium text-muted-foreground mb-1">{title}</p>}
+      {title && (
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-[10px] font-medium text-muted-foreground">{title}</p>
+          <CopyButton text={json} />
+        </div>
+      )}
       <pre className="font-mono text-[10px] bg-muted p-2.5 rounded overflow-auto max-h-64">
         <code>{json}</code>
       </pre>
@@ -128,10 +156,11 @@ function NodeLogItem({
           {log.error && (
             <div className="mt-2 flex items-start gap-2 rounded bg-red-50 p-2.5 text-red-700">
               <AlertTriangle size={14} className="mt-0.5 shrink-0" />
-              <div className="text-[11px]">
+              <div className="text-[11px] flex-1">
                 <p className="font-medium">执行错误</p>
                 <p className="mt-0.5">{log.error}</p>
               </div>
+              <CopyButton text={log.error} />
             </div>
           )}
           <JsonBlock data={log.output} title="输出 (Output)" />
@@ -198,7 +227,8 @@ export default function ExecutionLogViewer({
       {execution?.errorMessage && (
         <div className="shrink-0 px-5 py-2 flex items-start gap-2 bg-red-50 text-red-700 border-b">
           <AlertTriangle size={14} className="mt-0.5 shrink-0" />
-          <span className="text-[11px]">{execution.errorMessage}</span>
+          <span className="text-[11px] flex-1">{execution.errorMessage}</span>
+          <CopyButton text={execution.errorMessage} />
         </div>
       )}
 
@@ -216,7 +246,10 @@ export default function ExecutionLogViewer({
           <>
             {execution.triggerData && (
               <div className="px-5 py-3 border-b">
-                <p className="text-[11px] font-medium text-muted-foreground mb-1.5">触发数据</p>
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-[11px] font-medium text-muted-foreground">触发数据</p>
+                  <CopyButton text={JSON.stringify(execution.triggerData, null, 2)} />
+                </div>
                 <pre className="font-mono text-[10px] bg-muted p-2.5 rounded overflow-auto max-h-48">
                   <code>{JSON.stringify(execution.triggerData, null, 2)}</code>
                 </pre>
@@ -239,7 +272,10 @@ export default function ExecutionLogViewer({
 
             {execution.result && Object.keys(execution.result).length > 0 && (
               <div className="px-5 py-3 border-t">
-                <p className="text-[11px] font-medium text-muted-foreground mb-1.5">执行结果</p>
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-[11px] font-medium text-muted-foreground">执行结果</p>
+                  <CopyButton text={JSON.stringify(execution.result, null, 2)} />
+                </div>
                 <JsonBlock data={execution.result} />
               </div>
             )}
