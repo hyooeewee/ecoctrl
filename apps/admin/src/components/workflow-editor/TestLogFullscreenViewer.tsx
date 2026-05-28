@@ -12,6 +12,10 @@ import {
   Terminal,
   AlertTriangle,
   ArrowLeft,
+  Copy,
+  Check,
+  Braces,
+  List,
 } from "lucide-react";
 
 interface TestNodeLog {
@@ -72,12 +76,38 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }, [text]);
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className="flex items-center gap-1 text-[10px] text-muted-foreground transition-colors hover:text-foreground"
+    >
+      {copied ? <Check size={10} className="text-emerald-500" /> : <Copy size={10} />}
+      <span>{copied ? "已复制" : "复制"}</span>
+    </button>
+  );
+}
+
 function JsonBlock({ data, title }: { data: unknown; title?: string }) {
   if (data === undefined || data === null) return null;
   const json = JSON.stringify(data, null, 2);
   return (
     <div className="mt-2">
-      {title && <p className="text-[10px] font-medium text-muted-foreground mb-1">{title}</p>}
+      {title && (
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-[10px] font-medium text-muted-foreground">{title}</p>
+          <CopyButton text={json} />
+        </div>
+      )}
       <pre className="font-mono text-[10px] bg-muted p-2.5 rounded overflow-auto max-h-64">
         <code>{json}</code>
       </pre>
@@ -129,10 +159,11 @@ function NodeLogItem({ log, isFailed }: { log: TestNodeLog; isFailed: boolean })
           {log.error && (
             <div className="mt-2 flex items-start gap-2 rounded bg-red-50 p-2.5 text-red-700">
               <AlertTriangle size={14} className="mt-0.5 shrink-0" />
-              <div className="text-[11px]">
+              <div className="text-[11px] flex-1">
                 <p className="font-medium">执行错误</p>
                 <p className="mt-0.5">{log.error}</p>
               </div>
+              <CopyButton text={log.error} />
             </div>
           )}
           <JsonBlock data={log.output} title="输出 (Output)" />
@@ -149,6 +180,7 @@ export default function TestLogFullscreenViewer({
   if (!testResult) return null;
 
   const isFailed = testResult.status === "failed";
+  const [viewMode, setViewMode] = useState<"card" | "json">("card");
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -164,30 +196,48 @@ export default function TestLogFullscreenViewer({
             {testResult.nodeLogs?.length ?? 0} 个节点
           </span>
           <StatusBadge status={testResult.status} />
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            title={viewMode === "card" ? "切换到 JSON 视图" : "切换到卡片视图"}
+            onClick={() => setViewMode((v) => (v === "card" ? "json" : "card"))}
+          >
+            {viewMode === "card" ? <Braces size={14} /> : <List size={14} />}
+          </Button>
+          {viewMode === "json" && <CopyButton text={JSON.stringify(testResult, null, 2)} />}
         </div>
       </div>
 
-      {testResult.error && (
+      {testResult.error && viewMode === "card" && (
         <div className="shrink-0 px-5 py-2 flex items-start gap-2 bg-red-50 text-red-700 border-b">
           <AlertTriangle size={14} className="mt-0.5 shrink-0" />
-          <span className="text-[11px]">{testResult.error}</span>
+          <span className="text-[11px] flex-1">{testResult.error}</span>
+          <CopyButton text={testResult.error} />
         </div>
       )}
 
       {/* Body */}
       <div className="flex-1 overflow-auto">
-        <div className="px-5 py-2.5 border-b bg-accent/30">
-          <p className="text-[11px] font-medium">节点执行日志</p>
-        </div>
-
-        {testResult.nodeLogs && testResult.nodeLogs.length > 0 ? (
-          testResult.nodeLogs.map((log) => (
-            <NodeLogItem key={log.nodeId} log={log} isFailed={isFailed} />
-          ))
+        {viewMode === "json" ? (
+          <pre className="font-mono text-[10px] bg-muted p-5 rounded overflow-auto h-full">
+            <code>{JSON.stringify(testResult, null, 2)}</code>
+          </pre>
         ) : (
-          <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
-            暂无节点日志
-          </div>
+          <>
+            <div className="px-5 py-2.5 border-b bg-accent/30">
+              <p className="text-[11px] font-medium">节点执行日志</p>
+            </div>
+
+            {testResult.nodeLogs && testResult.nodeLogs.length > 0 ? (
+              testResult.nodeLogs.map((log) => (
+                <NodeLogItem key={log.nodeId} log={log} isFailed={isFailed} />
+              ))
+            ) : (
+              <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
+                暂无节点日志
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
