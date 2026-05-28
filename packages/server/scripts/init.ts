@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import bcrypt from "bcryptjs";
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
-import { eq } from "drizzle-orm";
+import { eq, count } from "drizzle-orm";
 import { intro, isCancel, multiselect, outro } from "@clack/prompts";
 import * as schema from "@/schemas/index";
 import { ensureDatabase } from "@/lib/ensureDatabase";
@@ -269,6 +269,281 @@ async function initPlatformConfig(force = false) {
   }
 }
 
+async function initDashboardWidgets(force = false) {
+  const existing = await db.select({ value: count() }).from(schema.dashboardWidgets);
+  if (existing[0].value > 0 && !force) {
+    console.log("[init] dashboard widgets already seeded, skipping");
+    return;
+  }
+
+  const widgets = [
+    {
+      titleKey: "totalEnergy",
+      icon: "Wind",
+      layoutX: 4,
+      layoutY: 1,
+      layoutW: 3,
+      layoutH: 2,
+      hidden: true,
+      dataType: "stat" as const,
+      dataJson: {
+        value: "8,456",
+        unit: "kWh",
+        delta: "+12%",
+        deltaVariant: "up-bad",
+        sparkline: [280, 310, 295, 340, 380, 420, 395, 440, 410, 460, 480, 500],
+        sparklineColor: "var(--color-chart-1)",
+        footerKey: "totalEnergyFooter",
+      },
+      sortOrder: 0,
+    },
+    {
+      titleKey: "todayCost",
+      icon: "Banknote",
+      layoutX: 1,
+      layoutY: 1,
+      layoutW: 3,
+      layoutH: 2,
+      hidden: false,
+      dataType: "stat" as const,
+      dataJson: {
+        value: "5,240",
+        unit: "costUnit",
+        delta: "+8%",
+        deltaVariant: "up-bad",
+        sparkline: [180, 210, 195, 240, 280, 310, 290, 330, 350, 370, 385, 400],
+        sparklineColor: "var(--color-chart-4)",
+        footerKey: "costFooter",
+      },
+      sortOrder: 1,
+    },
+    {
+      titleKey: "carbonEmission",
+      icon: "Leaf",
+      layoutX: 1,
+      layoutY: 3,
+      layoutW: 3,
+      layoutH: 2,
+      hidden: false,
+      dataType: "stat" as const,
+      dataJson: {
+        value: "2,340",
+        unit: "kg CO₂",
+        delta: "+2%",
+        deltaVariant: "up-bad",
+        sparkline: [280, 320, 290, 350, 310, 270, 340],
+        sparklineColor: "var(--color-chart-2)",
+        footerKey: "carbonFooter",
+      },
+      sortOrder: 2,
+    },
+    {
+      titleKey: "energyIntensity",
+      icon: "Gauge",
+      layoutX: 1,
+      layoutY: 5,
+      layoutW: 3,
+      layoutH: 2,
+      hidden: false,
+      dataType: "stat" as const,
+      dataJson: {
+        value: "98",
+        unit: "kWh/m²",
+        delta: "−7%",
+        deltaVariant: "down-good",
+        sparkline: [120, 115, 112, 108, 105, 103, 100, 99, 97, 96, 97, 98],
+        sparklineColor: "var(--color-chart-1)",
+        footerKey: "intensityFooter",
+      },
+      sortOrder: 3,
+    },
+    {
+      titleKey: "loadStatus",
+      icon: "Activity",
+      layoutX: 1,
+      layoutY: 7,
+      layoutW: 3,
+      layoutH: 2,
+      hidden: false,
+      dataType: "stat" as const,
+      dataJson: {
+        value: "60",
+        unit: "%",
+        delta: "loadNormal",
+        deltaVariant: "up-good",
+        sparkline: [55, 58, 60, 63, 61, 60, 58, 59, 60, 62, 61, 60],
+        sparklineColor: "var(--color-chart-2)",
+        progressValue: 60,
+      },
+      sortOrder: 4,
+    },
+    {
+      titleKey: "renewableRate",
+      icon: "Sun",
+      layoutX: 4,
+      layoutY: 3,
+      layoutW: 3,
+      layoutH: 2,
+      hidden: true,
+      dataType: "stat" as const,
+      dataJson: {
+        value: "85",
+        unit: "%",
+        delta: "renewableTarget",
+        deltaVariant: "neutral",
+        sparkline: [78, 80, 81, 80, 82, 84, 83, 85, 84, 86, 85, 85],
+        sparklineColor: "var(--color-cyber-green)",
+        progressValue: 85,
+      },
+      sortOrder: 5,
+    },
+    {
+      titleKey: "weather",
+      icon: "Cloud",
+      layoutX: 14,
+      layoutY: 1,
+      layoutW: 3,
+      layoutH: 2,
+      hidden: false,
+      dataType: "weather" as const,
+      dataJson: {},
+      sortOrder: 6,
+    },
+    {
+      titleKey: "charts.trendTitle",
+      icon: "TrendingUp",
+      layoutX: 4,
+      layoutY: 6,
+      layoutW: 6,
+      layoutH: 3,
+      hidden: false,
+      dataType: "chart" as const,
+      dataJson: {
+        chartType: "area",
+        points: [
+          { label: "Mon", value: 400 },
+          { label: "Tue", value: 300 },
+          { label: "Wed", value: 500 },
+          { label: "Thu", value: 280 },
+          { label: "Fri", value: 590 },
+          { label: "Sat", value: 320 },
+          { label: "Sun", value: 250 },
+        ],
+      },
+      sortOrder: 7,
+    },
+    {
+      titleKey: "charts.breakdownTitle",
+      icon: "ChartPie",
+      layoutX: 10,
+      layoutY: 6,
+      layoutW: 4,
+      layoutH: 3,
+      hidden: false,
+      dataType: "chart" as const,
+      dataJson: {
+        chartType: "donut",
+        items: [
+          { label: "hvac", value: 45, color: "var(--color-chart-1)" },
+          { label: "lighting", value: 30, color: "var(--color-chart-3)" },
+          { label: "equipment", value: 15, color: "var(--color-chart-4)" },
+          { label: "other", value: 10, color: "oklch(0.35 0.02 265)" },
+        ],
+      },
+      sortOrder: 8,
+    },
+    {
+      titleKey: "alerts.title",
+      icon: "Bell",
+      layoutX: 14,
+      layoutY: 7,
+      layoutW: 3,
+      layoutH: 2,
+      hidden: false,
+      dataType: "list" as const,
+      dataJson: {
+        items: [
+          {
+            icon: "AlertTriangle",
+            title: "能耗异常波动 (超出阈值 20%)",
+            subtitle: "中央空调 A1",
+            severity: "critical",
+            time: "10:15:22",
+          },
+          {
+            icon: "ExclamationCircle",
+            title: "电压不稳定告警",
+            subtitle: "配电柜 B3",
+            severity: "warning",
+            time: "09:45:10",
+          },
+          {
+            icon: "InfoCircle",
+            title: "例行维保提醒",
+            subtitle: "水泵 C1",
+            severity: "info",
+            time: "08:00:00",
+          },
+        ],
+      },
+      sortOrder: 9,
+    },
+    {
+      titleKey: "devices.title",
+      icon: "Monitor",
+      layoutX: 14,
+      layoutY: 5,
+      layoutW: 3,
+      layoutH: 2,
+      hidden: false,
+      dataType: "list" as const,
+      dataJson: {
+        items: [
+          { icon: "Wind", label: "devices.airConditioning", value: 6, status: "critical" },
+          { icon: "Zap", label: "devices.lighting", value: 30, status: "warn" },
+          { icon: "Elevator", label: "devices.elevators", value: 10, status: "ok" },
+          { icon: "Server", label: "devices.servers", value: 24, status: "ok" },
+        ],
+      },
+      sortOrder: 10,
+    },
+    {
+      titleKey: "ai.title",
+      icon: "BrainCircuit",
+      layoutX: 14,
+      layoutY: 3,
+      layoutW: 3,
+      layoutH: 2,
+      hidden: false,
+      dataType: "list" as const,
+      dataJson: {
+        items: [
+          {
+            icon: "Wind",
+            text: "优化暖通夜间计划——降低夜间温控设定值至 18°C",
+            saving: "预计节能 12%",
+          },
+          { icon: "Zap", text: "根据占用传感器调整照明——B2–B4 区域", saving: "预计节能 8%" },
+          {
+            icon: "Server",
+            text: "将非关键服务器任务迁移至低峰期 (02:00–06:00)",
+            saving: "预计节省 5% 费用",
+          },
+        ],
+      },
+      sortOrder: 11,
+    },
+  ];
+
+  if (existing[0].value > 0 && force) {
+    await db.delete(schema.dashboardWidgets);
+    console.log("[init] cleared existing dashboard widgets (force mode)");
+  }
+
+  await db.insert(schema.dashboardWidgets).values(widgets);
+  console.log("[init] seeded dashboard widgets");
+}
+
 // ─── Module registry ──────────────────────────────────────────────
 
 const MODULES: InitModule[] = [
@@ -283,6 +558,12 @@ const MODULES: InitModule[] = [
   { value: "pets", label: "内置宠物 (pets)", forceable: true, run: initBuiltInPets },
   { value: "users", label: "默认管理员 (users)", forceable: true, run: initUsers },
   { value: "config", label: "平台配置 (config)", forceable: true, run: initPlatformConfig },
+  {
+    value: "widgets",
+    label: "Dashboard 组件 (widgets)",
+    forceable: true,
+    run: initDashboardWidgets,
+  },
 ];
 
 // ─── Main ─────────────────────────────────────────────────────────
