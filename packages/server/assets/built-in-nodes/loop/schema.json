@@ -3,27 +3,27 @@
   "properties": {
     "mode": {
       "type": "string",
-      "title": "Mode",
+      "title": "模式",
       "enum": ["foreach", "while"],
       "default": "foreach"
     },
     "maxIterations": {
       "type": "number",
-      "title": "Max Iterations",
+      "title": "最大迭代次数",
       "default": 100
     },
     "items": {
       "type": "string",
-      "title": "Items (expression)"
+      "title": "遍历项 (foreach 模式)"
     },
     "itemVar": {
       "type": "string",
-      "title": "Item Variable Name",
+      "title": "项变量名",
       "default": "item"
     },
     "condition": {
       "type": "string",
-      "title": "Condition (while mode)"
+      "title": "条件表达式 (while 模式)"
     }
   }
 }

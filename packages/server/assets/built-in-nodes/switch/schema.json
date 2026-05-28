@@ -3,23 +3,24 @@
   "properties": {
     "expression": {
       "type": "string",
-      "title": "Expression"
+      "title": "表达式"
     },
     "cases": {
       "type": "array",
-      "title": "Cases",
+      "title": "分支条件",
       "items": {
         "type": "object",
         "properties": {
-          "value": { "type": "string", "title": "Value" },
+          "value": { "type": "string", "title": "匹配值" },
           "operator": {
             "type": "string",
-            "title": "Operator",
+            "title": "运算符",
             "enum": ["===", "==", "!=", "!==", ">", "<", ">=", "<="],
             "default": "==="
           }
         }
       }
     }
-  }
+  },
+  "required": ["expression"]
 }

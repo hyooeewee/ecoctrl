@@ -3,7 +3,7 @@
   "properties": {
     "method": {
       "type": "string",
-      "title": "Method",
+      "title": "请求方法",
       "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],
       "default": "GET"
     },
@@ -14,21 +14,22 @@
     },
     "headers": {
       "type": "object",
-      "title": "Headers"
+      "title": "请求头"
     },
     "body": {
       "type": "object",
-      "title": "Body"
+      "title": "请求体"
     },
     "timeoutMs": {
       "type": "number",
-      "title": "Timeout (ms)",
+      "title": "超时 (毫秒)",
       "default": 10000
     },
     "retry": {
       "type": "number",
-      "title": "Retry Count",
+      "title": "重试次数",
       "default": 0
     }
-  }
+  },
+  "required": ["url"]
 }

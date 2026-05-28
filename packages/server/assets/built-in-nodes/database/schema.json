@@ -3,26 +3,27 @@
   "properties": {
     "operation": {
       "type": "string",
-      "title": "Operation",
+      "title": "操作",
       "enum": ["select", "insert", "update", "delete"],
       "default": "select"
     },
     "table": {
       "type": "string",
-      "title": "Table"
+      "title": "表名"
     },
     "where": {
       "type": "object",
-      "title": "Where"
+      "title": "条件"
     },
     "data": {
       "type": "object",
-      "title": "Data"
+      "title": "数据"
     },
     "returning": {
       "type": "array",
-      "title": "Returning Columns",
+      "title": "返回列",
       "items": { "type": "string" }
     }
-  }
+  },
+  "required": ["operation", "table"]
 }
