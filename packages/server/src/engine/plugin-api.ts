@@ -131,6 +131,10 @@ export function createPluginApi(
         const useSecure = options.smtpSecure ?? options.smtpPort === 465;
         const requireTLS = !useSecure && options.smtpPort === 587;
 
+        logger.info(
+          `[SMTP] Config: host=${options.smtpHost}, port=${options.smtpPort}, secure=${useSecure}, requireTLS=${requireTLS}, user=${options.smtpUser}, from=${options.from || options.smtpUser}`,
+        );
+
         const transport = createTransport({
           host: options.smtpHost,
           port: options.smtpPort,
@@ -140,7 +144,7 @@ export function createPluginApi(
           connectionTimeout: 15000,
           greetingTimeout: 15000,
           socketTimeout: 15000,
-          tls: { rejectUnauthorized: false },
+          tls: { rejectUnauthorized: false, minVersion: "TLSv1" },
         });
 
         try {
@@ -149,23 +153,16 @@ export function createPluginApi(
             `[SMTP] Transport verified OK for ${options.smtpHost}:${options.smtpPort} (user=${options.smtpUser})`,
           );
         } catch (verifyErr) {
-          const err = verifyErr as Error & { code?: string; command?: string };
-          logger.error(
-            `[SMTP] Transport verify failed for ${options.smtpHost}:${options.smtpPort}: ${err.message} (code=${err.code})`,
+          const err = verifyErr as Error & {
+            code?: string;
+            command?: string;
+            responseCode?: number;
+            response?: string;
+          };
+          logger.warn(
+            `[SMTP] Transport verify warning for ${options.smtpHost}:${options.smtpPort}: ${err.message} (code=${err.code}, command=${err.command}, responseCode=${err.responseCode}, response="${err.response}")`,
           );
-          if (err.code === "ETIMEDOUT" || err.message.includes("Timeout")) {
-            throw new Error(
-              `SMTP 连接超时 (${options.smtpHost}:${options.smtpPort})。请检查: 1) 主机/端口是否正确 2) 防火墙是否允许出站 3) 163/QQ 邮箱需使用授权码而非登录密码 4) 465 端口需 SSL, 587 端口需 STARTTLS`,
-              { cause: verifyErr },
-            );
-          }
-          if (err.message.includes("Invalid login") || err.message.includes("AUTH")) {
-            throw new Error(
-              `SMTP 认证失败 (${options.smtpUser})。163/QQ 等邮箱请使用"授权码"代替登录密码。`,
-              { cause: verifyErr },
-            );
-          }
-          throw new Error(`SMTP 连接验证失败: ${err.message}`, { cause: verifyErr });
+          // Continue to sendMail — some servers fail verify but accept actual mail
         }
 
         const senderFrom = options.from || options.smtpUser;
