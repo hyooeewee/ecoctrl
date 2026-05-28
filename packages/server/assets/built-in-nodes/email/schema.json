@@ -25,10 +25,6 @@
       "type": "string",
       "title": "主题"
     },
-    "template": {
-      "type": "string",
-      "title": "模板"
-    },
     "body": {
       "type": "string",
       "title": "正文",
@@ -61,6 +57,11 @@
       "type": "boolean",
       "title": "使用 SSL / TLS",
       "default": false
+    },
+    "retry": {
+      "type": "number",
+      "title": "重试次数",
+      "default": 0
     }
   },
   "required": ["to", "subject", "body", "smtpHost", "smtpPort", "smtpUser", "smtpPass"]

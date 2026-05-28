@@ -14,7 +14,6 @@ module.exports = async function execute(ctx, api) {
   const body = String(ctx.config.body || "");
   const bodyType = String(ctx.config.bodyType || "text");
 
-  // Node-level SMTP overrides (all-or-nothing: partial config triggers strict error)
   const smtpHost = String(ctx.config.smtpHost || "");
   const smtpPort = ctx.config.smtpPort !== undefined ? Number(ctx.config.smtpPort) : undefined;
   const smtpUser = String(ctx.config.smtpUser || "");

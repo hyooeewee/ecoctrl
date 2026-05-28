@@ -1,11 +1,13 @@
 module.exports = async function execute(ctx, api) {
   const pointName = String(ctx.config.pointName || "");
+
   if (!pointName) {
     api.log.error("[point_read] missing required field 'pointName'");
     throw new Error("point_read node requires 'pointName'");
   }
 
   api.log.info(`[point_read] reading point: ${pointName}`);
+
   let values;
   try {
     values = await api.iot.readPoints([pointName]);
