@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import { ChevronRight, ChevronDown } from "lucide-react";
+import { Maximize2 } from "lucide-react";
 import { Badge } from "@ecoctrl/ui/badge";
 import { ScrollArea } from "@ecoctrl/ui/scroll-area";
 
@@ -23,9 +23,15 @@ interface WorkflowTestPanelProps {
   } | null;
   testLogOpen: boolean;
   onToggle: () => void;
+  onFullscreen: () => void;
 }
 
-export function WorkflowTestPanel({ testResult, testLogOpen, onToggle }: WorkflowTestPanelProps) {
+export function WorkflowTestPanel({
+  testResult,
+  testLogOpen,
+  onToggle,
+  onFullscreen,
+}: WorkflowTestPanelProps) {
   if (!testResult) return null;
 
   // Resizable panel height
@@ -93,10 +99,16 @@ export function WorkflowTestPanel({ testResult, testLogOpen, onToggle }: Workflo
             {testResult.nodeLogs?.length ?? 0} 个节点
           </span>
         </div>
-        {testLogOpen ? (
-          <ChevronDown size={14} className="text-muted-foreground" />
-        ) : (
-          <ChevronRight size={14} className="text-muted-foreground" />
+        {testLogOpen && (
+          <Maximize2
+            size={14}
+            className="text-muted-foreground cursor-pointer hover:text-foreground"
+            onClick={(e) => {
+              e.stopPropagation();
+              onFullscreen();
+            }}
+            title="全屏"
+          />
         )}
       </button>
 

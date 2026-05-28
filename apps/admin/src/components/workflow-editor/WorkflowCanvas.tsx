@@ -32,6 +32,7 @@ import { WorkflowTestPanel } from "./WorkflowTestPanel";
 import { WorkflowNodeConfig } from "./WorkflowNodeConfig";
 import { WorkflowDialogs } from "./WorkflowDialogs";
 import { VariableEditor } from "./VariableEditor";
+import TestLogFullscreenViewer from "./TestLogFullscreenViewer";
 
 interface WorkflowCanvasProps {
   workflowId: string | null;
@@ -55,7 +56,7 @@ export default function WorkflowCanvas({ workflowId, onBack, onDirtyChange }: Wo
 
   return (
     <div className="flex h-full flex-col">
-      {!canvas.envVarFullscreen && (
+      {!canvas.envVarFullscreen && !canvas.testLogFullscreen && (
         <WorkflowToolbar
           workflowName={canvas.workflowName}
           isPublished={canvas.isPublished}
@@ -98,6 +99,11 @@ export default function WorkflowCanvas({ workflowId, onBack, onDirtyChange }: Wo
             canvas.setShowEnvVarsDialog(true);
           }}
           fullscreen={true}
+        />
+      ) : canvas.testLogFullscreen ? (
+        <TestLogFullscreenViewer
+          testResult={canvas.testResult}
+          onBack={() => canvas.setTestLogFullscreen(false)}
         />
       ) : (
         <div className="flex flex-1 overflow-hidden">
@@ -489,6 +495,7 @@ export default function WorkflowCanvas({ workflowId, onBack, onDirtyChange }: Wo
               testResult={canvas.testResult}
               testLogOpen={canvas.testLogOpen}
               onToggle={() => canvas.setTestLogOpen((v) => !v)}
+              onFullscreen={() => canvas.setTestLogFullscreen(true)}
             />
           </div>
 
