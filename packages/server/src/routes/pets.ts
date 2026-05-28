@@ -67,7 +67,7 @@ async function listPets(
       const hasSpritesheet = await storage.exists(spritesheetKey);
       if (!hasSpritesheet) continue;
 
-      const spritesheetUrl = await storage.getUrl(spritesheetKey);
+      const spritesheetUrl = `/api/pets/${petId}/spritesheet`;
       results.push({
         id: petId,
         displayName: validated.displayName,
@@ -108,6 +108,37 @@ export default async function petRoutes(fastify: FastifyInstance) {
     async (_request: FastifyRequest, reply: FastifyReply) => {
       const pets = await listPets(storage);
       return reply.send({ pets });
+    },
+  );
+
+  fastify.get(
+    "/:id/spritesheet",
+    {
+      schema: {
+        tags: ["Pets"],
+        summary: "Get a pet's spritesheet image",
+        security: [],
+        params: z.object({ id: z.string() }),
+        response: {
+          200: z.any().describe("image/webp"),
+          ...errors,
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const key = `${id}/spritesheet.webp`;
+
+      const exists = await storage.exists(key);
+      if (!exists) {
+        return reply.status(404).send({ error: "Spritesheet not found" });
+      }
+
+      const stream = await storage.get(key);
+      return reply
+        .header("Content-Type", "image/webp")
+        .header("Cache-Control", "public, max-age=3600")
+        .send(stream);
     },
   );
 
