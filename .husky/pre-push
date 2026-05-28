@@ -8,7 +8,9 @@ git add apps/*/.env.example packages/*/.env.example
 
 if [ -f "docker/.env.local" ]; then
   uv run scripts/generate-compose.py --all
-  git add docker/compose.yaml docker/compose.dev.yaml docker/compose.build.yaml
+  for f in docker/compose.yaml docker/compose.dev.yaml docker/compose.build.yaml; do
+    git diff --quiet "$f" || git add "$f"
+  done
 fi
 
 # Auto-generate DB migrations if schema files changed

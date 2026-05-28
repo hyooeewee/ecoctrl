@@ -34,13 +34,6 @@ except ImportError:
     sys.exit(1)
 
 
-def _str_representer(dumper, data):
-    """Force double quotes for all string values to match project style."""
-    return dumper.represent_scalar("tag:yaml.org,2002:str", data, style='"')
-
-
-yaml.add_representer(str, _str_representer)
-
 try:
     import questionary
 except ImportError:
