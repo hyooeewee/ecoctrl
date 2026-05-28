@@ -36,7 +36,10 @@ function createMockApi(): PluginApi {
     utils: { sleep: async () => {} },
     expr: { evaluateBoolean: () => false, evaluateExpression: () => null },
     db: { execute: async () => ({}) },
-    workflow: { executeSubGraph: async () => ({}) },
+    workflow: {
+      executeSubGraph: async () => ({}),
+      executeById: async () => ({ status: "completed", nodeLogs: [] }),
+    },
   };
 }
 

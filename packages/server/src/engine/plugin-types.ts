@@ -42,6 +42,15 @@ export interface ExecutionContext {
   nodeOutputs: Map<string, Record<string, unknown>>;
   triggerData: Record<string, unknown>;
   env: Record<string, string>;
+  secrets: Record<string, string>;
+}
+
+export interface WorkflowExecutionResult {
+  status: string;
+  output?: Record<string, unknown>;
+  error?: string;
+  nodeLogs: unknown[];
+  dryRun?: boolean;
 }
 
 export interface PluginApi {
@@ -136,5 +145,9 @@ export interface PluginApi {
   };
   workflow: {
     executeSubGraph(nodes: unknown[], edges: unknown[]): Promise<Record<string, unknown>>;
+    executeById(
+      workflowId: string,
+      triggerData?: Record<string, unknown>,
+    ): Promise<WorkflowExecutionResult>;
   };
 }
