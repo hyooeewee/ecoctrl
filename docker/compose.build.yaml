@@ -49,7 +49,7 @@ services:
     restart: always
     environment:
       NODE_ENV: development
-      PORT: "3000"
+      PORT: '3000'
       HOST: 0.0.0.0
       DATABASE_URL: postgresql://ecoctrl:ecoctrl_secret@postgres:5432/ecoctrl
       STORAGE_PROVIDER: minio
@@ -59,7 +59,7 @@ services:
       S3_BUCKET_FILES: ecoctrl-files
       S3_BUCKET_MODELS: ecoctrl-models
       S3_BUCKET_PLUGINS: ecoctrl-plugins
-      S3_FORCE_PATH_STYLE: "true"
+      S3_FORCE_PATH_STYLE: 'true'
       INIT_ADMIN_USERNAME: admin
       INIT_ADMIN_PASSWORD: admin_secret
       INIT_ADMIN_EMAIL: admin@example.com
