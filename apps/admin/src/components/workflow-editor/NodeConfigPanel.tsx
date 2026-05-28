@@ -708,24 +708,25 @@ function SchemaField({
     );
   }
 
-  // Number / integer
+  // Number / integer (also supports expression references like {{var.x}})
   if (prop.type === "number" || prop.type === "integer") {
     return (
       <div className="space-y-1.5">
         <FieldLabel label={label} required={required} inputId={inputId} />
         <FieldDescription text={description} />
-        <Input
+        <ExpressionInput
           id={inputId}
-          type="number"
-          value={value === undefined || value === null ? "" : String(value)}
-          placeholder={prop.placeholder ?? `请输入 ${label}`}
-          min={prop.minimum}
-          max={prop.maximum}
-          onChange={(e) => {
-            const val = e.target.value === "" ? undefined : Number(e.target.value);
-            onChange(val);
+          value={stringValue}
+          onChange={(v) => {
+            if (v === "") {
+              onChange(undefined);
+            } else {
+              onChange(v);
+            }
           }}
-          className={inputBaseClasses}
+          placeholder={prop.placeholder ?? `请输入 ${label}`}
+          upstreamNodes={upstreamNodes}
+          envVars={envVars}
         />
       </div>
     );
@@ -778,6 +779,7 @@ export { ExpressionRefHelper };
 export type { UpstreamNodeInfo };
 
 export function NodeConfigPanel({
+  nodeId,
   currentConfig,
   schema,
   skipFields,
@@ -786,11 +788,32 @@ export function NodeConfigPanel({
   getNodeDef,
   onChange,
 }: NodeConfigPanelProps) {
-  const [formData, setFormData] = useState<Record<string, unknown>>(currentConfig);
-
   const typedSchema = schema as JsonSchema;
   const properties = typedSchema.properties ?? {};
   const requiredSet = new Set(typedSchema.required ?? []);
+  const skip = new Set(skipFields ?? []);
+  const propertyEntries = Object.entries(properties).filter(([key]) => !skip.has(key));
+
+  const buildInitialForm = useCallback(
+    (base: Record<string, unknown>) => {
+      const initial = { ...base };
+      for (const [key, prop] of propertyEntries) {
+        if (!(key in initial) && prop.default !== undefined) {
+          initial[key] = prop.default;
+        }
+      }
+      return initial;
+    },
+    [propertyEntries],
+  );
+
+  const [formData, setFormData] = useState<Record<string, unknown>>(() =>
+    buildInitialForm(currentConfig),
+  );
+
+  useEffect(() => {
+    setFormData(buildInitialForm(currentConfig));
+  }, [nodeId, buildInitialForm, currentConfig]);
 
   const envVarsForHelper = (envVars ?? []).map((v) => ({ key: v.key, type: v.type }));
 
@@ -814,17 +837,11 @@ export function NodeConfigPanel({
   const handleFieldChange = useCallback(
     (key: string, value: unknown) => {
       const next = { ...formData, [key]: value };
-      if (value === undefined) {
-        delete next[key];
-      }
       setFormData(next);
       onChange(next);
     },
     [formData, onChange],
   );
-
-  const skip = new Set(skipFields ?? []);
-  const propertyEntries = Object.entries(properties).filter(([key]) => !skip.has(key));
 
   if (propertyEntries.length === 0) {
     return (
@@ -852,7 +869,7 @@ export function NodeConfigPanel({
           key={key}
           name={key}
           prop={prop}
-          value={formData[key] ?? prop.default}
+          value={formData[key]}
           required={requiredSet.has(key)}
           upstreamNodes={resolvedUpstream}
           envVars={envVarsForHelper}
