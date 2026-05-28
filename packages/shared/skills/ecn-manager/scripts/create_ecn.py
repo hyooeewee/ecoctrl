@@ -129,11 +129,11 @@ def write_files(
     source_dir.mkdir(parents=True, exist_ok=True)
 
     (source_dir / "manifest.json").write_text(
-        json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+        json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
     (source_dir / "backend.js").write_text(backend_js, encoding="utf-8")
     (source_dir / "schema.json").write_text(
-        json.dumps(schema, indent=2) + "\n", encoding="utf-8"
+        json.dumps(schema, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
     (source_dir / icon_name).write_text(icon_svg, encoding="utf-8")
 
