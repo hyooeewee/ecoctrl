@@ -243,7 +243,7 @@ export function WorkflowNodeConfig({
 
   return (
     <div
-      className="relative flex shrink-0 flex-col border-l bg-white dark:bg-zinc-900"
+      className="relative flex h-full shrink-0 flex-col overflow-hidden border-l bg-white dark:bg-zinc-900"
       style={{ width: panelWidth }}
     >
       {/* Resize handle */}
@@ -346,7 +346,11 @@ export function WorkflowNodeConfig({
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeConfigTab} onValueChange={onTabChange} className="flex flex-1 flex-col">
+      <Tabs
+        value={activeConfigTab}
+        onValueChange={onTabChange}
+        className="flex flex-1 flex-col overflow-hidden"
+      >
         <div className="mx-4 mt-3 flex gap-6 border-b border-border/50">
           <button
             onClick={() => onTabChange("config")}
@@ -380,8 +384,8 @@ export function WorkflowNodeConfig({
           </button>
         </div>
 
-        <TabsContent value="config" className="mt-0 flex-1">
-          <ScrollArea className="h-[calc(100vh-180px)]">
+        <TabsContent value="config" className="mt-0 flex-1 overflow-hidden">
+          <ScrollArea className="h-full">
             <div className="space-y-6 px-4 py-5">
               {/* Point nodes - special combobox for point names */}
               {isPointNode && (
@@ -477,8 +481,8 @@ export function WorkflowNodeConfig({
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="history" className="mt-0 flex-1">
-          <ScrollArea className="h-[calc(100vh-180px)]">
+        <TabsContent value="history" className="mt-0 flex-1 overflow-hidden">
+          <ScrollArea className="h-full">
             <div className="p-4 space-y-3">
               {!testResult?.nodeLogs || testResult.nodeLogs.length === 0 ? (
                 <div className="flex h-32 flex-col items-center justify-center gap-2">
@@ -539,8 +543,8 @@ export function WorkflowNodeConfig({
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="related" className="mt-0 flex-1">
-          <ScrollArea className="h-[calc(100vh-180px)]">
+        <TabsContent value="related" className="mt-0 flex-1 overflow-hidden">
+          <ScrollArea className="h-full">
             <div className="space-y-5 px-4 py-5">
               {/* Upstream */}
               {parentNodes.length > 0 && (
