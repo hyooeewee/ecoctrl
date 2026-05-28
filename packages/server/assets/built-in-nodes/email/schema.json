@@ -3,25 +3,64 @@
   "properties": {
     "to": {
       "type": "string",
-      "title": "To"
+      "title": "收件人"
+    },
+    "cc": {
+      "type": "string",
+      "title": "抄送"
+    },
+    "bcc": {
+      "type": "string",
+      "title": "密送"
+    },
+    "from": {
+      "type": "string",
+      "title": "发件人"
+    },
+    "replyTo": {
+      "type": "string",
+      "title": "回复地址"
     },
     "subject": {
       "type": "string",
-      "title": "Subject"
+      "title": "主题"
     },
     "template": {
       "type": "string",
-      "title": "Template"
+      "title": "模板"
     },
     "body": {
       "type": "string",
-      "title": "Body"
+      "title": "正文",
+      "format": "textarea"
     },
     "bodyType": {
       "type": "string",
-      "title": "Body Type",
+      "title": "正文类型",
       "enum": ["text", "html"],
       "default": "text"
+    },
+    "smtpHost": {
+      "type": "string",
+      "title": "SMTP 服务器"
+    },
+    "smtpPort": {
+      "type": "integer",
+      "title": "SMTP 端口",
+      "default": 587
+    },
+    "smtpUser": {
+      "type": "string",
+      "title": "SMTP 用户名"
+    },
+    "smtpPass": {
+      "type": "string",
+      "title": "SMTP 密码 / 授权码"
+    },
+    "smtpSecure": {
+      "type": "boolean",
+      "title": "使用 SSL / TLS",
+      "default": false
     }
   },
   "required": ["to", "subject", "body"]
