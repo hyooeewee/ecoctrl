@@ -342,6 +342,17 @@ export default async function modelRoutes(fastify: FastifyInstance) {
     },
   );
 
+  const CONTENT_TYPE_MAP: Record<string, string> = {
+    ".glb": "model/gltf-binary",
+    ".gltf": "model/gltf+json",
+    ".zip": "application/zip",
+  };
+
+  function resolveContentType(fileUrl: string): string {
+    const ext = fileUrl.slice(fileUrl.lastIndexOf(".")).toLowerCase();
+    return CONTENT_TYPE_MAP[ext] || "application/octet-stream";
+  }
+
   fastify.get(
     "/:id/file",
     {
@@ -362,8 +373,11 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         return reply.status(404).send({ error: "Model or file not found" });
       }
 
-      const url = await storage.getUrl(model.fileUrl);
-      return reply.redirect(url);
+      const stream = await storage.get(model.fileUrl);
+      return reply
+        .header("Content-Type", resolveContentType(model.fileUrl))
+        .header("Cache-Control", "public, max-age=3600")
+        .send(stream);
     },
   );
 
