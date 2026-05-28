@@ -1,5 +1,41 @@
 # @ecoctrl/admin
 
+## 0.5.0
+
+### Minor Changes
+
+- [`c77f0b7`](https://github.com/hyooeewee/ecoctrl/commit/c77f0b7989523f333679e78aae6146e09134d6da) Thanks [@hyooeewee](https://github.com/hyooeewee)! - Refactor workflow editor with unified node shell, variable editor, and extracted canvas hooks.
+
+- [`c77f0b7`](https://github.com/hyooeewee/ecoctrl/commit/c77f0b7989523f333679e78aae6146e09134d6da) Thanks [@hyooeewee](https://github.com/hyooeewee)! - Add ECN manager skill toolchain for custom workflow node development.
+
+- [`c77f0b7`](https://github.com/hyooeewee/ecoctrl/commit/c77f0b7989523f333679e78aae6146e09134d6da) Thanks [@hyooeewee](https://github.com/hyooeewee)! - Standardize built-in nodes with SVG icons and kebab-case naming fixes.
+
+- [`c77f0b7`](https://github.com/hyooeewee/ecoctrl/commit/c77f0b7989523f333679e78aae6146e09134d6da) Thanks [@hyooeewee](https://github.com/hyooeewee)! - Rebuild models/objects/points management UI with data table panels and create/edit dialogs.
+
+- [`c77f0b7`](https://github.com/hyooeewee/ecoctrl/commit/c77f0b7989523f333679e78aae6146e09134d6da) Thanks [@hyooeewee](https://github.com/hyooeewee)! - Squash database migrations into single init file.
+
+- [`c77f0b7`](https://github.com/hyooeewee/ecoctrl/commit/c77f0b7989523f333679e78aae6146e09134d6da) Thanks [@hyooeewee](https://github.com/hyooeewee)! - Add SSE real-time push system across admin, web, and server.
+
+### Patch Changes
+
+- [`c77f0b7`](https://github.com/hyooeewee/ecoctrl/commit/c77f0b7989523f333679e78aae6146e09134d6da) Thanks [@hyooeewee](https://github.com/hyooeewee)! - Update Docker build scripts and compose files.
+
+- [`c77f0b7`](https://github.com/hyooeewee/ecoctrl/commit/c77f0b7989523f333679e78aae6146e09134d6da) Thanks [@hyooeewee](https://github.com/hyooeewee)! - Extend UI library with checkbox, hover-card, pagination, and sonner.
+
+- [`c77f0b7`](https://github.com/hyooeewee/ecoctrl/commit/c77f0b7989523f333679e78aae6146e09134d6da) Thanks [@hyooeewee](https://github.com/hyooeewee)! - Patch API clients and server routes for new features.
+
+- [`c77f0b7`](https://github.com/hyooeewee/ecoctrl/commit/c77f0b7989523f333679e78aae6146e09134d6da) Thanks [@hyooeewee](https://github.com/hyooeewee)! - Adjust release and compose helper scripts.
+
+- [`c77f0b7`](https://github.com/hyooeewee/ecoctrl/commit/c77f0b7989523f333679e78aae6146e09134d6da) Thanks [@hyooeewee](https://github.com/hyooeewee)! - Remove husky pre-commit and update pre-push hook.
+
+- [`c77f0b7`](https://github.com/hyooeewee/ecoctrl/commit/c77f0b7989523f333679e78aae6146e09134d6da) Thanks [@hyooeewee](https://github.com/hyooeewee)! - Add color mode hook and update dark mode utilities.
+
+- [`c77f0b7`](https://github.com/hyooeewee/ecoctrl/commit/c77f0b7989523f333679e78aae6146e09134d6da) Thanks [@hyooeewee](https://github.com/hyooeewee)! - Refresh dependencies via pnpm-lock.
+
+- [`c77f0b7`](https://github.com/hyooeewee/ecoctrl/commit/c77f0b7989523f333679e78aae6146e09134d6da) Thanks [@hyooeewee](https://github.com/hyooeewee)! - Add CI/CD workflows for canary and stable releases.
+
+- [`c77f0b7`](https://github.com/hyooeewee/ecoctrl/commit/c77f0b7989523f333679e78aae6146e09134d6da) Thanks [@hyooeewee](https://github.com/hyooeewee)! - Add test coverage for SSE, workflow, and storage modules.
+
 ## 0.4.10
 
 ### Patch Changes
