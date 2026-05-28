@@ -8,6 +8,7 @@ import {
   Braces,
   Scroll,
   AlignLeft,
+  Upload,
 } from "lucide-react";
 import { Button } from "@ecoctrl/ui/button";
 import { Input } from "@ecoctrl/ui/input";
@@ -15,6 +16,58 @@ import { Switch } from "@ecoctrl/ui/switch";
 import { useState, useRef } from "react";
 import { Editor } from "@monaco-editor/react";
 import type { EnvVar } from "./types";
+
+// ========================================
+// Import helpers
+// ========================================
+
+function inferType(key: string, value: unknown): EnvVar["type"] {
+  if (typeof value === "boolean") return "boolean";
+  if (typeof value === "number") return "number";
+  if (typeof value === "string") {
+    const secretKeywords = [
+      "secret",
+      "password",
+      "token",
+      "key",
+      "api_key",
+      "auth",
+      "credential",
+      "private",
+    ];
+    if (secretKeywords.some((k) => key.toLowerCase().includes(k))) return "secret";
+    return "string";
+  }
+  return "string";
+}
+
+function parseEnvValue(raw: string): unknown {
+  if (raw === "true" || raw === "True" || raw === "TRUE") return true;
+  if (raw === "false" || raw === "False" || raw === "FALSE") return false;
+  const num = Number(raw);
+  if (!Number.isNaN(num) && raw !== "") return num;
+  return raw;
+}
+
+function parseEnvFile(content: string): Array<{ key: string; value: unknown }> {
+  const result: Array<{ key: string; value: unknown }> = [];
+  for (const line of content.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eqIdx = trimmed.indexOf("=");
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    let rawValue = trimmed.slice(eqIdx + 1).trim();
+    if (
+      (rawValue.startsWith('"') && rawValue.endsWith('"')) ||
+      (rawValue.startsWith("'") && rawValue.endsWith("'"))
+    ) {
+      rawValue = rawValue.slice(1, -1);
+    }
+    result.push({ key, value: parseEnvValue(rawValue) });
+  }
+  return result;
+}
 
 // ========================================
 // Key Value Row — card layout
@@ -191,6 +244,7 @@ export function VariableEditor({
   const editorRef = useRef<
     Parameters<NonNullable<React.ComponentProps<typeof Editor>["onMount"]>>[0] | null
   >(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const syncFormToJson = () => {
     try {
@@ -270,6 +324,64 @@ export function VariableEditor({
     editorRef.current?.getAction("editor.action.formatDocument")?.run();
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      if (!content) return;
+
+      try {
+        let entries: Array<{ key: string; value: unknown }> = [];
+
+        try {
+          const parsed = JSON.parse(content);
+          if (Array.isArray(parsed)) {
+            entries = parsed.map((item: Record<string, unknown>) => ({
+              key: String(item.key ?? ""),
+              value: item.value ?? "",
+            }));
+          } else if (typeof parsed === "object" && parsed !== null) {
+            entries = Object.entries(parsed).map(([key, value]) => ({ key, value }));
+          }
+        } catch {
+          entries = parseEnvFile(content);
+        }
+
+        const newItems: EnvVar[] = entries
+          .filter((e) => e.key)
+          .map((e) => ({
+            key: e.key,
+            value: e.value as string | number | boolean,
+            type: inferType(e.key, e.value),
+          }));
+
+        const merged = [...items];
+        for (const item of newItems) {
+          const idx = merged.findIndex((v) => v.key === item.key);
+          if (idx >= 0) {
+            merged[idx] = item;
+          } else {
+            merged.push(item);
+          }
+        }
+        setItems(merged);
+        setIsDirty(true);
+        if (editorMode === "json") {
+          setItemsJson(JSON.stringify(merged, null, 2));
+          setJsonError("");
+        }
+      } catch {
+        setJsonError("导入失败：无法解析文件");
+      }
+
+      e.target.value = "";
+    };
+    reader.readAsText(file);
+  };
+
   const getDisplayJson = (): string => {
     const source = !itemsJson.trim() ? items : (JSON.parse(itemsJson) as EnvVar[]);
     if (!Array.isArray(source)) return itemsJson;
@@ -345,7 +457,7 @@ export function VariableEditor({
               onMount={(editor) => {
                 editorRef.current = editor;
               }}
-              options={{ ...editorOptions, readOnly: !jsonShowSecrets }}
+              options={{ ...editorOptions, readOnly: false }}
             />
           </div>
         </div>
@@ -369,6 +481,22 @@ export function VariableEditor({
       <div className="flex shrink-0 items-center justify-between border-b px-4 py-3">
         <span className="text-sm font-medium">{title}</span>
         <div className="flex items-center gap-0.5">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json,.env,.txt,application/json,text/plain"
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            title="导入变量文件"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload size={14} />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
@@ -463,7 +591,7 @@ export function VariableEditor({
               onMount={(editor) => {
                 editorRef.current = editor;
               }}
-              options={{ ...editorOptions, readOnly: !jsonShowSecrets }}
+              options={{ ...editorOptions, readOnly: false }}
             />
           </div>
         )}
