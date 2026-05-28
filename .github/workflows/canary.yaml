@@ -65,8 +65,7 @@ jobs:
             echo "is_rc=true" >> $GITHUB_OUTPUT
             exit 0
           fi
-          COMMIT_MSG=$(git log -1 --pretty=%s)
-          if echo "$COMMIT_MSG" | grep -q "^Version Packages$"; then
+          if git log --pretty=%s -n 5 | grep -q "^Version Packages$"; then
             echo "is_rc=true" >> $GITHUB_OUTPUT
           else
             echo "is_rc=false" >> $GITHUB_OUTPUT
