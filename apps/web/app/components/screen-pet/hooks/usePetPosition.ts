@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 
 const PET_SIZE = 64;
 const MARGIN = 16;
@@ -6,9 +6,16 @@ const DRAG_THRESHOLD = 5;
 
 export function usePetPosition(initialX?: number, initialY?: number) {
   const [position, setPosition] = useState({
-    x: initialX ?? (typeof window !== "undefined" ? window.innerWidth - PET_SIZE - MARGIN : 400),
-    y: initialY ?? (typeof window !== "undefined" ? window.innerHeight - PET_SIZE - MARGIN : 500),
+    x: initialX ?? 400,
+    y: initialY ?? 500,
   });
+
+  useEffect(() => {
+    setPosition({
+      x: initialX ?? window.innerWidth - PET_SIZE - MARGIN,
+      y: initialY ?? window.innerHeight - PET_SIZE - MARGIN,
+    });
+  }, [initialX, initialY]);
   const positionRef = useRef(position);
   // Keep ref in sync with state for event handlers
   positionRef.current = position;
