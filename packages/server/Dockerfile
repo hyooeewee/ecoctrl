@@ -41,15 +41,12 @@ WORKDIR /app
 COPY --from=builder /app/packages/server/dist /app
 COPY --from=builder /app/packages/server/prod/node_modules /app/node_modules
 
-# Install curl for healthcheck
-RUN apk add --no-cache curl
-
 ENV NODE_ENV=production
 
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD curl -fsS http://localhost:3000/health > /dev/null || exit 1
+  CMD wget -qO- http://localhost:3000/health > /dev/null || exit 1
 
 # Entrypoint: run init (includes migrations), then start server
 COPY <<'ENTRYPOINT' /entrypoint.sh
