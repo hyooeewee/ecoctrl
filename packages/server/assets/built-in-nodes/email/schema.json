@@ -23,5 +23,6 @@
       "enum": ["text", "html"],
       "default": "text"
     }
-  }
+  },
+  "required": ["to", "subject", "body"]
 }
