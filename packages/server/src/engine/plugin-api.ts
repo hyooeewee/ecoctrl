@@ -12,7 +12,6 @@ import {
 import { evaluateExpression, evaluateBoolean } from "./expr";
 import { buildVars } from "./template";
 import { createTransport } from "nodemailer";
-import { findPlatformConfig } from "@/repositories/platformConfig";
 import { db } from "@/config/database";
 import { sql } from "drizzle-orm";
 import type { PluginRegistry } from "./plugin-registry";
@@ -22,29 +21,6 @@ import { emitEvent } from "@/lib/notifyTrigger";
 const logger = getLogger("plugin");
 
 const ALLOWED_ENV_KEYS = ["API_BASE_URL", "NODE_ENV", "APP_NAME"];
-
-// SMTP transport cache (moved from executor.ts)
-let smtpTransport: ReturnType<typeof createTransport> | null = null;
-let smtpConfigTime = 0;
-
-async function getSmtpTransport() {
-  const now = Date.now();
-  if (smtpTransport && now - smtpConfigTime < 60_000) {
-    return smtpTransport;
-  }
-  const config = await findPlatformConfig();
-  if (!config.smtpHost || !config.smtpUser) {
-    return null;
-  }
-  smtpTransport = createTransport({
-    host: config.smtpHost,
-    port: config.smtpPort,
-    secure: config.smtpSecure,
-    auth: { user: config.smtpUser, pass: config.smtpPass },
-  });
-  smtpConfigTime = now;
-  return smtpTransport;
-}
 
 export function createPluginApi(
   ctx: ExecutionContext,
@@ -130,19 +106,99 @@ export function createPluginApi(
         subject: string;
         body: string;
         bodyType?: string;
+        from?: string;
+        cc?: string;
+        bcc?: string;
+        replyTo?: string;
+        smtpHost?: string;
+        smtpPort?: number;
+        smtpUser?: string;
+        smtpPass?: string;
+        smtpSecure?: boolean;
       }) => {
-        const transport = await getSmtpTransport();
-        if (!transport) {
-          throw new Error("SMTP not configured");
+        const missing: string[] = [];
+        if (!options.smtpHost) missing.push("smtpHost");
+        if (options.smtpPort === undefined) missing.push("smtpPort");
+        if (!options.smtpUser) missing.push("smtpUser");
+        if (!options.smtpPass) missing.push("smtpPass");
+        if (missing.length > 0) {
+          throw new Error(
+            `邮件节点缺少必需的 SMTP 配置: ${missing.join(", ")}。请在节点配置中填写完整的 SMTP 服务器信息。`,
+          );
         }
+
+        const transport = createTransport({
+          host: options.smtpHost,
+          port: options.smtpPort,
+          secure: options.smtpSecure ?? options.smtpPort === 465,
+          auth: { user: options.smtpUser, pass: options.smtpPass },
+        });
+
+        try {
+          await transport.verify();
+          logger.info(
+            `[SMTP] Transport verified OK for ${options.smtpHost}:${options.smtpPort} (user=${options.smtpUser})`,
+          );
+        } catch (verifyErr) {
+          const err = verifyErr as Error & { code?: string; command?: string };
+          logger.error(
+            `[SMTP] Transport verify failed for ${options.smtpHost}:${options.smtpPort}: ${err.message} (code=${err.code})`,
+          );
+          if (err.code === "ETIMEDOUT" || err.message.includes("Timeout")) {
+            throw new Error(
+              `SMTP 连接超时 (${options.smtpHost}:${options.smtpPort})。请检查: 1) 主机/端口是否正确 2) 防火墙是否允许出站 3) 163/QQ 邮箱需使用授权码而非登录密码 4) 465 端口需 SSL, 587 端口需 STARTTLS`,
+              { cause: verifyErr },
+            );
+          }
+          if (err.message.includes("Invalid login") || err.message.includes("AUTH")) {
+            throw new Error(
+              `SMTP 认证失败 (${options.smtpUser})。163/QQ 等邮箱请使用"授权码"代替登录密码。`,
+              { cause: verifyErr },
+            );
+          }
+          throw new Error(`SMTP 连接验证失败: ${err.message}`, { cause: verifyErr });
+        }
+
+        const senderFrom = options.from || options.smtpUser;
         const bodyType = options.bodyType || "text";
-        const result = await transport.sendMail({
-          from: "noreply@ecoctrl.com",
+        const mailOptions: Record<string, unknown> = {
+          from: senderFrom,
           to: options.to.filter(Boolean),
           subject: options.subject,
           [bodyType === "html" ? "html" : "text"]: options.body,
-        });
-        return { messageId: result.messageId, sent: true };
+        };
+        if (options.cc) mailOptions.cc = options.cc;
+        if (options.bcc) mailOptions.bcc = options.bcc;
+        if (options.replyTo) mailOptions.replyTo = options.replyTo;
+
+        const recipients = options.to.filter(Boolean).join(", ");
+        logger.info(
+          `[SMTP] Sending mail from=${senderFrom} to=[${recipients}] subject="${options.subject}" bodyType=${bodyType} cc=${options.cc || "-"} bcc=${options.bcc || "-"} via ${options.smtpHost}:${options.smtpPort}`,
+        );
+
+        try {
+          const result = await transport.sendMail(mailOptions);
+          logger.info(
+            `[SMTP] Mail sent successfully: messageId=${result.messageId}, accepted=${result.accepted?.length ?? 0}, rejected=${result.rejected?.length ?? 0}, response="${result.response}"`,
+          );
+          return {
+            messageId: result.messageId,
+            sent: true,
+            accepted: result.accepted,
+            rejected: result.rejected,
+            response: result.response,
+          };
+        } catch (sendErr) {
+          const err = sendErr as Error & {
+            code?: string;
+            command?: string;
+            responseCode?: number;
+          };
+          logger.error(
+            `[SMTP] Mail send failed: ${err.message} (code=${err.code}, responseCode=${err.responseCode}, command=${err.command})`,
+          );
+          throw new Error(`邮件发送失败: ${err.message}`, { cause: sendErr });
+        }
       },
     },
 
