@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "SSE 推送 Config",
+  "properties": {
+    "eventType": {
+      "type": "string",
+      "title": "事件类型",
+      "description": "SSE 事件类型标识，如 alert、notification、custom 等"
+    },
+    "payload": {
+      "type": "string",
+      "title": "事件内容 (JSON)",
+      "description": "JSON 格式的事件负载，支持 {{表达式}}",
+      "format": "textarea"
+    },
+    "targetMode": {
+      "type": "string",
+      "title": "发送目标",
+      "enum": ["broadcast", "trigger", "user"],
+      "default": "trigger"
+    },
+    "targetUserId": {
+      "type": "string",
+      "title": "目标用户 ID",
+      "description": "当发送目标为\"指定用户\"时填写，支持 {{表达式}}"
+    },
+    "eventId": {
+      "type": "string",
+      "title": "事件 ID",
+      "description": "可选的事件唯一标识"
+    }
+  },
+  "required": ["eventType", "payload", "targetMode"]
+}

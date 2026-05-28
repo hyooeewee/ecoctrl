@@ -1,0 +1,10 @@
+{
+  "id": "sse-send",
+  "name": "SSE 推送",
+  "version": "1.0.0",
+  "category": "action",
+  "entry": "backend.js",
+  "schema": "schema.json",
+  "description": "向 web 客户端推送 SSE 实时事件消息",
+  "color": "#3b82f6"
+}

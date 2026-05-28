@@ -1,0 +1,11 @@
+{
+  "id": "cron-trigger",
+  "name": "Cron Trigger",
+  "version": "1.0.0",
+  "category": "trigger",
+  "entry": "backend.js",
+  "schema": "schema.json",
+  "description": "Trigger workflow execution on a cron schedule",
+  "color": "#f59e0b",
+  "icon": "icon.svg"
+}
