@@ -1,6 +1,7 @@
 import postgres from "postgres";
 import { getLogger } from "@/lib/logger";
 import { env } from "@/lib/env";
+import { POSTGRES_OPTIONS } from "@/config/database";
 
 const logger = getLogger("database");
 
@@ -8,7 +9,7 @@ export async function ensureDatabase(databaseUrl?: string): Promise<void> {
   const targetUrl = databaseUrl || env.DATABASE_URL;
   // Connect to the postgres system database to check/create target DB
   const adminUrl = targetUrl.replace(/\/[^/]+$/, "/postgres");
-  const sql = postgres(adminUrl, { prepare: false });
+  const sql = postgres(adminUrl, POSTGRES_OPTIONS);
 
   // Extract DB name from URL (last path segment)
   const dbName = targetUrl.split("/").pop() || "ecoctrl";
@@ -33,7 +34,7 @@ export async function resetDatabase(databaseUrl?: string): Promise<void> {
   const dbName = targetUrl.split("/").pop() || "ecoctrl";
   const adminUrl = targetUrl.replace(/\/[^/]+$/, "/postgres");
 
-  const sql = postgres(adminUrl, { prepare: false });
+  const sql = postgres(adminUrl, POSTGRES_OPTIONS);
 
   await sql.unsafe(`
     SELECT pg_terminate_backend(pid)

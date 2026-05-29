@@ -46,7 +46,14 @@ export class PluginRegistry {
   async loadAll(): Promise<void> {
     this.plugins.clear();
     try {
-      const keys = await this.storage.list(PLUGIN_PREFIX);
+      // Guard against slow/unavailable storage (e.g. network-hung MinIO)
+      const keys = await Promise.race([
+        this.storage.list(PLUGIN_PREFIX),
+        new Promise<string[]>((_resolve, reject) =>
+          setTimeout(() => reject(new Error("Plugin storage list timeout")), 5000),
+        ),
+      ]);
+
       // Group keys by plugin id and version
       const groups = new Map<string, Map<string, string[]>>(); // id -> version -> filenames
       for (const key of keys) {
@@ -74,8 +81,8 @@ export class PluginRegistry {
           await this.loadPlugin(id, version, files);
         }
       }
-    } catch {
-      // Storage may be empty or unavailable
+    } catch (err) {
+      logger.warn(`Plugin registry load skipped: ${(err as Error).message}`);
     }
   }
 
