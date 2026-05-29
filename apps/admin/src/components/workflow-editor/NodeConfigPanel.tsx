@@ -790,9 +790,11 @@ export function NodeConfigPanel({
 }: NodeConfigPanelProps) {
   const typedSchema = schema as JsonSchema;
   const properties = typedSchema.properties ?? {};
-  const requiredSet = new Set(typedSchema.required ?? []);
-  const skip = new Set(skipFields ?? []);
-  const propertyEntries = Object.entries(properties).filter(([key]) => !skip.has(key));
+  const requiredSet = useMemo(() => new Set(typedSchema.required ?? []), [typedSchema.required]);
+  const propertyEntries = useMemo(() => {
+    const skip = new Set(skipFields ?? []);
+    return Object.entries(properties).filter(([key]) => !skip.has(key));
+  }, [properties, skipFields]);
 
   const buildInitialForm = useCallback(
     (base: Record<string, unknown>) => {
