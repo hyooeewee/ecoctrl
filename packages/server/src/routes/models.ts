@@ -3,6 +3,7 @@ import { z } from "zod";
 import JSZip from "jszip";
 import { DataModelSchema } from "@ecoctrl/shared";
 import { getModelStorage } from "@/storage";
+import { streamFile } from "@/storage/stream";
 import {
   findManyModels,
   findModelById,
@@ -52,13 +53,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
     },
     async (_request, reply) => {
       const items = await findManyModels();
-      const resolved = await Promise.all(
-        items.map(async (item) => ({
-          ...item,
-          fileUrl: item.fileUrl ? await storage.getUrl(item.fileUrl) : null,
-        })),
-      );
-      return reply.send(resolved);
+      return reply.send(items);
     },
   );
 
@@ -153,7 +148,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
       });
       const response = {
         ...created,
-        fileUrl: created.fileUrl ? await storage.getUrl(created.fileUrl) : null,
+        fileUrl: created.fileUrl,
       };
       return reply.status(201).send(response);
     },
@@ -206,7 +201,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
       }
       const response = {
         ...updated,
-        fileUrl: updated.fileUrl ? await storage.getUrl(updated.fileUrl) : null,
+        fileUrl: updated.fileUrl,
       };
       return response;
     },
@@ -305,7 +300,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
       }
       const response = {
         ...updated,
-        fileUrl: updated.fileUrl ? await storage.getUrl(updated.fileUrl) : null,
+        fileUrl: updated.fileUrl,
       };
       return response;
     },
@@ -342,23 +337,13 @@ export default async function modelRoutes(fastify: FastifyInstance) {
     },
   );
 
-  const CONTENT_TYPE_MAP: Record<string, string> = {
-    ".glb": "model/gltf-binary",
-    ".gltf": "model/gltf+json",
-    ".zip": "application/zip",
-  };
-
-  function resolveContentType(fileUrl: string): string {
-    const ext = fileUrl.slice(fileUrl.lastIndexOf(".")).toLowerCase();
-    return CONTENT_TYPE_MAP[ext] || "application/octet-stream";
-  }
-
   fastify.get(
     "/:id/file",
     {
       schema: {
         tags: ["Models"],
         summary: "Get 3D model file",
+        security: [],
         params: z.object({ id: z.string().describe("Model ID") }),
         response: {
           200: z.unknown(),
@@ -373,11 +358,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         return reply.status(404).send({ error: "Model or file not found" });
       }
 
-      const stream = await storage.get(model.fileUrl);
-      return reply
-        .header("Content-Type", resolveContentType(model.fileUrl))
-        .header("Cache-Control", "public, max-age=3600")
-        .send(stream);
+      return streamFile(storage, model.fileUrl, reply);
     },
   );
 

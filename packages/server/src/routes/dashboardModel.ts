@@ -7,6 +7,7 @@ import {
 } from "@ecoctrl/shared";
 import { findDashboardModel, updateDashboardModel } from "@/repositories/dashboardModel";
 import { getModelStorage } from "@/storage";
+import { streamFile } from "@/storage/stream";
 import { errors } from "@/lib/schemas";
 
 const storage = getModelStorage();
@@ -20,6 +21,25 @@ const configBodySchema = z.object({
 });
 
 export default async function dashboardModelRoutes(fastify: FastifyInstance) {
+  fastify.get(
+    "/file",
+    {
+      schema: {
+        tags: ["Dashboard"],
+        summary: "Stream dashboard model file",
+        security: [],
+        response: { ...errors },
+      },
+    },
+    async (_request, reply) => {
+      const config = await findDashboardModel();
+      if (!config?.modelFileUrl) {
+        return reply.status(404).send({ error: "No model file" });
+      }
+      return streamFile(storage, config.modelFileUrl, reply);
+    },
+  );
+
   fastify.get(
     "/",
     {
@@ -39,7 +59,7 @@ export default async function dashboardModelRoutes(fastify: FastifyInstance) {
         labels: [],
       };
       if (result.modelFileUrl) {
-        result.modelFileUrl = await storage.getUrl(result.modelFileUrl);
+        result.modelFileUrl = "/api/dashboard-model/file";
       }
       return reply.send(result);
     },
@@ -97,7 +117,7 @@ export default async function dashboardModelRoutes(fastify: FastifyInstance) {
 
       const response = {
         ...updated,
-        modelFileUrl: updated.modelFileUrl ? await storage.getUrl(updated.modelFileUrl) : null,
+        modelFileUrl: updated.modelFileUrl ? "/api/dashboard-model/file" : null,
       };
       return reply.send(response);
     },
@@ -133,7 +153,7 @@ export default async function dashboardModelRoutes(fastify: FastifyInstance) {
       };
       const result = await updateDashboardModel(updated);
       if (result?.modelFileUrl) {
-        result.modelFileUrl = await storage.getUrl(result.modelFileUrl);
+        result.modelFileUrl = "/api/dashboard-model/file";
       }
       return reply.send(result);
     },
