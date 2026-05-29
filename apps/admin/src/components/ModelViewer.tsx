@@ -1,5 +1,18 @@
 import { RotateCcw, Maximize2, AlertTriangle, Download } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
+import {
+  Engine,
+  Scene,
+  ArcRotateCamera,
+  HemisphericLight,
+  DirectionalLight,
+  Vector3,
+  Color3,
+  Color4,
+  SceneLoader,
+  TransformNode,
+} from "@babylonjs/core";
+import "@babylonjs/loaders";
 
 import AppButton from "@/components/AppButton";
 
@@ -13,54 +26,124 @@ const PREVIEWABLE_FORMATS = new Set(["GLB", "GLTF", "GLTF (zip)"]);
 
 export default function ModelViewer({ src, alt, format }: ModelViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const viewerRef = useRef<HTMLElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const engineRef = useRef<Engine | null>(null);
+  const sceneRef = useRef<Scene | null>(null);
+  const cameraRef = useRef<ArcRotateCamera | null>(null);
+  const autoRotateRef = useRef(true);
+
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
   const canPreview = PREVIEWABLE_FORMATS.has((format ?? "").toUpperCase());
 
-  // Lazy load model-viewer web component
+  // Initialize BabylonJS engine + scene
   useEffect(() => {
-    if (!canPreview) return;
+    if (!canPreview || !canvasRef.current || !containerRef.current) return;
 
-    let cancelled = false;
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
 
-    const load = async () => {
-      try {
-        await import("@google/model-viewer");
-      } catch {
-        if (!cancelled) setHasError(true);
+    const engine = new Engine(canvas, true, {
+      preserveDrawingBuffer: true,
+      stencil: true,
+    });
+    engineRef.current = engine;
+
+    const scene = new Scene(engine);
+    sceneRef.current = scene;
+    scene.clearColor = new Color4(0, 0, 0, 0);
+
+    // Camera
+    const camera = new ArcRotateCamera(
+      "camera",
+      -Math.PI / 4,
+      Math.PI / 3,
+      10,
+      Vector3.Zero(),
+      scene,
+    );
+    camera.attachControl(canvas, true);
+    camera.minZ = 0.1;
+    camera.maxZ = 1000;
+    camera.lowerRadiusLimit = 1;
+    camera.upperRadiusLimit = 100;
+    camera.wheelPrecision = 50;
+    cameraRef.current = camera;
+
+    // Lights
+    const hemi = new HemisphericLight("hemi", new Vector3(0, 1, 0), scene);
+    hemi.intensity = 0.7;
+    hemi.diffuse = new Color3(1, 1, 1);
+    hemi.groundColor = new Color3(0.5, 0.5, 0.5);
+
+    const dir = new DirectionalLight("dir", new Vector3(-1, -2, 1), scene);
+    dir.intensity = 0.5;
+    dir.position = new Vector3(5, 10, -5);
+
+    // Auto-rotate
+    scene.registerBeforeRender(() => {
+      if (autoRotateRef.current && cameraRef.current) {
+        cameraRef.current.alpha += 0.003;
       }
-    };
+    });
 
-    load();
+    // Render loop
+    engine.runRenderLoop(() => scene.render());
+
+    // Resize handling
+    const ro = new ResizeObserver(() => engine.resize());
+    ro.observe(container);
 
     return () => {
-      cancelled = true;
+      ro.disconnect();
+      scene.dispose();
+      engine.dispose();
+      engineRef.current = null;
+      sceneRef.current = null;
+      cameraRef.current = null;
     };
   }, [canPreview]);
 
-  // Bind native events on the web component via ref
+  // Load model when src changes
   useEffect(() => {
-    if (!canPreview || hasError || !src) return;
+    const scene = sceneRef.current;
+    const engine = engineRef.current;
+    const camera = cameraRef.current;
+    if (!scene || !engine || !camera || !src) return;
 
-    const el = viewerRef.current;
-    if (!el) return;
+    setIsLoading(true);
+    setHasError(false);
+    autoRotateRef.current = true;
 
-    const handleLoad = () => setIsLoading(false);
-    const handleError = () => {
-      setIsLoading(false);
-      setHasError(true);
-    };
+    // Clear previous model
+    scene.transformNodes.filter((n) => n.name === "modelRoot").forEach((n) => n.dispose());
 
-    el.addEventListener("load", handleLoad);
-    el.addEventListener("error", handleError);
+    const rootNode = new TransformNode("modelRoot", scene);
 
-    return () => {
-      el.removeEventListener("load", handleLoad);
-      el.removeEventListener("error", handleError);
-    };
-  }, [canPreview, hasError, src]);
+    SceneLoader.ImportMeshAsync("", "", src, scene)
+      .then((result) => {
+        result.meshes.forEach((mesh) => {
+          mesh.parent = rootNode;
+        });
+
+        // Fit camera to model
+        fitCameraToModel(camera, rootNode);
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        console.error("Model load failed:", err);
+        setIsLoading(false);
+        setHasError(true);
+      });
+  }, [src]);
+
+  const handleReset = () => {
+    const camera = cameraRef.current;
+    if (!camera) return;
+    autoRotateRef.current = true;
+    fitCameraToModel(camera, camera.getScene().transformNodes.find((n) => n.name === "modelRoot")!);
+  };
 
   const toggleFullscreen = async () => {
     const el = containerRef.current;
@@ -76,13 +159,16 @@ export default function ModelViewer({ src, alt, format }: ModelViewerProps) {
     }
   };
 
-  const handleReset = () => {
-    const mv = viewerRef.current as any;
-    if (mv) {
-      mv.cameraOrbit = "0deg 75deg 105%";
-      mv.fieldOfView = "30deg";
-    }
-  };
+  // Stop auto-rotate on user interaction
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const stop = () => {
+      autoRotateRef.current = false;
+    };
+    canvas.addEventListener("pointerdown", stop);
+    return () => canvas.removeEventListener("pointerdown", stop);
+  }, []);
 
   if (!canPreview) {
     return (
@@ -135,40 +221,47 @@ export default function ModelViewer({ src, alt, format }: ModelViewerProps) {
         </AppButton>
       </div>
 
-      {/* Model viewer */}
-      {hasError ? (
-        <div className="flex flex-1 items-center justify-center text-sm text-red-400">
+      {/* Loading */}
+      {isLoading && (
+        <div className="absolute inset-0 z-0 flex items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      )}
+
+      {/* Error */}
+      {hasError && (
+        <div className="absolute inset-0 z-0 flex items-center justify-center text-sm text-red-400">
           模型加载失败，请检查文件是否有效
         </div>
-      ) : (
-        <>
-          {isLoading && (
-            <div className="absolute inset-0 z-0 flex items-center justify-center">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            </div>
-          )}
-          {src && (
-            <model-viewer
-              ref={viewerRef as any}
-              src={src}
-              alt={alt || "3D Model"}
-              camera-controls
-              auto-rotate
-              shadow-intensity="1"
-              exposure="1"
-              interaction-prompt="none"
-              camera-orbit="0deg 75deg 105%"
-              field-of-view="30deg"
-              loading="eager"
-              style={{
-                width: "100%",
-                height: "100%",
-                backgroundColor: "transparent",
-              }}
-            />
-          )}
-        </>
       )}
+
+      {/* Canvas */}
+      <canvas ref={canvasRef} className="h-full w-full outline-none" />
     </div>
   );
+}
+
+// ========================================
+// Helpers
+// ========================================
+
+function fitCameraToModel(camera: ArcRotateCamera, rootNode: TransformNode): void {
+  const meshes = rootNode.getChildMeshes();
+  if (meshes.length === 0) return;
+
+  let min = new Vector3(Infinity, Infinity, Infinity);
+  let max = new Vector3(-Infinity, -Infinity, -Infinity);
+
+  for (const mesh of meshes) {
+    const bb = mesh.getBoundingInfo().boundingBox;
+    min = Vector3.Minimize(min, bb.minimumWorld);
+    max = Vector3.Maximize(max, bb.maximumWorld);
+  }
+
+  const center = Vector3.Center(min, max);
+  const size = max.subtract(min);
+  const maxDim = Math.max(size.x, size.y, size.z);
+
+  camera.target = center;
+  camera.radius = (maxDim / 2 / Math.tan(camera.fov / 2)) * 1.5;
 }
