@@ -26,15 +26,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-
       - name: Login GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
@@ -88,116 +79,6 @@ jobs:
               ghcr.io/${{ github.repository }}/${IMG}:${{ steps.resolve.outputs.rc-tag }}
           done
 
-      # ── Build source artifacts for GitHub Release ──
-      - name: Build Web
-        run: pnpm --filter @ecoctrl/web build
-
-      - name: Build Admin
-        run: pnpm --filter @ecoctrl/admin build
-
-      - name: Build Server
-        run: pnpm --filter @ecoctrl/server build
-
-      - name: Package artifacts
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          VERSION=${VERSION#v}
-          mkdir -p release-assets
-
-          for dir in apps/admin/dist apps/web/build/client packages/server/dist; do
-            if [ ! -d "$dir" ]; then
-              echo "Error: $dir does not exist."
-              exit 1
-            fi
-          done
-
-          mkdir -p ecoctrl/admin ecoctrl/web ecoctrl/server
-          cp -r apps/admin/dist/. ecoctrl/admin/
-          cp -r apps/web/build/client/. ecoctrl/web/
-          cp -r packages/server/dist/. ecoctrl/server/
-          cp scripts/start.mjs ecoctrl/
-
-          cd ecoctrl
-          zip -r "../release-assets/admin-v${VERSION}.zip" admin
-          zip -r "../release-assets/web-v${VERSION}.zip" web
-          zip -r "../release-assets/server-v${VERSION}.zip" server
-          cd ..
-
-          zip -r "release-assets/ecoctrl-v${VERSION}.zip" ecoctrl
-          rm -rf ecoctrl
-
-      # ── Offline Docker bundle ──
-      - name: Package offline deploy bundle
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          VERSION=${VERSION#v}
-
-          bash scripts/migrate-images.sh docker/compose.yaml --export ./ecoctrl-images.tar --platform linux/amd64
-
-          mkdir -p docker-bundle
-          mv ecoctrl-images.tar docker-bundle/
-          cp docker/compose.yaml docker-bundle/
-          cp scripts/migrate-images.sh docker-bundle/
-
-          cat > docker-bundle/README.txt << EOF
-          EcoCtrl Docker Offline Bundle v${VERSION}
-
-          1. Ensure docker and docker compose are installed
-          2. Run: bash migrate-images.sh compose.yaml --load ecoctrl-images.tar
-          3. Copy .env.local to this directory
-          4. Run: docker compose up -d
-          EOF
-
-          zip -r "ecoctrl-docker-v${VERSION}.zip" docker-bundle
-          rm -rf docker-bundle
-
-      # ── Upload to R2 ──
-      - name: Upload Docker bundle to R2
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          VERSION=${VERSION#v}
-
-          ENDPOINT="https://${CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com"
-
-          aws s3 cp "ecoctrl-docker-v${VERSION}.zip" \
-            "s3://ecoctrl/images/v${VERSION}/ecoctrl.zip" \
-            --endpoint-url "$ENDPOINT"
-
-          aws s3 cp "ecoctrl-docker-v${VERSION}.zip" \
-            "s3://ecoctrl/images/latest/ecoctrl.zip" \
-            --endpoint-url "$ENDPOINT"
-
-          rm "ecoctrl-docker-v${VERSION}.zip"
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      - name: Upload source release assets to R2
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          VERSION=${VERSION#v}
-
-          for file in release-assets/*.zip; do
-            filename=$(basename "$file")
-            latest_name="${filename/-v${VERSION}/}"
-
-            pnpm wrangler r2 object put "ecoctrl/releases/v$VERSION/$latest_name" \
-              --file="$file" \
-              --content-type="application/zip" \
-              --remote
-
-            pnpm wrangler r2 object put "ecoctrl/releases/latest/$latest_name" \
-              --file="$file" \
-              --content-type="application/zip" \
-              --remote
-
-            echo "Uploaded: $filename -> v$VERSION + latest"
-          done
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
       # ── GitHub Release ──
       - name: Generate release body
         id: changelog
@@ -226,11 +107,5 @@ jobs:
             --latest \
             --title "Release ${{ steps.version.outputs.version }}" \
             --notes-file /tmp/changelog_body.md
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload release assets
-        run: |
-          gh release upload ${{ steps.version.outputs.version }} release-assets/*.zip --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
