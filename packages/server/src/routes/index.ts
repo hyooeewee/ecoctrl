@@ -68,6 +68,16 @@ export default async function apiRoutes(fastify: FastifyInstance) {
     try {
       await request.jwtVerify();
     } catch {
+      // Fallback: accept token from query param (for endpoints opened in new tabs)
+      const queryToken = (request.query as Record<string, string>).token;
+      if (queryToken) {
+        try {
+          fastify.jwt.verify(queryToken);
+          return;
+        } catch {
+          // invalid query token — fall through to 401
+        }
+      }
       return reply.status(401).send({ error: "Unauthorized" });
     }
   });
