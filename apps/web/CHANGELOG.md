@@ -1,5 +1,21 @@
 # @ecoctrl/web
 
+## 0.6.0
+
+### Minor Changes
+
+- [`6d19b45`](https://github.com/hyooeewee/ecoctrl/commit/6d19b454ad439f00868bde1de8f3185f7f17064f) Thanks [@hyooeewee](https://github.com/hyooeewee)! - Add full email functionality with SMTP configuration to the workflow engine
+
+- [`6d19b45`](https://github.com/hyooeewee/ecoctrl/commit/6d19b454ad439f00868bde1de8f3185f7f17064f) Thanks [@hyooeewee](https://github.com/hyooeewee)! - Add cron-trigger and sse-send built-in nodes with error handling, retry mechanism, and logging improvements
+
+- [`6d19b45`](https://github.com/hyooeewee/ecoctrl/commit/6d19b454ad439f00868bde1de8f3185f7f17064f) Thanks [@hyooeewee](https://github.com/hyooeewee)! - Add dashboard layout with 3D building view, floor navigation, and model loading optimizations
+
+- [`6d19b45`](https://github.com/hyooeewee/ecoctrl/commit/6d19b454ad439f00868bde1de8f3185f7f17064f) Thanks [@hyooeewee](https://github.com/hyooeewee)! - Enhance workflow editor with expression support, variable import, export/import, and log viewer improvements
+
+### Patch Changes
+
+- [`6d19b45`](https://github.com/hyooeewee/ecoctrl/commit/6d19b454ad439f00868bde1de8f3185f7f17064f) Thanks [@hyooeewee](https://github.com/hyooeewee)! - Fix Docker healthcheck commands, normalize compose quotes, and update dependencies
+
 ## 0.5.0
 
 ### Minor Changes
@@ -45,6 +61,7 @@
 - [`135f18b`](https://github.com/hyooeewee/ecoctrl/commit/135f18b0f171593fe459b216654d0fb3ee5ef9fa) Thanks [@hyooeewee](https://github.com/hyooeewee)! - refactored the server's build/Docker setup and the init script's asset resolution for built-in nodes and pets
 
 - [`f37c77c`](https://github.com/hyooeewee/ecoctrl/commit/f37c77c98049e2528c6d47d58c72061e6e93ab99) Thanks [@hyooeewee](https://github.com/hyooeewee)! - - Add `StorageAdapter` abstraction supporting S3 API (MinIO, R2, OSS, AWS S3)
+
   - Integrate MinIO as self-hosted object storage backend
   - Refactor `/api/files` and `/api/models` routes to use presigned URL redirects
   - Replace `unzipper` with `jszip` for in-memory 3D model ZIP extraction
@@ -52,6 +69,7 @@
   - Add MinIO service to Docker Compose with auto bucket initialization
 
 - [`06e3532`](https://github.com/hyooeewee/ecoctrl/commit/06e353268e3404d18e212bbb092afb1e9d60b80c) Thanks [@hyooeewee](https://github.com/hyooeewee)! - **Workflow Engine**
+
   - Add plugin node system with `.ecn` zip package format (manifest + backend.js + schema.json + icon.svg)
   - Run plugin code in `isolated-vm` sandbox with curated API (http, iot, log, variables)
   - Add built-in workflow nodes as `.ecn` packages: start, end, condition, switch, loop, parallel, delay, http-request, database, email, point-read, point-write,
@@ -61,6 +79,7 @@
   - Add `@ecoctrl/ui/context-menu` and `@ecoctrl/ui/kbd` components
 
   **Pet Remote Storage**
+
   - Add `GET /api/pets` (public), `POST /api/pets`, `DELETE /api/pets/:id`, `POST /api/pets/reload` (admin) endpoints
   - Use dedicated `ecoctrl-pets` S3 bucket via `getPetStorage()`
   - Remove `virtual:pets` build-time module; load pets dynamically from API at runtime
@@ -178,6 +197,7 @@
 ### Minor Changes
 
 - 76b4d49: ### Admin
+
   - Add business object CRUD with point value management
   - Enhance model management with device type and point configuration
   - Add file upload and replacement for 3D models
@@ -185,12 +205,14 @@
   - Add success feedback and registration flow controls
 
   ### Web
+
   - Implement authentication flow with login/logout
   - Replace CSS blueprint with Lottie loading animation
   - Add logout confirmation dialog
   - Refactor widget layout to individual position properties
 
   ### Server
+
   - Add rate limiting with @fastify/rate-limit
   - Enhance BusinessObject and PointItem schemas
   - Add status field to BusinessObject
