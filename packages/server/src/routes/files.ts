@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { getFileStorage } from "@/storage";
+import { streamFile } from "@/storage/stream";
 import {
   findManyFiles,
   findFileById,
@@ -112,8 +113,9 @@ export default async function fileRoutes(fastify: FastifyInstance) {
         return reply.status(404).send({ error: "File not found" });
       }
 
-      const url = await storage.getUrl(file.filename);
-      return reply.redirect(url);
+      return streamFile(storage, file.filename, reply, {
+        disposition: `attachment; filename="${file.name}"`,
+      });
     },
   );
 
@@ -134,8 +136,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
         return reply.status(404).send({ error: "File not found" });
       }
 
-      const url = await storage.getUrl(file.filename);
-      return reply.redirect(url);
+      return streamFile(storage, file.filename, reply);
     },
   );
 

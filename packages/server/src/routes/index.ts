@@ -19,7 +19,6 @@ import userSettingsRoutes from "@/routes/userSettings";
 import modelRoutes from "@/routes/models";
 import objectRoutes from "@/routes/objects";
 import pointRoutes from "@/routes/points";
-import { getModelStorage } from "@/storage";
 import iotRoutes from "@/routes/iot";
 import backupScheduleRoutes from "@/routes/backupSchedule";
 import authRoutes from "@/routes/auth";
@@ -103,8 +102,6 @@ export default async function apiRoutes(fastify: FastifyInstance) {
     },
   );
 
-  const modelStorage = getModelStorage();
-
   fastify.get(
     "/public/model",
     {
@@ -125,7 +122,7 @@ export default async function apiRoutes(fastify: FastifyInstance) {
         labels: [],
       };
       if (result.modelFileUrl) {
-        result.modelFileUrl = await modelStorage.getUrl(result.modelFileUrl);
+        result.modelFileUrl = "/api/dashboard-model/file";
       }
       return reply.send(result);
     },

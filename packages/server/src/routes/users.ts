@@ -20,6 +20,7 @@ import {
   updateUserPreferences,
 } from "@/repositories/users";
 import { getFileStorage } from "@/storage";
+import { streamFile } from "@/storage/stream";
 import { errors } from "@/lib/schemas";
 import type { UserPreferences } from "@ecoctrl/shared";
 
@@ -248,8 +249,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
         return reply.redirect(user.avatarUrl);
       }
 
-      const url = await storage.getUrl(user.avatarUrl);
-      return reply.redirect(url);
+      return streamFile(storage, user.avatarUrl, reply);
     },
   );
 
