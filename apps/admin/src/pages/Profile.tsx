@@ -26,10 +26,16 @@ import {
 } from "lucide-react";
 
 import { Button } from "@ecoctrl/ui";
-import { Input } from "@ecoctrl/ui";
 import { Label } from "@ecoctrl/ui";
 import { Avatar, AvatarFallback, AvatarImage } from "@ecoctrl/ui";
 import { Badge } from "@ecoctrl/ui";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+  InputGroupText,
+} from "@ecoctrl/ui/input-group";
 
 import { authApi } from "@/api/auth";
 import { oauthApi, type LinkedOAuthAccount } from "@/api/oauth";
@@ -425,30 +431,32 @@ export default function Profile() {
             <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
               用户名
             </Label>
-            <div className="relative">
-              <UserIcon className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-              <Input
+            <InputGroup className="bg-muted/30">
+              <InputGroupAddon>
+                <UserIcon />
+              </InputGroupAddon>
+              <InputGroupInput
                 value={editUsername}
                 onChange={(e) => setEditUsername(e.target.value)}
                 placeholder="请输入用户名"
-                className="bg-muted/30 border-border pl-10"
               />
-            </div>
+            </InputGroup>
           </div>
           <div className="space-y-2">
             <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
               邮箱
             </Label>
-            <div className="relative">
-              <Mail className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-              <Input
+            <InputGroup className="bg-muted/30">
+              <InputGroupAddon>
+                <Mail />
+              </InputGroupAddon>
+              <InputGroupInput
                 type="email"
                 value={editEmail}
                 onChange={(e) => setEditEmail(e.target.value)}
                 placeholder="请输入邮箱"
-                className="bg-muted/30 border-border pl-10"
               />
-            </div>
+            </InputGroup>
           </div>
         </div>
         <div className="flex justify-end">
@@ -479,71 +487,80 @@ export default function Profile() {
             <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
               原密码
             </Label>
-            <div className="relative">
-              <Lock className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-              <Input
+            <InputGroup className="bg-muted/30">
+              <InputGroupAddon>
+                <Lock />
+              </InputGroupAddon>
+              <InputGroupInput
                 type={showOldPwd ? "text" : "password"}
                 value={oldPassword}
                 onChange={(e) => setOldPassword(e.target.value)}
                 placeholder="请输入当前密码"
                 autoComplete="current-password"
-                className="bg-muted/30 border-border pr-10 pl-10"
               />
-              <button
-                type="button"
-                onClick={() => setShowOldPwd((v) => !v)}
-                className="text-muted-foreground hover:text-foreground absolute top-2.5 right-3"
-              >
-                {showOldPwd ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
+              <InputGroupAddon align="inline-end">
+                <InputGroupButton
+                  variant="ghost"
+                  size="icon-xs"
+                  onClick={() => setShowOldPwd((v) => !v)}
+                >
+                  {showOldPwd ? <EyeOff /> : <Eye />}
+                </InputGroupButton>
+              </InputGroupAddon>
+            </InputGroup>
           </div>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div className="space-y-2">
               <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
                 新密码
               </Label>
-              <div className="relative">
-                <Lock className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-                <Input
+              <InputGroup className="bg-muted/30">
+                <InputGroupAddon>
+                  <Lock />
+                </InputGroupAddon>
+                <InputGroupInput
                   type={showNewPwd ? "text" : "password"}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="请输入新密码"
                   autoComplete="new-password"
-                  className="bg-muted/30 border-border pr-10 pl-10"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowNewPwd((v) => !v)}
-                  className="text-muted-foreground hover:text-foreground absolute top-2.5 right-3"
-                >
-                  {showNewPwd ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
+                <InputGroupAddon align="inline-end">
+                  <InputGroupButton
+                    variant="ghost"
+                    size="icon-xs"
+                    onClick={() => setShowNewPwd((v) => !v)}
+                  >
+                    {showNewPwd ? <EyeOff /> : <Eye />}
+                  </InputGroupButton>
+                </InputGroupAddon>
+              </InputGroup>
             </div>
             <div className="space-y-2">
               <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
                 确认新密码
               </Label>
-              <div className="relative">
-                <Lock className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-                <Input
+              <InputGroup className="bg-muted/30">
+                <InputGroupAddon>
+                  <Lock />
+                </InputGroupAddon>
+                <InputGroupInput
                   type={showConfirmPwd ? "text" : "password"}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="请再次输入新密码"
                   autoComplete="new-password"
-                  className="bg-muted/30 border-border pr-10 pl-10"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPwd((v) => !v)}
-                  className="text-muted-foreground hover:text-foreground absolute top-2.5 right-3"
-                >
-                  {showConfirmPwd ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
+                <InputGroupAddon align="inline-end">
+                  <InputGroupButton
+                    variant="ghost"
+                    size="icon-xs"
+                    onClick={() => setShowConfirmPwd((v) => !v)}
+                  >
+                    {showConfirmPwd ? <EyeOff /> : <Eye />}
+                  </InputGroupButton>
+                </InputGroupAddon>
+              </InputGroup>
             </div>
           </div>
         </div>
@@ -574,57 +591,49 @@ export default function Profile() {
           <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
             用户 ID
           </Label>
-          <div className="relative">
-            <Fingerprint className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-            <Input
-              value={userDetail?.id ?? ""}
-              disabled
-              className="bg-muted/30 border-border pl-10"
-            />
-          </div>
+          <InputGroup className="bg-muted/30">
+            <InputGroupAddon>
+              <Fingerprint />
+            </InputGroupAddon>
+            <InputGroupInput value={userDetail?.id ?? ""} disabled />
+          </InputGroup>
         </div>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <div className="space-y-2">
             <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
               角色
             </Label>
-            <div className="relative">
-              <Shield className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-              <Input
-                value={userDetail ? ROLE_LABELS[userDetail.role] : ""}
-                disabled
-                className="bg-muted/30 border-border pl-10"
-              />
-            </div>
+            <InputGroup className="bg-muted/30">
+              <InputGroupAddon>
+                <Shield />
+              </InputGroupAddon>
+              <InputGroupInput value={userDetail ? ROLE_LABELS[userDetail.role] : ""} disabled />
+            </InputGroup>
           </div>
           <div className="space-y-2">
             <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
               状态
             </Label>
-            <div className="relative">
-              <Activity className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-              <Input
-                value={statusInfo.label}
-                disabled
-                className="bg-muted/30 border-border pl-10"
-              />
-              <span
-                className={`absolute top-1/2 right-3 h-2 w-2 -translate-y-1/2 rounded-full ${statusInfo.color}`}
-              />
-            </div>
+            <InputGroup className="bg-muted/30">
+              <InputGroupAddon>
+                <Activity />
+              </InputGroupAddon>
+              <InputGroupInput value={statusInfo.label} disabled />
+              <InputGroupAddon align="inline-end">
+                <span className={`h-2 w-2 rounded-full ${statusInfo.color}`} />
+              </InputGroupAddon>
+            </InputGroup>
           </div>
           <div className="space-y-2">
             <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
               最后登录时间
             </Label>
-            <div className="relative">
-              <Clock className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-              <Input
-                value={formatDateTime(userDetail?.lastLogin ?? null)}
-                disabled
-                className="bg-muted/30 border-border pl-10"
-              />
-            </div>
+            <InputGroup className="bg-muted/30">
+              <InputGroupAddon>
+                <Clock />
+              </InputGroupAddon>
+              <InputGroupInput value={formatDateTime(userDetail?.lastLogin ?? null)} disabled />
+            </InputGroup>
           </div>
         </div>
       </div>
@@ -643,54 +652,59 @@ export default function Profile() {
             <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
               邮箱地址
             </Label>
-            <div className="relative">
-              <Mail className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-              <Input
+            <InputGroup className="bg-muted/30">
+              <InputGroupAddon>
+                <Mail />
+              </InputGroupAddon>
+              <InputGroupInput
                 type="email"
                 value={bindEmailInput}
                 onChange={(e) => setBindEmailInput(e.target.value)}
                 placeholder="请输入邮箱"
-                className="bg-muted/30 border-border pr-[108px] pl-10"
               />
-              <button
-                type="button"
-                onClick={handleSendBindEmailCode}
-                disabled={bindEmailCountdown > 0 || bindEmailSending}
-                className="absolute top-1/2 right-2 -translate-y-1/2 rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
-              >
-                {bindEmailCountdown > 0 ? `${bindEmailCountdown}s` : "获取验证码"}
-              </button>
-            </div>
+              <InputGroupAddon align="inline-end">
+                <InputGroupButton
+                  variant="default"
+                  size="xs"
+                  onClick={handleSendBindEmailCode}
+                  disabled={bindEmailCountdown > 0 || bindEmailSending}
+                >
+                  {bindEmailCountdown > 0 ? `${bindEmailCountdown}s` : "获取验证码"}
+                </InputGroupButton>
+              </InputGroupAddon>
+            </InputGroup>
           </div>
           <div className="space-y-2">
             <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
               验证码
             </Label>
-            <div className="relative">
-              <KeyRound className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-              <Input
+            <InputGroup className="bg-muted/30">
+              <InputGroupAddon>
+                <KeyRound />
+              </InputGroupAddon>
+              <InputGroupInput
                 value={bindEmailCode}
                 onChange={(e) => setBindEmailCode(e.target.value)}
                 placeholder="请输入6位验证码"
                 maxLength={6}
-                className="bg-muted/30 border-border pl-10"
               />
-            </div>
+            </InputGroup>
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
               设置登录密码
             </Label>
-            <div className="relative">
-              <Lock className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-              <Input
+            <InputGroup className="bg-muted/30">
+              <InputGroupAddon>
+                <Lock />
+              </InputGroupAddon>
+              <InputGroupInput
                 type="password"
                 value={bindEmailPassword}
                 onChange={(e) => setBindEmailPassword(e.target.value)}
                 placeholder="至少 6 位字符"
-                className="bg-muted/30 border-border pl-10"
               />
-            </div>
+            </InputGroup>
           </div>
         </div>
         <div className="flex justify-end">
