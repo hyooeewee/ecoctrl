@@ -13,7 +13,6 @@
                                     ▼
                 ┌──────────────────────────────────────┐
                 │   反向代理（Docker 中为 Caddy /      │
-                │   release zip 中为 lws --rewrite /   │
                 │   开发环境为 Vite dev proxy）        │
                 └───────────┬──────────────────────────┘
                             │
@@ -106,13 +105,13 @@ Repository 函数遵循 Prisma 风格（`createXxx`、`findManyXxx`、`findXxxBy
 | `apps/docs`                      | `vitepress build`                  | `.vitepress/dist/` 下的静态站点                   |
 | `packages/ui`、`packages/shared` | 无 — 以源码形式被消费              | 不适用                                            |
 
-服务端的 Rolldown 配置把所有 bare specifier 与 Node 内置全部外部化。一个自定义插件随后扫描 bundle 用到的外部 import，从源 `package.json` 中读取版本，写出仅包含运行时依赖的全新 `dist/package.json`。release zip 因此只需要 `pnpm install --prod` 就能跑起来。
+服务端的 Rolldown 配置把所有 bare specifier 与 Node 内置全部外部化。一个自定义插件随后扫描 bundle 用到的外部 import，从源 `package.json` 中读取版本，写出仅包含运行时依赖的全新 `dist/package.json`。产物自包含，`pnpm install --prod` 即可运行。
 
-具体的产物如何被打包成 release zip 与 Docker 镜像，请参见 [部署指南](/zh/reference/deployment)。
+具体的产物如何被打包成 Docker 镜像，请参见 [部署指南](/zh/reference/deployment)。
 
 ## 运行时拓扑
 
-EcoCtrl 支持三种部署形态，共用同一份编译产物：
+EcoCtrl 支持两种部署形态，共用同一份编译产物：
 
 ### 本地开发
 
@@ -135,18 +134,6 @@ ecoctrl-web   (Caddy)   :8081 → /api /static 重写到 http://server:3000
 ```
 
 每个 App 的 Dockerfile 产出小镜像：SPA bundle + 一份用于改写 API/static 前缀的 Caddyfile。Compose 文件挂载各 App 的 `.env.local`，因此后端主机与前缀都可以在不重新构建的前提下调整。
-
-### Release zip（`ecoctrl-vX.Y.Z.zip`）
-
-```
-ecoctrl/
-├── start.mjs          # 交互菜单 — 启动 / 重启 / 停止
-├── server/...        # node bundle + 自动生成的 package.json
-├── admin/...         # 静态资源
-└── web/...           # 静态资源
-```
-
-`start.mjs` 使用 pm2 启动服务（进程名 `ecoctrl-server`），并通过 [`local-web-server`](https://github.com/lwsjs/local-web-server) 的 `--rewrite` 把 `admin/` 与 `web/` 起到端口 4173 与 8081，复刻 Caddy 的行为且无需安装 Caddy。重写规则同样从 `.env.local` 读取。
 
 ## IoT 代理层
 

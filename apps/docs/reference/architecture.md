@@ -13,7 +13,6 @@ This page is the runtime view of EcoCtrl: how requests flow, where responsibilit
                                     ▼
                 ┌──────────────────────────────────────┐
                 │   Reverse proxy (Caddy in Docker /   │
-                │   lws --rewrite in release zips /    │
                 │   Vite dev proxy in development)     │
                 └───────────┬──────────────────────────┘
                             │
@@ -108,11 +107,11 @@ Repository functions follow Prisma-style naming (`createXxx`, `findManyXxx`, `fi
 
 The server's Rolldown config externalizes every bare specifier and Node built-in. A custom plugin then walks the bundle's external imports, looks each version up in the source `package.json`, and writes a fresh `dist/package.json` listing only the runtime dependencies. The released zip can therefore be installed on any host with `pnpm install --prod`.
 
-See [Deployment](/reference/deployment) for how these outputs are packaged into release zips and Docker images.
+See [Deployment](/reference/deployment) for how these outputs are packaged into Docker images.
 
 ## Runtime topologies
 
-EcoCtrl supports three runtime shapes, all sharing the same compiled code:
+EcoCtrl supports two runtime shapes, both sharing the same compiled code:
 
 ### Local development
 
@@ -135,18 +134,6 @@ ecoctrl-web   (Caddy)   :8081 → /api /static rewritten to http://server:3000
 ```
 
 Per-app Dockerfiles produce small images: the SPA bundle plus a Caddyfile that rewrites the API/static prefixes. The compose file mounts each app's `.env.local` so backend host and prefix are configurable without rebuilding.
-
-### Release zip (`ecoctrl-vX.Y.Z.zip`)
-
-```
-ecoctrl/
-├── start.mjs          # interactive menu — start, restart, stop
-├── server/...        # node bundle + auto-generated package.json
-├── admin/...         # static files
-└── web/...           # static files
-```
-
-`start.mjs` runs the server under pm2 (`ecoctrl-server`) and serves `admin/` and `web/` with [`local-web-server`](https://github.com/lwsjs/local-web-server)'s `--rewrite` flag, replicating Caddy's behavior without requiring it. The same `.env.local` files drive the rewrites.
 
 ## IoT proxy layer
 

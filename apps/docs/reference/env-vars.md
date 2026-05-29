@@ -55,7 +55,7 @@ Configured providers are returned by `GET /api/auth/oauth/providers`; if the lis
 
 ## Admin & web (`apps/{admin,web}/.env.local`)
 
-These variables are **read by the runtime layer (Caddy in Docker, lws in the release zip), not by the JavaScript bundle**. Client code always issues requests against the literal `/api` and `/static` prefixes.
+These variables are **read by the runtime layer (Caddy in Docker), not by the JavaScript bundle**. Client code always issues requests against the literal `/api` and `/static` prefixes.
 
 | Variable        | Default                 | Description                                                                           |
 | --------------- | ----------------------- | ------------------------------------------------------------------------------------- |
@@ -83,9 +83,7 @@ Database credentials, ports and `DATABASE_URL` are hardcoded inside `compose.yml
 
 When the same variable is set in multiple places, EcoCtrl resolves it in this order (highest wins):
 
-1. **Shell environment** — `JWT_SECRET=... node start.mjs`.
+1. **Shell environment** — `JWT_SECRET=... node index.mjs`.
 2. **Per-app `.env.local`** — `apps/admin/.env.local`, `apps/web/.env.local`, `packages/server/.env.local`.
 3. **Per-app `.env.example`** — used by tests / fallbacks only.
-4. **Built-in defaults** in `start.mjs` and inside the server.
-
-The release zip's `start.mjs` additionally honors `ROOT/.env.local` as a shared fallback for both admin and web, useful when both apps point to the same backend.
+4. **Built-in defaults** inside the server.

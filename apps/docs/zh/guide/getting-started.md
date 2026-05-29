@@ -1,12 +1,11 @@
 # 快速上手
 
-EcoCtrl 提供三种运行方式，按需选择：
+EcoCtrl 提供两种运行方式，按需选择：
 
-| 你的目标                  | 推荐路径                                 |
-| ------------------------- | ---------------------------------------- |
-| 用容器一键体验整个平台    | [Docker Compose](#docker-compose-启动)   |
-| 从 release 产物部署到生产 | [预构建 Release](#从预构建-release-启动) |
-| 在本地修改源码并热更新    | 见 [开发指南](./development)             |
+| 你的目标               | 推荐路径                               |
+| ---------------------- | -------------------------------------- |
+| 用容器一键体验整个平台 | [Docker Compose](#docker-compose-启动) |
+| 在本地修改源码并热更新 | 见 [开发指南](./development)           |
 
 ## Docker Compose 启动
 
@@ -45,58 +44,6 @@ docker compose -f compose.yml up --build
 ```bash
 docker compose -f compose.yml down          # 保留数据
 docker compose -f compose.yml down -v       # 同时清空 Postgres volume
-```
-
-## 从预构建 Release 启动
-
-GitHub 上每个标签版本都会发布预构建产物，可直接部署到任意 Linux 主机（要求 Node.js 20+ 与 PostgreSQL）。
-
-### 下载
-
-打开 [GitHub Releases](https://github.com/hyooeewee/ecoctrl/releases)，选择以下任一种：
-
-- **`ecoctrl-vX.Y.Z.zip`** — 推荐，已包含全部组件。
-- 单独的 zip：`admin-vX.Y.Z.zip`、`web-vX.Y.Z.zip`、`server-vX.Y.Z.zip`。解压后并排放在同一个 `ecoctrl/` 目录下。
-
-### 解压后的目录
-
-```
-ecoctrl/
-├── start.mjs        # 一键启动脚本
-├── admin/          # admin 静态资源（端口 4173）
-├── web/            # web 静态资源（端口 8081）
-└── server/         # node API 包（端口 3000）
-```
-
-### 配置并启动
-
-```bash
-cd ecoctrl
-
-# 1. 配置服务端。.env.local 优先级高于 .env.example。
-cp server/.env.example server/.env.local
-# 设置 DATABASE_URL、JWT_SECRET 以及可选的集成凭据。
-
-# 2. 启动整个栈。
-node start.mjs
-```
-
-`start.mjs` 会执行：
-
-1. 第一次运行时为服务端安装运行时依赖（`pnpm install --prod`）。
-2. 通过 [pm2](https://pm2.keymetrics.io/) 以 `ecoctrl-server` 进程名启动 API。
-3. 把 `admin/` 和 `web/` 静态资源分别在 `4173` 与 `8081` 端口起服务，自动把 `/api/*` 与 `/static/*` 重写到 API。
-
-可以随时再次运行 `node start.mjs` 触发交互菜单（`[r]` 重启，`[s]` 停止，`[q]` 取消）。
-
-### 手动停止
-
-如需绕过菜单：
-
-```bash
-npx pm2 delete ecoctrl-server
-kill "$(cat logs/admin.pid)"
-kill "$(cat logs/web.pid)"
 ```
 
 ## 下一步

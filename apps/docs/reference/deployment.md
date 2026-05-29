@@ -1,11 +1,6 @@
 # Deployment
 
-EcoCtrl supports two production deployment shapes:
-
-| Shape                                       | Best for                     | What you need             |
-| ------------------------------------------- | ---------------------------- | ------------------------- |
-| [Docker Compose](#docker-compose)           | Single-host deploys, on-prem | Docker 24+                |
-| [Pre-built release zip](#pre-built-release) | Bare Linux hosts, no Docker  | Node 20+, PostgreSQL, pm2 |
+EcoCtrl ships as Docker images published to GHCR. The recommended way to run in production is Docker Compose.
 
 ## Docker Compose
 
@@ -83,112 +78,6 @@ docker compose -f compose.yml down -v       # also wipe Postgres volume
 ::: warning
 The `compose.yml` Caddyfile is configured for plain HTTP. In production, terminate TLS in front of these containers (Caddy on the host, Cloudflare, an ALB, etc.) and route to the SPA containers over the internal network.
 :::
-
-## Pre-built release
-
-GitHub Releases publishes pre-staged zips for every tagged version. They contain the SPA bundles and a Rolldown-bundled server with auto-generated `dist/package.json` listing only runtime dependencies — install with `pnpm install --prod`.
-
-### Download
-
-:::tabs
-== GitHub Releases
-
-From [GitHub Releases](https://github.com/hyooeewee/ecoctrl/releases):
-
-- **`ecoctrl-vX.Y.Z.zip`** — recommended. Contains everything, ready for `start.mjs`.
-- Component zips: `admin-vX.Y.Z.zip`, `web-vX.Y.Z.zip`, `server-vX.Y.Z.zip`. Extract them next to each other.
-
-== R2 Mirror (China)
-
-If GitHub Releases is slow or unreachable, download from our Cloudflare R2 mirror (same files, synced on every release):
-
-- **Full bundle**: <a href="https://bucket.godot.qzz.io/releases/latest/ecoctrl.zip" download>ecoctrl.zip ↓</a>
-- **Admin only**: <a href="https://bucket.godot.qzz.io/releases/latest/admin.zip" download>admin.zip ↓</a>
-- **Web only**: <a href="https://bucket.godot.qzz.io/releases/latest/web.zip" download>web.zip ↓</a>
-- **Server only**: <a href="https://bucket.godot.qzz.io/releases/latest/server.zip" download>server.zip ↓</a>
-
-:::
-
-### Layout after unpacking
-
-```
-ecoctrl/
-├── start.mjs
-├── server/
-│   ├── index.mjs
-│   ├── package.json
-│   ├── ecoctrl.config.cjs   # pm2 config for the server
-│   └── .env.example         # copy to .env.local
-├── admin/                   # static build
-└── web/                     # static build
-```
-
-### Configure
-
-```bash
-cd ecoctrl
-cp server/.env.example server/.env.local
-$EDITOR server/.env.local       # DATABASE_URL, JWT_SECRET, optional IoT/OAuth/SMTP
-
-# Optional: override per-app proxy targets if API isn't on http://localhost:3000
-echo 'API_BASE_URL=https://api.example.com' > admin/.env.local
-echo 'API_BASE_URL=https://api.example.com' > web/.env.local
-```
-
-### Start
-
-```bash
-node start.mjs
-```
-
-`start.mjs` will:
-
-1. Run `pnpm install --prod` inside `server/` on the first launch.
-2. Start the API under pm2 as `ecoctrl-server`.
-3. Serve `admin/` on `:4173` and `web/` on `:8081` via [`local-web-server`](https://github.com/lwsjs/local-web-server) with `--rewrite "/api/(.*) -> $API_BASE_URL$API_PREFIX/$1"`.
-
-Re-run the script for an interactive menu (`[r]` restart, `[s]` stop, `[q]` cancel).
-
-### Manual stop
-
-```bash
-npx pm2 delete ecoctrl-server
-kill "$(cat logs/admin.pid)"
-kill "$(cat logs/web.pid)"
-```
-
-### Reverse proxy in front
-
-Both the SPA servers and the API listen on plain HTTP. A typical production frontend pairs them with a TLS-terminating proxy. For Caddy:
-
-```nginx
-app.example.com {
-    reverse_proxy localhost:8081      # web portal
-}
-
-admin.example.com {
-    reverse_proxy localhost:4173      # admin
-}
-
-api.example.com {
-    reverse_proxy localhost:3000      # API server
-}
-```
-
-Then point `API_BASE_URL=https://api.example.com` in both `admin/.env.local` and `web/.env.local`. The SPA bundles do not need to be rebuilt.
-
-## Build from source
-
-If you want to build artifacts yourself instead of using release zips:
-
-```bash
-pnpm install
-pnpm build:admin    # → apps/admin/dist/
-pnpm build:web      # → apps/web/build/
-pnpm build:server   # → packages/server/dist/{index.mjs, package.json}
-```
-
-The server build's auto-generated `dist/package.json` lists only the runtime dependencies pulled out of the bundle, so a copy of `server/` plus `pnpm install --prod` is enough to run it.
 
 ## Production checklist
 

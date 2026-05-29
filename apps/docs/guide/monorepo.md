@@ -15,7 +15,7 @@ ecoctrl/
 │   ├── ui/             # Shared component library (shadcn/ui style, source-only)
 │   └── shared/         # Zod schemas, types, and Vite tooling
 ├── docker/             # Compose manifests and per-app Dockerfiles
-├── scripts/            # start.mjs and runtime helpers shipped with releases
+├── scripts/            # release and migration helpers
 └── pnpm-workspace.yaml
 ```
 
@@ -91,13 +91,13 @@ The practical implication: **whenever you edit something in `packages/ui`, the c
 
 `packages/server` is bundled by [Rolldown](https://rolldown.rs/). Its config (`rolldown.config.ts`) externalizes every bare specifier and Node built-in, so the resulting `dist/index.mjs` is a thin entry point that imports from `node_modules/`.
 
-A custom plugin scans the bundle's external imports, looks up each version from the source `package.json`, and emits a fresh `dist/package.json` listing only the runtime dependencies. The release zip therefore contains a self-contained server bundle that any host can install with a plain `pnpm install --prod`.
+A custom plugin scans the bundle's external imports, looks up each version from the source `package.json`, and emits a fresh `dist/package.json` listing only the runtime dependencies. The resulting bundle is self-contained and can be installed with a plain `pnpm install --prod`.
 
 ## Versioning with Changesets
 
 The repo uses [Changesets](https://github.com/changesets/changesets) for versioning. Two configuration choices are worth knowing:
 
-- **Fixed packages**: `@ecoctrl/admin`, `@ecoctrl/web` and `@ecoctrl/server` share the same version number — bumping any one of them bumps all three. Release zip filenames are derived from this shared version.
+- **Fixed packages**: `@ecoctrl/admin`, `@ecoctrl/web` and `@ecoctrl/server` share the same version number — bumping any one of them bumps all three. Docker image tags are derived from this shared version.
 - **Ignored packages**: `@ecoctrl/ui` and `@ecoctrl/shared` do not participate in versioning. They evolve continuously alongside the apps that consume them.
 
 Create a changeset before opening a PR with user-visible changes:
