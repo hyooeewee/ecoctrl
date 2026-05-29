@@ -40,22 +40,6 @@ docker compose -f compose.yml up --build
 
 > **Offline/air-gapped?** Download the [offline bundle](https://bucket.godot.qzz.io/images/latest/ecoctrl.zip) — includes pre-pulled images, no registry access needed.
 
-### Pre-built Release
-
-Download from [GitHub Releases](https://github.com/hyooeewee/ecoctrl/releases) or the R2 mirror (for users in mainland China):
-
-| Source     | Full bundle                                                                                                                                                                                                      |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GitHub     | [`ecoctrl-vX.Y.Z.zip`](https://github.com/hyooeewee/ecoctrl/releases)                                                                                                                                            |
-| R2 Mirror  | [`ecoctrl.zip`](https://bucket.godot.qzz.io/releases/latest/ecoctrl.zip)                                                                                                                                         |
-| Components | [`admin.zip`](https://bucket.godot.qzz.io/releases/latest/admin.zip) · [`web.zip`](https://bucket.godot.qzz.io/releases/latest/web.zip) · [`server.zip`](https://bucket.godot.qzz.io/releases/latest/server.zip) |
-
-```bash
-unzip ecoctrl-v1.0.0.zip
-cd ecoctrl
-node start.mjs
-```
-
 ## Local Development
 
 ### Prerequisites
@@ -108,7 +92,7 @@ pnpm db:studio    # open Drizzle Studio
 
 ## Documentation
 
-- [Deployment Guide](https://ecoctrl.godot.run/reference/deployment) — Docker, release zips, offline bundles
+- [Deployment Guide](https://ecoctrl.godot.run/reference/deployment) — Docker deployment, local development
 - [Architecture](https://ecoctrl.godot.run/reference/architecture) — request flow, runtime topology
 - [Environment Variables](https://ecoctrl.godot.run/reference/env-vars) — full reference
 - [API Docs](http://localhost:3000/documentation) — Swagger UI (server must be running)
