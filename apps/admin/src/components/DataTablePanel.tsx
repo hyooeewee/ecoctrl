@@ -53,22 +53,30 @@ function createSelectionColumn<TData>(): ColumnDef<TData, any> {
   return {
     id: "select",
     header: ({ table }) => (
-      <IndeterminateCheckbox
-        checked={
-          table.getIsAllPageRowsSelected()
-            ? true
-            : table.getIsSomePageRowsSelected()
-              ? "indeterminate"
-              : false
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-      />
+      // base-ui checkbox dispatches a new click event from a hidden input,
+      // so stopPropagation must be on a native wrapper, not the Checkbox itself.
+      <span onClick={(e) => e.stopPropagation()}>
+        <IndeterminateCheckbox
+          checked={
+            table.getIsAllPageRowsSelected()
+              ? true
+              : table.getIsSomePageRowsSelected()
+                ? "indeterminate"
+                : false
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        />
+      </span>
     ),
     cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-      />
+      // base-ui checkbox dispatches a new click event from a hidden input,
+      // so stopPropagation must be on a native wrapper, not the Checkbox itself.
+      <span onClick={(e) => e.stopPropagation()}>
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+        />
+      </span>
     ),
     enableSorting: false,
     enableHiding: false,
