@@ -5,6 +5,7 @@
   "category": "action",
   "entry": "backend.js",
   "schema": "schema.json",
+  "icon": "icon.svg",
   "description": "向 web 客户端推送 SSE 实时事件消息",
   "color": "#3b82f6"
 }
