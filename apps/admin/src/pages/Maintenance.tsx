@@ -38,7 +38,8 @@ import { cn } from "@/lib/utils";
 import type { MaintenanceReminder, MaintenanceReminderDetail } from "@ecoctrl/shared";
 import { filesApi } from "../api/files";
 import { maintenanceApi } from "../api/maintenance";
-import { fetchRaw } from "../api/request";
+import { auth } from "../lib/auth";
+import { API_PREFIX } from "../lib/env";
 
 interface Manual {
   id: string;
@@ -255,16 +256,11 @@ export default function Maintenance() {
     }
   };
 
-  const handleManualClick = async (manual: Manual) => {
+  const handleManualClick = (manual: Manual) => {
     if (manual.fileUrl) {
-      try {
-        const res = await fetchRaw(`/files/${manual.id}/preview`);
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        window.open(url, "_blank");
-      } catch {
-        alert("文件预览失败");
-      }
+      const token = auth.getAccessToken();
+      const url = `${API_PREFIX}/files/${manual.id}/preview${token ? `?token=${token}` : ""}`;
+      window.open(url, "_blank");
     } else {
       setPreviewManual(manual.name);
     }
