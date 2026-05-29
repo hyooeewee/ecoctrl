@@ -15,7 +15,7 @@ ecoctrl/
 │   ├── ui/             # 共享组件库（shadcn/ui 风格、源码分发）
 │   └── shared/         # Zod schema、类型与 Vite 工具
 ├── docker/             # Compose 清单与各 App 的 Dockerfile
-├── scripts/            # release 包附带的 start.mjs 与运行时脚本
+├── scripts/            # 发布与迁移辅助脚本
 └── pnpm-workspace.yaml
 ```
 
@@ -91,13 +91,13 @@ vite-plus 是 Voidzero 发行的 Vite 超集，提供：
 
 `packages/server` 由 [Rolldown](https://rolldown.rs/) 打包。它的 `rolldown.config.ts` 把所有 bare specifier 与 Node 内置模块都标为外部依赖，因此最终的 `dist/index.mjs` 只是一个轻量入口，运行时仍然 import `node_modules/`。
 
-一个自定义插件会扫描 bundle 用到的外部 import，从源 `package.json` 中查找版本并写出新的 `dist/package.json`，仅列出真正使用的运行时依赖。release zip 中的服务端因此自包含，部署到任何主机只需 `pnpm install --prod`。
+一个自定义插件会扫描 bundle 用到的外部 import，从源 `package.json` 中查找版本并写出新的 `dist/package.json`，仅列出真正使用的运行时依赖。产物自包含，部署到任何主机只需 `pnpm install --prod`。
 
 ## 使用 Changesets 管理版本
 
 仓库使用 [Changesets](https://github.com/changesets/changesets) 管理版本。两个配置项需要了解：
 
-- **Fixed 包**：`@ecoctrl/admin`、`@ecoctrl/web` 与 `@ecoctrl/server` 共享同一个版本号 — 任意一个升级都会带动另外两个一起升级。release zip 文件名也由这个共享版本决定。
+- **Fixed 包**：`@ecoctrl/admin`、`@ecoctrl/web` 与 `@ecoctrl/server` 共享同一个版本号 — 任意一个升级都会带动另外两个一起升级。Docker 镜像标签也由这个共享版本决定。
 - **Ignored 包**：`@ecoctrl/ui` 与 `@ecoctrl/shared` 不参与版本管理，跟随消费它们的 App 持续演进。
 
 提交带有用户可见变更的 PR 之前，先创建一个 changeset：

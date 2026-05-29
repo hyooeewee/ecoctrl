@@ -1,11 +1,6 @@
 # 部署指南
 
-EcoCtrl 支持两种生产部署形态：
-
-| 形态                                  | 适用场景                    | 依赖                      |
-| ------------------------------------- | --------------------------- | ------------------------- |
-| [Docker Compose](#docker-compose)     | 单机部署、私有部署          | Docker 24+                |
-| [预构建 release zip](#预构建-release) | 不使用 Docker 的 Linux 主机 | Node 20+、PostgreSQL、pm2 |
+EcoCtrl 以 Docker 镜像形式发布到 GHCR。生产环境推荐使用 Docker Compose 部署。
 
 ## Docker Compose
 
@@ -81,112 +76,6 @@ docker compose -f compose.yml down -v       # 同时清空 Postgres volume
 ::: warning
 `compose.yml` 配置的是明文 HTTP。生产环境请在容器之外终结 TLS（主机上的 Caddy、Cloudflare、ALB 等），再把流量转发到 SPA 容器。
 :::
-
-## 预构建 Release
-
-GitHub Releases 为每个 tag 发布预构建 zip。其中包含 SPA bundle 与 Rolldown 打包好的服务端，附带自动生成的 `dist/package.json`，仅列出运行时依赖 — 用 `pnpm install --prod` 即可安装。
-
-### 下载
-
-:::tabs
-== GitHub Releases
-
-打开 [GitHub Releases](https://github.com/hyooeewee/ecoctrl/releases)：
-
-- **`ecoctrl-vX.Y.Z.zip`** — 推荐，包含全部组件，可直接配合 `start.mjs` 使用。
-- 单包：`admin-vX.Y.Z.zip`、`web-vX.Y.Z.zip`、`server-vX.Y.Z.zip`，并排解压到同一目录即可。
-
-== 国内镜像
-
-如果 GitHub Releases 访问较慢，可从 Cloudflare R2 镜像下载（每次 release 自动同步）：
-
-- **完整包**：<a href="https://bucket.godot.qzz.io/releases/latest/ecoctrl.zip" download>ecoctrl.zip ↓</a>
-- **Admin**：<a href="https://bucket.godot.qzz.io/releases/latest/admin.zip" download>admin.zip ↓</a>
-- **Web**：<a href="https://bucket.godot.qzz.io/releases/latest/web.zip" download>web.zip ↓</a>
-- **Server**：<a href="https://bucket.godot.qzz.io/releases/latest/server.zip" download>server.zip ↓</a>
-
-:::
-
-### 解压结构
-
-```
-ecoctrl/
-├── start.mjs
-├── server/
-│   ├── index.mjs
-│   ├── package.json
-│   ├── ecoctrl.config.cjs   # 服务端的 pm2 配置
-│   └── .env.example         # 复制为 .env.local
-├── admin/                   # 静态产物
-└── web/                     # 静态产物
-```
-
-### 配置
-
-```bash
-cd ecoctrl
-cp server/.env.example server/.env.local
-$EDITOR server/.env.local       # DATABASE_URL、JWT_SECRET，以及可选的 IoT/OAuth/SMTP
-
-# 可选：覆盖各 App 的代理目标，如果 API 不在 http://localhost:3000
-echo 'API_BASE_URL=https://api.example.com' > admin/.env.local
-echo 'API_BASE_URL=https://api.example.com' > web/.env.local
-```
-
-### 启动
-
-```bash
-node start.mjs
-```
-
-`start.mjs` 会执行：
-
-1. 第一次启动时在 `server/` 中运行 `pnpm install --prod`。
-2. 通过 pm2 启动 API（进程名 `ecoctrl-server`）。
-3. 用 [`local-web-server`](https://github.com/lwsjs/local-web-server) 把 `admin/` 起在 `:4173`、`web/` 起在 `:8081`，附带 `--rewrite "/api/(.*) -> $API_BASE_URL$API_PREFIX/$1"`。
-
-再次执行脚本会进入交互菜单（`[r]` 重启、`[s]` 停止、`[q]` 取消）。
-
-### 手动停止
-
-```bash
-npx pm2 delete ecoctrl-server
-kill "$(cat logs/admin.pid)"
-kill "$(cat logs/web.pid)"
-```
-
-### 在前面挂反向代理
-
-SPA 服务与 API 都监听明文 HTTP。生产环境通常配合一个负责 TLS 终结的反向代理。Caddy 示例：
-
-```nginx
-app.example.com {
-    reverse_proxy localhost:8081      # web 门户
-}
-
-admin.example.com {
-    reverse_proxy localhost:4173      # admin
-}
-
-api.example.com {
-    reverse_proxy localhost:3000      # API 服务
-}
-```
-
-然后在 `admin/.env.local` 与 `web/.env.local` 中设置 `API_BASE_URL=https://api.example.com`。SPA 不需要重新构建。
-
-## 从源码构建
-
-如果你想自行构建，而不使用 release zip：
-
-```bash
-pnpm install
-pnpm build:admin    # → apps/admin/dist/
-pnpm build:web      # → apps/web/build/
-pnpm build:server   # → packages/server/dist/{index.mjs, package.json}
-```
-
-服务端构建产物的 `dist/package.json` 仅列出 bundle 实际用到的依赖，所以 `server/` 加上 `pnpm install --prod` 就能跑。
 
 ## 上线 Checklist
 

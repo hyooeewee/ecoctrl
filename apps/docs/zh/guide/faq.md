@@ -93,7 +93,6 @@ Dockerfile 假设 `pnpm-lock.yaml` 与整个工作区都存在于上下文中。
 
 - 开发环境：通过 Vite 的 proxy（`createDevProxy`）。
 - 容器环境：通过 Caddy。
-- release zip：通过 `start.mjs` 与 `lws --rewrite`。
 
 修改 API 主机或前缀 **不需要重新构建前端**，只需更新对应运行时层的环境变量（参见 [环境变量](/zh/reference/env-vars)）。
 

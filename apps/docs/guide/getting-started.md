@@ -1,12 +1,11 @@
 # Getting Started
 
-There are three supported ways to run EcoCtrl. Pick the one that matches your situation:
+There are two supported ways to run EcoCtrl. Pick the one that matches your situation:
 
-| You want to…                                      | Use this path                                      |
-| ------------------------------------------------- | -------------------------------------------------- |
-| Try it out quickly with everything in containers  | [Docker Compose](#run-with-docker-compose)         |
-| Deploy a production build from a release artifact | [Pre-built Release](#run-from-a-pre-built-release) |
-| Hack on the code locally with hot reload          | See the [Development guide](./development)         |
+| You want to…                                     | Use this path                              |
+| ------------------------------------------------ | ------------------------------------------ |
+| Try it out quickly with everything in containers | [Docker Compose](#run-with-docker-compose) |
+| Hack on the code locally with hot reload         | See the [Development guide](./development) |
 
 ## Run with Docker Compose
 
@@ -45,60 +44,6 @@ The seeded admin account is created on the very first run. The default credentia
 ```bash
 docker compose -f compose.yml down          # keep data
 docker compose -f compose.yml down -v       # also wipe Postgres volume
-```
-
-## Run from a pre-built release
-
-Each tagged version on GitHub publishes pre-built artifacts you can drop on any Linux box that has Node.js 20+ and PostgreSQL.
-
-### Download
-
-Open [GitHub Releases](https://github.com/hyooeewee/ecoctrl/releases) and grab either:
-
-- **`ecoctrl-vX.Y.Z.zip`** — every component pre-staged, recommended.
-- Individual zips: `admin-vX.Y.Z.zip`, `web-vX.Y.Z.zip`, `server-vX.Y.Z.zip`. Extract them next to each other inside an `ecoctrl/` directory.
-
-### Layout
-
-After unpacking you get:
-
-```
-ecoctrl/
-├── start.mjs        # one-click startup script
-├── admin/          # admin static files (served on port 4173)
-├── web/            # web static files (served on port 8081)
-└── server/         # node API bundle (port 3000)
-```
-
-### Configure and start
-
-```bash
-cd ecoctrl
-
-# 1. Configure the server. .env.local takes precedence over .env.example.
-cp server/.env.example server/.env.local
-# Set DATABASE_URL, JWT_SECRET, and any optional integration credentials.
-
-# 2. Bring everything up.
-node start.mjs
-```
-
-`start.mjs` will:
-
-1. Install the server's runtime dependencies (`pnpm install --prod`) the first time it runs.
-2. Start the API under [pm2](https://pm2.keymetrics.io/) as `ecoctrl-server`.
-3. Serve the `admin/` and `web/` static bundles on `4173` and `8081`, automatically rewriting `/api/*` and `/static/*` to the API.
-
-You can re-run `node start.mjs` at any time to get an interactive menu (`[r]` restart, `[s]` stop, `[q]` cancel).
-
-### Manual stop
-
-If you need to stop services without the menu:
-
-```bash
-npx pm2 delete ecoctrl-server
-kill "$(cat logs/admin.pid)"
-kill "$(cat logs/web.pid)"
 ```
 
 ## What's next

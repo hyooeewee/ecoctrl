@@ -55,7 +55,7 @@
 
 ## Admin 与 Web（`apps/{admin,web}/.env.local`）
 
-这些变量 **由运行时层读取（Docker 中是 Caddy，release zip 中是 lws），并不会被 JavaScript bundle 读取**。客户端代码总是请求字面量 `/api` 与 `/static` 前缀。
+这些变量 **由运行时层读取（Docker 中是 Caddy），并不会被 JavaScript bundle 读取**。客户端代码总是请求字面量 `/api` 与 `/static` 前缀。
 
 | 变量            | 默认值                  | 说明                                                                    |
 | --------------- | ----------------------- | ----------------------------------------------------------------------- |
@@ -83,9 +83,7 @@
 
 同一变量在多个位置出现时，EcoCtrl 按以下顺序解析（高优先级在前）：
 
-1. **Shell 环境变量** — `JWT_SECRET=... node start.mjs`。
+1. **Shell 环境变量** — `JWT_SECRET=... node index.mjs`。
 2. **每个 App 的 `.env.local`** — `apps/admin/.env.local`、`apps/web/.env.local`、`packages/server/.env.local`。
 3. **每个 App 的 `.env.example`** — 仅作为兜底/测试用。
-4. **`start.mjs` 与服务端中的内置默认值**。
-
-release zip 的 `start.mjs` 还支持把 `ROOT/.env.local` 作为 admin 与 web 共享的兜底配置 — 当两个 App 指向同一后端时非常方便。
+4. **服务端中的内置默认值**。

@@ -37,5 +37,5 @@ features:
     details: 自动轮转的 JWT + Refresh Token、OAuth 登录、SMTP 邮件验证码、基于角色的权限模型，开箱即用。
   - icon: 🐳
     title: 一键部署
-    details: 通过单条 docker compose up 启动整套服务，或者下载预构建的 release zip 用 start.mjs 启动 — 自由选择。
+    details: 通过单条 docker compose up 启动整套服务。同时提供离线部署包，适用于无外网环境。
 ---
