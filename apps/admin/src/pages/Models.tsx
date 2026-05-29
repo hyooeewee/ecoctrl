@@ -34,6 +34,7 @@ import { objectsApi } from "../api/objects";
 import { pointsApi } from "../api/points";
 import { toast } from "sonner";
 import ModelViewer from "../components/ModelViewer";
+import CardModelPreview from "../components/CardModelPreview";
 import ModelUploadWizard from "@/components/ModelUploadWizard";
 import { PointCreateEditDialog } from "@/components/models/dialogs/PointCreateEditDialog";
 import { ObjectCreateEditDialog } from "@/components/models/dialogs/ObjectCreateEditDialog";
@@ -115,21 +116,6 @@ export default function Models() {
   useEffect(() => {
     fetchModels();
   }, [fetchModels]);
-
-  // Lazy-load model-viewer when there are previewable models without thumbnails
-  useEffect(() => {
-    if (
-      models.some(
-        (m) =>
-          !m.thumbnailUrl &&
-          m.format &&
-          CARD_PREVIEW_FORMATS.has(m.format.toUpperCase()) &&
-          m.fileUrl,
-      )
-    ) {
-      import("@google/model-viewer").catch(() => {});
-    }
-  }, [models]);
 
   const handleUploadSuccess = useCallback(async () => {
     await fetchModels();
@@ -643,17 +629,7 @@ export default function Models() {
                         ) : model.fileUrl &&
                           model.format &&
                           CARD_PREVIEW_FORMATS.has(model.format.toUpperCase()) ? (
-                          <model-viewer
-                            src={`/api/models/${model.id}/file`}
-                            alt={model.name}
-                            auto-rotate
-                            interaction-prompt="none"
-                            shadow-intensity="1"
-                            exposure="1"
-                            loading="eager"
-                            className="pointer-events-none h-full w-full"
-                            style={{ backgroundColor: "transparent" }}
-                          />
+                          <CardModelPreview src={`/api/models/${model.id}/file`} alt={model.name} />
                         ) : (
                           <ImageIcon className="h-12 w-12 text-muted-foreground/40 transition-transform group-hover:scale-110" />
                         )}

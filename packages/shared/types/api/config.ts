@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+// ========================================
+// Hotspot Schema
+// ========================================
+
 export const DashboardModelHotspotSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -9,6 +13,78 @@ export const DashboardModelHotspotSchema = z.object({
   description: z.string(),
 });
 export type DashboardModelHotspot = z.infer<typeof DashboardModelHotspotSchema>;
+
+// ========================================
+// Label Operation Schemas
+// ========================================
+
+export const CameraOperationSchema = z.object({
+  type: z.literal("camera"),
+  config: z.object({
+    target: z.object({ x: z.number(), y: z.number(), z: z.number() }),
+    distance: z.number(),
+    fov: z.number(),
+    duration: z.number(),
+    easing: z.string().optional(),
+  }),
+});
+
+export const ClippingOperationSchema = z.object({
+  type: z.literal("clipping"),
+  config: z.object({
+    planeNormal: z.object({ x: z.number(), y: z.number(), z: z.number() }),
+    planeOffset: z.number(),
+    duration: z.number(),
+    revealLabelIds: z.array(z.string()).optional(),
+  }),
+});
+
+export const VisibilityOperationSchema = z.object({
+  type: z.literal("visibility"),
+  config: z.object({
+    targets: z.array(z.string()),
+    action: z.enum(["show", "hide", "toggle"]),
+    duration: z.number().optional(),
+  }),
+});
+
+export const PostProcessOperationSchema = z.object({
+  type: z.literal("postprocess"),
+  config: z.object({
+    effect: z.string(),
+    value: z.number(),
+    duration: z.number().optional(),
+  }),
+});
+
+export const LabelOperationSchema = z.discriminatedUnion("type", [
+  CameraOperationSchema,
+  ClippingOperationSchema,
+  VisibilityOperationSchema,
+  PostProcessOperationSchema,
+]);
+export type LabelOperation = z.infer<typeof LabelOperationSchema>;
+
+// ========================================
+// Label Schema (New - with operations & tree)
+// ========================================
+
+export const DashboardModelLabelV2Schema = z.object({
+  id: z.string(),
+  key: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  parentId: z.string().nullable().optional(),
+  position: z.object({ x: z.number(), y: z.number(), z: z.number() }),
+  meshKeywords: z.array(z.string()),
+  operations: z.array(LabelOperationSchema),
+  order: z.number(),
+});
+export type DashboardModelLabelV2 = z.infer<typeof DashboardModelLabelV2Schema>;
+
+// ========================================
+// Label Schema (Legacy - for backward compat)
+// ========================================
 
 export const DashboardModelLabelSchema = z.object({
   key: z.string(),
@@ -20,14 +96,26 @@ export const DashboardModelLabelSchema = z.object({
 });
 export type DashboardModelLabel = z.infer<typeof DashboardModelLabelSchema>;
 
+// ========================================
+// Config Schema
+// ========================================
+
 export const DashboardModelConfigSchema = z.object({
   modelFileUrl: z.string().nullable().optional(),
+  // Multiple model files (same coordinate system)
+  modelFiles: z.array(z.string()).optional(),
   cameraPreset: z.string(),
   ambientLightIntensity: z.number(),
   hotspots: z.array(DashboardModelHotspotSchema),
   labels: z.array(DashboardModelLabelSchema),
+  // New V2 labels (optional for backward compat)
+  labelsV2: z.array(DashboardModelLabelV2Schema).optional(),
 });
 export type DashboardModelConfig = z.infer<typeof DashboardModelConfigSchema>;
+
+// ========================================
+// System Config
+// ========================================
 
 export const SystemConfigSchema = z.object({
   platformName: z.string(),
