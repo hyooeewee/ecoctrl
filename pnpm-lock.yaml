@@ -113,6 +113,18 @@ importers:
 
   apps/admin:
     dependencies:
+      '@babylonjs/core':
+        specifier: ^9.6.2
+        version: 9.6.2
+      '@babylonjs/gui':
+        specifier: ^9.10.0
+        version: 9.10.0(@babylonjs/core@9.6.2)
+      '@babylonjs/loaders':
+        specifier: ^9.6.2
+        version: 9.6.2(@babylonjs/core@9.6.2)(babylonjs-gltf2interface@9.6.2)
+      '@babylonjs/materials':
+        specifier: ^9.10.0
+        version: 9.10.0(@babylonjs/core@9.6.2)
       '@base-ui/react':
         specifier: 'catalog:'
         version: 1.4.1(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -948,11 +960,21 @@ packages:
   '@babylonjs/core@9.6.2':
     resolution: {integrity: sha512-4r0nSC6y1XBoLSzFFD50WLGueLaP1+tKkmDYOtwSA+AIk19sfgl4+pmPUxYXXl2G/gE/DT2yRIShCT8IxY9aHQ==}
 
+  '@babylonjs/gui@9.10.0':
+    resolution: {integrity: sha512-snhf8jr3Qcrck6Wpwe2Vhf7uZPiFtU87LdrGMxgN6mTPUqYqP9790N7dyAk0ClJW1/Mhwo/ewsuMobJugfHkrw==}
+    peerDependencies:
+      '@babylonjs/core': ^9.0.0
+
   '@babylonjs/loaders@9.6.2':
     resolution: {integrity: sha512-szGhihDgj/8JLcMLnMse3F0geFSKRlQ5PfayIBhjWYBL8ic3/uNNRJapo503+r3/1n0Byed2qbtaggB1rzNgtQ==}
     peerDependencies:
       '@babylonjs/core': ^9.0.0
       babylonjs-gltf2interface: ^9.0.0
+
+  '@babylonjs/materials@9.10.0':
+    resolution: {integrity: sha512-CxOMnAJ+l4Zle8WF2JbtdpDBAk3grK+5tVnxbW0RohEfG5QCVZVjFCCTLCpyoTFLuFaIyOxsOIozfK7o1btsZw==}
+    peerDependencies:
+      '@babylonjs/core': ^9.0.0
 
   '@base-ui/react@1.4.1':
     resolution: {integrity: sha512-Ab5/LIhcmL8BQcsBUYiOfkSDRdLpvgUBzMK30cu684JPcLclYlztharvCZyNNgzJtbAiREzI9q0pI5erHCMgCw==}
@@ -8079,10 +8101,18 @@ snapshots:
 
   '@babylonjs/core@9.6.2': {}
 
+  '@babylonjs/gui@9.10.0(@babylonjs/core@9.6.2)':
+    dependencies:
+      '@babylonjs/core': 9.6.2
+
   '@babylonjs/loaders@9.6.2(@babylonjs/core@9.6.2)(babylonjs-gltf2interface@9.6.2)':
     dependencies:
       '@babylonjs/core': 9.6.2
       babylonjs-gltf2interface: 9.6.2
+
+  '@babylonjs/materials@9.10.0(@babylonjs/core@9.6.2)':
+    dependencies:
+      '@babylonjs/core': 9.6.2
 
   '@base-ui/react@1.4.1(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
     dependencies:
@@ -10217,7 +10247,7 @@ snapshots:
       obug: 2.1.1
       std-env: 4.1.0
       tinyrainbow: 3.1.0
-      vitest: '@voidzero-dev/vite-plus-test@0.1.22(@types/node@22.19.19)(@vitest/coverage-v8@4.1.5)(@vitest/ui@4.1.5)(esbuild@0.27.7)(jiti@2.7.0)(jsdom@26.1.0)(tsx@4.21.0)(typescript@5.9.3)(vite@8.0.11(@types/node@22.19.19)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.4))(yaml@2.8.4)'
+      vitest: '@voidzero-dev/vite-plus-test@0.1.22(@types/node@22.19.18)(@vitest/coverage-v8@4.1.5)(@vitest/ui@4.1.5)(esbuild@0.27.7)(jiti@2.7.0)(jsdom@26.1.0)(tsx@4.21.0)(typescript@5.9.3)(vite@8.0.11(@types/node@22.19.18)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.4))(yaml@2.8.4)'
 
   '@vitest/expect@4.1.5':
     dependencies:
@@ -10264,7 +10294,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.16
       tinyrainbow: 3.1.0
-      vitest: '@voidzero-dev/vite-plus-test@0.1.22(@types/node@22.19.19)(@vitest/coverage-v8@4.1.5)(@vitest/ui@4.1.5)(esbuild@0.27.7)(jiti@2.7.0)(jsdom@26.1.0)(tsx@4.21.0)(typescript@5.9.3)(vite@8.0.11(@types/node@22.19.19)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.4))(yaml@2.8.4)'
+      vitest: '@voidzero-dev/vite-plus-test@0.1.22(@types/node@22.19.18)(@vitest/coverage-v8@4.1.5)(@vitest/ui@4.1.5)(esbuild@0.27.7)(jiti@2.7.0)(jsdom@26.1.0)(tsx@4.21.0)(typescript@5.9.3)(vite@8.0.11(@types/node@22.19.18)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.4))(yaml@2.8.4)'
 
   '@vitest/utils@4.1.5':
     dependencies:
