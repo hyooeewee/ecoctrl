@@ -459,14 +459,25 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
     }
 
     function tryLoadModel(url: string) {
-      const { rootUrl, filename } = splitModelUrl(url);
-      return SceneLoader.ImportMeshAsync("", rootUrl, filename, scene, (event) => {
-        if (event.lengthComputable && event.total > 0) {
-          const value = Math.min(99, (event.loaded / event.total) * 100);
-          setLoadProgress(value);
-          propsRef.current.onProgress?.(value);
-        }
-      });
+      const pluginExtension = url.includes(".glb")
+        ? ".glb"
+        : url.includes(".gltf")
+          ? ".gltf"
+          : undefined;
+      return SceneLoader.ImportMeshAsync(
+        null,
+        "",
+        url,
+        scene,
+        (event) => {
+          if (event.lengthComputable && event.total > 0) {
+            const value = Math.min(99, (event.loaded / event.total) * 100);
+            setLoadProgress(value);
+            propsRef.current.onProgress?.(value);
+          }
+        },
+        pluginExtension,
+      );
     }
 
     const processLoadedResult = (
