@@ -1,16 +1,13 @@
 import { Undo2, Check, Maximize, Minimize, Minus, Plus, RotateCcw, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useLoaderData } from "react-router";
+import { useLoaderData, useOutletContext } from "react-router";
 
 import { BentoGrid } from "~/components/dashboard/bento-grid";
-import { LoadingOverlay } from "~/components/dashboard/loading-overlay";
-import { BuildingView, type BuildingViewRef } from "~/components/dashboard/building-view";
 import { DashboardHeader } from "~/components/dashboard/dashboard-header";
 import { DashboardNav } from "~/components/dashboard/dashboard-nav";
 import { DashboardWidgets } from "~/components/dashboard/widgets";
 import { fetchDashboardData, type DashboardData } from "~/lib/dashboard-api";
 import { API_PREFIX } from "~/lib/env";
-import { fetchPublicModel, type PublicModelData } from "~/lib/model-api";
 import { cn } from "~/lib/utils";
 import { locale, useLocale } from "~/locales";
 import { useAuthStore } from "~/store/auth";
@@ -18,6 +15,7 @@ import { useSettingsStore, type BentoLayoutItem } from "~/store/settings";
 import { useWidgetDataStore } from "~/store/widgetData";
 import { useSse } from "~/hooks/use-sse";
 
+import type { DashboardOutletContext } from "./dashboard-layout";
 import type { Route } from "./+types/home";
 
 // ─── Meta ──────────────────────────────────────────────────────────────────────
@@ -30,53 +28,12 @@ export function meta(_args: Route.MetaArgs) {
 
 export async function clientLoader(): Promise<{
   dashboard: DashboardData | null;
-  model: PublicModelData | null;
 }> {
-  const [dashboard, model] = await Promise.all([
-    fetchDashboardData().catch((err) => {
-      console.error("[clientLoader] fetchDashboardData failed:", err);
-      return null;
-    }),
-    fetchPublicModel().catch((err) => {
-      console.error("[clientLoader] fetchPublicModel failed:", err);
-      return null;
-    }),
-  ]);
-  return { dashboard, model };
-}
-
-// ─── Label info sidebar ─────────────────────────────────────────────────────────
-
-const SIDEBAR_W = 320;
-
-function LabelInfoPanel({ labelKey, onClose }: { labelKey: string; onClose: () => void }) {
-  const t = useLocale();
-  const info = t.labelInfo[labelKey as keyof typeof t.labelInfo];
-  if (!info) return null;
-
-  return (
-    <div
-      className="absolute top-0 bottom-0 left-0 z-30 flex flex-col border-r border-white/10 bg-black/80 backdrop-blur-md transition-transform duration-300 ease-out pointer-events-auto"
-      style={{ width: SIDEBAR_W }}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-        <h2 className="text-sm font-semibold text-foreground">{info.title}</h2>
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-foreground/60 hover:text-foreground flex size-7 items-center justify-center rounded-md transition-colors hover:bg-white/10"
-        >
-          <X size={16} />
-        </button>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
-        <p className="text-muted-foreground text-xs leading-relaxed">{info.description}</p>
-      </div>
-    </div>
-  );
+  const dashboard = await fetchDashboardData().catch((err) => {
+    console.error("[clientLoader] fetchDashboardData failed:", err);
+    return null;
+  });
+  return { dashboard };
 }
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
@@ -85,15 +42,14 @@ export default function Home() {
   const t = useLocale();
   const loaderData = useLoaderData() as {
     dashboard: DashboardData | null;
-    model: PublicModelData | null;
   };
+  const { buildingRef, activeLabel, setActiveLabel } = useOutletContext<DashboardOutletContext>();
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn());
   const fetchUser = useAuthStore((state) => state.fetchUser);
   const navHideDelay = useSettingsStore((state) => state.navHideDelay);
   const bentoDragEnabled = useSettingsStore((state) => state.bentoDragEnabled);
   const bentoLayout = useSettingsStore((state) => state.bentoLayout);
   const editAutoExitDelay = useSettingsStore((state) => state.editAutoExitDelay);
-  const showLoadingAnimation = useSettingsStore((state) => state.showLoadingAnimation);
   const setBentoDragEnabled = useSettingsStore((state) => state.setBentoDragEnabled);
   const setBentoLayout = useSettingsStore((state) => state.setBentoLayout);
   const hydrateBentoLayout = useSettingsStore((state) => state.hydrateBentoLayout);
@@ -102,11 +58,7 @@ export default function Home() {
 
   const [navVisible, setNavVisible] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
-  const [activeLabel, setActiveLabel] = useState<string | null>(null);
-  const [modelLoaded, setModelLoaded] = useState(false);
-  const [modelLoadProgress, setModelLoadProgress] = useState(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const buildingRef = useRef<BuildingViewRef>(null);
   const layoutSnapshotRef = useRef<BentoLayoutItem[] | null>(null);
   const hasSnappedRef = useRef(false);
 
@@ -206,7 +158,7 @@ export default function Home() {
     } else {
       buildingRef.current?.setClipping(false);
     }
-  }, [activeLabel]);
+  }, [activeLabel, buildingRef]);
 
   // Start/reset the auto-hide countdown
   const resetTimer = useCallback(() => {
@@ -281,159 +233,131 @@ export default function Home() {
   }, [bentoDragEnabled, editAutoExitDelay, setBentoDragEnabled]);
 
   return (
-    <div className="dark">
-      <div className="text-foreground relative h-screen overflow-hidden font-mono">
-        {/* Blueprint loading overlay — covers everything until model is ready */}
-        {showLoadingAnimation && !modelLoaded && <LoadingOverlay progress={modelLoadProgress} />}
-
-        {/* Full-page 3D building background */}
-        <BuildingView
-          ref={buildingRef}
-          className="absolute inset-0 z-0 h-full w-full"
-          activeLabel={activeLabel}
-          sidebarWidth={activeLabel ? SIDEBAR_W : 0}
-          onLabelClick={setActiveLabel}
-          onCanvasClick={() => setActiveLabel(null)}
-          onLoad={() => setModelLoaded(true)}
-          onProgress={setModelLoadProgress}
-          modelUrl={loaderData?.model?.modelFileUrl}
-          labels={loaderData?.model?.labels}
+    <div className="flex h-full flex-col pointer-events-none">
+      {/* Header */}
+      <div className="pointer-events-auto">
+        <DashboardHeader
+          onLogoClick={handleLogoClick}
+          navVisible={navVisible}
+          sseStatus={sseStatus}
         />
-
-        {/* Label info sidebar (left panel) */}
-        {activeLabel && (
-          <LabelInfoPanel labelKey={activeLabel} onClose={() => setActiveLabel(null)} />
-        )}
-
-        {/* Overlay layout — let pointer events pass through to the 3D canvas;
-             individual interactive children re-enable events below. */}
-        <div className="absolute inset-0 z-10 flex flex-col pointer-events-none">
-          {/* Header */}
-          <div className="pointer-events-auto">
-            <DashboardHeader
-              onLogoClick={handleLogoClick}
-              navVisible={navVisible}
-              sseStatus={sseStatus}
-            />
-          </div>
-
-          {/* Main bento grid layout — cards re-enable events individually */}
-          <main className="relative flex min-h-0 flex-1 overflow-hidden">
-            <BentoGrid
-              className={cn(
-                "transition-all duration-300 ease-in-out",
-                isImmersive && "opacity-0 pointer-events-none",
-              )}
-            >
-              <DashboardWidgets data={loaderData?.dashboard ?? null} />
-            </BentoGrid>
-          </main>
-
-          {/* Bottom navigation — absolute at bottom, floats above widgets */}
-          <div
-            className="absolute bottom-0 left-2 right-2 z-20 overflow-hidden transition-all duration-300 ease-in-out pointer-events-auto"
-            style={{
-              maxHeight: navVisible ? "60px" : "0px",
-              opacity: navVisible ? 1 : 0,
-            }}
-          >
-            <DashboardNav />
-          </div>
-
-          {/* Floating controls — fullscreen / zoom / reset */}
-          <div
-            className={cn(
-              "absolute top-[72px] z-30 flex flex-col overflow-hidden rounded-lg border border-white/10 bg-black/40 backdrop-blur-md transition-all duration-300 pointer-events-auto",
-              (activeLabel !== null || bentoDragEnabled) && "opacity-0 pointer-events-none",
-            )}
-            style={{ right: controlsRight }}
-          >
-            <button
-              type="button"
-              onClick={() => {
-                if (!fullscreen) {
-                  buildingRef.current?.ensureCloseUp(15);
-                } else {
-                  buildingRef.current?.resetToDefaultRadius();
-                }
-                setFullscreen((v) => !v);
-              }}
-              className="text-cyber-cyan flex size-8 items-center justify-center transition-colors hover:bg-white/10"
-              title={fullscreen ? t.controls.exitFullscreen : t.controls.fullscreen}
-            >
-              {fullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
-            </button>
-            <div className="h-px bg-white/10" />
-            <button
-              type="button"
-              onClick={() => buildingRef.current?.zoomIn()}
-              className="text-cyber-cyan flex size-8 items-center justify-center transition-colors hover:bg-white/10"
-              title={t.controls.zoomIn}
-            >
-              <Plus size={16} />
-            </button>
-            <div className="h-px bg-white/10" />
-            <button
-              type="button"
-              onClick={() => buildingRef.current?.zoomOut()}
-              className="text-cyber-cyan flex size-8 items-center justify-center transition-colors hover:bg-white/10"
-              title={t.controls.zoomOut}
-            >
-              <Minus size={16} />
-            </button>
-            <div className="h-px bg-white/10" />
-            <button
-              type="button"
-              onClick={() => {
-                setActiveLabel(null);
-                setFullscreen(false);
-                buildingRef.current?.resetCamera();
-              }}
-              className="text-cyber-cyan flex size-8 items-center justify-center transition-colors hover:bg-white/10"
-              title={t.controls.reset}
-            >
-              <RotateCcw size={16} />
-            </button>
-          </div>
-
-          {/* Edit layout floating toolbar */}
-          {bentoDragEnabled && (
-            <div className="absolute bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/10 bg-black/60 px-2 py-1.5 shadow-lg backdrop-blur-md transition-all pointer-events-auto">
-              <button
-                type="button"
-                onClick={() => setBentoDragEnabled(false)}
-                className="text-foreground/80 hover:text-cyber-cyan flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/5"
-              >
-                <Check size={14} />
-                {t.editLayout.done}
-              </button>
-              <div className="h-4 w-px bg-white/10" />
-              <button
-                type="button"
-                onClick={() => {
-                  if (layoutSnapshotRef.current) {
-                    setBentoLayout(layoutSnapshotRef.current);
-                  }
-                  setBentoDragEnabled(false);
-                }}
-                className="text-foreground/80 hover:text-cyber-cyan flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/5"
-              >
-                <X size={14} />
-                {t.editLayout.cancel}
-              </button>
-              <div className="h-4 w-px bg-white/10" />
-              <button
-                type="button"
-                onClick={() => resetBentoLayout()}
-                className="text-foreground/80 hover:text-cyber-cyan flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/5"
-              >
-                <Undo2 size={14} />
-                {t.editLayout.reset}
-              </button>
-            </div>
-          )}
-        </div>
       </div>
+
+      {/* Main bento grid layout — cards re-enable events individually */}
+      <main className="relative flex min-h-0 flex-1 overflow-hidden">
+        <BentoGrid
+          className={cn(
+            "transition-all duration-300 ease-in-out",
+            isImmersive && "opacity-0 pointer-events-none",
+          )}
+        >
+          <DashboardWidgets data={loaderData?.dashboard ?? null} />
+        </BentoGrid>
+      </main>
+
+      {/* Bottom navigation — absolute at bottom, floats above widgets */}
+      <div
+        className="absolute bottom-0 left-2 right-2 z-20 overflow-hidden transition-all duration-300 ease-in-out pointer-events-auto"
+        style={{
+          maxHeight: navVisible ? "60px" : "0px",
+          opacity: navVisible ? 1 : 0,
+        }}
+      >
+        <DashboardNav />
+      </div>
+
+      {/* Floating controls — fullscreen / zoom / reset */}
+      <div
+        className={cn(
+          "absolute top-[72px] z-30 flex flex-col overflow-hidden rounded-lg border border-white/10 bg-black/40 backdrop-blur-md transition-all duration-300 pointer-events-auto",
+          (activeLabel !== null || bentoDragEnabled) && "opacity-0 pointer-events-none",
+        )}
+        style={{ right: controlsRight }}
+      >
+        <button
+          type="button"
+          onClick={() => {
+            if (!fullscreen) {
+              buildingRef.current?.ensureCloseUp(15);
+            } else {
+              buildingRef.current?.resetToDefaultRadius();
+            }
+            setFullscreen((v) => !v);
+          }}
+          className="text-cyber-cyan flex size-8 items-center justify-center transition-colors hover:bg-white/10"
+          title={fullscreen ? t.controls.exitFullscreen : t.controls.fullscreen}
+        >
+          {fullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
+        </button>
+        <div className="h-px bg-white/10" />
+        <button
+          type="button"
+          onClick={() => buildingRef.current?.zoomIn()}
+          className="text-cyber-cyan flex size-8 items-center justify-center transition-colors hover:bg-white/10"
+          title={t.controls.zoomIn}
+        >
+          <Plus size={16} />
+        </button>
+        <div className="h-px bg-white/10" />
+        <button
+          type="button"
+          onClick={() => buildingRef.current?.zoomOut()}
+          className="text-cyber-cyan flex size-8 items-center justify-center transition-colors hover:bg-white/10"
+          title={t.controls.zoomOut}
+        >
+          <Minus size={16} />
+        </button>
+        <div className="h-px bg-white/10" />
+        <button
+          type="button"
+          onClick={() => {
+            setActiveLabel(null);
+            setFullscreen(false);
+            buildingRef.current?.resetCamera();
+          }}
+          className="text-cyber-cyan flex size-8 items-center justify-center transition-colors hover:bg-white/10"
+          title={t.controls.reset}
+        >
+          <RotateCcw size={16} />
+        </button>
+      </div>
+
+      {/* Edit layout floating toolbar */}
+      {bentoDragEnabled && (
+        <div className="absolute bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/10 bg-black/60 px-2 py-1.5 shadow-lg backdrop-blur-md transition-all pointer-events-auto">
+          <button
+            type="button"
+            onClick={() => setBentoDragEnabled(false)}
+            className="text-foreground/80 hover:text-cyber-cyan flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/5"
+          >
+            <Check size={14} />
+            {t.editLayout.done}
+          </button>
+          <div className="h-4 w-px bg-white/10" />
+          <button
+            type="button"
+            onClick={() => {
+              if (layoutSnapshotRef.current) {
+                setBentoLayout(layoutSnapshotRef.current);
+              }
+              setBentoDragEnabled(false);
+            }}
+            className="text-foreground/80 hover:text-cyber-cyan flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/5"
+          >
+            <X size={14} />
+            {t.editLayout.cancel}
+          </button>
+          <div className="h-4 w-px bg-white/10" />
+          <button
+            type="button"
+            onClick={() => resetBentoLayout()}
+            className="text-foreground/80 hover:text-cyber-cyan flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/5"
+          >
+            <Undo2 size={14} />
+            {t.editLayout.reset}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
