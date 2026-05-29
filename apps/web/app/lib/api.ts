@@ -79,13 +79,13 @@ async function request<T>(
     const init: RequestInit = {
       method,
       headers: {
-        "Content-Type": "application/json",
         Accept: "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...extraHeaders,
       },
     };
     if (body) {
+      init.headers["Content-Type"] = "application/json";
       init.body = JSON.stringify(body);
     }
 
