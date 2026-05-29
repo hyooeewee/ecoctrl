@@ -14,7 +14,7 @@ export default function SystemsPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="dark text-foreground relative h-screen overflow-hidden bg-[#060d18] font-mono">
+    <div className="dark text-foreground relative h-screen overflow-hidden bg-transparent font-mono">
       <button
         type="button"
         onClick={() => navigate(-1)}
