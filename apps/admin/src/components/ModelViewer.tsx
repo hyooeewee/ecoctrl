@@ -6,7 +6,7 @@ import AppButton from "@/components/AppButton";
 interface ModelViewerProps {
   src: string | null;
   alt?: string;
-  format: string;
+  format: string | null;
 }
 
 const PREVIEWABLE_FORMATS = new Set(["GLB", "GLTF", "GLTF (zip)"]);
@@ -17,7 +17,7 @@ export default function ModelViewer({ src, alt, format }: ModelViewerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  const canPreview = PREVIEWABLE_FORMATS.has(format.toUpperCase());
+  const canPreview = PREVIEWABLE_FORMATS.has((format ?? "").toUpperCase());
 
   // Lazy load model-viewer web component
   useEffect(() => {
