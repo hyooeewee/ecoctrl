@@ -260,9 +260,11 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
   const rootMeshRef = useRef<Nullable<TransformNode>>(null);
   const labelAnchorsRef = useRef<{ key: string; worldPos: Vector3 }[]>([]);
   const labelElsRef = useRef<Record<string, HTMLDivElement | null>>({});
+  const lastLabelStateRef = useRef<Record<string, { x: number; y: number; visible: boolean }>>({});
   const glowRef = useRef<Nullable<GlowLayer>>(null);
   const [, setLoadProgress] = useState(0);
   const isInteractingRef = useRef(false);
+  const initializedRef = useRef(false);
 
   // Saved camera state after GLB load so resetCamera can truly restore initial state.
   const postLoadCameraStateRef = useRef<{
@@ -381,6 +383,9 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
   }, [sidebarWidth]);
 
   useEffect(() => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -598,8 +603,18 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
             p.x <= renderWidth &&
             p.y >= 0 &&
             p.y <= renderHeight;
-          el.style.display = visible ? "flex" : "none";
-          el.style.transform = `translate(${p.x}px, ${p.y}px)`;
+
+          const last = lastLabelStateRef.current[key];
+          if (
+            !last ||
+            last.visible !== visible ||
+            Math.abs(last.x - p.x) > 1 ||
+            Math.abs(last.y - p.y) > 1
+          ) {
+            el.style.display = visible ? "flex" : "none";
+            el.style.transform = `translate(${p.x}px, ${p.y}px)`;
+            lastLabelStateRef.current[key] = { x: p.x, y: p.y, visible };
+          }
         });
       }
     });
