@@ -18,6 +18,7 @@ import {
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
 import { AdvancedDynamicTexture } from "@babylonjs/gui";
+import { fetchModelUrl } from "@/lib/babylon-loaders";
 
 // ========================================
 // Types
@@ -180,14 +181,27 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
       setIsLoading(true);
       setHasError(false);
 
+      let cancelled = false;
+      let blobUrl: string | null = null;
+
       const loadModel = async () => {
         try {
+          const url = await fetchModelUrl(src);
+          if (cancelled) {
+            URL.revokeObjectURL(url);
+            return;
+          }
+          blobUrl = url;
           const result = await SceneLoader.ImportMeshAsync(
             "", // mesh names (empty = all)
             "", // scene root (empty = use rootUrl)
-            src, // file name / URL
+            url, // blob URL from authenticated fetch
             scene,
+            undefined,
+            ".glb", // force GLB loader — blob URLs have no extension
           );
+
+          if (cancelled) return;
 
           // Parent all loaded meshes to root node
           result.meshes.forEach((mesh) => {
@@ -200,6 +214,7 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
           setIsLoading(false);
           onModelLoaded?.(rootNode);
         } catch (err) {
+          if (cancelled) return;
           console.error("Model load failed:", err);
           setIsLoading(false);
           setHasError(true);
@@ -208,6 +223,11 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
       };
 
       loadModel();
+
+      return () => {
+        cancelled = true;
+        if (blobUrl) URL.revokeObjectURL(blobUrl);
+      };
     }, [src]);
 
     return (

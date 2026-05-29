@@ -64,6 +64,8 @@ export default async function apiRoutes(fastify: FastifyInstance) {
     // SSE stream (GET /api/events) uses query token auth, not Bearer header
     const pathname = request.url.split("?")[0];
     if (request.method === "GET" && pathname === "/api/events") return;
+    // Model file endpoints are public (loaded by BabylonJS without auth headers)
+    if (/^\/api\/(?:models\/[^/]+|dashboard-model)\/file\/?$/.test(pathname)) return;
     if (publicPaths.some((p) => request.url.startsWith(p))) return;
     try {
       await request.jwtVerify();

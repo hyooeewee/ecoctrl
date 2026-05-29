@@ -11,6 +11,7 @@ import {
   TransformNode,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
+import { fetchModelUrl } from "@/lib/babylon-loaders";
 
 interface CardModelPreviewProps {
   src: string;
@@ -48,8 +49,20 @@ export default function CardModelPreview({ src, alt: _alt }: CardModelPreviewPro
       camera.alpha += 0.003;
     });
 
-    SceneLoader.ImportMeshAsync("", "", src, scene)
+    let cancelled = false;
+    let blobUrl: string | null = null;
+
+    fetchModelUrl(src)
+      .then((url) => {
+        if (cancelled) {
+          URL.revokeObjectURL(url);
+          return null;
+        }
+        blobUrl = url;
+        return SceneLoader.ImportMeshAsync("", "", url, scene, undefined, ".glb");
+      })
       .then((result) => {
+        if (cancelled || !result) return;
         result.meshes.forEach((m) => {
           m.parent = rootNode;
         });
@@ -65,7 +78,9 @@ export default function CardModelPreview({ src, alt: _alt }: CardModelPreviewPro
     ro.observe(canvas);
 
     return () => {
+      cancelled = true;
       ro.disconnect();
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
       scene.dispose();
       engine.dispose();
     };

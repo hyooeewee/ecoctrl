@@ -13,6 +13,7 @@ import {
   TransformNode,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
+import { fetchModelUrl } from "@/lib/babylon-loaders";
 
 import AppButton from "@/components/AppButton";
 
@@ -120,9 +121,21 @@ export default function ModelViewer({ src, alt, format }: ModelViewerProps) {
     scene.transformNodes.filter((n) => n.name === "modelRoot").forEach((n) => n.dispose());
 
     const rootNode = new TransformNode("modelRoot", scene);
+    let cancelled = false;
+    let blobUrl: string | null = null;
 
-    SceneLoader.ImportMeshAsync("", "", src, scene)
+    fetchModelUrl(src)
+      .then((url) => {
+        if (cancelled) {
+          URL.revokeObjectURL(url);
+          return null;
+        }
+        blobUrl = url;
+        return SceneLoader.ImportMeshAsync("", "", url, scene, undefined, ".glb");
+      })
       .then((result) => {
+        if (cancelled || !result) return;
+
         result.meshes.forEach((mesh) => {
           mesh.parent = rootNode;
         });
@@ -132,10 +145,16 @@ export default function ModelViewer({ src, alt, format }: ModelViewerProps) {
         setIsLoading(false);
       })
       .catch((err) => {
+        if (cancelled) return;
         console.error("Model load failed:", err);
         setIsLoading(false);
         setHasError(true);
       });
+
+    return () => {
+      cancelled = true;
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
   }, [src]);
 
   const handleReset = () => {
