@@ -14,6 +14,7 @@ import { useAuthStore } from "~/store/auth";
 import { useSettingsStore, type BentoLayoutItem } from "~/store/settings";
 import { useWidgetDataStore } from "~/store/widgetData";
 import { useSse } from "~/hooks/use-sse";
+import type { SSEMessage } from "~/lib/sse";
 
 import type { DashboardOutletContext } from "./dashboard-layout";
 import type { Route } from "./+types/home";
@@ -67,10 +68,8 @@ export default function Home() {
   const setWidgetData = useWidgetDataStore((s) => s.setWidgetData);
   const removeWidgetData = useWidgetDataStore((s) => s.removeWidgetData);
 
-  const { isConnected, isReconnecting } = useSse({
-    url: `${API_PREFIX}/events`,
-    enabled: isLoggedIn,
-    onMessage: (msg) => {
+  const onSseMessage = useCallback(
+    (msg: SSEMessage) => {
       if (msg.type === "widget_update") {
         const { widgetId, data } = msg.payload as {
           widgetId: string;
@@ -82,6 +81,13 @@ export default function Home() {
         removeWidgetData(widgetId);
       }
     },
+    [setWidgetData, removeWidgetData],
+  );
+
+  const { isConnected, isReconnecting } = useSse({
+    url: `${API_PREFIX}/events`,
+    enabled: isLoggedIn,
+    onMessage: onSseMessage,
   });
 
   const sseStatus = isConnected ? "connected" : isReconnecting ? "reconnecting" : "disconnected";

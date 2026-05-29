@@ -23,7 +23,12 @@ export class SSEClient {
       getToken: async () => {
         const { accessToken } = useAuthStore.getState();
         if (!accessToken) throw new Error("No auth");
-        const res = await apiPost<{ token: string }>(`${API_PREFIX}/events/token`, undefined);
+        const res = await apiPost<{ token: string }>(
+          `${API_PREFIX}/events/token`,
+          undefined,
+          undefined,
+          true, // noReload: don't clear auth state on failure
+        );
         if (!res.ok || !res.data) {
           throw new Error(res.error || "Token request failed");
         }

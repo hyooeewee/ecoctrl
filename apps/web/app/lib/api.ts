@@ -12,7 +12,7 @@ export interface ApiResponse<T> {
 let isRefreshing = false;
 let refreshQueue: Array<(token: string | null) => void> = [];
 
-async function doRefresh(refreshToken: string): Promise<string | null> {
+async function doRefresh(refreshToken: string, noReload?: boolean): Promise<string | null> {
   try {
     const data = await authApi.refresh(refreshToken);
     const { setTokens } = useAuthStore.getState();
@@ -23,8 +23,10 @@ async function doRefresh(refreshToken: string): Promise<string | null> {
     });
     return data.accessToken;
   } catch {
-    const { clearTokens } = useAuthStore.getState();
-    clearTokens();
+    if (!noReload) {
+      const { clearTokens } = useAuthStore.getState();
+      clearTokens();
+    }
     return null;
   }
 }
@@ -47,8 +49,9 @@ export async function apiPost<T>(
   endpoint: string,
   body: unknown,
   extraHeaders?: Record<string, string>,
+  noReload?: boolean,
 ): Promise<ApiResponse<T>> {
-  return request<T>(endpoint, "POST", body, extraHeaders);
+  return request<T>(endpoint, "POST", body, extraHeaders, undefined, noReload);
 }
 
 export async function apiPatch<T>(
@@ -65,6 +68,7 @@ async function request<T>(
   body?: unknown,
   extraHeaders?: Record<string, string>,
   params?: Record<string, string>,
+  noReload?: boolean,
 ): Promise<ApiResponse<T>> {
   let url = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
 
@@ -96,7 +100,7 @@ async function request<T>(
       if (res.status === 401 && refreshToken) {
         if (!isRefreshing) {
           isRefreshing = true;
-          const newToken = await doRefresh(refreshToken);
+          const newToken = await doRefresh(refreshToken, noReload);
           isRefreshing = false;
           processQueue(newToken);
 
