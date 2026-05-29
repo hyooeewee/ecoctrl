@@ -6,7 +6,7 @@ import AsyncLock from "async-lock";
 
 const logger = getLogger("plugin-registry");
 
-const PLUGIN_PREFIX = "plugins/";
+const PLUGIN_PREFIX = "";
 
 async function streamToString(stream: ReadableStream | NodeJS.ReadableStream): Promise<string> {
   // Handle Web Streams API ReadableStream

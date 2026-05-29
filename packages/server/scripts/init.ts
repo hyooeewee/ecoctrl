@@ -98,7 +98,7 @@ async function initBuiltInNodes(force = false) {
 
     const manifestRaw = await fs.readFile(manifestPath, "utf-8");
     const manifest = JSON.parse(manifestRaw) as PluginManifest;
-    const buildKey = (filename: string) => `plugins/${manifest.id}/${manifest.version}/${filename}`;
+    const buildKey = (filename: string) => `${manifest.id}/${manifest.version}/${filename}`;
 
     const exists = await storage.exists(buildKey("manifest.json"));
     if (exists && !force) {
