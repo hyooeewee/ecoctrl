@@ -51,7 +51,7 @@ export function getPluginStorage(): StorageAdapter {
   if (!_pluginStorage) {
     const provider = env.STORAGE_PROVIDER;
     if (provider === "minio") {
-      _pluginStorage = createS3Adapter(env.S3_BUCKET_PLUGINS);
+      _pluginStorage = createS3Adapter(env.S3_BUCKET_NODES);
     } else if (provider === "local") {
       _pluginStorage = new LocalAdapter({ baseDir: "./plugins" });
     } else {
@@ -115,7 +115,7 @@ export async function ensureS3Buckets(): Promise<void> {
     region,
     accessKeyId,
     secretAccessKey,
-    bucket: env.S3_BUCKET_PLUGINS,
+    bucket: env.S3_BUCKET_NODES,
     forcePathStyle: env.S3_FORCE_PATH_STYLE,
   });
 

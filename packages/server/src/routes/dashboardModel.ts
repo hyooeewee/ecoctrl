@@ -82,7 +82,7 @@ export default async function dashboardModelRoutes(fastify: FastifyInstance) {
       const ext = originalName.includes(".")
         ? originalName.slice(originalName.lastIndexOf("."))
         : "";
-      const key = `dashboard/${fileId}${ext}`;
+      const key = `${fileId}${ext}`;
 
       await storage.put(key, fileBuffer);
 

@@ -49,7 +49,7 @@ const envSchema = z.object({
   S3_SECRET_KEY: z.string().optional(),
   S3_BUCKET_FILES: z.string().default("ecoctrl-files"),
   S3_BUCKET_MODELS: z.string().default("ecoctrl-models"),
-  S3_BUCKET_PLUGINS: z.string().default("ecoctrl-plugins"),
+  S3_BUCKET_NODES: z.string().default("ecoctrl-nodes"),
   S3_BUCKET_PETS: z.string().default("ecoctrl-pets"),
   S3_FORCE_PATH_STYLE: z
     .string()

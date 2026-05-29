@@ -115,7 +115,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         for (const [entryName, entry] of Object.entries(zip.files)) {
           if (entry.dir) continue;
           const content = await entry.async("nodebuffer");
-          const key = `models/${modelId}/${entryName}`;
+          const key = `${modelId}/${entryName}`;
           await storage.put(key, content);
           uploadedKeys.push(key);
           if (!gltfEntryName && entryName.toLowerCase().endsWith(".gltf")) {
@@ -130,11 +130,11 @@ export default async function modelRoutes(fastify: FastifyInstance) {
           return reply.status(400).send({ error: "ZIP must contain a .gltf file" });
         }
 
-        fileUrl = `models/${modelId}/${gltfEntryName}`;
+        fileUrl = `${modelId}/${gltfEntryName}`;
         format = "GLTF";
       } else {
         sizeBytes = fileBuffer.length;
-        const key = `models/${modelId}${ext}`;
+        const key = `${modelId}${ext}`;
         await storage.put(key, fileBuffer);
         fileUrl = key;
         format = FORMAT_MAP[ext.slice(1)] || ext.slice(1).toUpperCase();
@@ -194,7 +194,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
 
       // Delete old files when fileUrl is explicitly set to null
       if (fileUrl === null && existing.fileUrl) {
-        const keys = await storage.list(`models/${id}/`);
+        const keys = await storage.list(`${id}/`);
         for (const key of keys) {
           await storage.delete(key);
         }
@@ -249,7 +249,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
 
       // Delete old files
       if (existing.fileUrl) {
-        const keys = await storage.list(`models/${id}/`);
+        const keys = await storage.list(`${id}/`);
         for (const key of keys) {
           await storage.delete(key);
         }
@@ -270,7 +270,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         for (const [entryName, entry] of Object.entries(zip.files)) {
           if (entry.dir) continue;
           const content = await entry.async("nodebuffer");
-          const key = `models/${id}/${entryName}`;
+          const key = `${id}/${entryName}`;
           await storage.put(key, content);
           uploadedKeys.push(key);
           if (!gltfEntryName && entryName.toLowerCase().endsWith(".gltf")) {
@@ -285,11 +285,11 @@ export default async function modelRoutes(fastify: FastifyInstance) {
           return reply.status(400).send({ error: "ZIP must contain a .gltf file" });
         }
 
-        fileUrl = `models/${id}/${gltfEntryName}`;
+        fileUrl = `${id}/${gltfEntryName}`;
         format = "GLTF";
       } else {
         sizeBytes = fileBuffer.length;
-        const key = `models/${id}${ext}`;
+        const key = `${id}${ext}`;
         await storage.put(key, fileBuffer);
         fileUrl = key;
         format = FORMAT_MAP[ext.slice(1)] || ext.slice(1).toUpperCase();
