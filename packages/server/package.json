@@ -18,7 +18,7 @@
     "db:init": "dotenv -e .env.local -- tsx scripts/init.ts",
     "db:seed": "dotenv -e .env.local -- tsx scripts/seed.ts",
     "db:cleanup": "dotenv -e .env.local -- tsx scripts/cleanup.ts",
-    "db:reset": "pnpm db:cleanup -- --only=db,buckets --yes && pnpm db:init && pnpm db:seed",
+    "db:reset": "pnpm db:cleanup -- --filter=db,buckets --yes && pnpm db:init && pnpm db:seed",
     "db:squash": "dotenv -e .env.local -- tsx scripts/squash.ts",
     "db:drop": "drizzle-kit drop",
     "env:sync": "tsx ../../packages/shared/scripts/gen-env-example.ts",

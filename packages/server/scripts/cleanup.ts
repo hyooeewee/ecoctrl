@@ -25,8 +25,8 @@ interface CleanupModule {
 // ========================================
 
 const args = process.argv.slice(2);
-const onlyArg = args.find((a) => a.startsWith("--only="));
-const onlyModules = onlyArg ? onlyArg.slice(7).split(",") : null;
+const filterArg = args.find((a) => a.startsWith("--filter="));
+const filteredModules = filterArg ? filterArg.slice(9).split(",") : null;
 const yes = args.includes("--yes") || args.includes("-y");
 
 // ========================================
@@ -256,15 +256,15 @@ async function main() {
 
   // Select modules
   let selected: string[];
-  if (onlyModules) {
+  if (filteredModules) {
     const valid = MODULES.map((m) => m.value);
-    const invalid = onlyModules.filter((m) => !valid.includes(m));
+    const invalid = filteredModules.filter((m) => !valid.includes(m));
     if (invalid.length > 0) {
       console.error(`[cleanup] unknown modules: ${invalid.join(", ")}`);
       console.error(`[cleanup] valid modules: ${valid.join(", ")}`);
       process.exit(1);
     }
-    selected = onlyModules;
+    selected = filteredModules;
   } else if (process.stdin.isTTY) {
     const result = await multiselect({
       message: "Select modules to cleanup (space toggle, 'a' all, enter confirm):",
@@ -277,9 +277,9 @@ async function main() {
     }
     selected = result as string[];
   } else {
-    // Non-TTY: require explicit --only
+    // Non-TTY: require explicit --filter
     console.error(
-      "[cleanup] non-interactive mode requires --only flag. Use --yes to skip confirmations.",
+      "[cleanup] non-interactive mode requires --filter flag. Use --yes to skip confirmations.",
     );
     console.error(`[cleanup] valid modules: ${MODULES.map((m) => m.value).join(", ")}`);
     process.exit(1);

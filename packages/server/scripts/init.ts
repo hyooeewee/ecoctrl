@@ -34,8 +34,8 @@ interface InitModule {
 // ─── CLI parsing ──────────────────────────────────────────────────
 
 const args = process.argv.slice(2);
-const onlyArg = args.find((a) => a.startsWith("--only="));
-const onlyModules = onlyArg ? onlyArg.slice(7).split(",") : null;
+const filterArg = args.find((a) => a.startsWith("--filter="));
+const filteredModules = filterArg ? filterArg.slice(9).split(",") : null;
 const force = args.includes("--force") || args.includes("-f");
 
 // ─── Helper functions ─────────────────────────────────────────────
@@ -577,15 +577,15 @@ async function main() {
 
   // Select modules
   let selected: string[];
-  if (onlyModules) {
+  if (filteredModules) {
     const valid = MODULES.map((m) => m.value);
-    const invalid = onlyModules.filter((m) => !valid.includes(m));
+    const invalid = filteredModules.filter((m) => !valid.includes(m));
     if (invalid.length > 0) {
       console.error(`[init] unknown modules: ${invalid.join(", ")}`);
       console.error(`[init] valid modules: ${valid.join(", ")}`);
       process.exit(1);
     }
-    selected = onlyModules;
+    selected = filteredModules;
   } else if (process.stdin.isTTY) {
     const result = await multiselect({
       message: "Select modules to initialize (space toggle, 'a' all, enter confirm):",
