@@ -249,7 +249,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
         return reply.redirect(user.avatarUrl);
       }
 
-      return streamFile(storage, user.avatarUrl, reply);
+      return streamFile(storage, user.avatarUrl, reply, { request });
     },
   );
 

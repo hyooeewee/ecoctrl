@@ -115,6 +115,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
 
       return streamFile(storage, file.filename, reply, {
         disposition: `attachment; filename="${file.name}"`,
+        request,
       });
     },
   );
@@ -136,7 +137,7 @@ export default async function fileRoutes(fastify: FastifyInstance) {
         return reply.status(404).send({ error: "File not found" });
       }
 
-      return streamFile(storage, file.filename, reply);
+      return streamFile(storage, file.filename, reply, { request });
     },
   );
 

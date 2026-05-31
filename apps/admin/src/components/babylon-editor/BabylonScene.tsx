@@ -208,9 +208,6 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
             mesh.parent = rootNode;
           });
 
-          // Fit camera to model bounds
-          fitCameraToModel(cameraRef.current!, rootNode);
-
           setIsLoading(false);
           onModelLoaded?.(rootNode);
         } catch (err) {
@@ -280,31 +277,4 @@ function createGrid(scene: Scene): void {
   const grid = MeshBuilder.CreateGround("grid", { width: 20, height: 20, subdivisions: 20 }, scene);
   grid.material = gridMaterial;
   grid.position.y = -0.01;
-}
-
-function fitCameraToModel(camera: ArcRotateCamera, rootNode: TransformNode): void {
-  const meshes = rootNode.getChildMeshes();
-  if (meshes.length === 0) return;
-
-  // Calculate bounds
-  let min = new Vector3(Infinity, Infinity, Infinity);
-  let max = new Vector3(-Infinity, -Infinity, -Infinity);
-
-  meshes.forEach((mesh) => {
-    const bounds = mesh.getBoundingInfo().boundingBox;
-    min = Vector3.Minimize(min, bounds.minimumWorld);
-    max = Vector3.Maximize(max, bounds.maximumWorld);
-  });
-
-  const center = Vector3.Center(min, max);
-  const size = max.subtract(min);
-  const maxDim = Math.max(size.x, size.y, size.z);
-
-  // Set camera target to model center
-  camera.target = center;
-
-  // Set camera distance to fit model
-  const fov = camera.fov;
-  const distance = (maxDim / 2 / Math.tan(fov / 2)) * 1.5;
-  camera.radius = distance;
 }

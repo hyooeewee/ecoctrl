@@ -1,4 +1,4 @@
-import type { FastifyReply } from "fastify";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import { pipeline } from "node:stream/promises";
 import type { Readable } from "node:stream";
 import type { StorageAdapter } from "./types";
@@ -27,16 +27,34 @@ export async function streamFile(
   storage: StorageAdapter,
   key: string,
   reply: FastifyReply,
-  options?: { disposition?: string },
+  options?: { disposition?: string; request?: FastifyRequest },
 ): Promise<void> {
-  const stream = (await storage.get(key)) as unknown as Readable;
+  // Get file metadata for caching headers
+  const stat = await storage.stat(key);
+  const lastModified = stat.lastModified ?? new Date();
 
   reply
     .header("Content-Type", resolveContentType(key))
-    .header("Cache-Control", "public, max-age=3600");
+    .header("Cache-Control", "public, max-age=3600")
+    .header("Last-Modified", lastModified.toUTCString())
+    .header("Content-Length", stat.size);
   if (options?.disposition) {
     reply.header("Content-Disposition", options.disposition);
   }
+
+  // Handle conditional request — return 304 if file unchanged
+  if (options?.request) {
+    const ifModifiedSince = options.request.headers["if-modified-since"];
+    if (ifModifiedSince) {
+      const clientDate = new Date(ifModifiedSince);
+      // Compare at second precision (Last-Modified truncates sub-second)
+      if (lastModified.getTime() - clientDate.getTime() < 1000) {
+        return reply.status(304).send();
+      }
+    }
+  }
+
+  const stream = (await storage.get(key)) as unknown as Readable;
 
   // Hijack the raw response so we can pipe directly, bypassing
   // Fastify's internal stream handling that triggers write-after-end

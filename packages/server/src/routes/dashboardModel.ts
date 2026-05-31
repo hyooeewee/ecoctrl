@@ -31,12 +31,12 @@ export default async function dashboardModelRoutes(fastify: FastifyInstance) {
         response: { ...errors },
       },
     },
-    async (_request, reply) => {
+    async (request, reply) => {
       const config = await findDashboardModel();
       if (!config?.modelFileUrl) {
         return reply.status(404).send({ error: "No model file" });
       }
-      return streamFile(storage, config.modelFileUrl, reply);
+      return streamFile(storage, config.modelFileUrl, reply, { request });
     },
   );
 
