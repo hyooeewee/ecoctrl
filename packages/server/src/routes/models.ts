@@ -358,7 +358,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
         return reply.status(404).send({ error: "Model or file not found" });
       }
 
-      return streamFile(storage, model.fileUrl, reply);
+      return streamFile(storage, model.fileUrl, reply, { request });
     },
   );
 
