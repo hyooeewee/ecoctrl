@@ -2,7 +2,7 @@
 
 [![Release](https://github.com/hyooeewee/ecoctrl/actions/workflows/release.yaml/badge.svg)](https://github.com/hyooeewee/ecoctrl/actions/workflows/release.yaml)
 [![Version](https://img.shields.io/github/v/tag/hyooeewee/ecoctrl?label=version)](https://github.com/hyooeewee/ecoctrl/releases)
-[![Node](https://img.shields.io/badge/node-%3E%3D20.0.0-339933?logo=nodedotjs)](https://nodejs.org/)
+[![Node](https://img.shields.io/badge/node-%3E%3D24.0.0-339933?logo=nodedotjs)](https://nodejs.org/)
 
 ![Admin](docs/screenshots/admin.png)
 
@@ -12,13 +12,13 @@ An energy & IoT control platform built as a pnpm monorepo, featuring 3D visualiz
 
 ## Architecture
 
-| Package           | Stack                                                 | Description                                                |
-| ----------------- | ----------------------------------------------------- | ---------------------------------------------------------- |
-| `apps/admin`      | React 19 + vite-plus + TailwindCSS + Recharts         | Admin dashboard                                            |
-| `apps/web`        | React Router 7 + Babylon.js + vite-plus + TailwindCSS | Public 3D portal                                           |
-| `packages/server` | Fastify 5 + Drizzle ORM + PostgreSQL + Rolldown       | REST API (bundled with auto-generated `dist/package.json`) |
-| `packages/ui`     | React + TailwindCSS + Base UI                         | Shared component library                                   |
-| `packages/shared` | Zod + TypeScript + shared Vite configs                | Shared schemas, types, and build utilities                 |
+| Package           | Stack                                                   | Description                                                |
+| ----------------- | ------------------------------------------------------- | ---------------------------------------------------------- |
+| `apps/admin`      | React 19 + vite-plus + TailwindCSS + shadcn/ui          | Admin dashboard                                            |
+| `apps/web`        | React Router 7 + Babylon.js + vite-plus + TailwindCSS   | Public 3D portal                                           |
+| `packages/server` | Fastify 5 + Drizzle ORM + PostgreSQL + Rolldown + MinIO | REST API (bundled with auto-generated `dist/package.json`) |
+| `packages/ui`     | React + TailwindCSS + Base UI                           | Shared component library                                   |
+| `packages/shared` | Zod + TypeScript + shared Vite configs                  | Shared schemas, types, and build utilities                 |
 
 ## Quick Start
 
@@ -28,7 +28,12 @@ An energy & IoT control platform built as a pnpm monorepo, featuring 3D visualiz
 cd docker
 cp .env.example .env.local
 # Edit .env.local: fill in JWT_SECRET, DATABASE_URL
-docker compose -f compose.yml up --build
+
+# From source (builds images locally)
+docker compose -f compose.build.yaml up --build
+
+# Or pull pre-built images
+docker compose up
 ```
 
 | Service  | URL                                 |
@@ -37,6 +42,7 @@ docker compose -f compose.yml up --build
 | Admin    | http://localhost:4173               |
 | API      | http://localhost:3000               |
 | API Docs | http://localhost:3000/documentation |
+| MinIO    | http://localhost:9001 (console)     |
 
 > **Offline/air-gapped?** Download the [offline bundle](https://bucket.godot.qzz.io/images/latest/ecoctrl.zip) — includes pre-pulled images, no registry access needed.
 
@@ -44,9 +50,10 @@ docker compose -f compose.yml up --build
 
 ### Prerequisites
 
-- Node.js 20+
-- pnpm 10.33+
+- Node.js 24+
+- pnpm 11+
 - PostgreSQL 16+ (or Docker)
+- MinIO (included in Docker setup, or use AWS S3)
 
 ### Setup
 
@@ -54,31 +61,27 @@ docker compose -f compose.yml up --build
 # 1. Install
 pnpm install
 
-# 2. Start PostgreSQL
+# 2. Start PostgreSQL and MinIO
 cd docker
-docker compose -f compose.yml up postgres -d
+docker compose up postgres minio -d
 
 # 3. Configure environment
 cp packages/server/.env.example packages/server/.env.local
-# Edit .env.local: fill in DATABASE_URL and JWT_SECRET
+# Edit .env.local: fill in DATABASE_URL, JWT_SECRET, and S3 credentials
 
 # 4. Initialize database
 cd packages/server
 pnpm db:push
 pnpm db:seed
 
-# 5. Build UI library
-cd ../..
-pnpm build:ui
-
-# 6. Start all services
+# 5. Start all services
 pnpm dev
 ```
 
 | Command           | Service                        |
 | ----------------- | ------------------------------ |
 | `pnpm dev`        | All services                   |
-| `pnpm dev:server` | API on http://localhost:3000   |
+| `pnpm dev:server` | API on http://localhost:3001   |
 | `pnpm dev:admin`  | Admin on http://localhost:5173 |
 | `pnpm dev:web`    | Web on http://localhost:8080   |
 
@@ -95,7 +98,7 @@ pnpm db:studio    # open Drizzle Studio
 - [Deployment Guide](https://ecoctrl.godot.run/reference/deployment) — Docker deployment, local development
 - [Architecture](https://ecoctrl.godot.run/reference/architecture) — request flow, runtime topology
 - [Environment Variables](https://ecoctrl.godot.run/reference/env-vars) — full reference
-- [API Docs](http://localhost:3000/documentation) — Swagger UI (server must be running)
+- [API Docs](http://localhost:3001/documentation) — Swagger UI (server must be running)
 
 ## License
 
