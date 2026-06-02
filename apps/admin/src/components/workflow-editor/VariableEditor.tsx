@@ -523,25 +523,29 @@ export function VariableEditor({
             </Button>
           )}
           <span className="text-muted-foreground/30 mx-1 text-xs">|</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            title={jsonShowSecrets ? "隐藏密钥" : "显示密钥"}
-            onClick={() => setJsonShowSecrets((v) => !v)}
-          >
-            {jsonShowSecrets ? <EyeOff size={14} /> : <Eye size={14} />}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            title="全屏编辑"
-            onClick={handleEnterFullscreen}
-          >
-            <Maximize2 size={14} />
-          </Button>
-          <span className="text-muted-foreground/30 mx-1 text-xs">|</span>
+          {editorMode === "json" && (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                title={jsonShowSecrets ? "隐藏密钥" : "显示密钥"}
+                onClick={() => setJsonShowSecrets((v) => !v)}
+              >
+                {jsonShowSecrets ? <EyeOff size={14} /> : <Eye size={14} />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                title="全屏编辑"
+                onClick={handleEnterFullscreen}
+              >
+                <Maximize2 size={14} />
+              </Button>
+              <span className="text-muted-foreground/30 mx-1 text-xs">|</span>
+            </>
+          )}
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCancel}>
             <X size={14} />
           </Button>
