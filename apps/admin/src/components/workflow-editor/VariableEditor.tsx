@@ -383,13 +383,18 @@ export function VariableEditor({
   };
 
   const getDisplayJson = (): string => {
-    const source = !itemsJson.trim() ? items : (JSON.parse(itemsJson) as EnvVar[]);
-    if (!Array.isArray(source)) return itemsJson;
-    if (jsonShowSecrets) return JSON.stringify(source, null, 2);
-    const masked = source.map((item) =>
-      item.type === "secret" ? { ...item, value: "***" } : item,
-    );
-    return JSON.stringify(masked, null, 2);
+    if (!itemsJson.trim()) return JSON.stringify(items, null, 2);
+    try {
+      const source = JSON.parse(itemsJson) as EnvVar[];
+      if (!Array.isArray(source)) return itemsJson;
+      if (jsonShowSecrets) return JSON.stringify(source, null, 2);
+      const masked = source.map((item) =>
+        item.type === "secret" ? { ...item, value: "***" } : item,
+      );
+      return JSON.stringify(masked, null, 2);
+    } catch {
+      return itemsJson;
+    }
   };
 
   const editorOptions: React.ComponentProps<typeof Editor>["options"] = {
