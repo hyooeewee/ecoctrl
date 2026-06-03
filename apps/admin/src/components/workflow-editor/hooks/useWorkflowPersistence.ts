@@ -132,6 +132,8 @@ export function useWorkflowPersistence(options: UseWorkflowPersistenceOptions) {
     setTesting(true);
     setTestLogOpen(true);
     try {
+      // Save current state before testing
+      await handleSave({ silent: true });
       const result = await workflowsApi.test(workflowId);
       setTestResult(result);
       const logCount = result.nodeLogs?.length ?? 0;
@@ -149,7 +151,7 @@ export function useWorkflowPersistence(options: UseWorkflowPersistenceOptions) {
     } finally {
       setTesting(false);
     }
-  }, [workflowId]);
+  }, [workflowId, handleSave]);
 
   const handleTestNode = useCallback(
     async (nodeId: string) => {
@@ -159,6 +161,8 @@ export function useWorkflowPersistence(options: UseWorkflowPersistenceOptions) {
       }
       setTesting(true);
       try {
+        // Save current state before testing
+        await handleSave({ silent: true });
         const result = await workflowsApi.test(workflowId, undefined, nodeId);
         setTestResult(result);
         const targetLog = result.nodeLogs?.find((log) => log.nodeId === nodeId);
@@ -179,7 +183,7 @@ export function useWorkflowPersistence(options: UseWorkflowPersistenceOptions) {
         setTesting(false);
       }
     },
-    [workflowId],
+    [workflowId, handleSave],
   );
 
   // Auto save
