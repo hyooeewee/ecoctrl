@@ -451,7 +451,13 @@ export default function DashboardModel() {
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-3">
         {/* 3D Viewport */}
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-black lg:col-span-2">
-          <BabylonScene ref={sceneRef} models={modelSources} className="h-full w-full flex-1" />
+          <BabylonScene
+            ref={sceneRef}
+            models={modelSources}
+            showGrid={showGrid}
+            showAxes={showAxes}
+            className="h-full w-full flex-1"
+          />
         </div>
 
         {/* Right Panel */}
@@ -459,10 +465,17 @@ export default function DashboardModel() {
           <CardContent className="flex flex-1 flex-col overflow-auto p-4">
             {/* Model Files */}
             <div className="mb-4">
-              <button
-                type="button"
-                className="mb-2 flex w-full items-center justify-between"
+              <div
+                role="button"
+                tabIndex={0}
+                className="mb-2 flex w-full cursor-pointer items-center justify-between"
                 onClick={() => setFilesExpanded((v) => !v)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setFilesExpanded((v) => !v);
+                  }
+                }}
               >
                 <div className="flex items-center gap-1">
                   <ChevronDown
@@ -500,7 +513,7 @@ export default function DashboardModel() {
                     }}
                   />
                 </div>
-              </button>
+              </div>
 
               {filesExpanded && (
                 <>
