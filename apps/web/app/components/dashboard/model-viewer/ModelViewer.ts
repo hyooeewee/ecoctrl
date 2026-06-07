@@ -1,5 +1,6 @@
 import {
   ArcRotateCamera,
+  Color3,
   Color4,
   Engine,
   GlowLayer,
@@ -10,7 +11,6 @@ import {
   TransformNode,
   Vector3,
   Viewport,
-  type Nullable,
 } from "@babylonjs/core";
 import "@babylonjs/loaders/glTF";
 import type { DashboardModelLabel, LabelOperation } from "@ecoctrl/shared";
@@ -23,6 +23,7 @@ import {
   FALLBACK_URL,
   DEFAULT_LABELS,
   DEFAULT_V2_LABELS,
+  DEFAULT_ENVIRONMENT,
   type LabelDef,
 } from "./constants";
 import type { ModelFileEntry } from "@ecoctrl/shared";
@@ -119,7 +120,29 @@ export class ModelViewer implements ModelViewerRef {
 
     // Create scene
     this.scene = new Scene(this.engine);
-    this.scene.clearColor = new Color4(6 / 255, 13 / 255, 24 / 255, 1);
+
+    // Environment setup — Sandbox style by default, overridable via options
+    const envOpts = { ...DEFAULT_ENVIRONMENT, ...options.environment };
+
+    if (envOpts.clearColor) {
+      this.scene.clearColor = Color4.FromHexString(envOpts.clearColor);
+    }
+
+    // Create default environment (skybox + ground + image processing)
+    this.scene.createDefaultEnvironment({
+      createSkybox: envOpts.createSkybox,
+      skyboxSize: envOpts.skyboxSize,
+      skyboxColor: Color3.FromHexString(envOpts.skyboxColor),
+      createGround: envOpts.createGround,
+      groundSize: envOpts.groundSize,
+      groundColor: Color3.FromHexString(envOpts.groundColor),
+      enableGroundShadow: envOpts.enableGroundShadow,
+      groundShadowLevel: envOpts.groundShadowLevel,
+      cameraExposure: envOpts.cameraExposure,
+      cameraContrast: envOpts.cameraContrast,
+      toneMappingEnabled: envOpts.toneMappingEnabled,
+      setupImageProcessing: envOpts.setupImageProcessing,
+    });
 
     // Create camera
     this.camera = new ArcRotateCamera(
@@ -144,9 +167,9 @@ export class ModelViewer implements ModelViewerRef {
     this.canvas.addEventListener("pointercancel", this.onPointerUp);
     this.canvas.addEventListener("pointerleave", this.onPointerUp);
 
-    // Lighting
+    // Additional hemisphere light for model visibility
     const hemi = new HemisphericLight("hemi", new Vector3(0, 1, 0), this.scene);
-    hemi.intensity = 0.6;
+    hemi.intensity = 0.8;
 
     // Glow layer
     this.glow = new GlowLayer("glow", this.scene);
