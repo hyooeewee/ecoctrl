@@ -32,6 +32,8 @@ export interface ModelSource {
 
 export interface BabylonSceneProps {
   models: ModelSource[];
+  showGrid?: boolean;
+  showAxes?: boolean;
   alt?: string;
   onSceneReady?: (scene: Scene, engine: Engine) => void;
   onModelLoaded?: (rootNode: TransformNode) => void;
@@ -50,7 +52,10 @@ export interface BabylonSceneRef {
 // ========================================
 
 const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
-  ({ models, alt, onSceneReady, onModelLoaded, className }, ref) => {
+  (
+    { models, showGrid = true, showAxes = true, alt, onSceneReady, onModelLoaded, className },
+    ref,
+  ) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const engineRef = useRef<Engine | null>(null);
@@ -61,6 +66,8 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
     const loadedModelsRef = useRef<Map<string, { root: TransformNode; blobUrl: string }>>(
       new Map(),
     );
+    const gridRef = useRef<ReturnType<typeof createGrid> | null>(null);
+    const axesRef = useRef<ReturnType<typeof createAxes> | null>(null);
 
     const [isLoading, setIsLoading] = useState(false);
     const [hasError, setHasError] = useState(false);
@@ -131,8 +138,9 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
       dirLight.intensity = 0.5;
       dirLight.position = new Vector3(5, 10, -5);
 
-      // Setup grid
-      createGrid(scene);
+      // Setup grid & axes
+      gridRef.current = createGrid(scene);
+      axesRef.current = createAxes(scene);
 
       // Setup GUI overlay
       const guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("guiOverlay", true, scene);
@@ -198,7 +206,7 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
       // Load new visible models.
       const toLoad = models.filter((m) => m.visible && !loadedModelsRef.current.has(m.id));
       if (toLoad.length === 0) {
-        frameCameraToVisibleModels(loadedModelsRef.current, models, camera);
+        frameCameraToVisibleModels(loadedModelsRef.current, models, camera, axesRef.current);
         return;
       }
 
@@ -246,7 +254,7 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
 
           if (!cancelled) {
             setIsLoading(false);
-            frameCameraToVisibleModels(loadedModelsRef.current, models, camera);
+            frameCameraToVisibleModels(loadedModelsRef.current, models, camera, axesRef.current);
             onModelLoaded?.(rootNodeRef.current!);
           }
         } catch (err) {
@@ -264,6 +272,18 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
         cancelled = true;
       };
     }, [models]);
+
+    // ========================================
+    // Grid / Axes Visibility
+    // ========================================
+
+    useEffect(() => {
+      gridRef.current?.setEnabled(showGrid);
+    }, [showGrid]);
+
+    useEffect(() => {
+      axesRef.current?.setEnabled(showAxes);
+    }, [showAxes]);
 
     return (
       <div
@@ -306,7 +326,7 @@ export default BabylonScene;
 // Helpers
 // ========================================
 
-function createGrid(scene: Scene): void {
+function createGrid(scene: Scene) {
   const gridMaterial = new StandardMaterial("gridMat", scene);
   gridMaterial.diffuseColor = new Color3(0.3, 0.3, 0.3);
   gridMaterial.alpha = 0.3;
@@ -315,18 +335,59 @@ function createGrid(scene: Scene): void {
   const grid = MeshBuilder.CreateGround("grid", { width: 20, height: 20, subdivisions: 20 }, scene);
   grid.material = gridMaterial;
   grid.position.y = -0.01;
+  return grid;
+}
+
+function createAxes(scene: Scene) {
+  const root = new TransformNode("axesRoot", scene);
+
+  const xMat = new StandardMaterial("axisXMat", scene);
+  xMat.diffuseColor = new Color3(1, 0, 0);
+  xMat.emissiveColor = new Color3(0.5, 0, 0);
+
+  const yMat = new StandardMaterial("axisYMat", scene);
+  yMat.diffuseColor = new Color3(0, 1, 0);
+  yMat.emissiveColor = new Color3(0, 0.5, 0);
+
+  const zMat = new StandardMaterial("axisZMat", scene);
+  zMat.diffuseColor = new Color3(0, 0, 1);
+  zMat.emissiveColor = new Color3(0, 0, 0.5);
+
+  const xAxis = MeshBuilder.CreateCylinder("axisX", { height: 5, diameter: 0.02 }, scene);
+  xAxis.rotation.z = Math.PI / 2;
+  xAxis.position.x = 2.5;
+  xAxis.material = xMat;
+  xAxis.parent = root;
+
+  const yAxis = MeshBuilder.CreateCylinder("axisY", { height: 5, diameter: 0.02 }, scene);
+  yAxis.position.y = 2.5;
+  yAxis.material = yMat;
+  yAxis.parent = root;
+
+  const zAxis = MeshBuilder.CreateCylinder("axisZ", { height: 5, diameter: 0.02 }, scene);
+  zAxis.rotation.x = Math.PI / 2;
+  zAxis.position.z = 2.5;
+  zAxis.material = zMat;
+  zAxis.parent = root;
+
+  return root;
 }
 
 function frameCameraToVisibleModels(
   loadedModels: Map<string, { root: TransformNode }>,
   models: ModelSource[],
   camera: ArcRotateCamera | null,
+  axesRoot: TransformNode | null,
 ): void {
   if (!camera) return;
 
   const min = new Vector3(Infinity, Infinity, Infinity);
   const max = new Vector3(-Infinity, -Infinity, -Infinity);
   let hasMesh = false;
+
+  // Always include the origin so axes remain in view.
+  min.minimizeInPlace(Vector3.Zero());
+  max.maximizeInPlace(Vector3.Zero());
 
   models.forEach((model) => {
     if (!model.visible) return;
@@ -343,8 +404,6 @@ function frameCameraToVisibleModels(
     });
   });
 
-  if (!hasMesh) return;
-
   const center = min.add(max).scale(0.5);
   const size = max.subtract(min);
   camera.setTarget(center);
@@ -353,5 +412,11 @@ function frameCameraToVisibleModels(
     camera.radius = diagonal * 1.5;
     camera.lowerRadiusLimit = Math.max(0.1, diagonal * 0.1);
     camera.upperRadiusLimit = Math.max(100, diagonal * 5);
+  }
+
+  // Scale axes so they are clearly visible relative to the scene.
+  if (axesRoot) {
+    const scale = diagonal > 0 ? diagonal * 0.12 : 1;
+    axesRoot.scaling = new Vector3(scale, scale, scale);
   }
 }
