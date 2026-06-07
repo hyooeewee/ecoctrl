@@ -63,6 +63,10 @@ export class LocalAdapter implements StorageAdapter {
     return `/api/local-storage/${key}`;
   }
 
+  async getPublicUrl(key: string): Promise<string> {
+    return `/api/local-storage/${key}`;
+  }
+
   async exists(key: string): Promise<boolean> {
     return fs.existsSync(this.resolve(key));
   }

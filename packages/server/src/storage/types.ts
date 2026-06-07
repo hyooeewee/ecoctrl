@@ -15,6 +15,7 @@ export interface StorageAdapter {
   get(key: string): Promise<ReadableStream>;
   delete(key: string): Promise<void>;
   getUrl(key: string, expiresIn?: number): Promise<string>;
+  getPublicUrl(key: string): Promise<string>;
   exists(key: string): Promise<boolean>;
   list(prefix: string): Promise<string[]>;
   stat(key: string): Promise<ObjectStat>;

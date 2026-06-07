@@ -1,0 +1,1 @@
+ALTER TABLE "dashboard_models" ADD COLUMN "model_files" jsonb DEFAULT '[]' NOT NULL;

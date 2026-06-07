@@ -51,6 +51,7 @@ const envSchema = z.object({
   S3_BUCKET_MODELS: z.string().default("ecoctrl-models"),
   S3_BUCKET_NODES: z.string().default("ecoctrl-nodes"),
   S3_BUCKET_PETS: z.string().default("ecoctrl-pets"),
+  S3_PUBLIC_ENDPOINT: z.string().optional(),
   S3_FORCE_PATH_STYLE: z
     .string()
     .default("false")
