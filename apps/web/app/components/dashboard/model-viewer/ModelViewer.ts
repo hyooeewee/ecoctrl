@@ -369,16 +369,39 @@ export class ModelViewer implements ModelViewerRef {
     const glbRoot = result.transformNodes.find((n) => n.name === "__root__") ?? firstMesh;
     glbRoot.parent = groupParent;
 
-    // Compute bounding info in local space (relative to groupParent).
-    // Use glbRoot (__root__) instead of firstMesh because firstMesh may have
-    // a position offset inside glbRoot, making its coordinate system different
-    // from groupParent. glbRoot is directly parented to groupParent with zero
-    // offset, so its local space matches groupParent's.
-    const { min, max } = glbRoot.getHierarchyBoundingVectors(false);
+    // Temporarily zero pivot rotation so world-space bounds match groupParent space.
+    const savedPivotY = this.pivot.rotation.y;
+    this.pivot.rotation.y = 0;
+    this.scene.updateTransformMatrix(true);
+
+    // Compute bounds from all imported meshes using world coordinates.
+    // getChildMeshes(true) on __root__ may return empty, so we use result.meshes.
+    let min = new Vector3(Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE);
+    let max = new Vector3(-Number.MAX_VALUE, -Number.MAX_VALUE, -Number.MAX_VALUE);
+
+    for (const mesh of result.meshes) {
+      if (!mesh.getBoundingInfo) continue;
+      const bmin = mesh.getBoundingInfo().boundingBox.minimumWorld;
+      const bmax = mesh.getBoundingInfo().boundingBox.maximumWorld;
+      min = Vector3.Minimize(min, bmin);
+      max = Vector3.Maximize(max, bmax);
+    }
+
+    // Restore pivot rotation.
+    this.pivot.rotation.y = savedPivotY;
+    this.scene.updateTransformMatrix(true);
+
     const size = max.subtract(min);
     const center = min.add(size.scale(0.5));
     const maxSize = Math.max(size.x, size.y, size.z);
     const localScale = maxSize > 0 ? 10 / maxSize : 1;
+
+    console.log(
+      `[ModelViewer] Bounding box for "${groupId}": meshCount=${result.meshes.length}, ` +
+        `min=(${min.x.toFixed(2)}, ${min.y.toFixed(2)}, ${min.z.toFixed(2)}), ` +
+        `max=(${max.x.toFixed(2)}, ${max.y.toFixed(2)}, ${max.z.toFixed(2)}), center=(${center.x.toFixed(2)}, ${center.y.toFixed(2)}, ${center.z.toFixed(2)}), ` +
+        `size=(${size.x.toFixed(2)}, ${size.y.toFixed(2)}, ${size.z.toFixed(2)}), localScale=${localScale.toFixed(4)}`,
+    );
 
     // Store the local scale on the groupParent for later unified scaling.
     (groupParent as any).__localScale = localScale;
@@ -421,7 +444,12 @@ export class ModelViewer implements ModelViewerRef {
     const min = (groupParent as any).__boundsMin as Vector3 | undefined;
     const center = (groupParent as any).__boundsCenter as Vector3 | undefined;
 
-    if (!this.unifiedScale || !min || !center) return;
+    if (!this.unifiedScale || !min || !center) {
+      console.warn(
+        `[ModelViewer] applyUnifiedScale skipped: unifiedScale=${this.unifiedScale}, min=${min}, center=${center}`,
+      );
+      return;
+    }
 
     // Set scaling directly so every model shares the same world-space scale.
     // unifiedScale comes from the first loaded model's localScale (10/maxSize).
@@ -433,6 +461,11 @@ export class ModelViewer implements ModelViewerRef {
     groupParent.position.x = -center.x * this.unifiedScale;
     groupParent.position.y = -min.y * this.unifiedScale;
     groupParent.position.z = -center.z * this.unifiedScale;
+
+    console.log(
+      `[ModelViewer] applyUnifiedScale: unifiedScale=${this.unifiedScale.toFixed(4)}, ` +
+        `groupParent.pos=(${groupParent.position.x.toFixed(2)}, ${groupParent.position.y.toFixed(2)}, ${groupParent.position.z.toFixed(2)})`,
+    );
   }
 
   /**
@@ -471,6 +504,13 @@ export class ModelViewer implements ModelViewerRef {
       const target = center.clone();
       this.camera.setTarget(target);
 
+      console.log(
+        `[ModelViewer] setupPostLoadState: combinedMin=(${combinedMin.x.toFixed(2)}, ${combinedMin.y.toFixed(2)}, ${combinedMin.z.toFixed(2)}), ` +
+          `combinedMax=(${combinedMax.x.toFixed(2)}, ${combinedMax.y.toFixed(2)}, ${combinedMax.z.toFixed(2)}), ` +
+          `size=(${size.x.toFixed(2)}, ${size.y.toFixed(2)}, ${size.z.toFixed(2)}), target=(${target.x.toFixed(2)}, ${target.y.toFixed(2)}, ${target.z.toFixed(2)}), ` +
+          `camera.radius=${this.camera.radius.toFixed(2)}, alpha=${this.camera.alpha.toFixed(2)}, beta=${this.camera.beta.toFixed(2)}`,
+      );
+
       // Snapshot post-load camera state
       this.postLoadCameraState = {
         alpha: this.camera.alpha,
@@ -478,6 +518,10 @@ export class ModelViewer implements ModelViewerRef {
         radius: this.camera.radius,
         target: target.clone(),
       };
+    } else {
+      console.warn(
+        `[ModelViewer] setupPostLoadState: no bounding box computed (groups=${this.groups.length})`,
+      );
     }
   }
 
