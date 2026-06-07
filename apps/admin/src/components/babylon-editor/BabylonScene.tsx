@@ -24,8 +24,14 @@ import { fetchModelUrl } from "@/lib/babylon-loaders";
 // Types
 // ========================================
 
+export interface ModelSource {
+  id: string;
+  url: string;
+  visible: boolean;
+}
+
 export interface BabylonSceneProps {
-  src: string | null;
+  models: ModelSource[];
   alt?: string;
   onSceneReady?: (scene: Scene, engine: Engine) => void;
   onModelLoaded?: (rootNode: TransformNode) => void;
@@ -44,7 +50,7 @@ export interface BabylonSceneRef {
 // ========================================
 
 const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
-  ({ src, alt, onSceneReady, onModelLoaded, className }, ref) => {
+  ({ models, alt, onSceneReady, onModelLoaded, className }, ref) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const engineRef = useRef<Engine | null>(null);
@@ -52,6 +58,9 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
     const cameraRef = useRef<ArcRotateCamera | null>(null);
     const rootNodeRef = useRef<TransformNode | null>(null);
     const guiTextureRef = useRef<AdvancedDynamicTexture | null>(null);
+    const loadedModelsRef = useRef<Map<string, { root: TransformNode; blobUrl: string }>>(
+      new Map(),
+    );
 
     const [isLoading, setIsLoading] = useState(false);
     const [hasError, setHasError] = useState(false);
@@ -166,50 +175,80 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
     useEffect(() => {
       const scene = sceneRef.current;
       const engine = engineRef.current;
-      const rootNode = rootNodeRef.current;
+      const camera = cameraRef.current;
+      if (!scene || !engine) return;
 
-      if (!scene || !engine || !rootNode) return;
+      // Update visibility for already loaded models.
+      loadedModelsRef.current.forEach((data, id) => {
+        const model = models.find((m) => m.id === id);
+        if (model) {
+          data.root.setEnabled(model.visible);
+        }
+      });
 
-      // Clear previous model
-      rootNode.getChildMeshes().forEach((mesh) => mesh.dispose());
+      // Remove models that are no longer in the list.
+      loadedModelsRef.current.forEach((data, id) => {
+        if (!models.find((m) => m.id === id)) {
+          data.root.dispose(false, true);
+          URL.revokeObjectURL(data.blobUrl);
+          loadedModelsRef.current.delete(id);
+        }
+      });
 
-      if (!src) {
-        setIsLoading(false);
+      // Load new visible models.
+      const toLoad = models.filter((m) => m.visible && !loadedModelsRef.current.has(m.id));
+      if (toLoad.length === 0) {
+        frameCameraToVisibleModels(loadedModelsRef.current, models, camera);
         return;
       }
 
       setIsLoading(true);
       setHasError(false);
-
       let cancelled = false;
-      let blobUrl: string | null = null;
 
-      const loadModel = async () => {
+      const loadAll = async () => {
         try {
-          const url = await fetchModelUrl(src);
-          if (cancelled) {
-            URL.revokeObjectURL(url);
-            return;
+          for (const model of toLoad) {
+            const blobUrl = await fetchModelUrl(model.url);
+            if (cancelled) {
+              URL.revokeObjectURL(blobUrl);
+              return;
+            }
+
+            const result = await SceneLoader.ImportMeshAsync(
+              "", // mesh names (empty = all)
+              "", // scene root (empty = use rootUrl)
+              blobUrl, // blob URL from authenticated fetch
+              scene,
+              undefined,
+              ".glb", // force GLB loader — blob URLs have no extension
+            );
+
+            if (cancelled) {
+              URL.revokeObjectURL(blobUrl);
+              return;
+            }
+
+            // Parent the GLTF __root__ to a per-model root node,
+            // preserving full hierarchy.
+            const modelRoot = new TransformNode(`model_${model.id}`, scene);
+            const gltfRoot = result.transformNodes.find((tn) => tn.name === "__root__");
+            if (gltfRoot) {
+              gltfRoot.parent = modelRoot;
+            } else {
+              result.meshes.forEach((mesh) => {
+                mesh.parent = modelRoot;
+              });
+            }
+
+            loadedModelsRef.current.set(model.id, { root: modelRoot, blobUrl });
           }
-          blobUrl = url;
-          const result = await SceneLoader.ImportMeshAsync(
-            "", // mesh names (empty = all)
-            "", // scene root (empty = use rootUrl)
-            url, // blob URL from authenticated fetch
-            scene,
-            undefined,
-            ".glb", // force GLB loader — blob URLs have no extension
-          );
 
-          if (cancelled) return;
-
-          // Parent all loaded meshes to root node
-          result.meshes.forEach((mesh) => {
-            mesh.parent = rootNode;
-          });
-
-          setIsLoading(false);
-          onModelLoaded?.(rootNode);
+          if (!cancelled) {
+            setIsLoading(false);
+            frameCameraToVisibleModels(loadedModelsRef.current, models, camera);
+            onModelLoaded?.(rootNodeRef.current!);
+          }
         } catch (err) {
           if (cancelled) return;
           console.error("Model load failed:", err);
@@ -219,13 +258,12 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
         }
       };
 
-      loadModel();
+      loadAll();
 
       return () => {
         cancelled = true;
-        if (blobUrl) URL.revokeObjectURL(blobUrl);
       };
-    }, [src]);
+    }, [models]);
 
     return (
       <div
@@ -277,4 +315,43 @@ function createGrid(scene: Scene): void {
   const grid = MeshBuilder.CreateGround("grid", { width: 20, height: 20, subdivisions: 20 }, scene);
   grid.material = gridMaterial;
   grid.position.y = -0.01;
+}
+
+function frameCameraToVisibleModels(
+  loadedModels: Map<string, { root: TransformNode }>,
+  models: ModelSource[],
+  camera: ArcRotateCamera | null,
+): void {
+  if (!camera) return;
+
+  const min = new Vector3(Infinity, Infinity, Infinity);
+  const max = new Vector3(-Infinity, -Infinity, -Infinity);
+  let hasMesh = false;
+
+  models.forEach((model) => {
+    if (!model.visible) return;
+    const data = loadedModels.get(model.id);
+    if (!data) return;
+
+    data.root.getChildMeshes().forEach((mesh) => {
+      const bi = mesh.getBoundingInfo();
+      if (bi) {
+        hasMesh = true;
+        min.minimizeInPlace(bi.boundingBox.minimumWorld);
+        max.maximizeInPlace(bi.boundingBox.maximumWorld);
+      }
+    });
+  });
+
+  if (!hasMesh) return;
+
+  const center = min.add(max).scale(0.5);
+  const size = max.subtract(min);
+  camera.setTarget(center);
+  const diagonal = Math.max(size.x, size.y, size.z);
+  if (diagonal > 0) {
+    camera.radius = diagonal * 1.5;
+    camera.lowerRadiusLimit = Math.max(0.1, diagonal * 0.1);
+    camera.upperRadiusLimit = Math.max(100, diagonal * 5);
+  }
 }
