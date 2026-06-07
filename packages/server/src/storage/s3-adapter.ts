@@ -8,6 +8,7 @@ import {
   CopyObjectCommand,
   CreateBucketCommand,
   DeleteBucketCommand,
+  PutBucketPolicyCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "@/lib/env";
@@ -53,6 +54,26 @@ export class S3Adapter implements StorageAdapter {
         throw err;
       }
     }
+  }
+
+  async ensurePublicRead(): Promise<void> {
+    const policy = {
+      Version: "2012-10-17",
+      Statement: [
+        {
+          Effect: "Allow",
+          Principal: { AWS: "*" },
+          Action: "s3:GetObject",
+          Resource: `arn:aws:s3:::${this.bucket}/*`,
+        },
+      ],
+    };
+    await this.client.send(
+      new PutBucketPolicyCommand({
+        Bucket: this.bucket,
+        Policy: JSON.stringify(policy),
+      }),
+    );
   }
 
   async put(key: string, data: Buffer | ReadableStream, options?: PutOptions): Promise<void> {
