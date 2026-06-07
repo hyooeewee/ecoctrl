@@ -48,6 +48,9 @@ export interface BabylonSceneRef {
   engine: Engine | null;
   rootNode: TransformNode | null;
   guiTexture: AdvancedDynamicTexture | null;
+  zoomIn: () => void;
+  zoomOut: () => void;
+  resetView: () => void;
 }
 
 // ========================================
@@ -79,6 +82,7 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
       new Map(),
     );
     const loadingIdsRef = useRef<Set<string>>(new Set());
+    const modelsRef = useRef<ModelSource[]>(models);
     const gridRef = useRef<ReturnType<typeof createGrid> | null>(null);
     const axesRef = useRef<ReturnType<typeof createAxes> | null>(null);
 
@@ -99,6 +103,32 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
       },
       get guiTexture() {
         return guiTextureRef.current;
+      },
+      zoomIn() {
+        const camera = cameraRef.current;
+        if (!camera || camera.mode !== Camera.ORTHOGRAPHIC_CAMERA) return;
+        const factor = 0.9;
+        camera.orthoLeft *= factor;
+        camera.orthoRight *= factor;
+        camera.orthoTop *= factor;
+        camera.orthoBottom *= factor;
+      },
+      zoomOut() {
+        const camera = cameraRef.current;
+        if (!camera || camera.mode !== Camera.ORTHOGRAPHIC_CAMERA) return;
+        const factor = 1.1;
+        camera.orthoLeft *= factor;
+        camera.orthoRight *= factor;
+        camera.orthoTop *= factor;
+        camera.orthoBottom *= factor;
+      },
+      resetView() {
+        frameCameraToVisibleModels(
+          loadedModelsRef.current,
+          modelsRef.current,
+          cameraRef.current,
+          axesRef.current,
+        );
       },
     }));
 
@@ -199,6 +229,11 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
     // ========================================
     // Model Loading
     // ========================================
+
+    // Keep modelsRef in sync so resetView always uses latest list.
+    useEffect(() => {
+      modelsRef.current = models;
+    }, [models]);
 
     useEffect(() => {
       const scene = sceneRef.current;
@@ -348,7 +383,7 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
     return (
       <div
         ref={containerRef}
-        className={`relative flex h-full w-full overflow-hidden rounded-lg border border-border bg-black ${className ?? ""}`}
+        className={`relative flex h-full w-full overflow-hidden bg-black ${className ?? ""}`}
       >
         {/* Loading overlay */}
         {isLoading && (
