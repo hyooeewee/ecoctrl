@@ -4,7 +4,7 @@
 
 import { create } from "zustand";
 import { toast } from "sonner";
-import type { DashboardModelConfig, DashboardModelLabel, ModelFileEntry } from "@ecoctrl/shared";
+import type { DashboardModelConfig, DashboardModelLabel } from "@ecoctrl/shared";
 import type { LabelConfig, LabelOperation } from "@/components/babylon-editor";
 import { dashboardModelApi } from "@/api/dashboardModel";
 import { clearModelCache } from "@ecoctrl/shared/model-cache";
@@ -27,8 +27,6 @@ interface ModelEditorState {
   editorMode: EditorMode;
   showGrid: boolean;
   showAxes: boolean;
-  filesExpanded: boolean;
-  labelsExpanded: boolean;
   panelOpen: boolean;
 
   // Model visibility & progress
@@ -66,8 +64,6 @@ interface ModelEditorState {
   setEditorMode: (mode: EditorMode) => void;
   toggleGrid: () => void;
   toggleAxes: () => void;
-  toggleFilesExpanded: () => void;
-  toggleLabelsExpanded: () => void;
   togglePanel: () => void;
 }
 
@@ -81,8 +77,6 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
   editorMode: "select",
   showGrid: true,
   showAxes: true,
-  filesExpanded: true,
-  labelsExpanded: true,
   panelOpen: true,
   visibleFileIds: new Set(),
   loadingProgress: new Map(),
@@ -280,30 +274,5 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
   setEditorMode: (mode) => set({ editorMode: mode }),
   toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
   toggleAxes: () => set((state) => ({ showAxes: !state.showAxes })),
-  toggleFilesExpanded: () => set((state) => ({ filesExpanded: !state.filesExpanded })),
-  toggleLabelsExpanded: () => set((state) => ({ labelsExpanded: !state.labelsExpanded })),
   togglePanel: () => set((state) => ({ panelOpen: !state.panelOpen })),
 }));
-
-// ========================================
-// Selectors (derived state)
-// ========================================
-
-export const selectExistingFiles = (state: ModelEditorState): ModelFileEntry[] => {
-  const config = state.config;
-  return config?.modelFiles?.length
-    ? config.modelFiles
-    : config?.modelFileUrl
-      ? [
-          {
-            id: "legacy",
-            fileKey: config.modelFileUrl,
-            name: config.modelFileUrl.split("/").pop() || "legacy",
-            priority: "critical",
-          },
-        ]
-      : [];
-};
-
-export const selectSelectedLabel = (state: ModelEditorState) =>
-  state.labels.find((l) => l.id === state.selectedLabelId) ?? null;
