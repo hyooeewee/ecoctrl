@@ -491,12 +491,14 @@ def base_pet_prompt(args: argparse.Namespace) -> str:
     brand_block = f"\nBrand inspiration: {brand_line}\n" if brand_line else "\n"
     chroma_key = args.chroma_key["hex"]
     chroma_name = args.chroma_key["name"]
-    return f"""Create one clean full-body reference sprite for Codex pet {args.display_name}.
+    return f"""STRICTLY COPY the character from the reference image. The reference image is the primary and authoritative visual source. Match exact art style, colors, proportions, clothing, and all visual details precisely. Do not invent, change, or simplify any design element from the reference.
 
-Pet identity: {pet_notes}.
+Create one clean full-body reference sprite for Codex pet {args.display_name} on a perfectly flat pure {chroma_name} {chroma_key} chroma-key background. Output exactly 192x208 pixels. Compact full-body mascot filling the entire frame.
+
+Pet identity (supplementary to the reference image): {pet_notes}.
 Style: {style_contract}
 {brand_block}
-Place a single centered pose on a perfectly flat pure {chroma_name} {chroma_key} chroma-key background. Keep the full pet visible, compact, readable at 192x208, and easy to animate. Preserve approved reference identity cues. No scenery, text, borders, checkerboard transparency, shadows, glows, detached effects, or extra props. Keep {chroma_key} and close colors out of the pet, props, highlights, and effects."""
+Preserve text and logos from the reference image exactly as they appear. No scenery, borders, checkerboard transparency, shadows, glows, detached effects, or extra props. Keep {chroma_key} and close colors out of the pet, props, highlights, and effects."""
 
 
 def row_prompt(
@@ -508,13 +510,16 @@ def row_prompt(
     chroma_name = args.chroma_key["name"]
     state_prompt = STATE_PROMPTS[state]
     state_requirements = "\n".join(f"- {line}" for line in STATE_REQUIREMENTS[state])
-    return f"""Create one horizontal animation strip for Codex pet `{args.pet_id}`, state `{state}`.
+    strip_width = frames * 192
+    return f"""STRICTLY COPY the character from the reference image and canonical base. The reference images are the primary and authoritative visual source. Match exact art style, colors, proportions, clothing, and all visual details precisely. Do not invent, change, or simplify any design element.
+
+Create one horizontal animation strip for Codex pet `{args.pet_id}`, state `{state}`.
 
 Use the attached canonical base for identity. Use the attached layout guide only for slot count, spacing, centering, and padding; do not draw the guide.
 
-Output exactly {frames} full-body frames in one left-to-right row on flat pure {chroma_name} {chroma_key}. Treat the row as {frames} invisible equal-width slots: one centered complete pose per slot, evenly spaced, with no overlap, clipping, empty slots, labels, or borders.
+Output exactly {frames} full-body frames in one left-to-right row on flat pure {chroma_name} {chroma_key}. Output a horizontal strip of exactly {strip_width}x208 pixels. Each frame slot is 192x208. Treat the row as {frames} invisible equal-width slots: one centered complete pose per slot, evenly spaced, with no overlap, clipping, empty slots, labels, or borders.
 
-Identity: same pet in every frame: {pet_notes}. Preserve silhouette, face, proportions, markings, palette, material, style, and props.
+Identity (supplementary to the reference images): same pet in every frame: {pet_notes}. Preserve silhouette, face, proportions, markings, palette, material, style, and props.
 Style: {style_contract}
 Animation continuity: keep apparent pet scale and baseline stable within the row unless the state itself intentionally changes vertical position, such as `jumping`. Move the pose within the slot instead of redrawing the pet larger or smaller frame to frame.
 
@@ -523,7 +528,7 @@ State action: {state_prompt}
 State requirements:
 {state_requirements}
 
-Clean extraction: crisp opaque edges, safe padding, no scenery, text, guide marks, checkerboard, shadows, glows, motion blur, speed lines, dust, detached effects, stray pixels, or chroma-key colors inside the pet."""
+Clean extraction: crisp opaque edges, safe padding, preserve text and logos from the reference image exactly as they appear. No scenery, guide marks, checkerboard, shadows, glows, motion blur, speed lines, dust, detached effects, stray pixels, or chroma-key colors inside the pet."""
 
 
 def retry_row_prompt(
@@ -534,7 +539,10 @@ def retry_row_prompt(
     chroma_name = args.chroma_key["name"]
     state_prompt = STATE_PROMPTS[state]
     state_requirements = "\n".join(f"- {line}" for line in STATE_REQUIREMENTS[state])
-    return f"""Create Codex pet row `{state}` for `{args.pet_id}`: exactly {frames} full-body frames in one horizontal strip on flat pure {chroma_name} {chroma_key}.
+    strip_width = frames * 192
+    return f"""STRICTLY COPY the character from the reference image and canonical base. Match exact art style, colors, proportions, clothing, and all visual details precisely. Do not invent, change, or simplify any design element.
+
+Create Codex pet row `{state}` for `{args.pet_id}`: exactly {frames} full-body frames in one horizontal strip on flat pure {chroma_name} {chroma_key}. Output a horizontal strip of exactly {strip_width}x208 pixels. Each frame slot is 192x208.
 
 Use the attached canonical base for identity and the layout guide only for spacing. Same pet in every frame: {pet_notes}. Preserve silhouette, face, palette, material, proportions, markings, and props.
 
@@ -545,7 +553,7 @@ Action: {state_prompt}
 State requirements:
 {state_requirements}
 
-One centered complete pose per invisible slot. No text, boxes, guide marks, scenery, shadows, glows, motion blur, speed lines, dust, detached effects, stray pixels, or {chroma_key} colors in the pet."""
+One centered complete pose per invisible slot. Preserve text and logos from the reference image exactly as they appear. No boxes, guide marks, scenery, shadows, glows, motion blur, speed lines, dust, detached effects, stray pixels, or {chroma_key} colors in the pet."""
 
 
 def make_jobs(
