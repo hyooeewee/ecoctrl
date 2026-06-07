@@ -4,7 +4,7 @@
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { toast } from "sonner";
-import { Save, Eye, Grid3X3, Axis3D, File, X, Upload, ChevronDown } from "lucide-react";
+import { Save, Eye, Grid3X3, Axis3D, File, X, Upload, ChevronDown, Trash2 } from "lucide-react";
 import { Button } from "@ecoctrl/ui";
 import { Card, CardContent } from "@ecoctrl/ui";
 import { Badge } from "@ecoctrl/ui";
@@ -534,7 +534,7 @@ export default function DashboardModel() {
                               onClick={() => handleDeleteFile(file.id)}
                               title="删除"
                             >
-                              <X size={12} />
+                              <Trash2 size={12} />
                             </button>
                           </div>
                         );
@@ -561,7 +561,7 @@ export default function DashboardModel() {
                             className="ml-1 rounded p-0.5 hover:bg-muted-foreground/20"
                             onClick={() => handleRemovePendingFile(index)}
                           >
-                            <X size={12} />
+                            <Trash2 size={12} />
                           </button>
                         </div>
                       ))}
