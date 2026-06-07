@@ -69,7 +69,7 @@ export type LabelOperation = z.infer<typeof LabelOperationSchema>;
 // Label Schema (New - with operations & tree)
 // ========================================
 
-export const DashboardModelLabelV2Schema = z.object({
+export const DashboardModelLabelSchema = z.object({
   id: z.string(),
   key: z.string(),
   name: z.string(),
@@ -80,7 +80,7 @@ export const DashboardModelLabelV2Schema = z.object({
   operations: z.array(LabelOperationSchema),
   order: z.number(),
 });
-export type DashboardModelLabelV2 = z.infer<typeof DashboardModelLabelV2Schema>;
+export type DashboardModelLabel = z.infer<typeof DashboardModelLabelSchema>;
 
 // ========================================
 // Model File Entry Schema
@@ -91,7 +91,7 @@ export const ModelFileEntrySchema = z.object({
   fileKey: z.string(),
   name: z.string().optional(),
   priority: z.enum(["critical", "background"]).default("background"),
-  labels: z.array(DashboardModelLabelV2Schema).optional(),
+  labels: z.array(DashboardModelLabelSchema).optional(),
 });
 export type ModelFileEntry = z.infer<typeof ModelFileEntrySchema>;
 
@@ -120,7 +120,7 @@ export const DashboardModelConfigSchema = z.object({
   cameraPreset: z.string(),
   ambientLightIntensity: z.number(),
   hotspots: z.array(DashboardModelHotspotSchema),
-  labels: z.array(DashboardModelLabelV2Schema),
+  labels: z.array(DashboardModelLabelSchema),
 });
 export type DashboardModelConfig = z.infer<typeof DashboardModelConfigSchema>;
 
