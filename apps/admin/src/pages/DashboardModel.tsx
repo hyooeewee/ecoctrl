@@ -33,14 +33,14 @@ import {
   LabelMarkerData,
 } from "@/components/babylon-editor";
 import { dashboardModelApi } from "../api/dashboardModel";
-import type { DashboardModelConfig, DashboardModelLabelV2 } from "@ecoctrl/shared";
+import type { DashboardModelConfig, DashboardModelLabel } from "@ecoctrl/shared";
 import { Vector3 } from "@babylonjs/core";
 
 // ========================================
 // Types
 // ========================================
 
-type Label = DashboardModelLabelV2;
+type Label = DashboardModelLabel;
 
 type EditorMode = "select" | "placeLabel" | "clipPreview";
 
