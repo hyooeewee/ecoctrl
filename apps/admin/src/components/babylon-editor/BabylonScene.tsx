@@ -127,7 +127,7 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
       // Setup camera in orthographic mode for a true axonometric view.
       const camera = new ArcRotateCamera(
         "camera",
-        -Math.PI / 4,
+        Math.PI / 4,
         Math.acos(1 / Math.sqrt(3)),
         30,
         Vector3.Zero(),
@@ -466,7 +466,7 @@ function frameCameraToVisibleModels(
   // Frame around the coordinate axes origin with a fixed isometric
   // orthographic view rather than chasing the model bounds.
   camera.setTarget(Vector3.Zero());
-  camera.alpha = -Math.PI / 4;
+  camera.alpha = Math.PI / 4;
   camera.beta = Math.acos(1 / Math.sqrt(3));
   camera.radius = 30;
   camera.lowerRadiusLimit = 1;
