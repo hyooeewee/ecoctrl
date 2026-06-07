@@ -2,8 +2,7 @@
 // Dashboard Model Configuration Page
 // ========================================
 
-import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { toast } from "sonner";
+import React, { useEffect, useRef, useMemo } from "react";
 import { File, Upload, ChevronDown, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { Button } from "@ecoctrl/ui";
@@ -22,254 +21,80 @@ import {
   LabelTree,
   LabelConfigForm,
   OperationConfig,
-  LabelConfig,
-  LabelOperation,
-  LabelTreeNode,
-  LabelMarkerData,
+  type LabelTreeNode,
+  type LabelMarkerData,
 } from "@/components/babylon-editor";
-import { dashboardModelApi } from "../api/dashboardModel";
-import { clearModelCache } from "@ecoctrl/shared/model-cache";
-import type { DashboardModelConfig, DashboardModelLabel, ModelFileEntry } from "@ecoctrl/shared";
 import { Vector3 } from "@babylonjs/core";
-
+import {
+  useModelEditorStore,
+  selectExistingFiles,
+  selectSelectedLabel,
+} from "@/store/modelEditorStore";
 import { useAppStore } from "@/store/appStore";
-
-// ========================================
-// Types
-// ========================================
-
-type Label = DashboardModelLabel;
-
-type EditorMode = "select" | "placeLabel" | "clipPreview";
 
 // ========================================
 // Component
 // ========================================
 
 export default function DashboardModel() {
-  // ========================================
-  // State
-  // ========================================
-
-  const [config, setConfig] = useState<DashboardModelConfig | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const [uploading, setUploading] = useState(false);
-
-  const [editorMode, setEditorMode] = useState<EditorMode>("select");
-  const [labels, setLabels] = useState<Label[]>([]);
-  const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
-  const [showGrid, setShowGrid] = useState(true);
-  const [showAxes, setShowAxes] = useState(true);
-  const [visibleFileIds, setVisibleFileIds] = useState<Set<string>>(new Set());
-  const [filesExpanded, setFilesExpanded] = useState(true);
-  const [labelsExpanded, setLabelsExpanded] = useState(true);
-  const [loadingProgress, setLoadingProgress] = useState<Map<string, number>>(new Map());
-  const [panelOpen, setPanelOpen] = useState(true);
-
   const sceneRef = useRef<BabylonSceneRef>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const setActiveTab = useAppStore((state) => state.setActiveTab);
 
-  // ========================================
-  // Data Loading
-  // ========================================
+  // Store state (selective subscriptions)
+  const loading = useModelEditorStore((s) => s.loading);
+  const editorMode = useModelEditorStore((s) => s.editorMode);
+  const showGrid = useModelEditorStore((s) => s.showGrid);
+  const showAxes = useModelEditorStore((s) => s.showAxes);
+  const filesExpanded = useModelEditorStore((s) => s.filesExpanded);
+  const labelsExpanded = useModelEditorStore((s) => s.labelsExpanded);
+  const panelOpen = useModelEditorStore((s) => s.panelOpen);
+  const visibleFileIds = useModelEditorStore((s) => s.visibleFileIds);
+  const loadingProgress = useModelEditorStore((s) => s.loadingProgress);
+  const pendingFiles = useModelEditorStore((s) => s.pendingFiles);
+  const uploading = useModelEditorStore((s) => s.uploading);
+  const labels = useModelEditorStore((s) => s.labels);
+  const selectedLabelId = useModelEditorStore((s) => s.selectedLabelId);
 
-  useEffect(() => {
-    const fetchConfig = async () => {
-      try {
-        const data = await dashboardModelApi.get();
-        setConfig(data);
-        if (data.modelFiles?.length) {
-          setVisibleFileIds(new Set(data.modelFiles.map((f) => f.id)));
-        }
-        if (data.labels) {
-          setLabels(data.labels as Label[]);
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchConfig();
-  }, []);
+  // Store actions (stable references)
+  const {
+    fetchConfig,
+    saveLabels,
+    toggleFileVisible,
+    deleteFile,
+    setModelProgress,
+    addPendingFiles,
+    removePendingFile,
+    clearPendingFiles,
+    uploadAll,
+    pickLabel,
+    selectLabel,
+    addLabel,
+    deleteLabel,
+    updateLabelConfig,
+    updateLabelOperations,
+    setEditorMode,
+    toggleGrid,
+    toggleAxes,
+    toggleFilesExpanded,
+    toggleLabelsExpanded,
+    togglePanel,
+  } = useModelEditorStore();
 
-  // ========================================
-  // File Upload (batch)
-  // ========================================
+  // Derived
+  const existingFiles = useModelEditorStore(selectExistingFiles);
+  const selectedLabel = useModelEditorStore(selectSelectedLabel);
 
-  const handleUploadAll = async () => {
-    if (pendingFiles.length === 0) return;
-    setUploading(true);
-    try {
-      const updated = await dashboardModelApi.uploadMultiple(pendingFiles);
-      setConfig(updated);
-      setPendingFiles([]);
-      toast.success(`已上传 ${pendingFiles.length} 个文件`);
-    } catch (err) {
-      console.error("Upload failed:", err);
-      toast.error("上传失败");
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleAddFiles = (files: File[]) => {
-    setPendingFiles((prev) => [...prev, ...files]);
-  };
-
-  const handleRemovePendingFile = (index: number) => {
-    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleClearPendingFiles = () => {
-    setPendingFiles([]);
-  };
-
-  // ========================================
-  // Label Management
-  // ========================================
-
-  const selectedLabel = useMemo(
-    () => labels.find((l) => l.id === selectedLabelId) ?? null,
-    [labels, selectedLabelId],
-  );
-
-  const handleLabelPick = useCallback(
-    (info: { position: Vector3 }) => {
-      if (editorMode !== "placeLabel") return;
-
-      const newLabel: Label = {
-        id: `label_${Date.now()}`,
-        key: `label_${labels.length + 1}`,
-        name: `标签 ${labels.length + 1}`,
-        description: "",
-        parentId: null,
-        position: {
-          x: parseFloat(info.position.x.toFixed(3)),
-          y: parseFloat(info.position.y.toFixed(3)),
-          z: parseFloat(info.position.z.toFixed(3)),
-        },
-        meshKeywords: [],
-        operations: [],
-        order: labels.length,
-      };
-
-      setLabels((prev) => [...prev, newLabel]);
-      setSelectedLabelId(newLabel.id);
-      setEditorMode("select");
-      toast.success("标签已添加");
-    },
-    [editorMode, labels.length],
-  );
-
-  const handleLabelSelect = useCallback((id: string) => {
-    setSelectedLabelId(id);
-    setEditorMode("select");
-  }, []);
-
-  const handleLabelAdd = useCallback(
-    (parentId?: string) => {
-      const newLabel: Label = {
-        id: `label_${Date.now()}`,
-        key: `label_${labels.length + 1}`,
-        name: `标签 ${labels.length + 1}`,
-        description: "",
-        parentId: parentId ?? null,
-        position: { x: 0, y: 1, z: 0 },
-        meshKeywords: [],
-        operations: [],
-        order: labels.length,
-      };
-
-      setLabels((prev) => [...prev, newLabel]);
-      setSelectedLabelId(newLabel.id);
-    },
-    [labels.length],
-  );
-
-  const handleLabelDelete = useCallback(
-    (id: string) => {
-      setLabels((prev) => prev.filter((l) => l.id !== id));
-      if (selectedLabelId === id) {
-        setSelectedLabelId(null);
-      }
-      toast.success("标签已删除");
-    },
-    [selectedLabelId],
-  );
-
-  const handleLabelEdit = useCallback((id: string) => {
-    setSelectedLabelId(id);
-  }, []);
-
-  const handleLabelConfigChange = useCallback((config: LabelConfig) => {
-    setLabels((prev) =>
-      prev.map((l) =>
-        l.id === config.id
-          ? {
-              ...l,
-              key: config.key,
-              name: config.name,
-              description: config.description,
-              parentId: config.parentId,
-              position: config.position,
-              meshKeywords: config.meshKeywords,
-            }
-          : l,
-      ),
-    );
-  }, []);
-
-  const handleOperationsChange = useCallback(
-    (operations: LabelOperation[]) => {
-      if (!selectedLabelId) return;
-      setLabels((prev) => prev.map((l) => (l.id === selectedLabelId ? { ...l, operations } : l)));
-    },
-    [selectedLabelId],
-  );
-
-  // ========================================
-  // Mesh Picking
-  // ========================================
-
-  const { pickedInfo, clearPick } = useMeshPicking({
-    scene: sceneRef.current?.scene ?? null,
-    enabled: editorMode === "placeLabel",
-    onPick: handleLabelPick,
-  });
-
-  // ========================================
-  // Label Markers
-  // ========================================
-
-  const labelMarkers: LabelMarkerData[] = useMemo(
+  const modelSources = useMemo(
     () =>
-      labels.map((l) => ({
-        id: l.id,
-        key: l.key,
-        name: l.name,
-        position: new Vector3(l.position.x, l.position.y, l.position.z),
-        isSelected: l.id === selectedLabelId,
-        hasChildren: labels.some((child) => child.parentId === l.id),
+      existingFiles.map((file) => ({
+        id: file.id,
+        url: `/api/dashboard-model/file?key=${encodeURIComponent(file.fileKey)}`,
+        visible: visibleFileIds.has(file.id),
       })),
-    [labels, selectedLabelId],
+    [existingFiles, visibleFileIds],
   );
-
-  useLabelMarkers({
-    scene: sceneRef.current?.scene ?? null,
-    guiTexture: sceneRef.current?.guiTexture ?? null,
-    labels: labelMarkers,
-    selectedId: selectedLabelId,
-    onLabelClick: handleLabelSelect,
-  });
-
-  // ========================================
-  // Label Tree Data
-  // ========================================
 
   const labelTreeData: LabelTreeNode[] = useMemo(() => {
     const map = new Map<string, LabelTreeNode>();
@@ -297,113 +122,37 @@ export default function DashboardModel() {
     return roots;
   }, [labels]);
 
-  // ========================================
-  // Save
-  // ========================================
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await dashboardModelApi.update({ labels });
-      toast.success("配置已保存");
-    } catch (err) {
-      console.error("Save failed:", err);
-      toast.error("保存失败");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // ========================================
-  // Existing file info
-  // ========================================
-
-  const existingFiles: ModelFileEntry[] = useMemo(
+  const labelMarkers: LabelMarkerData[] = useMemo(
     () =>
-      config?.modelFiles?.length
-        ? config.modelFiles
-        : config?.modelFileUrl
-          ? [
-              {
-                id: "legacy",
-                fileKey: config.modelFileUrl,
-                name: config.modelFileUrl.split("/").pop() || "legacy",
-                priority: "critical",
-              },
-            ]
-          : [],
-    [config],
-  );
-
-  const modelSources = useMemo(
-    () =>
-      existingFiles.map((file) => ({
-        id: file.id,
-        url: `/api/dashboard-model/file?key=${encodeURIComponent(file.fileKey)}`,
-        visible: visibleFileIds.has(file.id),
+      labels.map((l) => ({
+        id: l.id,
+        key: l.key,
+        name: l.name,
+        position: new Vector3(l.position.x, l.position.y, l.position.z),
+        isSelected: l.id === selectedLabelId,
+        hasChildren: labels.some((child) => child.parentId === l.id),
       })),
-    [existingFiles, visibleFileIds],
+    [labels, selectedLabelId],
   );
 
-  // ========================================
-  // File Visibility
-  // ========================================
+  // Effects
+  useEffect(() => {
+    fetchConfig();
+  }, [fetchConfig]);
 
-  const toggleFileVisible = (fileId: string) => {
-    setVisibleFileIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(fileId)) {
-        next.delete(fileId);
-      } else {
-        next.add(fileId);
-      }
-      return next;
-    });
-  };
+  useMeshPicking({
+    scene: sceneRef.current?.scene ?? null,
+    enabled: editorMode === "placeLabel",
+    onPick: (info) => pickLabel(info.position),
+  });
 
-  // ========================================
-  // File Deletion
-  // ========================================
-
-  const handleDeleteFile = async (fileId: string) => {
-    if (!config) return;
-    const deleted = config.modelFiles?.find((f) => f.id === fileId);
-    const newFiles = config.modelFiles?.filter((f) => f.id !== fileId) ?? [];
-    try {
-      await dashboardModelApi.update({ modelFiles: newFiles });
-      if (deleted) {
-        const url = `/api/dashboard-model/file?key=${encodeURIComponent(deleted.fileKey)}`;
-        await clearModelCache(url);
-      }
-      setConfig((prev) => (prev ? { ...prev, modelFiles: newFiles } : null));
-      setVisibleFileIds((prev) => {
-        const next = new Set(prev);
-        next.delete(fileId);
-        return next;
-      });
-      setLoadingProgress((prev) => {
-        const next = new Map(prev);
-        next.delete(fileId);
-        return next;
-      });
-      toast.success("模型文件已删除");
-    } catch (err) {
-      console.error("Delete failed:", err);
-      toast.error("删除失败");
-    }
-  };
-
-  // ========================================
-  // Model Loading Progress
-  // ========================================
-
-  const handleModelProgress = (fileId: string, progress: number) => {
-    setLoadingProgress((prev) => {
-      const next = new Map(prev);
-      next.set(fileId, progress);
-      return next;
-    });
-  };
+  useLabelMarkers({
+    scene: sceneRef.current?.scene ?? null,
+    guiTexture: sceneRef.current?.guiTexture ?? null,
+    labels: labelMarkers,
+    selectedId: selectedLabelId,
+    onLabelClick: selectLabel,
+  });
 
   // ========================================
   // Render
@@ -421,11 +170,10 @@ export default function DashboardModel() {
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-black">
       <ModelEditorTopBar
         onBack={() => setActiveTab("models")}
-        onSave={handleSave}
-        saving={saving}
+        onSave={saveLabels}
+        saving={useModelEditorStore((s) => s.saving)}
       />
 
-      {/* Main Viewport Area */}
       <div className="relative flex-1 overflow-hidden">
         {/* Collapsible Left Panel */}
         <AnimatePresence initial={false}>
@@ -444,7 +192,7 @@ export default function DashboardModel() {
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7"
-                  onClick={() => setPanelOpen(false)}
+                  onClick={togglePanel}
                   title="收起"
                 >
                   <ChevronLeft size={16} />
@@ -455,9 +203,9 @@ export default function DashboardModel() {
               <div className="flex gap-1 border-b border-border p-2">
                 {(
                   [
-                    { id: "select", label: "选择" },
-                    { id: "placeLabel", label: "放置标签" },
-                    { id: "clipPreview", label: "剖切" },
+                    { id: "select" as const, label: "选择" },
+                    { id: "placeLabel" as const, label: "放置标签" },
+                    { id: "clipPreview" as const, label: "剖切" },
                   ] as const
                 ).map((m) => (
                   <button
@@ -485,11 +233,11 @@ export default function DashboardModel() {
                       role="button"
                       tabIndex={0}
                       className="mb-2 flex w-full cursor-pointer items-center justify-between"
-                      onClick={() => setFilesExpanded((v) => !v)}
+                      onClick={toggleFilesExpanded}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          setFilesExpanded((v) => !v);
+                          toggleFilesExpanded();
                         }
                       }}
                     >
@@ -526,7 +274,7 @@ export default function DashboardModel() {
                           className="hidden"
                           onChange={(e) => {
                             if (e.target.files?.length) {
-                              handleAddFiles(Array.from(e.target.files));
+                              addPendingFiles(Array.from(e.target.files));
                               e.target.value = "";
                             }
                           }}
@@ -565,7 +313,7 @@ export default function DashboardModel() {
                                     <button
                                       type="button"
                                       className="ml-1 rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                                      onClick={() => handleDeleteFile(file.id)}
+                                      onClick={() => deleteFile(file.id)}
                                       title="删除"
                                     >
                                       <Trash2 size={12} />
@@ -601,7 +349,7 @@ export default function DashboardModel() {
                                 <button
                                   type="button"
                                   className="ml-1 rounded p-0.5 hover:bg-muted-foreground/20"
-                                  onClick={() => handleRemovePendingFile(index)}
+                                  onClick={() => removePendingFile(index)}
                                 >
                                   <Trash2 size={12} />
                                 </button>
@@ -613,7 +361,7 @@ export default function DashboardModel() {
                         {existingFiles.length === 0 && pendingFiles.length === 0 && (
                           <ModelFileZone
                             file={null}
-                            onFileSelect={(file) => handleAddFiles([file])}
+                            onFileSelect={(file) => addPendingFiles([file])}
                             onFileClear={() => {}}
                             acceptedFormats=".glb,.gltf,.obj"
                           />
@@ -621,14 +369,10 @@ export default function DashboardModel() {
 
                         {pendingFiles.length > 0 && (
                           <div className="mt-2 flex gap-2">
-                            <Button
-                              className="flex-1"
-                              onClick={handleUploadAll}
-                              disabled={uploading}
-                            >
+                            <Button className="flex-1" onClick={uploadAll} disabled={uploading}>
                               {uploading ? "上传中..." : `上传全部 (${pendingFiles.length})`}
                             </Button>
-                            <Button variant="outline" onClick={handleClearPendingFiles}>
+                            <Button variant="outline" onClick={clearPendingFiles}>
                               清空
                             </Button>
                           </div>
@@ -642,7 +386,7 @@ export default function DashboardModel() {
                     <button
                       type="button"
                       className="mb-2 flex w-full items-center gap-1"
-                      onClick={() => setLabelsExpanded((v) => !v)}
+                      onClick={toggleLabelsExpanded}
                     >
                       <ChevronDown
                         size={14}
@@ -657,10 +401,10 @@ export default function DashboardModel() {
                       <LabelTree
                         labels={labelTreeData}
                         selectedId={selectedLabelId}
-                        onSelect={handleLabelSelect}
-                        onAdd={handleLabelAdd}
-                        onDelete={handleLabelDelete}
-                        onEdit={handleLabelEdit}
+                        onSelect={selectLabel}
+                        onAdd={addLabel}
+                        onDelete={deleteLabel}
+                        onEdit={(id) => selectLabel(id)}
                       />
                     )}
                   </div>
@@ -683,7 +427,7 @@ export default function DashboardModel() {
                           parentOptions={labels
                             .filter((l) => l.id !== selectedLabel.id)
                             .map((l) => ({ id: l.id, name: l.name }))}
-                          onChange={handleLabelConfigChange}
+                          onChange={updateLabelConfig}
                         />
 
                         <div className="mt-4">
@@ -692,7 +436,7 @@ export default function DashboardModel() {
                             availableLabelIds={labels
                               .filter((l) => l.id !== selectedLabelId)
                               .map((l) => l.id)}
-                            onChange={handleOperationsChange}
+                            onChange={updateLabelOperations}
                           />
                         </div>
                       </div>
@@ -713,7 +457,7 @@ export default function DashboardModel() {
               exit={{ x: -20, opacity: 0 }}
               transition={{ duration: 0.2 }}
               type="button"
-              onClick={() => setPanelOpen(true)}
+              onClick={togglePanel}
               className="bg-card/80 backdrop-blur border-border absolute top-4 left-4 z-10 flex flex-col items-center gap-1 rounded-lg border px-2 py-3 shadow-lg hover:bg-card"
               title="展开面板"
             >
@@ -729,16 +473,16 @@ export default function DashboardModel() {
           models={modelSources}
           showGrid={showGrid}
           showAxes={showAxes}
-          onModelProgress={handleModelProgress}
+          onModelProgress={setModelProgress}
           className="h-full w-full"
         />
 
         <ViewportControls
           sceneRef={sceneRef}
           showGrid={showGrid}
-          onToggleGrid={() => setShowGrid((v) => !v)}
+          onToggleGrid={toggleGrid}
           showAxes={showAxes}
-          onToggleAxes={() => setShowAxes((v) => !v)}
+          onToggleAxes={toggleAxes}
         />
       </div>
     </div>
