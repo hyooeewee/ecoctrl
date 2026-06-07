@@ -83,6 +83,19 @@ export const DashboardModelLabelV2Schema = z.object({
 export type DashboardModelLabelV2 = z.infer<typeof DashboardModelLabelV2Schema>;
 
 // ========================================
+// Model File Entry Schema
+// ========================================
+
+export const ModelFileEntrySchema = z.object({
+  id: z.string(),
+  fileKey: z.string(),
+  name: z.string().optional(),
+  priority: z.enum(["critical", "background"]).default("background"),
+  labels: z.array(DashboardModelLabelV2Schema).optional(),
+});
+export type ModelFileEntry = z.infer<typeof ModelFileEntrySchema>;
+
+// ========================================
 // Label Schema (Legacy - for backward compat)
 // ========================================
 
@@ -103,13 +116,11 @@ export type DashboardModelLabel = z.infer<typeof DashboardModelLabelSchema>;
 export const DashboardModelConfigSchema = z.object({
   modelFileUrl: z.string().nullable().optional(),
   // Multiple model files (same coordinate system)
-  modelFiles: z.array(z.string()).optional(),
+  modelFiles: z.array(ModelFileEntrySchema).optional(),
   cameraPreset: z.string(),
   ambientLightIntensity: z.number(),
   hotspots: z.array(DashboardModelHotspotSchema),
-  labels: z.array(DashboardModelLabelSchema),
-  // New V2 labels (optional for backward compat)
-  labelsV2: z.array(DashboardModelLabelV2Schema).optional(),
+  labels: z.array(DashboardModelLabelV2Schema),
 });
 export type DashboardModelConfig = z.infer<typeof DashboardModelConfigSchema>;
 
