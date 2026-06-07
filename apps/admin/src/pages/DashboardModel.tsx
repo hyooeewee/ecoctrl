@@ -4,21 +4,16 @@
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { toast } from "sonner";
-import { Save, Eye, Grid3X3, Axis3D, File, X, Upload, ChevronDown, Trash2 } from "lucide-react";
+import { File, Upload, ChevronDown, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { Button } from "@ecoctrl/ui";
-import { Card, CardContent } from "@ecoctrl/ui";
 import { Badge } from "@ecoctrl/ui";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@ecoctrl/ui";
+import { ScrollArea } from "@ecoctrl/ui";
+import { cn } from "@/lib/utils";
 
-import AppButton from "@/components/AppButton";
 import ModelFileZone from "@/components/ModelFileZone";
+import ModelEditorTopBar from "@/components/model-editor/ModelEditorTopBar";
+import ViewportControls from "@/components/model-editor/ViewportControls";
 import {
   BabylonScene,
   BabylonSceneRef,
@@ -36,6 +31,8 @@ import { dashboardModelApi } from "../api/dashboardModel";
 import { clearModelCache } from "@ecoctrl/shared/model-cache";
 import type { DashboardModelConfig, DashboardModelLabel, ModelFileEntry } from "@ecoctrl/shared";
 import { Vector3 } from "@babylonjs/core";
+
+import { useAppStore } from "@/store/appStore";
 
 // ========================================
 // Types
@@ -69,9 +66,12 @@ export default function DashboardModel() {
   const [filesExpanded, setFilesExpanded] = useState(true);
   const [labelsExpanded, setLabelsExpanded] = useState(true);
   const [loadingProgress, setLoadingProgress] = useState<Map<string, number>>(new Map());
+  const [panelOpen, setPanelOpen] = useState(true);
 
   const sceneRef = useRef<BabylonSceneRef>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const setActiveTab = useAppStore((state) => state.setActiveTab);
 
   // ========================================
   // Data Loading
@@ -82,11 +82,9 @@ export default function DashboardModel() {
       try {
         const data = await dashboardModelApi.get();
         setConfig(data);
-        // Initialize visibility: all files visible by default
         if (data.modelFiles?.length) {
           setVisibleFileIds(new Set(data.modelFiles.map((f) => f.id)));
         }
-        // Load labels from config if available
         if (data.labels) {
           setLabels(data.labels as Label[]);
         }
@@ -277,7 +275,6 @@ export default function DashboardModel() {
     const map = new Map<string, LabelTreeNode>();
     const roots: LabelTreeNode[] = [];
 
-    // Create nodes
     labels.forEach((l) => {
       map.set(l.id, {
         id: l.id,
@@ -289,7 +286,6 @@ export default function DashboardModel() {
       });
     });
 
-    // Build tree
     map.forEach((node) => {
       if (node.parentId && map.has(node.parentId)) {
         map.get(node.parentId)!.children.push(node);
@@ -415,308 +411,335 @@ export default function DashboardModel() {
 
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+      <div className="flex h-screen w-screen items-center justify-center bg-black text-sm text-muted-foreground">
         加载中...
       </div>
     );
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden p-6">
-      {/* Toolbar */}
-      <div className="mb-4 flex items-center gap-2 rounded-lg border bg-background p-2">
-        <div className="flex items-center gap-1 border-r pr-2">
-          <AppButton
-            level={editorMode === "select" ? "action" : "ghost"}
-            size="sm"
-            onClick={() => setEditorMode("select")}
-          >
-            选择
-          </AppButton>
-          <AppButton
-            level={editorMode === "placeLabel" ? "action" : "ghost"}
-            size="sm"
-            onClick={() => setEditorMode("placeLabel")}
-          >
-            放置标签
-          </AppButton>
-          <AppButton
-            level={editorMode === "clipPreview" ? "action" : "ghost"}
-            size="sm"
-            onClick={() => setEditorMode("clipPreview")}
-          >
-            剖切预览
-          </AppButton>
-        </div>
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-black">
+      <ModelEditorTopBar
+        onBack={() => setActiveTab("models")}
+        onSave={handleSave}
+        saving={saving}
+      />
 
-        <div className="flex-1" />
+      {/* Main Viewport Area */}
+      <div className="relative flex-1 overflow-hidden">
+        {/* Collapsible Left Panel */}
+        <AnimatePresence initial={false}>
+          {panelOpen && (
+            <motion.div
+              initial={{ x: -340, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: -340, opacity: 0 }}
+              transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+              className="bg-card/95 backdrop-blur border-border absolute top-4 left-4 bottom-4 z-10 flex w-80 flex-col overflow-hidden rounded-lg border shadow-lg"
+            >
+              {/* Panel Header */}
+              <div className="border-border flex items-center justify-between border-b px-3 py-2">
+                <span className="text-sm font-semibold">模型与标签</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => setPanelOpen(false)}
+                  title="收起"
+                >
+                  <ChevronLeft size={16} />
+                </Button>
+              </div>
 
-        <div className="flex items-center gap-1 border-l pl-2">
-          <AppButton
-            level={showGrid ? "action" : "ghost"}
-            size="icon-sm"
-            onClick={() => setShowGrid(!showGrid)}
-            title="网格"
-          >
-            <Grid3X3 size={16} />
-          </AppButton>
-          <AppButton
-            level={showAxes ? "action" : "ghost"}
-            size="icon-sm"
-            onClick={() => setShowAxes(!showAxes)}
-            title="坐标轴"
-          >
-            <Axis3D size={16} />
-          </AppButton>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* 3D Viewport */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-black lg:col-span-2">
-          <BabylonScene
-            ref={sceneRef}
-            models={modelSources}
-            showGrid={showGrid}
-            showAxes={showAxes}
-            onModelProgress={handleModelProgress}
-            className="h-full w-full flex-1"
-          />
-        </div>
-
-        {/* Right Panel */}
-        <Card className="flex flex-col overflow-hidden border-none shadow-sm lg:col-span-1">
-          <CardContent className="flex flex-1 flex-col overflow-auto p-4">
-            {/* Model Files */}
-            <div className="mb-4">
-              <div
-                role="button"
-                tabIndex={0}
-                className="mb-2 flex w-full cursor-pointer items-center justify-between"
-                onClick={() => setFilesExpanded((v) => !v)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    setFilesExpanded((v) => !v);
-                  }
-                }}
-              >
-                <div className="flex items-center gap-1">
-                  <ChevronDown
-                    size={14}
-                    className={`shrink-0 text-muted-foreground transition-transform ${filesExpanded ? "" : "-rotate-90"}`}
-                  />
-                  <span className="text-sm font-semibold">模型文件</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">
-                    {existingFiles.length} 个文件
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      fileInputRef.current?.click();
-                    }}
+              {/* Editor Mode Tabs */}
+              <div className="flex gap-1 border-b border-border p-2">
+                {(
+                  [
+                    { id: "select", label: "选择" },
+                    { id: "placeLabel", label: "放置标签" },
+                    { id: "clipPreview", label: "剖切" },
+                  ] as const
+                ).map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setEditorMode(m.id)}
+                    className={cn(
+                      "flex-1 rounded px-2 py-1 text-xs font-medium transition-colors",
+                      editorMode === m.id
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    )}
                   >
-                    <Upload size={14} className="mr-1" />
-                    上传
-                  </Button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".glb,.gltf,.obj"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => {
-                      if (e.target.files?.length) {
-                        handleAddFiles(Array.from(e.target.files));
-                        e.target.value = "";
-                      }
-                    }}
-                  />
-                </div>
+                    {m.label}
+                  </button>
+                ))}
               </div>
 
-              {filesExpanded && (
-                <>
-                  {/* Existing files list */}
-                  {existingFiles.length > 0 && (
-                    <div className="mb-3 space-y-1.5">
-                      {existingFiles.map((file) => {
-                        const fileName = file.name || file.fileKey.split("/").pop() || "未知";
-                        const ext = fileName.split(".").pop()?.toUpperCase() ?? "";
-                        const isVisible = visibleFileIds.has(file.id);
-                        const progress = loadingProgress.get(file.id);
-                        const isLoading = progress !== undefined && progress < 1;
-                        return (
-                          <div key={file.id} className="rounded-md border bg-muted/30 px-3 py-2">
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={isVisible}
-                                onChange={() => toggleFileVisible(file.id)}
-                                className="h-3.5 w-3.5 shrink-0 accent-primary"
-                                title={isVisible ? "隐藏模型" : "显示模型"}
-                              />
-                              <File size={14} className="shrink-0 text-blue-500" />
-                              <span className="flex-1 truncate text-xs">{fileName}</span>
-                              <Badge variant="secondary" className="shrink-0 text-[10px]">
-                                {ext}
-                              </Badge>
-                              <button
-                                type="button"
-                                className="ml-1 rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                                onClick={() => handleDeleteFile(file.id)}
-                                title="删除"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            </div>
-                            {isLoading && (
-                              <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-muted">
-                                <div
-                                  className="h-full bg-blue-500 transition-all"
-                                  style={{ width: `${progress * 100}%` }}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Pending files to upload */}
-                  {pendingFiles.length > 0 && (
-                    <div className="mb-3 space-y-1.5">
-                      <div className="text-xs font-medium text-muted-foreground">待上传</div>
-                      {pendingFiles.map((file, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center gap-2 rounded-md border border-dashed border-blue-400 bg-blue-50/50 px-3 py-2"
+              {/* Panel Content */}
+              <ScrollArea className="flex-1">
+                <div className="p-3">
+                  {/* Model Files */}
+                  <div className="mb-4">
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      className="mb-2 flex w-full cursor-pointer items-center justify-between"
+                      onClick={() => setFilesExpanded((v) => !v)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setFilesExpanded((v) => !v);
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-1">
+                        <ChevronDown
+                          size={14}
+                          className={cn(
+                            "shrink-0 text-muted-foreground transition-transform",
+                            filesExpanded ? "" : "-rotate-90",
+                          )}
+                        />
+                        <span className="text-sm font-semibold">模型文件</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {existingFiles.length} 个文件
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            fileInputRef.current?.click();
+                          }}
                         >
-                          <File size={14} className="shrink-0 text-blue-500" />
-                          <span className="flex-1 truncate text-xs">{file.name}</span>
-                          <Badge variant="secondary" className="shrink-0 text-[10px]">
-                            {file.name.split(".").pop()?.toUpperCase()}
-                          </Badge>
-                          <button
-                            type="button"
-                            className="ml-1 rounded p-0.5 hover:bg-muted-foreground/20"
-                            onClick={() => handleRemovePendingFile(index)}
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      ))}
+                          <Upload size={14} className="mr-1" />
+                          上传
+                        </Button>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept=".glb,.gltf,.obj"
+                          multiple
+                          className="hidden"
+                          onChange={(e) => {
+                            if (e.target.files?.length) {
+                              handleAddFiles(Array.from(e.target.files));
+                              e.target.value = "";
+                            }
+                          }}
+                        />
+                      </div>
                     </div>
-                  )}
 
-                  {/* Upload zone — only shown when no files at all */}
-                  {existingFiles.length === 0 && pendingFiles.length === 0 && (
-                    <ModelFileZone
-                      file={null}
-                      onFileSelect={(file) => handleAddFiles([file])}
-                      onFileClear={() => {}}
-                      acceptedFormats=".glb,.gltf,.obj"
-                    />
-                  )}
+                    {filesExpanded && (
+                      <>
+                        {existingFiles.length > 0 && (
+                          <div className="mb-3 space-y-1.5">
+                            {existingFiles.map((file) => {
+                              const fileName = file.name || file.fileKey.split("/").pop() || "未知";
+                              const ext = fileName.split(".").pop()?.toUpperCase() ?? "";
+                              const isVisible = visibleFileIds.has(file.id);
+                              const progress = loadingProgress.get(file.id);
+                              const isLoading = progress !== undefined && progress < 1;
+                              return (
+                                <div
+                                  key={file.id}
+                                  className="rounded-md border bg-muted/30 px-3 py-2"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="checkbox"
+                                      checked={isVisible}
+                                      onChange={() => toggleFileVisible(file.id)}
+                                      className="h-3.5 w-3.5 shrink-0 accent-primary"
+                                      title={isVisible ? "隐藏模型" : "显示模型"}
+                                    />
+                                    <File size={14} className="shrink-0 text-blue-500" />
+                                    <span className="flex-1 truncate text-xs">{fileName}</span>
+                                    <Badge variant="secondary" className="shrink-0 text-[10px]">
+                                      {ext}
+                                    </Badge>
+                                    <button
+                                      type="button"
+                                      className="ml-1 rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                      onClick={() => handleDeleteFile(file.id)}
+                                      title="删除"
+                                    >
+                                      <Trash2 size={12} />
+                                    </button>
+                                  </div>
+                                  {isLoading && (
+                                    <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-muted">
+                                      <div
+                                        className="h-full bg-blue-500 transition-all"
+                                        style={{ width: `${progress * 100}%` }}
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
 
-                  {/* Upload buttons */}
-                  {pendingFiles.length > 0 && (
-                    <div className="mt-2 flex gap-2">
-                      <Button className="flex-1" onClick={handleUploadAll} disabled={uploading}>
-                        {uploading ? "上传中..." : `上传全部 (${pendingFiles.length})`}
-                      </Button>
-                      <Button variant="outline" onClick={handleClearPendingFiles}>
-                        清空
-                      </Button>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+                        {pendingFiles.length > 0 && (
+                          <div className="mb-3 space-y-1.5">
+                            <div className="text-xs font-medium text-muted-foreground">待上传</div>
+                            {pendingFiles.map((file, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center gap-2 rounded-md border border-dashed border-blue-400 bg-blue-50/50 px-3 py-2"
+                              >
+                                <File size={14} className="shrink-0 text-blue-500" />
+                                <span className="flex-1 truncate text-xs">{file.name}</span>
+                                <Badge variant="secondary" className="shrink-0 text-[10px]">
+                                  {file.name.split(".").pop()?.toUpperCase()}
+                                </Badge>
+                                <button
+                                  type="button"
+                                  className="ml-1 rounded p-0.5 hover:bg-muted-foreground/20"
+                                  onClick={() => handleRemovePendingFile(index)}
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
 
-            {/* Label Tree */}
-            <div className="mb-4">
-              <button
-                type="button"
-                className="mb-2 flex w-full items-center gap-1"
-                onClick={() => setLabelsExpanded((v) => !v)}
-              >
-                <ChevronDown
-                  size={14}
-                  className={`shrink-0 text-muted-foreground transition-transform ${labelsExpanded ? "" : "-rotate-90"}`}
-                />
-                <span className="text-sm font-semibold">标签树</span>
-              </button>
-              {labelsExpanded && (
-                <LabelTree
-                  labels={labelTreeData}
-                  selectedId={selectedLabelId}
-                  onSelect={handleLabelSelect}
-                  onAdd={handleLabelAdd}
-                  onDelete={handleLabelDelete}
-                  onEdit={handleLabelEdit}
-                />
-              )}
-            </div>
+                        {existingFiles.length === 0 && pendingFiles.length === 0 && (
+                          <ModelFileZone
+                            file={null}
+                            onFileSelect={(file) => handleAddFiles([file])}
+                            onFileClear={() => {}}
+                            acceptedFormats=".glb,.gltf,.obj"
+                          />
+                        )}
 
-            {/* Label Config */}
-            {selectedLabel && (
-              <div className="border-t pt-4">
-                <h3 className="mb-3 text-sm font-semibold">标签配置</h3>
-                <div className="max-h-[300px] overflow-auto">
-                  <LabelConfigForm
-                    config={{
-                      id: selectedLabel.id,
-                      key: selectedLabel.key,
-                      name: selectedLabel.name,
-                      description: selectedLabel.description,
-                      parentId: selectedLabel.parentId ?? null,
-                      position: selectedLabel.position,
-                      meshKeywords: selectedLabel.meshKeywords,
-                    }}
-                    parentOptions={labels
-                      .filter((l) => l.id !== selectedLabel.id)
-                      .map((l) => ({ id: l.id, name: l.name }))}
-                    onChange={handleLabelConfigChange}
-                  />
-
-                  <div className="mt-4">
-                    <OperationConfig
-                      operations={selectedLabel.operations}
-                      availableLabelIds={labels
-                        .filter((l) => l.id !== selectedLabelId)
-                        .map((l) => l.id)}
-                      onChange={handleOperationsChange}
-                    />
+                        {pendingFiles.length > 0 && (
+                          <div className="mt-2 flex gap-2">
+                            <Button
+                              className="flex-1"
+                              onClick={handleUploadAll}
+                              disabled={uploading}
+                            >
+                              {uploading ? "上传中..." : `上传全部 (${pendingFiles.length})`}
+                            </Button>
+                            <Button variant="outline" onClick={handleClearPendingFiles}>
+                              清空
+                            </Button>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
 
-      {/* Save Button */}
-      <div className="mt-4 flex justify-end">
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? (
-            <>
-              <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              保存中...
-            </>
-          ) : (
-            <>
-              <Save size={16} className="mr-2" />
-              保存配置
-            </>
+                  {/* Label Tree */}
+                  <div className="mb-4">
+                    <button
+                      type="button"
+                      className="mb-2 flex w-full items-center gap-1"
+                      onClick={() => setLabelsExpanded((v) => !v)}
+                    >
+                      <ChevronDown
+                        size={14}
+                        className={cn(
+                          "shrink-0 text-muted-foreground transition-transform",
+                          labelsExpanded ? "" : "-rotate-90",
+                        )}
+                      />
+                      <span className="text-sm font-semibold">标签树</span>
+                    </button>
+                    {labelsExpanded && (
+                      <LabelTree
+                        labels={labelTreeData}
+                        selectedId={selectedLabelId}
+                        onSelect={handleLabelSelect}
+                        onAdd={handleLabelAdd}
+                        onDelete={handleLabelDelete}
+                        onEdit={handleLabelEdit}
+                      />
+                    )}
+                  </div>
+
+                  {/* Label Config */}
+                  {selectedLabel && (
+                    <div className="border-t pt-4">
+                      <h3 className="mb-3 text-sm font-semibold">标签配置</h3>
+                      <div className="max-h-[300px] overflow-auto">
+                        <LabelConfigForm
+                          config={{
+                            id: selectedLabel.id,
+                            key: selectedLabel.key,
+                            name: selectedLabel.name,
+                            description: selectedLabel.description,
+                            parentId: selectedLabel.parentId ?? null,
+                            position: selectedLabel.position,
+                            meshKeywords: selectedLabel.meshKeywords,
+                          }}
+                          parentOptions={labels
+                            .filter((l) => l.id !== selectedLabel.id)
+                            .map((l) => ({ id: l.id, name: l.name }))}
+                          onChange={handleLabelConfigChange}
+                        />
+
+                        <div className="mt-4">
+                          <OperationConfig
+                            operations={selectedLabel.operations}
+                            availableLabelIds={labels
+                              .filter((l) => l.id !== selectedLabelId)
+                              .map((l) => l.id)}
+                            onChange={handleOperationsChange}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </motion.div>
           )}
-        </Button>
+        </AnimatePresence>
+
+        {/* Panel Toggle (when closed) */}
+        <AnimatePresence>
+          {!panelOpen && (
+            <motion.button
+              initial={{ x: -20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: -20, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              type="button"
+              onClick={() => setPanelOpen(true)}
+              className="bg-card/80 backdrop-blur border-border absolute top-4 left-4 z-10 flex flex-col items-center gap-1 rounded-lg border px-2 py-3 shadow-lg hover:bg-card"
+              title="展开面板"
+            >
+              <ChevronRight size={16} />
+              <span className="text-[10px] font-medium [writing-mode:vertical-rl]">模型与标签</span>
+            </motion.button>
+          )}
+        </AnimatePresence>
+
+        {/* BabylonScene */}
+        <BabylonScene
+          ref={sceneRef}
+          models={modelSources}
+          showGrid={showGrid}
+          showAxes={showAxes}
+          onModelProgress={handleModelProgress}
+          className="h-full w-full"
+        />
+
+        <ViewportControls
+          sceneRef={sceneRef}
+          showGrid={showGrid}
+          onToggleGrid={() => setShowGrid((v) => !v)}
+          showAxes={showAxes}
+          onToggleAxes={() => setShowAxes((v) => !v)}
+        />
       </div>
     </div>
   );
