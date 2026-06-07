@@ -15,6 +15,7 @@ import {
   TransformNode,
   MeshBuilder,
   StandardMaterial,
+  type ISceneLoaderProgressEvent,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
 import { AdvancedDynamicTexture } from "@babylonjs/gui";
@@ -37,6 +38,7 @@ export interface BabylonSceneProps {
   alt?: string;
   onSceneReady?: (scene: Scene, engine: Engine) => void;
   onModelLoaded?: (rootNode: TransformNode) => void;
+  onModelProgress?: (id: string, progress: number) => void;
   className?: string;
 }
 
@@ -53,7 +55,16 @@ export interface BabylonSceneRef {
 
 const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
   (
-    { models, showGrid = true, showAxes = true, alt, onSceneReady, onModelLoaded, className },
+    {
+      models,
+      showGrid = true,
+      showAxes = true,
+      alt,
+      onSceneReady,
+      onModelLoaded,
+      onModelProgress,
+      className,
+    },
     ref,
   ) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -217,6 +228,16 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
       const loadAll = async () => {
         try {
           for (const model of toLoad) {
+            let lastProgress = -1;
+            const onProgress = (event: ISceneLoaderProgressEvent) => {
+              const progress = event.total > 0 ? event.loaded / event.total : 0;
+              const rounded = Math.round(progress * 100) / 100;
+              if (rounded !== lastProgress) {
+                lastProgress = rounded;
+                onModelProgress?.(model.id, rounded);
+              }
+            };
+
             const blobUrl = await fetchModelUrl(model.url);
             if (cancelled) {
               URL.revokeObjectURL(blobUrl);
@@ -226,9 +247,9 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
             const result = await SceneLoader.ImportMeshAsync(
               "", // mesh names (empty = all)
               "", // scene root (empty = use rootUrl)
-              blobUrl, // blob URL from authenticated fetch
+              blobUrl, // blob URL from cache-backed fetch
               scene,
-              undefined,
+              onProgress,
               ".glb", // force GLB loader — blob URLs have no extension
             );
 
@@ -250,6 +271,7 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
             }
 
             loadedModelsRef.current.set(model.id, { root: modelRoot, blobUrl });
+            onModelProgress?.(model.id, 1);
           }
 
           if (!cancelled) {

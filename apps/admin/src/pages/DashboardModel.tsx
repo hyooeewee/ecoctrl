@@ -33,6 +33,7 @@ import {
   LabelMarkerData,
 } from "@/components/babylon-editor";
 import { dashboardModelApi } from "../api/dashboardModel";
+import { clearModelCache } from "@/lib/babylon-loaders";
 import type { DashboardModelConfig, DashboardModelLabel, ModelFileEntry } from "@ecoctrl/shared";
 import { Vector3 } from "@babylonjs/core";
 
@@ -67,6 +68,7 @@ export default function DashboardModel() {
   const [visibleFileIds, setVisibleFileIds] = useState<Set<string>>(new Set());
   const [filesExpanded, setFilesExpanded] = useState(true);
   const [labelsExpanded, setLabelsExpanded] = useState(true);
+  const [loadingProgress, setLoadingProgress] = useState<Map<string, number>>(new Map());
 
   const sceneRef = useRef<BabylonSceneRef>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -369,12 +371,22 @@ export default function DashboardModel() {
 
   const handleDeleteFile = async (fileId: string) => {
     if (!config) return;
+    const deleted = config.modelFiles?.find((f) => f.id === fileId);
     const newFiles = config.modelFiles?.filter((f) => f.id !== fileId) ?? [];
     try {
       await dashboardModelApi.update({ modelFiles: newFiles });
+      if (deleted) {
+        const url = `/api/dashboard-model/file?key=${encodeURIComponent(deleted.fileKey)}`;
+        await clearModelCache(url);
+      }
       setConfig((prev) => (prev ? { ...prev, modelFiles: newFiles } : null));
       setVisibleFileIds((prev) => {
         const next = new Set(prev);
+        next.delete(fileId);
+        return next;
+      });
+      setLoadingProgress((prev) => {
+        const next = new Map(prev);
         next.delete(fileId);
         return next;
       });
@@ -383,6 +395,18 @@ export default function DashboardModel() {
       console.error("Delete failed:", err);
       toast.error("删除失败");
     }
+  };
+
+  // ========================================
+  // Model Loading Progress
+  // ========================================
+
+  const handleModelProgress = (fileId: string, progress: number) => {
+    setLoadingProgress((prev) => {
+      const next = new Map(prev);
+      next.set(fileId, progress);
+      return next;
+    });
   };
 
   // ========================================
@@ -456,6 +480,7 @@ export default function DashboardModel() {
             models={modelSources}
             showGrid={showGrid}
             showAxes={showAxes}
+            onModelProgress={handleModelProgress}
             className="h-full w-full flex-1"
           />
         </div>
@@ -524,31 +549,40 @@ export default function DashboardModel() {
                         const fileName = file.name || file.fileKey.split("/").pop() || "未知";
                         const ext = fileName.split(".").pop()?.toUpperCase() ?? "";
                         const isVisible = visibleFileIds.has(file.id);
+                        const progress = loadingProgress.get(file.id);
+                        const isLoading = progress !== undefined && progress < 1;
                         return (
-                          <div
-                            key={file.id}
-                            className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isVisible}
-                              onChange={() => toggleFileVisible(file.id)}
-                              className="h-3.5 w-3.5 shrink-0 accent-primary"
-                              title={isVisible ? "隐藏模型" : "显示模型"}
-                            />
-                            <File size={14} className="shrink-0 text-blue-500" />
-                            <span className="flex-1 truncate text-xs">{fileName}</span>
-                            <Badge variant="secondary" className="shrink-0 text-[10px]">
-                              {ext}
-                            </Badge>
-                            <button
-                              type="button"
-                              className="ml-1 rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                              onClick={() => handleDeleteFile(file.id)}
-                              title="删除"
-                            >
-                              <Trash2 size={12} />
-                            </button>
+                          <div key={file.id} className="rounded-md border bg-muted/30 px-3 py-2">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={isVisible}
+                                onChange={() => toggleFileVisible(file.id)}
+                                className="h-3.5 w-3.5 shrink-0 accent-primary"
+                                title={isVisible ? "隐藏模型" : "显示模型"}
+                              />
+                              <File size={14} className="shrink-0 text-blue-500" />
+                              <span className="flex-1 truncate text-xs">{fileName}</span>
+                              <Badge variant="secondary" className="shrink-0 text-[10px]">
+                                {ext}
+                              </Badge>
+                              <button
+                                type="button"
+                                className="ml-1 rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                onClick={() => handleDeleteFile(file.id)}
+                                title="删除"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                            {isLoading && (
+                              <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-muted">
+                                <div
+                                  className="h-full bg-blue-500 transition-all"
+                                  style={{ width: `${progress * 100}%` }}
+                                />
+                              </div>
+                            )}
                           </div>
                         );
                       })}
