@@ -33,7 +33,7 @@ import {
   LabelMarkerData,
 } from "@/components/babylon-editor";
 import { dashboardModelApi } from "../api/dashboardModel";
-import { clearModelCache } from "@/lib/babylon-loaders";
+import { clearModelCache } from "@ecoctrl/shared/model-cache";
 import type { DashboardModelConfig, DashboardModelLabel, ModelFileEntry } from "@ecoctrl/shared";
 import { Vector3 } from "@babylonjs/core";
 

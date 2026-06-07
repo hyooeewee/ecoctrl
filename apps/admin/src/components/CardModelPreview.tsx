@@ -11,7 +11,7 @@ import {
   TransformNode,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
-import { fetchModelUrl } from "@/lib/babylon-loaders";
+import { fetchModelUrl } from "@ecoctrl/shared/model-cache";
 
 interface CardModelPreviewProps {
   src: string;
