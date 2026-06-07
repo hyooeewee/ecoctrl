@@ -99,7 +99,7 @@ export type ModelFileEntry = z.infer<typeof ModelFileEntrySchema>;
 // Label Schema (Legacy - for backward compat)
 // ========================================
 
-export const DashboardModelLabelSchema = z.object({
+export const LegacyDashboardModelLabelSchema = z.object({
   key: z.string(),
   fallbackPosition: z.object({ x: z.number(), y: z.number(), z: z.number() }),
   meshKeywords: z.array(z.string()),
@@ -107,7 +107,7 @@ export const DashboardModelLabelSchema = z.object({
   focusBeta: z.number(),
   focusRadius: z.number(),
 });
-export type DashboardModelLabel = z.infer<typeof DashboardModelLabelSchema>;
+export type LegacyDashboardModelLabel = z.infer<typeof LegacyDashboardModelLabelSchema>;
 
 // ========================================
 // Config Schema
