@@ -25,7 +25,29 @@ All paths below are relative to the project root. The project root is the direct
 
 Create a Codex-compatible animated pet from a concept, brand cue, company/prospect name, one or more reference images, or any combination of those inputs. This workflow keeps the deterministic hatch-pet pipeline for atlas geometry, validation, visual QA, and packaging, while using concise state-specific prompts and allowing any pet-safe visual style.
 
-User-facing inputs are optional. If the user omits a pet name, infer one from the concept, brand, company, or reference filenames; if that is not possible, choose a short friendly name. If the user omits a description, infer one from the concept or references. If the user omits reference images, generate the base pet from text first, then use that base as the canonical reference for every animation row.
+User-facing inputs are optional, but the AI must not silently adopt inferred values. If the user omits a pet name, description, style, or other key parameter, the AI should propose an inference and present it to the user via AskUserQuestion for confirmation or revision before proceeding. Every question must include an "AI decides for me" option alongside concrete alternatives.
+
+If the user provides reference images and the configured model supports multimodal (image+text) input, treat the reference image as the primary visual authority. Text descriptions should supplement, not override, the reference image's style, colors, proportions, and identity cues.
+
+## Pre-Run Alignment Interview
+
+Before calling `prepare_pet_run.py`, the orchestrator must interview the user with `AskUserQuestion`. The goal is to align expectations so the generated pet matches what the user actually wants, not what the AI silently guessed.
+
+### Required questions (every question must include an "AI decides for me" option)
+
+1. **Pet name** — "What would you like to name this pet?" (Options: a suggested name based on reference/concept, "Let AI decide", or custom text.)
+2. **Style preset** — "Which visual style should the pet use?" (Options: `pixel`, `plush`, `clay`, `sticker`, `flat-vector`, `3d-toy`, `painterly`, `brand-inspired`, `auto` / "Let AI decide".)
+3. **Reference image handling** _(ask only if the user provided reference images)_ — "The reference image contains text/logos/specific props (e.g., helmet logos, sign text). Should these be kept, removed, or simplified?" (Options: Keep as-is, Remove all text/logos, Simplify to mascot-safe versions, "Let AI decide".)
+4. **Creative freedom** _(ask only if the user provided reference images; otherwise ask: "How would you like the pet to look?" with text-based options)_ — "How closely should the generated pet match the reference image?" (Options: Strict fidelity — match style, colors, proportions exactly; Moderate fidelity — keep core identity but allow minor artistic adjustments; "Let AI decide".)
+5. **Special constraints or avoidances** — "Are there any colors, props, expressions, or themes you want to avoid?" (Options: None, list specific constraints, "Let AI decide".)
+
+### Reference-image priority rule
+
+When the user supplies reference images and the configured model supports multimodal input, the orchestrator must:
+
+- Attach the reference image(s) to every generation job.
+- Keep text descriptions concise and supplementary; do not let verbose descriptions override the visual evidence in the reference.
+- Emphasize to generation workers that the reference image is the primary identity lock.
 
 ## Generation Delegation
 
@@ -33,7 +55,25 @@ Use the image generation API configured in `.claude/settings.json` for all norma
 
 Before generating base art, row strips, or repair rows, load the API configuration from `.claude/settings.json` (or `.claude/settings.local.json`). Read `IMAGEGEN_API_KEY`, `IMAGEGEN_BASE_URL`, and `IMAGEGEN_MODEL` from the `env` field.
 
-Run inline Python/Bash to call the API with prompts from `prompts/`. The API call should support OpenAI-compatible image generation endpoints. If the configured API returns a transport-level error, retry once with the retry prompt. If the retry still fails, stop and report the failing row and prompt paths.
+Run the unified generation script `scripts/generate_image.py` for all visual generation. This script reads API credentials from `.claude/settings.json` (or `.claude/settings.local.json`), reads the prompt file, attaches every listed reference image, calls the configured model, and saves the output. Example:
+
+```bash
+# With reference images
+uv run scripts/generate_image.py \
+  --project-root /absolute/path/to/project \
+  --prompt-file /absolute/path/to/run/prompts/base-pet.md \
+  --reference /absolute/path/to/run/references/reference-01.png \
+  --reference /absolute/path/to/run/references/canonical-base.png \
+  --output /absolute/path/to/run/decoded/base.png
+
+# Text-only (no references)
+uv run scripts/generate_image.py \
+  --project-root /absolute/path/to/project \
+  --prompt-file /absolute/path/to/run/prompts/base-pet.md \
+  --output /absolute/path/to/run/decoded/base.png
+```
+
+If the configured API returns a transport-level error, retry once with the retry prompt and the same references. If the retry still fails, stop and report the failing row and prompt paths.
 
 When generating, pass the generated pet prompt as the authoritative visual spec. Pet prompts should stay concise, state-specific, sprite-production oriented, and grounded in the listed input images. Keep longer policy and QA rules in this skill and the deterministic review scripts rather than expanding them into every image prompt.
 
@@ -170,7 +210,7 @@ Use this checklist for a normal pet run, replacing `<Pet>` with the pet's name o
 
 What each step means:
 
-- `Getting <Pet> ready.` Choose or confirm the pet name, description, source images, style preset, style notes, and working folder. For bare brand/product/company requests, first run the brand discovery worker and capture the compact brand brief, source URLs, and avatar seed.
+- `Getting <Pet> ready.` Interview the user with AskUserQuestion to align on pet name, style preset, reference-image handling (keep/remove/simplify text and logos), creative freedom (strict fidelity vs. artistic license), and any constraints or avoidances. Present inferred defaults with an "AI decides for me" option in every question. Only after explicit user confirmation, prepare the run folder. For bare brand/product/company requests, first run the brand discovery worker and capture the compact brand brief, source URLs, and avatar seed.
 - `Imagining <Pet>'s main look.` Generate the pet's main reference image. This becomes the visual source of truth.
 - `Picturing <Pet>'s poses.` Generate pose rows through lightweight workers, starting with `idle` and `running-right` to confirm identity and gait. Only mirror `running-left` if `running-right` clearly works when flipped.
 - `Hatching <Pet>.` Turn the approved poses into final pet files, review the contact sheet, previews, and validation results, fix any broken parts, save `pet.json` and `spritesheet.webp`, then report the output paths.
@@ -201,7 +241,7 @@ python "$SKILL_DIR/scripts/prepare_pet_run.py" \
 All arguments above are optional except any flags needed to express user constraints. For text-only requests, pass the concept through `--pet-notes` and omit `--reference`; `prepare_pet_run.py` will infer a name, description, chroma key, and output directory as needed.
 For brand-only requests, run the discovery worker first, save the markdown brief, then pass the brief path through `--brand-discovery-file`, `avatar_seed` through `--pet-notes`, `brand_name` through `--brand-name`, `brand_brief` through `--brand-brief`, and each source URL through repeated `--brand-source`.
 
-2. Inspect `imagegen-jobs.json` for the next ready `$imagegen` jobs. A job is ready when its `status` is not `complete` and every id in `depends_on` is already complete. Prefer reading the manifest directly with `jq` or the editor instead of adding helper scripts for status display:
+2. Inspect `imagegen-jobs.json` for the next ready image-generation jobs. A job is ready when its `status` is not `complete` and every id in `depends_on` is already complete. Prefer reading the manifest directly with `jq` or the editor instead of adding helper scripts for status display:
 
 ```bash
 jq '.jobs[] | {id, kind, status, depends_on, prompt_file, retry_prompt_file, input_images, output_path, derivation_policy}' /absolute/path/to/run/imagegen-jobs.json
@@ -221,7 +261,7 @@ For each ready visual job, invoke the configured image generation API with the p
 
 When generating row strips, keep the identity lock in the row prompt authoritative. Preserve the same style, face, markings, palette, materials, prop design, body proportions, and silhouette from the canonical base. Row jobs attach the layout guide and canonical base by default; the decoded base is kept in the run folder for deterministic processing rather than sent as a redundant generation input.
 
-If `$imagegen` returns a transport-level `Bad Request` for a row, retry that same row once with its generated `retry_prompt_file`. The retry prompt preserves the row id, frame count, chroma key, canonical-base identity, and state action. Keep the canonical base attached. If the retry still fails, stop and report the failing row and prompt paths instead of switching to any other generation path.
+If `generate_image.py` returns a transport-level `Bad Request` for a row, retry that same row once with its generated `retry_prompt_file`. The retry prompt preserves the row id, frame count, chroma key, canonical-base identity, and state action. Keep the canonical base attached. If the retry still fails, stop and report the failing row and prompt paths instead of switching to any other generation path.
 
 4. After selecting a generated output for a job, copy it into the decoded output path and mark the job complete. For `base`, also create the canonical identity reference:
 
@@ -387,7 +427,7 @@ Keep `pet_request.json`, `final/spritesheet.webp`, `final/validation.json`, `qa/
 
 ## Lightweight Visual Workers
 
-Use lightweight subagents for image-heavy work by default. This bounds each `$imagegen` rollout to one selected image, keeps contact-sheet vision payloads out of the parent thread, and reduces cost while preserving the full 9-state app contract.
+Use lightweight subagents for image-heavy work by default. This bounds each generation worker to one selected image, keeps contact-sheet vision payloads out of the parent thread, and reduces cost while preserving the full 9-state app contract.
 
 ## Subagent Delegation
 
@@ -407,7 +447,7 @@ Base worker responsibilities:
 
 - handle only the `base` job
 - read `prompts/base-pet.md` and use any listed reference images
-- use `$imagegen` only
+- use `scripts/generate_image.py` only
 - honor any compact brand inspiration line in the prompt as broad visual/personality guidance, without copying logos, readable marks, UI screenshots, slogans, or text
 - return only `selected_source=/absolute/path/to/selected-output.png` and `qa_note=<one sentence>`
 
@@ -415,7 +455,7 @@ Row worker responsibilities:
 
 - handle exactly one row job
 - read the row prompt and use all listed input images
-- use `$imagegen` only; do not draw, edit, tile, or synthesize sprites locally
+- use `scripts/generate_image.py` only; do not draw, edit, tile, or synthesize sprites locally
 - perform a quick visual sanity check for frame count, identity, chroma background, spacing, clipping, and detached effects
 - enforce the row prompt's transparency and effects rules, including no detached effects, no wave marks for `waving`, no speed lines or dust for directional running rows, no literal foot-running for the non-directional `running` row, and only attached opaque sprite-like tears/smoke/stars when allowed by the state prompt
 - return only `selected_source=/absolute/path/to/selected-output.png` and `qa_note=<one sentence>`
@@ -445,7 +485,7 @@ Prompt file: <absolute base prompt file>
 Input images:
 - <absolute path> — <role>
 
-Use $imagegen only. Read the base prompt and attach every listed input image. If the prompt contains brand inspiration, use it only as broad mascot-safe guidance; do not copy logos, readable marks, UI screenshots, slogans, or text. Before returning, visually check that the result is one centered full-body pet on a flat chroma background, with no text, scenery, shadows, or detached effects.
+Use `scripts/generate_image.py` only. Read the base prompt and attach every listed input image. If the prompt contains brand inspiration, use it only as broad mascot-safe guidance; do not copy logos, readable marks, UI screenshots, slogans, or text. Before returning, visually check that the result is one centered full-body pet on a flat chroma background, with no text, scenery, shadows, or detached effects.
 
 Do not edit manifests, copy into decoded, mark jobs complete, generate rows, run image-processing scripts, repair, package, or open unrelated files.
 Do not include Markdown image previews, base64, or extra attachments in the final response.
@@ -468,7 +508,7 @@ Input images:
 - <absolute path> — <role>
 - <absolute path> — <role>
 
-Use $imagegen only. Read the row prompt and attach every listed input image. If imagegen returns Bad Request, retry once with the retry prompt and the same input images.
+Use `scripts/generate_image.py` only. Read the row prompt and attach every listed input image. If the API returns Bad Request, retry once with the retry prompt and the same input images.
 
 Before returning, visually check: exact frame count, same pet identity as canonical base, flat chroma background, complete separated unclipped poses, and no detached effects or guide marks. The prompt's transparency and effects rules are mandatory: no detached effects, no wave marks for `waving`, no speed lines or dust for directional running rows, no literal foot-running for the non-directional `running` row, and only attached opaque sprite-like tears/smoke/stars when allowed by the state prompt.
 
