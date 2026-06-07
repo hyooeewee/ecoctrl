@@ -33,15 +33,6 @@ export async function streamFile(
   const stat = await storage.stat(key);
   const lastModified = stat.lastModified ?? new Date();
 
-  reply
-    .header("Content-Type", resolveContentType(key))
-    .header("Cache-Control", "public, max-age=3600")
-    .header("Last-Modified", lastModified.toUTCString())
-    .header("Content-Length", stat.size);
-  if (options?.disposition) {
-    reply.header("Content-Disposition", options.disposition);
-  }
-
   // Handle conditional request — return 304 if file unchanged
   if (options?.request) {
     const ifModifiedSince = options.request.headers["if-modified-since"];
@@ -49,7 +40,11 @@ export async function streamFile(
       const clientDate = new Date(ifModifiedSince);
       // Compare at second precision (Last-Modified truncates sub-second)
       if (lastModified.getTime() - clientDate.getTime() < 1000) {
-        return reply.status(304).send();
+        return reply
+          .status(304)
+          .header("Cache-Control", "public, max-age=3600")
+          .header("Last-Modified", lastModified.toUTCString())
+          .send();
       }
     }
   }
@@ -60,6 +55,20 @@ export async function streamFile(
   // Fastify's internal stream handling that triggers write-after-end
   // when the S3 ChecksumStream races with client disconnection.
   reply.hijack();
+
+  // After hijack(), Fastify no longer writes the headers we set above.
+  // Write them directly to the raw response so Cache-Control reaches the client.
+  const headers: Record<string, string | number> = {
+    "Content-Type": resolveContentType(key),
+    "Cache-Control": "public, max-age=3600",
+    "Last-Modified": lastModified.toUTCString(),
+    "Content-Length": stat.size,
+  };
+  if (options?.disposition) {
+    headers["Content-Disposition"] = options.disposition;
+  }
+  reply.raw.writeHead(200, headers);
+
   try {
     await pipeline(stream, reply.raw);
   } catch (err: any) {
