@@ -17,7 +17,7 @@ const client = postgres(process.env.DATABASE_URL!, { prepare: false });
 const db = drizzle(client, { schema });
 
 const ADMIN_USER = process.env.INIT_ADMIN_USERNAME?.trim() || "admin";
-const ADMIN_PASS = process.env.INIT_ADMIN_PASSWORD?.trim() || crypto.randomUUID();
+const ADMIN_PASS = process.env.INIT_ADMIN_PASSWORD?.trim() || "admin_secret";
 const ADMIN_EMAIL = process.env.INIT_ADMIN_EMAIL?.trim() || "admin@example.com";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
