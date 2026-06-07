@@ -212,7 +212,7 @@ export default function DashboardModel() {
 
               {/* Panel Tabs */}
               <Tabs value={editorMode} onValueChange={(v) => setEditorMode(v as typeof editorMode)}>
-                <TabsList className="w-full rounded-none border-b border-border bg-transparent p-0">
+                <TabsList className="w-full">
                   <TabsTrigger value="select">模型</TabsTrigger>
                   <TabsTrigger value="placeLabel">标签</TabsTrigger>
                   <TabsTrigger value="clipPreview">动作</TabsTrigger>
@@ -222,176 +222,181 @@ export default function DashboardModel() {
               {/* Panel Content */}
               <ScrollArea className="flex-1">
                 <div className="p-3">
-                  {/* Model Files */}
-                  <div className="mb-4">
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        {existingFiles.length} 个文件
-                      </span>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        <Upload size={14} className="mr-1" />
-                        上传
-                      </Button>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept=".glb,.gltf,.obj"
-                        multiple
-                        className="hidden"
-                        onChange={(e) => {
-                          if (e.target.files?.length) {
-                            addPendingFiles(Array.from(e.target.files));
-                            e.target.value = "";
-                          }
-                        }}
-                      />
-                    </div>
-
-                    <>
-                      {existingFiles.length > 0 && (
-                        <div className="mb-3 space-y-1.5">
-                          {existingFiles.map((file) => {
-                            const fileName = file.name || file.fileKey.split("/").pop() || "未知";
-                            const ext = fileName.split(".").pop()?.toUpperCase() ?? "";
-                            const isVisible = visibleFileIds.has(file.id);
-                            const progress = loadingProgress.get(file.id);
-                            const isLoading = progress !== undefined && progress < 1;
-                            return (
-                              <div
-                                key={file.id}
-                                className="rounded-md border bg-muted/30 px-3 py-2"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <input
-                                    type="checkbox"
-                                    checked={isVisible}
-                                    onChange={() => toggleFileVisible(file.id)}
-                                    className="h-3.5 w-3.5 shrink-0 accent-primary"
-                                    title={isVisible ? "隐藏模型" : "显示模型"}
-                                  />
-                                  <File size={14} className="shrink-0 text-blue-500" />
-                                  <span className="flex-1 truncate text-xs">{fileName}</span>
-                                  <Badge variant="secondary" className="shrink-0 text-[10px]">
-                                    {ext}
-                                  </Badge>
-                                  <button
-                                    type="button"
-                                    className="ml-1 rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                                    onClick={() => deleteFile(file.id)}
-                                    title="删除"
-                                  >
-                                    <Trash2 size={12} />
-                                  </button>
-                                </div>
-                                {isLoading && (
-                                  <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-muted">
-                                    <div
-                                      className="h-full bg-blue-500 transition-all"
-                                      style={{ width: `${progress * 100}%` }}
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      {pendingFiles.length > 0 && (
-                        <div className="mb-3 space-y-1.5">
-                          <div className="text-xs font-medium text-muted-foreground">待上传</div>
-                          {pendingFiles.map((file, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center gap-2 rounded-md border border-dashed border-blue-400 bg-blue-50/50 px-3 py-2"
-                            >
-                              <File size={14} className="shrink-0 text-blue-500" />
-                              <span className="flex-1 truncate text-xs">{file.name}</span>
-                              <Badge variant="secondary" className="shrink-0 text-[10px]">
-                                {file.name.split(".").pop()?.toUpperCase()}
-                              </Badge>
-                              <button
-                                type="button"
-                                className="ml-1 rounded p-0.5 hover:bg-muted-foreground/20"
-                                onClick={() => removePendingFile(index)}
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {existingFiles.length === 0 && pendingFiles.length === 0 && (
-                        <ModelFileZone
-                          file={null}
-                          onFileSelect={(file) => addPendingFiles([file])}
-                          onFileClear={() => {}}
-                          acceptedFormats=".glb,.gltf,.obj"
+                  {editorMode === "select" && (
+                    <div className="mb-4">
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">
+                          {existingFiles.length} 个文件
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          <Upload size={14} className="mr-1" />
+                          上传
+                        </Button>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept=".glb,.gltf,.obj"
+                          multiple
+                          className="hidden"
+                          onChange={(e) => {
+                            if (e.target.files?.length) {
+                              addPendingFiles(Array.from(e.target.files));
+                              e.target.value = "";
+                            }
+                          }}
                         />
-                      )}
+                      </div>
 
-                      {pendingFiles.length > 0 && (
-                        <div className="mt-2 flex gap-2">
-                          <Button className="flex-1" onClick={uploadAll} disabled={uploading}>
-                            {uploading ? "上传中..." : `上传全部 (${pendingFiles.length})`}
-                          </Button>
-                          <Button variant="outline" onClick={clearPendingFiles}>
-                            清空
-                          </Button>
+                      <>
+                        {existingFiles.length > 0 && (
+                          <div className="mb-3 space-y-1.5">
+                            {existingFiles.map((file) => {
+                              const fileName = file.name || file.fileKey.split("/").pop() || "未知";
+                              const ext = fileName.split(".").pop()?.toUpperCase() ?? "";
+                              const isVisible = visibleFileIds.has(file.id);
+                              const progress = loadingProgress.get(file.id);
+                              const isLoading = progress !== undefined && progress < 1;
+                              return (
+                                <div
+                                  key={file.id}
+                                  className="rounded-md border bg-muted/30 px-3 py-2"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="checkbox"
+                                      checked={isVisible}
+                                      onChange={() => toggleFileVisible(file.id)}
+                                      className="h-3.5 w-3.5 shrink-0 accent-primary"
+                                      title={isVisible ? "隐藏模型" : "显示模型"}
+                                    />
+                                    <File size={14} className="shrink-0 text-blue-500" />
+                                    <span className="flex-1 truncate text-xs">{fileName}</span>
+                                    <Badge variant="secondary" className="shrink-0 text-[10px]">
+                                      {ext}
+                                    </Badge>
+                                    <button
+                                      type="button"
+                                      className="ml-1 rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                      onClick={() => deleteFile(file.id)}
+                                      title="删除"
+                                    >
+                                      <Trash2 size={12} />
+                                    </button>
+                                  </div>
+                                  {isLoading && (
+                                    <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-muted">
+                                      <div
+                                        className="h-full bg-blue-500 transition-all"
+                                        style={{ width: `${progress * 100}%` }}
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {pendingFiles.length > 0 && (
+                          <div className="mb-3 space-y-1.5">
+                            <div className="text-xs font-medium text-muted-foreground">待上传</div>
+                            {pendingFiles.map((file, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center gap-2 rounded-md border border-dashed border-blue-400 bg-blue-50/50 px-3 py-2"
+                              >
+                                <File size={14} className="shrink-0 text-blue-500" />
+                                <span className="flex-1 truncate text-xs">{file.name}</span>
+                                <Badge variant="secondary" className="shrink-0 text-[10px]">
+                                  {file.name.split(".").pop()?.toUpperCase()}
+                                </Badge>
+                                <button
+                                  type="button"
+                                  className="ml-1 rounded p-0.5 hover:bg-muted-foreground/20"
+                                  onClick={() => removePendingFile(index)}
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {existingFiles.length === 0 && pendingFiles.length === 0 && (
+                          <ModelFileZone
+                            file={null}
+                            onFileSelect={(file) => addPendingFiles([file])}
+                            onFileClear={() => {}}
+                            acceptedFormats=".glb,.gltf,.obj"
+                          />
+                        )}
+
+                        {pendingFiles.length > 0 && (
+                          <div className="mt-2 flex gap-2">
+                            <Button className="flex-1" onClick={uploadAll} disabled={uploading}>
+                              {uploading ? "上传中..." : `上传全部 (${pendingFiles.length})`}
+                            </Button>
+                            <Button variant="outline" onClick={clearPendingFiles}>
+                              清空
+                            </Button>
+                          </div>
+                        )}
+                      </>
+                    </div>
+                  )}
+
+                  {editorMode === "placeLabel" && (
+                    <>
+                      <LabelTree
+                        labels={labelTreeData}
+                        selectedId={selectedLabelId}
+                        onSelect={selectLabel}
+                        onAdd={addLabel}
+                        onDelete={deleteLabel}
+                        onEdit={(id) => selectLabel(id)}
+                      />
+
+                      {selectedLabel && (
+                        <div className="border-t pt-4">
+                          <h3 className="mb-3 text-sm font-semibold">标签配置</h3>
+                          <div className="max-h-[300px] overflow-auto">
+                            <LabelConfigForm
+                              config={{
+                                id: selectedLabel.id,
+                                key: selectedLabel.key,
+                                name: selectedLabel.name,
+                                description: selectedLabel.description,
+                                parentId: selectedLabel.parentId ?? null,
+                                position: selectedLabel.position,
+                                meshKeywords: selectedLabel.meshKeywords,
+                              }}
+                              parentOptions={labels
+                                .filter((l) => l.id !== selectedLabel.id)
+                                .map((l) => ({ id: l.id, name: l.name }))}
+                              onChange={updateLabelConfig}
+                            />
+
+                            <div className="mt-4">
+                              <OperationConfig
+                                operations={selectedLabel.operations}
+                                availableLabelIds={labels
+                                  .filter((l) => l.id !== selectedLabelId)
+                                  .map((l) => l.id)}
+                                onChange={updateLabelOperations}
+                              />
+                            </div>
+                          </div>
                         </div>
                       )}
                     </>
-                  </div>
+                  )}
 
-                  {/* Label Tree */}
-                  <div className="mb-4">
-                    <LabelTree
-                      labels={labelTreeData}
-                      selectedId={selectedLabelId}
-                      onSelect={selectLabel}
-                      onAdd={addLabel}
-                      onDelete={deleteLabel}
-                      onEdit={(id) => selectLabel(id)}
-                    />
-                  </div>
-
-                  {/* Label Config */}
-                  {selectedLabel && (
-                    <div className="border-t pt-4">
-                      <h3 className="mb-3 text-sm font-semibold">标签配置</h3>
-                      <div className="max-h-[300px] overflow-auto">
-                        <LabelConfigForm
-                          config={{
-                            id: selectedLabel.id,
-                            key: selectedLabel.key,
-                            name: selectedLabel.name,
-                            description: selectedLabel.description,
-                            parentId: selectedLabel.parentId ?? null,
-                            position: selectedLabel.position,
-                            meshKeywords: selectedLabel.meshKeywords,
-                          }}
-                          parentOptions={labels
-                            .filter((l) => l.id !== selectedLabel.id)
-                            .map((l) => ({ id: l.id, name: l.name }))}
-                          onChange={updateLabelConfig}
-                        />
-
-                        <div className="mt-4">
-                          <OperationConfig
-                            operations={selectedLabel.operations}
-                            availableLabelIds={labels
-                              .filter((l) => l.id !== selectedLabelId)
-                              .map((l) => l.id)}
-                            onChange={updateLabelOperations}
-                          />
-                        </div>
-                      </div>
-                    </div>
+                  {editorMode === "clipPreview" && (
+                    <div className="text-sm text-muted-foreground">动作配置</div>
                   )}
                 </div>
               </ScrollArea>
