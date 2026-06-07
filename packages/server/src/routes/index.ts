@@ -29,7 +29,7 @@ import nodeRoutes from "@/routes/nodes";
 import petRoutes from "@/routes/pets";
 import eventsRoutes from "@/routes/events";
 import { PluginRegistry } from "@/engine/plugin-registry";
-import { getPluginStorage, getModelStorage } from "@/storage";
+import { getPluginStorage } from "@/storage";
 
 export default async function apiRoutes(fastify: FastifyInstance) {
   // Initialize plugin registry with storage adapter (minio or local)
@@ -135,15 +135,22 @@ export default async function apiRoutes(fastify: FastifyInstance) {
         labels: [],
       };
 
-      // Resolve fileKeys to public URLs for direct browser access.
+      // Serve model files through the API proxy instead of direct S3 URLs.
+      // This avoids CORS issues when BabylonJS loads GLB files from a
+      // standalone MinIO instance (the bucket may be public, but cross-origin
+      // XHR requests still require CORS headers that are hard to maintain
+      // outside the project's docker-compose).
+      //
+      // PERFORMANCE NOTE: The proxy adds one backend hop. streamFile() uses
+      // streaming + 304 caching, so the overhead is negligible for dev / small
+      // teams. If you hit a bottleneck (large models + high concurrency):
+      //   1. Configure MinIO bucket CORS and switch back to getPublicUrl().
+      //   2. Or put a CDN / reverse cache in front of the proxy endpoint.
       if (result.modelFiles?.length > 0) {
-        const modelStorage = getModelStorage();
-        result.modelFiles = await Promise.all(
-          result.modelFiles.map(async (entry: any) => ({
-            ...entry,
-            fileKey: await modelStorage.getPublicUrl(entry.fileKey),
-          })),
-        );
+        result.modelFiles = result.modelFiles.map((entry: any) => ({
+          ...entry,
+          fileKey: `/api/dashboard-model/file?key=${encodeURIComponent(entry.fileKey)}`,
+        }));
       } else if (result.modelFileUrl) {
         result.modelFileUrl = "/api/dashboard-model/file";
       }

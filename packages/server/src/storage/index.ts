@@ -130,6 +130,7 @@ export async function ensureS3Buckets(): Promise<void> {
 
   await filesAdapter.ensureBucket();
   await modelsAdapter.ensureBucket();
+  await modelsAdapter.ensurePublicRead();
   await pluginsAdapter.ensureBucket();
   await petsAdapter.ensureBucket();
 }
