@@ -29,7 +29,7 @@ import nodeRoutes from "@/routes/nodes";
 import petRoutes from "@/routes/pets";
 import eventsRoutes from "@/routes/events";
 import { PluginRegistry } from "@/engine/plugin-registry";
-import { getPluginStorage } from "@/storage";
+import { getPluginStorage, getModelStorage } from "@/storage";
 
 export default async function apiRoutes(fastify: FastifyInstance) {
   // Initialize plugin registry with storage adapter (minio or local)
@@ -128,14 +128,26 @@ export default async function apiRoutes(fastify: FastifyInstance) {
       const config = await findDashboardModel();
       const result = config ?? {
         modelFileUrl: null,
+        modelFiles: [],
         cameraPreset: "Default_View_01",
         ambientLightIntensity: 0.85,
         hotspots: [],
         labels: [],
       };
-      if (result.modelFileUrl) {
+
+      // Resolve fileKeys to public URLs for direct browser access.
+      if (result.modelFiles?.length > 0) {
+        const modelStorage = getModelStorage();
+        result.modelFiles = await Promise.all(
+          result.modelFiles.map(async (entry: any) => ({
+            ...entry,
+            fileKey: await modelStorage.getPublicUrl(entry.fileKey),
+          })),
+        );
+      } else if (result.modelFileUrl) {
         result.modelFileUrl = "/api/dashboard-model/file";
       }
+
       return reply.send(result);
     },
   );

@@ -1,13 +1,15 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/config/database";
 import { dashboardModels } from "@/schemas/dashboardModel";
+import type { DashboardModelLabel, ModelFileEntry } from "@ecoctrl/shared";
 
 export interface DashboardModelConfig {
   modelFileUrl: string | null;
+  modelFiles: ModelFileEntry[];
   cameraPreset: string;
   ambientLightIntensity: number;
   hotspots: unknown[];
-  labels: unknown[];
+  labels: DashboardModelLabel[];
 }
 
 export async function findDashboardModel(): Promise<DashboardModelConfig | null> {
@@ -16,10 +18,11 @@ export async function findDashboardModel(): Promise<DashboardModelConfig | null>
   const r = rows[0];
   return {
     modelFileUrl: r.modelFileUrl,
+    modelFiles: (r.modelFiles as ModelFileEntry[]) ?? [],
     cameraPreset: r.cameraPreset,
     ambientLightIntensity: r.ambientLightIntensity,
     hotspots: r.hotspots as unknown[],
-    labels: r.labels as unknown[],
+    labels: r.labels as DashboardModelLabel[],
   };
 }
 
@@ -32,6 +35,7 @@ export async function updateDashboardModel(
       .insert(dashboardModels)
       .values({
         modelFileUrl: config.modelFileUrl,
+        modelFiles: config.modelFiles,
         cameraPreset: config.cameraPreset,
         ambientLightIntensity: config.ambientLightIntensity,
         hotspots: config.hotspots,
@@ -41,16 +45,18 @@ export async function updateDashboardModel(
     const r = result[0];
     return {
       modelFileUrl: r.modelFileUrl,
+      modelFiles: (r.modelFiles as ModelFileEntry[]) ?? [],
       cameraPreset: r.cameraPreset,
       ambientLightIntensity: r.ambientLightIntensity,
       hotspots: r.hotspots as unknown[],
-      labels: r.labels as unknown[],
+      labels: r.labels as DashboardModelLabel[],
     };
   } else {
     const result = await db
       .update(dashboardModels)
       .set({
         modelFileUrl: config.modelFileUrl,
+        modelFiles: config.modelFiles,
         cameraPreset: config.cameraPreset,
         ambientLightIntensity: config.ambientLightIntensity,
         hotspots: config.hotspots,
@@ -61,10 +67,11 @@ export async function updateDashboardModel(
     const r = result[0];
     return {
       modelFileUrl: r.modelFileUrl,
+      modelFiles: (r.modelFiles as ModelFileEntry[]) ?? [],
       cameraPreset: r.cameraPreset,
       ambientLightIntensity: r.ambientLightIntensity,
       hotspots: r.hotspots as unknown[],
-      labels: r.labels as unknown[],
+      labels: r.labels as DashboardModelLabel[],
     };
   }
 }

@@ -10,6 +10,7 @@ import {
   DeleteBucketCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { env } from "@/lib/env";
 import type { StorageAdapter, PutOptions, ObjectStat } from "./types";
 
 export interface S3AdapterConfig {
@@ -24,6 +25,9 @@ export interface S3AdapterConfig {
 export class S3Adapter implements StorageAdapter {
   private client: S3Client;
   private bucket: string;
+  private endpoint: string;
+  private region: string;
+  private forcePathStyle: boolean;
 
   constructor(config: S3AdapterConfig) {
     this.client = new S3Client({
@@ -36,6 +40,9 @@ export class S3Adapter implements StorageAdapter {
       forcePathStyle: config.forcePathStyle ?? false,
     });
     this.bucket = config.bucket;
+    this.endpoint = config.endpoint;
+    this.region = config.region;
+    this.forcePathStyle = config.forcePathStyle ?? false;
   }
 
   async ensureBucket(): Promise<void> {
@@ -86,6 +93,14 @@ export class S3Adapter implements StorageAdapter {
       Key: key,
     });
     return getSignedUrl(this.client as any, command as any, { expiresIn });
+  }
+
+  async getPublicUrl(key: string): Promise<string> {
+    const publicEndpoint = env.S3_PUBLIC_ENDPOINT ?? this.endpoint;
+    if (this.forcePathStyle) {
+      return `${publicEndpoint}/${this.bucket}/${key}`;
+    }
+    return `https://${this.bucket}.s3.${this.region}.amazonaws.com/${key}`;
   }
 
   async exists(key: string): Promise<boolean> {
