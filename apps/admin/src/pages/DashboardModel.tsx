@@ -76,9 +76,9 @@ export default function DashboardModel() {
       try {
         const data = await dashboardModelApi.get();
         setConfig(data);
-        // Load V2 labels from config if available
-        if (data.labelsV2) {
-          setLabels(data.labelsV2 as Label[]);
+        // Load labels from config if available
+        if (data.labels) {
+          setLabels(data.labels as Label[]);
         }
       } catch (err) {
         console.error(err);
@@ -299,7 +299,7 @@ export default function DashboardModel() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await dashboardModelApi.update({ labelsV2: labels });
+      await dashboardModelApi.update({ labels });
       toast.success("配置已保存");
     } catch (err) {
       console.error("Save failed:", err);
