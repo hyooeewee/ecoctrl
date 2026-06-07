@@ -7,8 +7,8 @@ node_modules/
 coverage/
 
 # Environment
-.env*
 !.env.example
+*.local*
 
 # Logs
 *.log
@@ -26,8 +26,6 @@ docker/ecoctrl/
 **/logs/
 
 **/superpowers/
-**/CLAUDE.md
 *.csv
 *.xlsx
 **/tmp/
-*.local*
