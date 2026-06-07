@@ -26,6 +26,7 @@ import {
   type LabelDef,
 } from "./constants";
 import type { ModelFileEntry } from "@ecoctrl/shared";
+import { fetchModelUrl } from "@ecoctrl/shared/model-cache";
 import type { ModelGroup, LabelAnchor, ModelLoadConfig, ViewerOptions } from "./types";
 
 // ========================================
@@ -341,10 +342,11 @@ export class ModelViewer implements ModelViewerRef {
 
     console.log(`[ModelViewer] Loading model group "${groupId}" from: ${url}`);
 
+    const blobUrl = await fetchModelUrl(url);
     const result = await SceneLoader.ImportMeshAsync(
       null,
       "",
-      url,
+      blobUrl,
       this.scene,
       (event) => {
         if (event.lengthComputable && event.total > 0) {
@@ -354,6 +356,7 @@ export class ModelViewer implements ModelViewerRef {
       },
       pluginExtension,
     );
+    URL.revokeObjectURL(blobUrl);
 
     const firstMesh = result.meshes[0];
     if (!firstMesh) {
