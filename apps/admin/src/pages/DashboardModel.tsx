@@ -33,7 +33,7 @@ import {
   LabelMarkerData,
 } from "@/components/babylon-editor";
 import { dashboardModelApi } from "../api/dashboardModel";
-import type { DashboardModelConfig, DashboardModelLabel } from "@ecoctrl/shared";
+import type { DashboardModelConfig, DashboardModelLabel, ModelFileEntry } from "@ecoctrl/shared";
 import { Vector3 } from "@babylonjs/core";
 
 // ========================================
@@ -313,7 +313,18 @@ export default function DashboardModel() {
   // Existing file info
   // ========================================
 
-  const existingFiles = config?.modelFiles ?? (config?.modelFileUrl ? [config.modelFileUrl] : []);
+  const existingFiles: ModelFileEntry[] = config?.modelFiles?.length
+    ? config.modelFiles
+    : config?.modelFileUrl
+      ? [
+          {
+            id: "legacy",
+            fileKey: config.modelFileUrl,
+            name: config.modelFileUrl.split("/").pop() || "legacy",
+            priority: "critical",
+          },
+        ]
+      : [];
 
   // ========================================
   // Render
@@ -403,8 +414,8 @@ export default function DashboardModel() {
               {/* Existing files list */}
               {existingFiles.length > 0 && (
                 <div className="mb-3 space-y-1.5">
-                  {existingFiles.map((url, index) => {
-                    const fileName = url.split("/").pop() ?? "未知";
+                  {existingFiles.map((file, index) => {
+                    const fileName = file.name || file.fileKey.split("/").pop() || "未知";
                     const ext = fileName.split(".").pop()?.toUpperCase() ?? "";
                     return (
                       <div
