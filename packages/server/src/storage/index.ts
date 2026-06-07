@@ -1,14 +1,18 @@
 import { env } from "@/lib/env";
+import { getLogger } from "@/lib/logger";
+import { withRetry } from "@/lib/withRetry";
 import { S3Adapter } from "./s3-adapter";
 import { LocalAdapter } from "./local-adapter";
 import type { StorageAdapter } from "./types";
+
+const storageLogger = getLogger("storage");
 
 let _fileStorage: StorageAdapter | null = null;
 let _modelStorage: StorageAdapter | null = null;
 let _pluginStorage: StorageAdapter | null = null;
 let _petStorage: StorageAdapter | null = null;
 
-function createS3Adapter(bucket: string): StorageAdapter {
+function createS3Adapter(bucket: string): S3Adapter {
   return new S3Adapter({
     endpoint: env.S3_ENDPOINT!,
     region: env.S3_REGION,
@@ -84,55 +88,34 @@ export function createStorageAdapter(): StorageAdapter {
   return getFileStorage();
 }
 
-export async function ensureS3Buckets(): Promise<void> {
-  if (env.STORAGE_PROVIDER !== "minio") return;
-
-  const endpoint = env.S3_ENDPOINT!;
-  const accessKeyId = env.S3_ACCESS_KEY!;
-  const secretAccessKey = env.S3_SECRET_KEY!;
-  const region = env.S3_REGION;
-
-  const filesAdapter = new S3Adapter({
-    endpoint,
-    region,
-    accessKeyId,
-    secretAccessKey,
-    bucket: env.S3_BUCKET_FILES,
-    forcePathStyle: env.S3_FORCE_PATH_STYLE,
-  });
-
-  const modelsAdapter = new S3Adapter({
-    endpoint,
-    region,
-    accessKeyId,
-    secretAccessKey,
-    bucket: env.S3_BUCKET_MODELS,
-    forcePathStyle: env.S3_FORCE_PATH_STYLE,
-  });
-
-  const pluginsAdapter = new S3Adapter({
-    endpoint,
-    region,
-    accessKeyId,
-    secretAccessKey,
-    bucket: env.S3_BUCKET_NODES,
-    forcePathStyle: env.S3_FORCE_PATH_STYLE,
-  });
-
-  const petsAdapter = new S3Adapter({
-    endpoint,
-    region,
-    accessKeyId,
-    secretAccessKey,
-    bucket: env.S3_BUCKET_PETS,
-    forcePathStyle: env.S3_FORCE_PATH_STYLE,
-  });
+async function doEnsureS3Buckets(): Promise<void> {
+  const filesAdapter = createS3Adapter(env.S3_BUCKET_FILES);
+  const modelsAdapter = createS3Adapter(env.S3_BUCKET_MODELS);
+  const pluginsAdapter = createS3Adapter(env.S3_BUCKET_NODES);
+  const petsAdapter = createS3Adapter(env.S3_BUCKET_PETS);
 
   await filesAdapter.ensureBucket();
   await modelsAdapter.ensureBucket();
   await modelsAdapter.ensurePublicRead();
   await pluginsAdapter.ensureBucket();
   await petsAdapter.ensureBucket();
+}
+
+export async function ensureS3Buckets(): Promise<void> {
+  if (env.STORAGE_PROVIDER !== "minio") return;
+
+  const endpoint = env.S3_ENDPOINT!;
+
+  await withRetry(doEnsureS3Buckets, {
+    maxRetries: 3,
+    delayMs: 2000,
+    onRetry: (attempt, max, _err, nextDelayMs) => {
+      storageLogger.warn(
+        `[ensureS3Buckets] Attempt ${attempt}/${max} failed for ${endpoint}. ` +
+          `Retrying in ${nextDelayMs}ms...`,
+      );
+    },
+  });
 }
 
 export * from "./types";
