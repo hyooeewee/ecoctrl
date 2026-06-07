@@ -4,7 +4,8 @@ import { X } from "lucide-react";
 
 import { BuildingView, type BuildingViewRef } from "~/components/dashboard/building-view";
 import { LoadingOverlay } from "~/components/dashboard/loading-overlay";
-import { fetchPublicModel, type PublicModelData } from "~/lib/model-api";
+import { fetchPublicModel } from "~/lib/model-api";
+import type { DashboardModelConfig } from "@ecoctrl/shared";
 import { useSettingsStore } from "~/store/settings";
 import { useLocale } from "~/locales";
 
@@ -66,7 +67,7 @@ function LabelInfoPanel({ labelKey, onClose }: { labelKey: string; onClose: () =
 // ========================================
 
 export async function clientLoader(): Promise<{
-  model: PublicModelData | null;
+  model: DashboardModelConfig | null;
 }> {
   const model = await fetchPublicModel().catch((err) => {
     console.error("[dashboard-layout clientLoader] fetchPublicModel failed:", err);
@@ -81,7 +82,7 @@ export async function clientLoader(): Promise<{
 
 export default function DashboardLayout() {
   const { model } = useLoaderData() as {
-    model: PublicModelData | null;
+    model: DashboardModelConfig | null;
   };
   const location = useLocation();
   const showLoadingAnimation = useSettingsStore((s) => s.showLoadingAnimation);
@@ -114,8 +115,7 @@ export default function DashboardLayout() {
         onCanvasClick={() => setActiveLabel(null)}
         onLoad={() => setModelLoaded(true)}
         onProgress={setModelLoadProgress}
-        modelUrl={model?.modelFileUrl}
-        labels={model?.labels}
+        modelConfig={model ?? undefined}
       />
 
       {/* Label info sidebar (left panel) */}
