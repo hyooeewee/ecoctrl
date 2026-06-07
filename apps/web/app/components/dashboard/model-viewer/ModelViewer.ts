@@ -167,7 +167,12 @@ export class ModelViewer implements ModelViewerRef {
   // Render loop
   // ========================================
 
+  private lastFrameTime = 0;
+  private slowFrameCount = 0;
+
   private render(): void {
+    const start = performance.now();
+
     // Auto-rotate
     if (this.autoRotate && !this.isInteracting) {
       this.camera.alpha += 0.002 * this.rotateSpeed;
@@ -177,6 +182,19 @@ export class ModelViewer implements ModelViewerRef {
 
     // Update clip plane
     updateClipPlane(this.scene, this.clipState);
+
+    const elapsed = performance.now() - start;
+    // Log every 60 slow frames (about 1s at 60fps) to avoid console spam.
+    if (elapsed > 16.67) {
+      this.slowFrameCount++;
+      if (this.slowFrameCount % 60 === 0) {
+        console.warn(
+          `[ModelViewer] Slow render loop detected: ${elapsed.toFixed(2)}ms/frame ` +
+            `(${this.slowFrameCount} slow frames since start). ` +
+            `Consider reducing scene complexity or disabling auto-rotate/glow.`,
+        );
+      }
+    }
   }
 
   // ========================================
@@ -224,9 +242,11 @@ export class ModelViewer implements ModelViewerRef {
 
     const criticalLoaded = criticalResults.filter((r): r is NonNullable<typeof r> => r !== null);
 
-    // Fallback: if all critical models failed, load fallback.
-    if (criticalLoaded.length === 0) {
-      console.warn(`[ModelViewer] All critical models failed, falling back to "${fallbackUrl}"`);
+    // Fallback: only when there ARE critical models and ALL of them failed.
+    if (critical.length > 0 && criticalLoaded.length === 0) {
+      console.warn(
+        `[ModelViewer] All ${critical.length} critical model(s) failed, falling back to "${fallbackUrl}"`,
+      );
       try {
         await this.loadSingle(fallbackUrl, "fallback");
       } catch {
@@ -234,26 +254,34 @@ export class ModelViewer implements ModelViewerRef {
       }
     }
 
-    // Compute unified scale from first critical model.
-    if (criticalLoaded.length > 0) {
+    // If no critical models loaded, block-load the first background model
+    // so we have a reference for unified scale and camera positioning.
+    let firstModelLoaded = criticalLoaded.length > 0;
+    if (!firstModelLoaded && background.length > 0) {
+      const firstBg = await this.tryLoadGroup(background[0]).catch(() => null);
+      if (firstBg) {
+        firstModelLoaded = true;
+        background.splice(0, 1);
+      }
+    }
+
+    // Compute and apply unified scale once the first model is available.
+    if (firstModelLoaded) {
       this.computeUnifiedScale();
-      // Apply unified scale to all loaded critical models.
       for (const group of this.groups) {
         if (group.rootNode) {
           this.applyUnifiedScale(group.rootNode);
         }
       }
+      this.setupPostLoadState();
+      this.computeLabelAnchors();
+      this.detectLobbyTopFromScene();
     }
-
-    // Set up camera and labels after critical models are loaded.
-    this.setupPostLoadState();
-    this.computeLabelAnchors();
-    this.detectLobbyTopFromScene();
 
     this.onProgress?.(100);
     this.onCriticalLoaded?.();
 
-    // Step 2: Load background models in parallel, non-blocking.
+    // Load remaining background models in parallel, non-blocking.
     if (background.length > 0) {
       Promise.all(background.map((entry) => this.tryLoadGroup(entry).catch(() => null))).then(
         (results) => {
@@ -263,7 +291,6 @@ export class ModelViewer implements ModelViewerRef {
               this.applyUnifiedScale(group.rootNode);
             }
           }
-          // Refresh label anchors since background models may add new meshes.
           this.computeLabelAnchors();
           this.detectLobbyTopFromScene();
         },
@@ -290,8 +317,13 @@ export class ModelViewer implements ModelViewerRef {
         this.groups.push(group);
       }
       return group;
-    } catch (err) {
-      console.warn(`[ModelViewer] Failed to load model "${entry.fileKey}":`, err);
+    } catch (err: any) {
+      const status = err?.status ?? err?.statusCode ?? "unknown";
+      const message = err?.message ?? String(err);
+      console.warn(
+        `[ModelViewer] Failed to load model group "${entry.id}" from "${entry.fileKey}" (priority: ${entry.priority}): HTTP ${status} - ${message}`,
+        err,
+      );
       return null;
     }
   }
@@ -306,6 +338,8 @@ export class ModelViewer implements ModelViewerRef {
       : url.includes(".gltf")
         ? ".gltf"
         : undefined;
+
+    console.log(`[ModelViewer] Loading model group "${groupId}" from: ${url}`);
 
     const result = await SceneLoader.ImportMeshAsync(
       null,
@@ -330,11 +364,17 @@ export class ModelViewer implements ModelViewerRef {
     const groupParent = new TransformNode(`groupParent_${groupId}`, this.scene);
     groupParent.parent = this.pivot;
 
-    const glbRoot = this.scene.getTransformNodeByName("__root__") ?? firstMesh;
+    // Use the __root__ from this import batch, not from the global scene
+    // (the scene may already contain __root__ nodes from previous loads).
+    const glbRoot = result.transformNodes.find((n) => n.name === "__root__") ?? firstMesh;
     glbRoot.parent = groupParent;
 
-    // Compute bounding info for this model (before unified scaling).
-    const { min, max } = firstMesh.getHierarchyBoundingVectors(true);
+    // Compute bounding info in local space (relative to groupParent).
+    // Use glbRoot (__root__) instead of firstMesh because firstMesh may have
+    // a position offset inside glbRoot, making its coordinate system different
+    // from groupParent. glbRoot is directly parented to groupParent with zero
+    // offset, so its local space matches groupParent's.
+    const { min, max } = glbRoot.getHierarchyBoundingVectors(false);
     const size = max.subtract(min);
     const center = min.add(size.scale(0.5));
     const maxSize = Math.max(size.x, size.y, size.z);
@@ -378,18 +418,18 @@ export class ModelViewer implements ModelViewerRef {
    * Apply unified scale to a group's root node.
    */
   private applyUnifiedScale(groupParent: TransformNode): void {
-    const localScale = (groupParent as any).__localScale ?? 1;
     const min = (groupParent as any).__boundsMin as Vector3 | undefined;
     const center = (groupParent as any).__boundsCenter as Vector3 | undefined;
 
     if (!this.unifiedScale || !min || !center) return;
 
-    // Apply the unified scale ratio.
-    const scaleRatio = this.unifiedScale / localScale;
-    groupParent.scaling.scaleInPlace(scaleRatio);
+    // Set scaling directly so every model shares the same world-space scale.
+    // unifiedScale comes from the first loaded model's localScale (10/maxSize).
+    groupParent.scaling = new Vector3(this.unifiedScale, this.unifiedScale, this.unifiedScale);
 
-    // Reposition so the model base sits at y=0 and is centered.
-    const size = center.subtract(min).scale(2); // approximate size from center-min
+    // Reposition so the model base sits at y=0 and is centered on xz.
+    // Position must be multiplied by the same scale because BabylonJS applies
+    // scaling before translation: worldPos = parentPos + scale * localPos.
     groupParent.position.x = -center.x * this.unifiedScale;
     groupParent.position.y = -min.y * this.unifiedScale;
     groupParent.position.z = -center.z * this.unifiedScale;
@@ -425,7 +465,10 @@ export class ModelViewer implements ModelViewerRef {
     if (combinedMin && combinedMax) {
       const size = combinedMax.subtract(combinedMin);
       const center = combinedMin.add(size.scale(0.5));
-      const target = new Vector3(0, size.y / 2, 0);
+      // Aim the camera at the actual world-space center of the loaded models,
+      // not the hard-coded origin, so the scene is centered regardless of
+      // pivot rotation.
+      const target = center.clone();
       this.camera.setTarget(target);
 
       // Snapshot post-load camera state
