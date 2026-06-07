@@ -7,6 +7,7 @@ import {
   Engine,
   Scene,
   ArcRotateCamera,
+  Camera,
   HemisphericLight,
   DirectionalLight,
   Vector3,
@@ -19,7 +20,7 @@ import {
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
 import { AdvancedDynamicTexture } from "@babylonjs/gui";
-import { fetchModelUrl } from "@/lib/babylon-loaders";
+import { fetchModelUrl } from "@ecoctrl/shared/model-cache";
 
 // ========================================
 // Types
@@ -77,6 +78,7 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
     const loadedModelsRef = useRef<Map<string, { root: TransformNode; blobUrl: string }>>(
       new Map(),
     );
+    const loadingIdsRef = useRef<Set<string>>(new Set());
     const gridRef = useRef<ReturnType<typeof createGrid> | null>(null);
     const axesRef = useRef<ReturnType<typeof createAxes> | null>(null);
 
@@ -122,20 +124,21 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
       const scene = new Scene(engine);
       sceneRef.current = scene;
 
-      // Setup camera
+      // Setup camera in orthographic mode for a true axonometric view.
       const camera = new ArcRotateCamera(
         "camera",
         -Math.PI / 4,
-        Math.PI / 3,
-        10,
+        Math.acos(1 / Math.sqrt(3)),
+        30,
         Vector3.Zero(),
         scene,
       );
+      camera.mode = Camera.ORTHOGRAPHIC_CAMERA;
       camera.attachControl(canvas, true);
       camera.minZ = 0.1;
       camera.maxZ = 1000;
       camera.lowerRadiusLimit = 1;
-      camera.upperRadiusLimit = 100;
+      camera.upperRadiusLimit = 500;
       camera.wheelPrecision = 50;
       cameraRef.current = camera;
 
@@ -177,6 +180,12 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
 
       return () => {
         resizeObserver.disconnect();
+        loadedModelsRef.current.forEach((data) => {
+          data.root.dispose(false, true);
+          URL.revokeObjectURL(data.blobUrl);
+        });
+        loadedModelsRef.current.clear();
+        loadingIdsRef.current.clear();
         scene.dispose();
         engine.dispose();
         engineRef.current = null;
@@ -215,7 +224,9 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
       });
 
       // Load new visible models.
-      const toLoad = models.filter((m) => m.visible && !loadedModelsRef.current.has(m.id));
+      const toLoad = models.filter(
+        (m) => m.visible && !loadedModelsRef.current.has(m.id) && !loadingIdsRef.current.has(m.id),
+      );
       if (toLoad.length === 0) {
         frameCameraToVisibleModels(loadedModelsRef.current, models, camera, axesRef.current);
         return;
@@ -228,6 +239,16 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
       const loadAll = async () => {
         try {
           for (const model of toLoad) {
+            // Skip if already loaded or currently loading (prevents races).
+            if (
+              cancelled ||
+              loadedModelsRef.current.has(model.id) ||
+              loadingIdsRef.current.has(model.id)
+            ) {
+              continue;
+            }
+
+            loadingIdsRef.current.add(model.id);
             let lastProgress = -1;
             const onProgress = (event: ISceneLoaderProgressEvent) => {
               const progress = event.total > 0 ? event.loaded / event.total : 0;
@@ -241,7 +262,8 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
             const blobUrl = await fetchModelUrl(model.url);
             if (cancelled) {
               URL.revokeObjectURL(blobUrl);
-              return;
+              loadingIdsRef.current.delete(model.id);
+              continue;
             }
 
             const result = await SceneLoader.ImportMeshAsync(
@@ -255,23 +277,39 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
 
             if (cancelled) {
               URL.revokeObjectURL(blobUrl);
-              return;
+              // ImportMeshAsync already injected meshes/transformNodes into the
+              // scene. If we bail out we must dispose them, otherwise a later
+              // re-run will duplicate geometry.
+              result.meshes.slice().forEach((mesh) => mesh.dispose(false, true));
+              result.transformNodes.slice().forEach((tn) => tn.dispose(false));
+              loadingIdsRef.current.delete(model.id);
+              continue;
             }
 
-            // Parent the GLTF __root__ to a per-model root node,
-            // preserving full hierarchy.
+            // Parent every top-level transform node and mesh to a per-model
+            // root so nothing leaks into the world root.
             const modelRoot = new TransformNode(`model_${model.id}`, scene);
             const gltfRoot = result.transformNodes.find((tn) => tn.name === "__root__");
             if (gltfRoot) {
               gltfRoot.parent = modelRoot;
-            } else {
-              result.meshes.forEach((mesh) => {
-                mesh.parent = modelRoot;
-              });
             }
+
+            // Some exporters emit meshes/transformNodes outside __root__;
+            // collect any orphans under the model root as well.
+            result.transformNodes.forEach((tn) => {
+              if (tn !== gltfRoot && tn !== modelRoot && !tn.parent) {
+                tn.parent = modelRoot;
+              }
+            });
+            result.meshes.forEach((mesh) => {
+              if (mesh !== modelRoot && !mesh.parent) {
+                mesh.parent = modelRoot;
+              }
+            });
 
             loadedModelsRef.current.set(model.id, { root: modelRoot, blobUrl });
             onModelProgress?.(model.id, 1);
+            loadingIdsRef.current.delete(model.id);
           }
 
           if (!cancelled) {
@@ -405,7 +443,6 @@ function frameCameraToVisibleModels(
 
   const min = new Vector3(Infinity, Infinity, Infinity);
   const max = new Vector3(-Infinity, -Infinity, -Infinity);
-  let hasMesh = false;
 
   // Always include the origin so axes remain in view.
   min.minimizeInPlace(Vector3.Zero());
@@ -419,26 +456,33 @@ function frameCameraToVisibleModels(
     data.root.getChildMeshes().forEach((mesh) => {
       const bi = mesh.getBoundingInfo();
       if (bi) {
-        hasMesh = true;
         min.minimizeInPlace(bi.boundingBox.minimumWorld);
         max.maximizeInPlace(bi.boundingBox.maximumWorld);
       }
     });
   });
 
-  const center = min.add(max).scale(0.5);
   const size = max.subtract(min);
-  camera.setTarget(center);
-  const diagonal = Math.max(size.x, size.y, size.z);
-  if (diagonal > 0) {
-    camera.radius = diagonal * 1.5;
-    camera.lowerRadiusLimit = Math.max(0.1, diagonal * 0.1);
-    camera.upperRadiusLimit = Math.max(100, diagonal * 5);
-  }
+  // Frame around the coordinate axes origin with a fixed isometric
+  // orthographic view rather than chasing the model bounds.
+  camera.setTarget(Vector3.Zero());
+  camera.alpha = -Math.PI / 4;
+  camera.beta = Math.acos(1 / Math.sqrt(3));
+  camera.radius = 30;
+  camera.lowerRadiusLimit = 1;
+  camera.upperRadiusLimit = 500;
 
   // Scale axes so they are clearly visible relative to the scene.
+  const diagonal = Math.max(size.x, size.y, size.z);
   if (axesRoot) {
     const scale = diagonal > 0 ? diagonal * 0.12 : 1;
     axesRoot.scaling = new Vector3(scale, scale, scale);
   }
+
+  // Orthographic frustum: fit the model + some padding.
+  const orthoExtent = Math.max(10, diagonal * 0.6);
+  camera.orthoLeft = -orthoExtent;
+  camera.orthoRight = orthoExtent;
+  camera.orthoTop = orthoExtent;
+  camera.orthoBottom = -orthoExtent;
 }

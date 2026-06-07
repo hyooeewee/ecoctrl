@@ -1,16 +1,18 @@
 /**
- * Helper to fetch a model file and return a Blob URL for BabylonJS.
+ * Browser Cache API wrapper for persistent 3D model caching across page reloads.
  *
- * Uses the Cache API for persistent cross-session caching so model files
- * survive page reloads without re-downloading. Falls back to a plain fetch
+ * Uses caches.open() to store fetch responses so GLB/GLTF files survive
+ * browser refreshes without re-downloading. Falls back to a plain fetch
  * when the Cache API is unavailable or fails.
- *
- * Callers must pass pluginExtension (e.g. ".glb") to SceneLoader so it
- * picks the right loader — blob URLs have no file extension.
  */
 
 const MODEL_CACHE_NAME = "ecoctrl-models-v1";
 
+/**
+ * Fetch a model URL and return a Blob URL suitable for BabylonJS SceneLoader.
+ * On first call the response is stored in the Cache API; subsequent calls
+ * serve from cache.
+ */
 export async function fetchModelUrl(url: string): Promise<string> {
   try {
     const cache = await caches.open(MODEL_CACHE_NAME);
@@ -34,13 +36,10 @@ export async function fetchModelUrl(url: string): Promise<string> {
 }
 
 /**
- * Remove a cached model file. Called when the file is deleted from config.
+ * Remove a cached model file. Call when the file is deleted from config.
+ * Errors are propagated so callers can decide whether to surface them.
  */
 export async function clearModelCache(url: string): Promise<void> {
-  try {
-    const cache = await caches.open(MODEL_CACHE_NAME);
-    await cache.delete(url);
-  } catch {
-    // Ignore cleanup failures.
-  }
+  const cache = await caches.open(MODEL_CACHE_NAME);
+  await cache.delete(url);
 }

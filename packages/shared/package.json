@@ -5,7 +5,8 @@
   "main": "index.ts",
   "exports": {
     ".": "./index.ts",
-    "./vite": "./config/vite.config.base.ts"
+    "./vite": "./config/vite.config.base.ts",
+    "./model-cache": "./model-cache.ts"
   },
   "dependencies": {
     "zod": "^4.3.6"
