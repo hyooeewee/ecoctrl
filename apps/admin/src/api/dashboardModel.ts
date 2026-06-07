@@ -13,4 +13,12 @@ export const dashboardModelApi = {
       body: form,
     });
   },
+  uploadMultiple: (files: File[]) => {
+    const form = new FormData();
+    files.forEach((file) => form.append("file", file));
+    return request<DashboardModelConfig>("/dashboard-model", {
+      method: "POST",
+      body: form,
+    });
+  },
 };

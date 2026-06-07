@@ -4,7 +4,7 @@
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { toast } from "sonner";
-import { Save, Eye, Grid3X3, Axis3D, File, X } from "lucide-react";
+import { Save, Eye, Grid3X3, Axis3D, File, X, Upload, ChevronDown } from "lucide-react";
 import { Button } from "@ecoctrl/ui";
 import { Card, CardContent } from "@ecoctrl/ui";
 import { Badge } from "@ecoctrl/ui";
@@ -64,8 +64,12 @@ export default function DashboardModel() {
   const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
   const [showGrid, setShowGrid] = useState(true);
   const [showAxes, setShowAxes] = useState(true);
+  const [visibleFileIds, setVisibleFileIds] = useState<Set<string>>(new Set());
+  const [filesExpanded, setFilesExpanded] = useState(true);
+  const [labelsExpanded, setLabelsExpanded] = useState(true);
 
   const sceneRef = useRef<BabylonSceneRef>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ========================================
   // Data Loading
@@ -76,6 +80,10 @@ export default function DashboardModel() {
       try {
         const data = await dashboardModelApi.get();
         setConfig(data);
+        // Initialize visibility: all files visible by default
+        if (data.modelFiles?.length) {
+          setVisibleFileIds(new Set(data.modelFiles.map((f) => f.id)));
+        }
         // Load labels from config if available
         if (data.labels) {
           setLabels(data.labels as Label[]);
@@ -90,21 +98,20 @@ export default function DashboardModel() {
   }, []);
 
   // ========================================
-  // File Upload (one at a time)
+  // File Upload (batch)
   // ========================================
 
-  const handleUploadNext = async () => {
+  const handleUploadAll = async () => {
     if (pendingFiles.length === 0) return;
-    const [nextFile, ...rest] = pendingFiles;
     setUploading(true);
     try {
-      const updated = await dashboardModelApi.upload(nextFile);
+      const updated = await dashboardModelApi.uploadMultiple(pendingFiles);
       setConfig(updated);
-      setPendingFiles(rest);
-      toast.success(`已上传: ${nextFile.name}`);
+      setPendingFiles([]);
+      toast.success(`已上传 ${pendingFiles.length} 个文件`);
     } catch (err) {
       console.error("Upload failed:", err);
-      toast.error(`上传失败: ${nextFile.name}`);
+      toast.error("上传失败");
     } finally {
       setUploading(false);
     }
@@ -313,18 +320,70 @@ export default function DashboardModel() {
   // Existing file info
   // ========================================
 
-  const existingFiles: ModelFileEntry[] = config?.modelFiles?.length
-    ? config.modelFiles
-    : config?.modelFileUrl
-      ? [
-          {
-            id: "legacy",
-            fileKey: config.modelFileUrl,
-            name: config.modelFileUrl.split("/").pop() || "legacy",
-            priority: "critical",
-          },
-        ]
-      : [];
+  const existingFiles: ModelFileEntry[] = useMemo(
+    () =>
+      config?.modelFiles?.length
+        ? config.modelFiles
+        : config?.modelFileUrl
+          ? [
+              {
+                id: "legacy",
+                fileKey: config.modelFileUrl,
+                name: config.modelFileUrl.split("/").pop() || "legacy",
+                priority: "critical",
+              },
+            ]
+          : [],
+    [config],
+  );
+
+  const modelSources = useMemo(
+    () =>
+      existingFiles.map((file) => ({
+        id: file.id,
+        url: `/api/dashboard-model/file?key=${encodeURIComponent(file.fileKey)}`,
+        visible: visibleFileIds.has(file.id),
+      })),
+    [existingFiles, visibleFileIds],
+  );
+
+  // ========================================
+  // File Visibility
+  // ========================================
+
+  const toggleFileVisible = (fileId: string) => {
+    setVisibleFileIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(fileId)) {
+        next.delete(fileId);
+      } else {
+        next.add(fileId);
+      }
+      return next;
+    });
+  };
+
+  // ========================================
+  // File Deletion
+  // ========================================
+
+  const handleDeleteFile = async (fileId: string) => {
+    if (!config) return;
+    const newFiles = config.modelFiles?.filter((f) => f.id !== fileId) ?? [];
+    try {
+      await dashboardModelApi.update({ modelFiles: newFiles });
+      setConfig((prev) => (prev ? { ...prev, modelFiles: newFiles } : null));
+      setVisibleFileIds((prev) => {
+        const next = new Set(prev);
+        next.delete(fileId);
+        return next;
+      });
+      toast.success("模型文件已删除");
+    } catch (err) {
+      console.error("Delete failed:", err);
+      toast.error("删除失败");
+    }
+  };
 
   // ========================================
   // Render
@@ -391,105 +450,172 @@ export default function DashboardModel() {
       {/* Main Content */}
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-3">
         {/* 3D Viewport */}
-        <Card className="flex min-h-0 flex-1 flex-col overflow-hidden border-none shadow-sm lg:col-span-2">
-          <CardContent className="flex min-h-0 flex-1 flex-col p-0">
-            <BabylonScene
-              ref={sceneRef}
-              src={config?.modelFileUrl ?? null}
-              className="h-full w-full flex-1"
-            />
-          </CardContent>
-        </Card>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-black lg:col-span-2">
+          <BabylonScene ref={sceneRef} models={modelSources} className="h-full w-full flex-1" />
+        </div>
 
         {/* Right Panel */}
         <Card className="flex flex-col overflow-hidden border-none shadow-sm lg:col-span-1">
-          <CardContent className="flex flex-1 flex-col overflow-hidden p-4">
+          <CardContent className="flex flex-1 flex-col overflow-auto p-4">
             {/* Model Files */}
             <div className="mb-4">
-              <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-sm font-semibold">模型文件</h3>
-                <span className="text-xs text-muted-foreground">{existingFiles.length} 个文件</span>
-              </div>
-
-              {/* Existing files list */}
-              {existingFiles.length > 0 && (
-                <div className="mb-3 space-y-1.5">
-                  {existingFiles.map((file, index) => {
-                    const fileName = file.name || file.fileKey.split("/").pop() || "未知";
-                    const ext = fileName.split(".").pop()?.toUpperCase() ?? "";
-                    return (
-                      <div
-                        key={index}
-                        className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2"
-                      >
-                        <File size={14} className="shrink-0 text-blue-500" />
-                        <span className="flex-1 truncate text-xs">{fileName}</span>
-                        <Badge variant="secondary" className="shrink-0 text-[10px]">
-                          {ext}
-                        </Badge>
-                      </div>
-                    );
-                  })}
+              <button
+                type="button"
+                className="mb-2 flex w-full items-center justify-between"
+                onClick={() => setFilesExpanded((v) => !v)}
+              >
+                <div className="flex items-center gap-1">
+                  <ChevronDown
+                    size={14}
+                    className={`shrink-0 text-muted-foreground transition-transform ${filesExpanded ? "" : "-rotate-90"}`}
+                  />
+                  <span className="text-sm font-semibold">模型文件</span>
                 </div>
-              )}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    {existingFiles.length} 个文件
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      fileInputRef.current?.click();
+                    }}
+                  >
+                    <Upload size={14} className="mr-1" />
+                    上传
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".glb,.gltf,.obj"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files?.length) {
+                        handleAddFiles(Array.from(e.target.files));
+                        e.target.value = "";
+                      }
+                    }}
+                  />
+                </div>
+              </button>
 
-              {/* Pending files to upload */}
-              {pendingFiles.length > 0 && (
-                <div className="mb-3 space-y-1.5">
-                  <div className="text-xs font-medium text-muted-foreground">待上传</div>
-                  {pendingFiles.map((file, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-2 rounded-md border border-dashed border-blue-400 bg-blue-50/50 px-3 py-2"
-                    >
-                      <File size={14} className="shrink-0 text-blue-500" />
-                      <span className="flex-1 truncate text-xs">{file.name}</span>
-                      <Badge variant="secondary" className="shrink-0 text-[10px]">
-                        {file.name.split(".").pop()?.toUpperCase()}
-                      </Badge>
-                      <button
-                        type="button"
-                        className="ml-1 rounded p-0.5 hover:bg-muted-foreground/20"
-                        onClick={() => handleRemovePendingFile(index)}
-                      >
-                        <X size={12} />
-                      </button>
+              {filesExpanded && (
+                <>
+                  {/* Existing files list */}
+                  {existingFiles.length > 0 && (
+                    <div className="mb-3 space-y-1.5">
+                      {existingFiles.map((file) => {
+                        const fileName = file.name || file.fileKey.split("/").pop() || "未知";
+                        const ext = fileName.split(".").pop()?.toUpperCase() ?? "";
+                        const isVisible = visibleFileIds.has(file.id);
+                        return (
+                          <div
+                            key={file.id}
+                            className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isVisible}
+                              onChange={() => toggleFileVisible(file.id)}
+                              className="h-3.5 w-3.5 shrink-0 accent-primary"
+                              title={isVisible ? "隐藏模型" : "显示模型"}
+                            />
+                            <File size={14} className="shrink-0 text-blue-500" />
+                            <span className="flex-1 truncate text-xs">{fileName}</span>
+                            <Badge variant="secondary" className="shrink-0 text-[10px]">
+                              {ext}
+                            </Badge>
+                            <button
+                              type="button"
+                              className="ml-1 rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                              onClick={() => handleDeleteFile(file.id)}
+                              title="删除"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))}
-                </div>
-              )}
+                  )}
 
-              {/* Upload zone */}
-              <ModelFileZone
-                file={null}
-                onFileSelect={(file) => handleAddFiles([file])}
-                onFileClear={() => {}}
-                acceptedFormats=".glb,.gltf,.obj"
-              />
+                  {/* Pending files to upload */}
+                  {pendingFiles.length > 0 && (
+                    <div className="mb-3 space-y-1.5">
+                      <div className="text-xs font-medium text-muted-foreground">待上传</div>
+                      {pendingFiles.map((file, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-2 rounded-md border border-dashed border-blue-400 bg-blue-50/50 px-3 py-2"
+                        >
+                          <File size={14} className="shrink-0 text-blue-500" />
+                          <span className="flex-1 truncate text-xs">{file.name}</span>
+                          <Badge variant="secondary" className="shrink-0 text-[10px]">
+                            {file.name.split(".").pop()?.toUpperCase()}
+                          </Badge>
+                          <button
+                            type="button"
+                            className="ml-1 rounded p-0.5 hover:bg-muted-foreground/20"
+                            onClick={() => handleRemovePendingFile(index)}
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
-              {/* Upload buttons */}
-              {pendingFiles.length > 0 && (
-                <div className="mt-2 flex gap-2">
-                  <Button className="flex-1" onClick={handleUploadNext} disabled={uploading}>
-                    {uploading ? "上传中..." : `上传下一个 (${pendingFiles.length})`}
-                  </Button>
-                  <Button variant="outline" onClick={handleClearPendingFiles}>
-                    清空
-                  </Button>
-                </div>
+                  {/* Upload zone — only shown when no files at all */}
+                  {existingFiles.length === 0 && pendingFiles.length === 0 && (
+                    <ModelFileZone
+                      file={null}
+                      onFileSelect={(file) => handleAddFiles([file])}
+                      onFileClear={() => {}}
+                      acceptedFormats=".glb,.gltf,.obj"
+                    />
+                  )}
+
+                  {/* Upload buttons */}
+                  {pendingFiles.length > 0 && (
+                    <div className="mt-2 flex gap-2">
+                      <Button className="flex-1" onClick={handleUploadAll} disabled={uploading}>
+                        {uploading ? "上传中..." : `上传全部 (${pendingFiles.length})`}
+                      </Button>
+                      <Button variant="outline" onClick={handleClearPendingFiles}>
+                        清空
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
             {/* Label Tree */}
-            <div className="mb-4 min-h-0 flex-1 overflow-auto">
-              <LabelTree
-                labels={labelTreeData}
-                selectedId={selectedLabelId}
-                onSelect={handleLabelSelect}
-                onAdd={handleLabelAdd}
-                onDelete={handleLabelDelete}
-                onEdit={handleLabelEdit}
-              />
+            <div className="mb-4">
+              <button
+                type="button"
+                className="mb-2 flex w-full items-center gap-1"
+                onClick={() => setLabelsExpanded((v) => !v)}
+              >
+                <ChevronDown
+                  size={14}
+                  className={`shrink-0 text-muted-foreground transition-transform ${labelsExpanded ? "" : "-rotate-90"}`}
+                />
+                <span className="text-sm font-semibold">标签树</span>
+              </button>
+              {labelsExpanded && (
+                <LabelTree
+                  labels={labelTreeData}
+                  selectedId={selectedLabelId}
+                  onSelect={handleLabelSelect}
+                  onAdd={handleLabelAdd}
+                  onDelete={handleLabelDelete}
+                  onEdit={handleLabelEdit}
+                />
+              )}
             </div>
 
             {/* Label Config */}
