@@ -3,12 +3,12 @@
 // ========================================
 
 import React, { useEffect, useRef, useMemo } from "react";
-import { File, Upload, ChevronDown, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { File, Upload, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { Button } from "@ecoctrl/ui";
 import { Badge } from "@ecoctrl/ui";
 import { ScrollArea } from "@ecoctrl/ui";
-import { cn } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger } from "@ecoctrl/ui";
 
 import ModelFileZone from "@/components/ModelFileZone";
 import ModelEditorTopBar from "@/components/model-editor/ModelEditorTopBar";
@@ -25,11 +25,7 @@ import {
   type LabelMarkerData,
 } from "@/components/babylon-editor";
 import { Vector3 } from "@babylonjs/core";
-import {
-  useModelEditorStore,
-  selectExistingFiles,
-  selectSelectedLabel,
-} from "@/store/modelEditorStore";
+import { useModelEditorStore } from "@/store/modelEditorStore";
 import { useAppStore } from "@/store/appStore";
 
 // ========================================
@@ -43,12 +39,11 @@ export default function DashboardModel() {
   const setActiveTab = useAppStore((state) => state.setActiveTab);
 
   // Store state (selective subscriptions)
+  const config = useModelEditorStore((s) => s.config);
   const loading = useModelEditorStore((s) => s.loading);
   const editorMode = useModelEditorStore((s) => s.editorMode);
   const showGrid = useModelEditorStore((s) => s.showGrid);
   const showAxes = useModelEditorStore((s) => s.showAxes);
-  const filesExpanded = useModelEditorStore((s) => s.filesExpanded);
-  const labelsExpanded = useModelEditorStore((s) => s.labelsExpanded);
   const panelOpen = useModelEditorStore((s) => s.panelOpen);
   const visibleFileIds = useModelEditorStore((s) => s.visibleFileIds);
   const loadingProgress = useModelEditorStore((s) => s.loadingProgress);
@@ -77,14 +72,29 @@ export default function DashboardModel() {
     setEditorMode,
     toggleGrid,
     toggleAxes,
-    toggleFilesExpanded,
-    toggleLabelsExpanded,
     togglePanel,
   } = useModelEditorStore();
 
-  // Derived
-  const existingFiles = useModelEditorStore(selectExistingFiles);
-  const selectedLabel = useModelEditorStore(selectSelectedLabel);
+  // Derived — computed in component to avoid unstable selectors
+  const existingFiles = useMemo(() => {
+    if (config?.modelFiles?.length) return config.modelFiles;
+    if (config?.modelFileUrl) {
+      return [
+        {
+          id: "legacy",
+          fileKey: config.modelFileUrl,
+          name: config.modelFileUrl.split("/").pop() || "legacy",
+          priority: "critical" as const,
+        },
+      ];
+    }
+    return [];
+  }, [config]);
+
+  const selectedLabel = useMemo(
+    () => labels.find((l) => l.id === selectedLabelId) ?? null,
+    [labels, selectedLabelId],
+  );
 
   const modelSources = useMemo(
     () =>
@@ -199,214 +209,154 @@ export default function DashboardModel() {
                 </Button>
               </div>
 
-              {/* Editor Mode Tabs */}
-              <div className="flex gap-1 border-b border-border p-2">
-                {(
-                  [
-                    { id: "select" as const, label: "选择" },
-                    { id: "placeLabel" as const, label: "放置标签" },
-                    { id: "clipPreview" as const, label: "剖切" },
-                  ] as const
-                ).map((m) => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => setEditorMode(m.id)}
-                    className={cn(
-                      "flex-1 rounded px-2 py-1 text-xs font-medium transition-colors",
-                      editorMode === m.id
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                    )}
-                  >
-                    {m.label}
-                  </button>
-                ))}
-              </div>
+              {/* Panel Tabs */}
+              <Tabs value={editorMode} onValueChange={(v) => setEditorMode(v as typeof editorMode)}>
+                <TabsList className="w-full rounded-none border-b border-border bg-transparent p-0">
+                  <TabsTrigger value="select">模型</TabsTrigger>
+                  <TabsTrigger value="placeLabel">标签</TabsTrigger>
+                  <TabsTrigger value="clipPreview">动作</TabsTrigger>
+                </TabsList>
+              </Tabs>
 
               {/* Panel Content */}
               <ScrollArea className="flex-1">
                 <div className="p-3">
                   {/* Model Files */}
                   <div className="mb-4">
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      className="mb-2 flex w-full cursor-pointer items-center justify-between"
-                      onClick={toggleFilesExpanded}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          toggleFilesExpanded();
-                        }
-                      }}
-                    >
-                      <div className="flex items-center gap-1">
-                        <ChevronDown
-                          size={14}
-                          className={cn(
-                            "shrink-0 text-muted-foreground transition-transform",
-                            filesExpanded ? "" : "-rotate-90",
-                          )}
-                        />
-                        <span className="text-sm font-semibold">模型文件</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">
-                          {existingFiles.length} 个文件
-                        </span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            fileInputRef.current?.click();
-                          }}
-                        >
-                          <Upload size={14} className="mr-1" />
-                          上传
-                        </Button>
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept=".glb,.gltf,.obj"
-                          multiple
-                          className="hidden"
-                          onChange={(e) => {
-                            if (e.target.files?.length) {
-                              addPendingFiles(Array.from(e.target.files));
-                              e.target.value = "";
-                            }
-                          }}
-                        />
-                      </div>
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">
+                        {existingFiles.length} 个文件
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <Upload size={14} className="mr-1" />
+                        上传
+                      </Button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".glb,.gltf,.obj"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          if (e.target.files?.length) {
+                            addPendingFiles(Array.from(e.target.files));
+                            e.target.value = "";
+                          }
+                        }}
+                      />
                     </div>
 
-                    {filesExpanded && (
-                      <>
-                        {existingFiles.length > 0 && (
-                          <div className="mb-3 space-y-1.5">
-                            {existingFiles.map((file) => {
-                              const fileName = file.name || file.fileKey.split("/").pop() || "未知";
-                              const ext = fileName.split(".").pop()?.toUpperCase() ?? "";
-                              const isVisible = visibleFileIds.has(file.id);
-                              const progress = loadingProgress.get(file.id);
-                              const isLoading = progress !== undefined && progress < 1;
-                              return (
-                                <div
-                                  key={file.id}
-                                  className="rounded-md border bg-muted/30 px-3 py-2"
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <input
-                                      type="checkbox"
-                                      checked={isVisible}
-                                      onChange={() => toggleFileVisible(file.id)}
-                                      className="h-3.5 w-3.5 shrink-0 accent-primary"
-                                      title={isVisible ? "隐藏模型" : "显示模型"}
-                                    />
-                                    <File size={14} className="shrink-0 text-blue-500" />
-                                    <span className="flex-1 truncate text-xs">{fileName}</span>
-                                    <Badge variant="secondary" className="shrink-0 text-[10px]">
-                                      {ext}
-                                    </Badge>
-                                    <button
-                                      type="button"
-                                      className="ml-1 rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                                      onClick={() => deleteFile(file.id)}
-                                      title="删除"
-                                    >
-                                      <Trash2 size={12} />
-                                    </button>
-                                  </div>
-                                  {isLoading && (
-                                    <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-muted">
-                                      <div
-                                        className="h-full bg-blue-500 transition-all"
-                                        style={{ width: `${progress * 100}%` }}
-                                      />
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        {pendingFiles.length > 0 && (
-                          <div className="mb-3 space-y-1.5">
-                            <div className="text-xs font-medium text-muted-foreground">待上传</div>
-                            {pendingFiles.map((file, index) => (
+                    <>
+                      {existingFiles.length > 0 && (
+                        <div className="mb-3 space-y-1.5">
+                          {existingFiles.map((file) => {
+                            const fileName = file.name || file.fileKey.split("/").pop() || "未知";
+                            const ext = fileName.split(".").pop()?.toUpperCase() ?? "";
+                            const isVisible = visibleFileIds.has(file.id);
+                            const progress = loadingProgress.get(file.id);
+                            const isLoading = progress !== undefined && progress < 1;
+                            return (
                               <div
-                                key={index}
-                                className="flex items-center gap-2 rounded-md border border-dashed border-blue-400 bg-blue-50/50 px-3 py-2"
+                                key={file.id}
+                                className="rounded-md border bg-muted/30 px-3 py-2"
                               >
-                                <File size={14} className="shrink-0 text-blue-500" />
-                                <span className="flex-1 truncate text-xs">{file.name}</span>
-                                <Badge variant="secondary" className="shrink-0 text-[10px]">
-                                  {file.name.split(".").pop()?.toUpperCase()}
-                                </Badge>
-                                <button
-                                  type="button"
-                                  className="ml-1 rounded p-0.5 hover:bg-muted-foreground/20"
-                                  onClick={() => removePendingFile(index)}
-                                >
-                                  <Trash2 size={12} />
-                                </button>
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={isVisible}
+                                    onChange={() => toggleFileVisible(file.id)}
+                                    className="h-3.5 w-3.5 shrink-0 accent-primary"
+                                    title={isVisible ? "隐藏模型" : "显示模型"}
+                                  />
+                                  <File size={14} className="shrink-0 text-blue-500" />
+                                  <span className="flex-1 truncate text-xs">{fileName}</span>
+                                  <Badge variant="secondary" className="shrink-0 text-[10px]">
+                                    {ext}
+                                  </Badge>
+                                  <button
+                                    type="button"
+                                    className="ml-1 rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                    onClick={() => deleteFile(file.id)}
+                                    title="删除"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                </div>
+                                {isLoading && (
+                                  <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-muted">
+                                    <div
+                                      className="h-full bg-blue-500 transition-all"
+                                      style={{ width: `${progress * 100}%` }}
+                                    />
+                                  </div>
+                                )}
                               </div>
-                            ))}
-                          </div>
-                        )}
+                            );
+                          })}
+                        </div>
+                      )}
 
-                        {existingFiles.length === 0 && pendingFiles.length === 0 && (
-                          <ModelFileZone
-                            file={null}
-                            onFileSelect={(file) => addPendingFiles([file])}
-                            onFileClear={() => {}}
-                            acceptedFormats=".glb,.gltf,.obj"
-                          />
-                        )}
+                      {pendingFiles.length > 0 && (
+                        <div className="mb-3 space-y-1.5">
+                          <div className="text-xs font-medium text-muted-foreground">待上传</div>
+                          {pendingFiles.map((file, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center gap-2 rounded-md border border-dashed border-blue-400 bg-blue-50/50 px-3 py-2"
+                            >
+                              <File size={14} className="shrink-0 text-blue-500" />
+                              <span className="flex-1 truncate text-xs">{file.name}</span>
+                              <Badge variant="secondary" className="shrink-0 text-[10px]">
+                                {file.name.split(".").pop()?.toUpperCase()}
+                              </Badge>
+                              <button
+                                type="button"
+                                className="ml-1 rounded p-0.5 hover:bg-muted-foreground/20"
+                                onClick={() => removePendingFile(index)}
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
-                        {pendingFiles.length > 0 && (
-                          <div className="mt-2 flex gap-2">
-                            <Button className="flex-1" onClick={uploadAll} disabled={uploading}>
-                              {uploading ? "上传中..." : `上传全部 (${pendingFiles.length})`}
-                            </Button>
-                            <Button variant="outline" onClick={clearPendingFiles}>
-                              清空
-                            </Button>
-                          </div>
-                        )}
-                      </>
-                    )}
+                      {existingFiles.length === 0 && pendingFiles.length === 0 && (
+                        <ModelFileZone
+                          file={null}
+                          onFileSelect={(file) => addPendingFiles([file])}
+                          onFileClear={() => {}}
+                          acceptedFormats=".glb,.gltf,.obj"
+                        />
+                      )}
+
+                      {pendingFiles.length > 0 && (
+                        <div className="mt-2 flex gap-2">
+                          <Button className="flex-1" onClick={uploadAll} disabled={uploading}>
+                            {uploading ? "上传中..." : `上传全部 (${pendingFiles.length})`}
+                          </Button>
+                          <Button variant="outline" onClick={clearPendingFiles}>
+                            清空
+                          </Button>
+                        </div>
+                      )}
+                    </>
                   </div>
 
                   {/* Label Tree */}
                   <div className="mb-4">
-                    <button
-                      type="button"
-                      className="mb-2 flex w-full items-center gap-1"
-                      onClick={toggleLabelsExpanded}
-                    >
-                      <ChevronDown
-                        size={14}
-                        className={cn(
-                          "shrink-0 text-muted-foreground transition-transform",
-                          labelsExpanded ? "" : "-rotate-90",
-                        )}
-                      />
-                      <span className="text-sm font-semibold">标签树</span>
-                    </button>
-                    {labelsExpanded && (
-                      <LabelTree
-                        labels={labelTreeData}
-                        selectedId={selectedLabelId}
-                        onSelect={selectLabel}
-                        onAdd={addLabel}
-                        onDelete={deleteLabel}
-                        onEdit={(id) => selectLabel(id)}
-                      />
-                    )}
+                    <LabelTree
+                      labels={labelTreeData}
+                      selectedId={selectedLabelId}
+                      onSelect={selectLabel}
+                      onAdd={addLabel}
+                      onDelete={deleteLabel}
+                      onEdit={(id) => selectLabel(id)}
+                    />
                   </div>
 
                   {/* Label Config */}
