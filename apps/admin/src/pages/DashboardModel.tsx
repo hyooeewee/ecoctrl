@@ -41,6 +41,7 @@ export default function DashboardModel() {
   // Store state (selective subscriptions)
   const config = useModelEditorStore((s) => s.config);
   const loading = useModelEditorStore((s) => s.loading);
+  const saving = useModelEditorStore((s) => s.saving);
   const editorMode = useModelEditorStore((s) => s.editorMode);
   const showGrid = useModelEditorStore((s) => s.showGrid);
   const showAxes = useModelEditorStore((s) => s.showAxes);
@@ -181,7 +182,7 @@ export default function DashboardModel() {
       <ModelEditorTopBar
         onBack={() => setActiveTab("models")}
         onSave={saveLabels}
-        saving={useModelEditorStore((s) => s.saving)}
+        saving={saving}
       />
 
       <div className="relative flex-1 overflow-hidden">
