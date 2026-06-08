@@ -122,15 +122,10 @@ export default function ModelViewer({ src, alt, format }: ModelViewerProps) {
 
     const rootNode = new TransformNode("modelRoot", scene);
     let cancelled = false;
-    let blobUrl: string | null = null;
 
-    fetchModelUrl(src)
+    fetchModelUrl(src, false)
       .then((url) => {
-        if (cancelled) {
-          URL.revokeObjectURL(url);
-          return null;
-        }
-        blobUrl = url;
+        if (cancelled) return null;
         return SceneLoader.ImportMeshAsync("", "", url, scene, undefined, ".glb");
       })
       .then((result) => {
@@ -153,7 +148,6 @@ export default function ModelViewer({ src, alt, format }: ModelViewerProps) {
 
     return () => {
       cancelled = true;
-      if (blobUrl) URL.revokeObjectURL(blobUrl);
     };
   }, [src]);
 

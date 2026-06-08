@@ -50,15 +50,10 @@ export default function CardModelPreview({ src, alt: _alt }: CardModelPreviewPro
     });
 
     let cancelled = false;
-    let blobUrl: string | null = null;
 
-    fetchModelUrl(src)
+    fetchModelUrl(src, false)
       .then((url) => {
-        if (cancelled) {
-          URL.revokeObjectURL(url);
-          return null;
-        }
-        blobUrl = url;
+        if (cancelled) return null;
         return SceneLoader.ImportMeshAsync("", "", url, scene, undefined, ".glb");
       })
       .then((result) => {
@@ -80,7 +75,6 @@ export default function CardModelPreview({ src, alt: _alt }: CardModelPreviewPro
     return () => {
       cancelled = true;
       ro.disconnect();
-      if (blobUrl) URL.revokeObjectURL(blobUrl);
       scene.dispose();
       engine.dispose();
     };

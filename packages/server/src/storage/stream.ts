@@ -31,10 +31,13 @@ export async function streamFile(
 ): Promise<void> {
   // Get file metadata for caching headers
   const stat = await storage.stat(key);
-  const lastModified = stat.lastModified ?? new Date();
 
-  // Handle conditional request — return 304 if file unchanged
-  if (options?.request) {
+  // Handle conditional request — return 304 if file unchanged.
+  // Only use Last-Modified when storage actually provides it;
+  // falling back to new Date() would make the header unstable and
+  // break browser caching.
+  const lastModified = stat.lastModified;
+  if (lastModified && options?.request) {
     const ifModifiedSince = options.request.headers["if-modified-since"];
     if (ifModifiedSince) {
       const clientDate = new Date(ifModifiedSince);
@@ -61,9 +64,11 @@ export async function streamFile(
   const headers: Record<string, string | number> = {
     "Content-Type": resolveContentType(key),
     "Cache-Control": "public, max-age=3600",
-    "Last-Modified": lastModified.toUTCString(),
     "Content-Length": stat.size,
   };
+  if (lastModified) {
+    headers["Last-Modified"] = lastModified.toUTCString();
+  }
   if (options?.disposition) {
     headers["Content-Disposition"] = options.disposition;
   }
