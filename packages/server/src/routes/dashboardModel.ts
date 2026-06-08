@@ -9,7 +9,7 @@ import {
 import { findDashboardModel, updateDashboardModel } from "@/repositories/dashboardModel";
 import { getModelStorage } from "@/storage";
 import { streamFile } from "@/storage/stream";
-import { errors } from "@/lib/schemas";
+import { errors, errorResponseSchema } from "@/lib/schemas";
 
 const storage = getModelStorage();
 
@@ -80,65 +80,77 @@ export default async function dashboardModelRoutes(fastify: FastifyInstance) {
         consumes: ["multipart/form-data"],
         response: {
           200: DashboardModelConfigSchema,
+          413: errorResponseSchema,
           ...errors,
         },
       },
     },
     async (request, reply) => {
-      const parts = request.parts();
-      const uploadedFiles: { buffer: Buffer; originalName: string }[] = [];
+      try {
+        const parts = request.parts();
+        const uploadedFiles: { buffer: Buffer; originalName: string }[] = [];
 
-      for await (const part of parts) {
-        if (part.type === "file") {
-          const chunks: Buffer[] = [];
-          for await (const chunk of part.file) {
-            chunks.push(chunk);
+        for await (const part of parts) {
+          if (part.type === "file") {
+            const chunks: Buffer[] = [];
+            for await (const chunk of part.file) {
+              chunks.push(chunk);
+            }
+            uploadedFiles.push({
+              buffer: Buffer.concat(chunks),
+              originalName: part.filename,
+            });
           }
-          uploadedFiles.push({
-            buffer: Buffer.concat(chunks),
-            originalName: part.filename,
+        }
+
+        if (uploadedFiles.length === 0) {
+          return reply.status(400).send({ error: "No file uploaded" });
+        }
+
+        const existing = await findDashboardModel();
+        const modelFiles = existing?.modelFiles ? [...existing.modelFiles] : [];
+
+        for (const file of uploadedFiles) {
+          const fileId = crypto.randomUUID();
+          const ext = file.originalName.includes(".")
+            ? file.originalName.slice(file.originalName.lastIndexOf("."))
+            : "";
+          const key = `${fileId}${ext}`;
+
+          await storage.put(key, file.buffer);
+
+          modelFiles.push({
+            id: fileId,
+            fileKey: key,
+            name: file.originalName,
+            priority: "background",
           });
         }
-      }
 
-      if (uploadedFiles.length === 0) {
-        return reply.status(400).send({ error: "No file uploaded" });
-      }
-
-      const existing = await findDashboardModel();
-      const modelFiles = existing?.modelFiles ? [...existing.modelFiles] : [];
-
-      for (const file of uploadedFiles) {
-        const fileId = crypto.randomUUID();
-        const ext = file.originalName.includes(".")
-          ? file.originalName.slice(file.originalName.lastIndexOf("."))
-          : "";
-        const key = `${fileId}${ext}`;
-
-        await storage.put(key, file.buffer);
-
-        modelFiles.push({
-          id: fileId,
-          fileKey: key,
-          name: file.originalName,
-          priority: "background",
+        const updated = await updateDashboardModel({
+          modelFileUrl: existing?.modelFileUrl ?? null,
+          modelFiles,
+          cameraPreset: existing?.cameraPreset ?? "Default_View_01",
+          ambientLightIntensity: existing?.ambientLightIntensity ?? 0.85,
+          hotspots: existing?.hotspots ?? [],
+          labels: existing?.labels ?? [],
         });
+
+        const response = {
+          ...updated,
+          modelFileUrl: updated.modelFileUrl ? "/api/dashboard-model/file" : null,
+        };
+        return reply.send(response);
+      } catch (err) {
+        const code = (err as { code?: string }).code;
+        if (code === "FST_FILES_LIMIT") {
+          return reply.status(413).send({ error: "单次上传文件数量超过限制（最多 10 个）" });
+        }
+        if (code === "FST_REQ_FILE_TOO_LARGE") {
+          return reply.status(413).send({ error: "单个文件大小超过 500MB 限制" });
+        }
+        throw err;
       }
-
-      const updated = await updateDashboardModel({
-        modelFileUrl: existing?.modelFileUrl ?? null,
-        modelFiles,
-        cameraPreset: existing?.cameraPreset ?? "Default_View_01",
-        ambientLightIntensity: existing?.ambientLightIntensity ?? 0.85,
-        hotspots: existing?.hotspots ?? [],
-        labels: existing?.labels ?? [],
-      });
-
-      const response = {
-        ...updated,
-        modelFileUrl: updated.modelFileUrl ? "/api/dashboard-model/file" : null,
-      };
-      return reply.send(response);
     },
   );
 

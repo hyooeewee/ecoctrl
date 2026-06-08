@@ -183,7 +183,8 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
       toast.success(`已上传 ${pendingFiles.length} 个文件`);
     } catch (err) {
       console.error("Upload failed:", err);
-      toast.error("上传失败");
+      const message = err instanceof Error ? err.message : "上传失败";
+      toast.error(message);
     } finally {
       set({ uploading: false });
     }
