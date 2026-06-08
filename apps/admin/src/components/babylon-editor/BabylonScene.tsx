@@ -518,9 +518,13 @@ function frameCameraToVisibleModels(
   camera.setTarget(Vector3.Zero());
   camera.alpha = Math.PI / 4;
   camera.beta = Math.acos(1 / Math.sqrt(3));
-  camera.radius = 30;
   camera.lowerRadiusLimit = 1;
   camera.upperRadiusLimit = 500;
+
+  // Ensure the camera sits outside the model so the near plane does not
+  // clip the front-facing geometry.
+  const maxCornerDist = Math.max(min.length(), max.length());
+  camera.radius = Math.max(30, maxCornerDist * 1.5);
 
   // Scale axes so they are clearly visible relative to the scene.
   const size = max.subtract(min);
