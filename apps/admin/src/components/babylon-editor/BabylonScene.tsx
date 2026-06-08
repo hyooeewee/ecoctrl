@@ -81,7 +81,7 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
     const rootNodeRef = useRef<TransformNode | null>(null);
     const guiTextureRef = useRef<AdvancedDynamicTexture | null>(null);
     const loadedModelsRef = useRef<
-      Map<string, { root: TransformNode; blobUrl: string; meshes: AbstractMesh[] }>
+      Map<string, { root: TransformNode; modelUrl: string; meshes: AbstractMesh[] }>
     >(new Map());
     const loadingIdsRef = useRef<Set<string>>(new Set());
     const modelsRef = useRef<ModelSource[]>(models);
@@ -214,7 +214,6 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
         resizeObserver.disconnect();
         loadedModelsRef.current.forEach((data) => {
           data.root.dispose(false, true);
-          URL.revokeObjectURL(data.blobUrl);
         });
         loadedModelsRef.current.clear();
         loadingIdsRef.current.clear();
@@ -255,7 +254,6 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
       loadedModelsRef.current.forEach((data, id) => {
         if (!models.find((m) => m.id === id)) {
           data.root.dispose(false, true);
-          URL.revokeObjectURL(data.blobUrl);
           loadedModelsRef.current.delete(id);
         }
       });
@@ -296,9 +294,8 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
               }
             };
 
-            const blobUrl = await fetchModelUrl(model.url);
+            const modelFileUrl = await fetchModelUrl(model.url, false);
             if (cancelled) {
-              URL.revokeObjectURL(blobUrl);
               loadingIdsRef.current.delete(model.id);
               continue;
             }
@@ -306,14 +303,13 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
             const result = await SceneLoader.ImportMeshAsync(
               "", // mesh names (empty = all)
               "", // scene root (empty = use rootUrl)
-              blobUrl, // blob URL from cache-backed fetch
+              modelFileUrl, // original URL — browser HTTP cache handles it
               scene,
               onProgress,
-              ".glb", // force GLB loader — blob URLs have no extension
+              ".glb", // force GLB loader
             );
 
             if (cancelled) {
-              URL.revokeObjectURL(blobUrl);
               // ImportMeshAsync already injected meshes/transformNodes into the
               // scene. If we bail out we must dispose them, otherwise a later
               // re-run will duplicate geometry.
@@ -346,7 +342,7 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
 
             loadedModelsRef.current.set(model.id, {
               root: modelRoot,
-              blobUrl,
+              modelUrl: modelFileUrl,
               meshes: result.meshes,
             });
             onModelProgress?.(model.id, 1);
