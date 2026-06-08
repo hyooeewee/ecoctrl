@@ -55,8 +55,8 @@ await fastify.register(cors, {
 });
 await fastify.register(multipart, {
   limits: {
-    fileSize: 100 * 1024 * 1024, // 100MB
-    files: 1,
+    fileSize: 500 * 1024 * 1024, // 500MB per file
+    files: 10, // allow up to 10 files per request
   },
 });
 await fastify.register(swagger, {

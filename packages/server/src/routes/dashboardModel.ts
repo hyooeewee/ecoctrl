@@ -73,7 +73,7 @@ export default async function dashboardModelRoutes(fastify: FastifyInstance) {
   fastify.post(
     "/",
     {
-      bodyLimit: 100 * 1024 * 1024, // 100MB, matching multipart fileSize limit
+      bodyLimit: 5 * 1024 * 1024 * 1024, // 5GB cap for batch uploads (10 files × 500MB)
       schema: {
         tags: ["Dashboard"],
         summary: "Upload dashboard model file(s)",
