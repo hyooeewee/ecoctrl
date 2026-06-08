@@ -88,44 +88,36 @@ export default async function dashboardModelRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       try {
         const parts = request.parts();
-        const uploadedFiles: { buffer: Buffer; originalName: string }[] = [];
+        const uploadedMetas: { id: string; fileKey: string; name: string; priority: string }[] = [];
 
         for await (const part of parts) {
           if (part.type === "file") {
-            const chunks: Buffer[] = [];
-            for await (const chunk of part.file) {
-              chunks.push(chunk);
-            }
-            uploadedFiles.push({
-              buffer: Buffer.concat(chunks),
-              originalName: part.filename,
+            const fileId = crypto.randomUUID();
+            const ext = part.filename.includes(".")
+              ? part.filename.slice(part.filename.lastIndexOf("."))
+              : "";
+            const key = `${fileId}${ext}`;
+
+            // Stream directly to S3 without buffering in memory
+            await storage.put(key, part.file as unknown as ReadableStream);
+
+            uploadedMetas.push({
+              id: fileId,
+              fileKey: key,
+              name: part.filename,
+              priority: "background",
             });
           }
         }
 
-        if (uploadedFiles.length === 0) {
+        if (uploadedMetas.length === 0) {
           return reply.status(400).send({ error: "No file uploaded" });
         }
 
         const existing = await findDashboardModel();
-        const modelFiles = existing?.modelFiles ? [...existing.modelFiles] : [];
-
-        for (const file of uploadedFiles) {
-          const fileId = crypto.randomUUID();
-          const ext = file.originalName.includes(".")
-            ? file.originalName.slice(file.originalName.lastIndexOf("."))
-            : "";
-          const key = `${fileId}${ext}`;
-
-          await storage.put(key, file.buffer);
-
-          modelFiles.push({
-            id: fileId,
-            fileKey: key,
-            name: file.originalName,
-            priority: "background",
-          });
-        }
+        const modelFiles = existing?.modelFiles
+          ? [...existing.modelFiles, ...uploadedMetas]
+          : uploadedMetas;
 
         const updated = await updateDashboardModel({
           modelFileUrl: existing?.modelFileUrl ?? null,
