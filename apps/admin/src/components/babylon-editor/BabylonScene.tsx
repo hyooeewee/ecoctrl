@@ -16,6 +16,8 @@ import {
   TransformNode,
   MeshBuilder,
   StandardMaterial,
+  AbstractMesh,
+  Node,
   type ISceneLoaderProgressEvent,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
@@ -78,9 +80,9 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
     const cameraRef = useRef<ArcRotateCamera | null>(null);
     const rootNodeRef = useRef<TransformNode | null>(null);
     const guiTextureRef = useRef<AdvancedDynamicTexture | null>(null);
-    const loadedModelsRef = useRef<Map<string, { root: TransformNode; blobUrl: string }>>(
-      new Map(),
-    );
+    const loadedModelsRef = useRef<
+      Map<string, { root: TransformNode; blobUrl: string; meshes: AbstractMesh[] }>
+    >(new Map());
     const loadingIdsRef = useRef<Set<string>>(new Set());
     const modelsRef = useRef<ModelSource[]>(models);
     const gridRef = useRef<ReturnType<typeof createGrid> | null>(null);
@@ -342,7 +344,11 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
               }
             });
 
-            loadedModelsRef.current.set(model.id, { root: modelRoot, blobUrl });
+            loadedModelsRef.current.set(model.id, {
+              root: modelRoot,
+              blobUrl,
+              meshes: result.meshes,
+            });
             onModelProgress?.(model.id, 1);
             loadingIdsRef.current.delete(model.id);
           }
@@ -469,7 +475,7 @@ function createAxes(scene: Scene) {
 }
 
 function frameCameraToVisibleModels(
-  loadedModels: Map<string, { root: TransformNode }>,
+  loadedModels: Map<string, { root: TransformNode; meshes: AbstractMesh[] }>,
   models: ModelSource[],
   camera: ArcRotateCamera | null,
   axesRoot: TransformNode | null,
@@ -488,7 +494,17 @@ function frameCameraToVisibleModels(
     const data = loadedModels.get(model.id);
     if (!data) return;
 
-    data.root.getChildMeshes().forEach((mesh) => {
+    // Force update world matrices from root down before reading bounds.
+    // Parenting gltfRoot under modelRoot dirties the whole hierarchy;
+    // without this, minimumWorld/maximumWorld are stale.
+    const stack: Node[] = [data.root];
+    while (stack.length > 0) {
+      const node = stack.shift()!;
+      node.computeWorldMatrix(true);
+      stack.push(...node.getChildren());
+    }
+
+    data.meshes.forEach((mesh) => {
       const bi = mesh.getBoundingInfo();
       if (bi) {
         min.minimizeInPlace(bi.boundingBox.minimumWorld);
@@ -497,7 +513,6 @@ function frameCameraToVisibleModels(
     });
   });
 
-  const size = max.subtract(min);
   // Frame around the coordinate axes origin with a fixed isometric
   // orthographic view rather than chasing the model bounds.
   camera.setTarget(Vector3.Zero());
@@ -508,14 +523,35 @@ function frameCameraToVisibleModels(
   camera.upperRadiusLimit = 500;
 
   // Scale axes so they are clearly visible relative to the scene.
-  const diagonal = Math.max(size.x, size.y, size.z);
+  const size = max.subtract(min);
+  const maxDim = Math.max(size.x, size.y, size.z);
   if (axesRoot) {
-    const scale = diagonal > 0 ? diagonal * 0.12 : 1;
+    const scale = maxDim > 0 ? maxDim * 0.12 : 1;
     axesRoot.scaling = new Vector3(scale, scale, scale);
   }
 
-  // Orthographic frustum: fit the model + some padding.
-  const orthoExtent = Math.max(10, diagonal * 0.6);
+  // Orthographic frustum: compute view-space bounds so the frustum exactly
+  // contains the bounding box regardless of camera angle.
+  const viewMatrix = camera.getViewMatrix();
+  const corners = [
+    new Vector3(min.x, min.y, min.z),
+    new Vector3(max.x, min.y, min.z),
+    new Vector3(min.x, max.y, min.z),
+    new Vector3(max.x, max.y, min.z),
+    new Vector3(min.x, min.y, max.z),
+    new Vector3(max.x, min.y, max.z),
+    new Vector3(min.x, max.y, max.z),
+    new Vector3(max.x, max.y, max.z),
+  ];
+
+  let maxViewCoord = 0;
+  for (const corner of corners) {
+    const viewPos = Vector3.TransformCoordinates(corner, viewMatrix);
+    maxViewCoord = Math.max(maxViewCoord, Math.abs(viewPos.x), Math.abs(viewPos.y));
+  }
+
+  const padding = 1.2;
+  const orthoExtent = Math.max(10, maxViewCoord * padding);
   camera.orthoLeft = -orthoExtent;
   camera.orthoRight = orthoExtent;
   camera.orthoTop = orthoExtent;
