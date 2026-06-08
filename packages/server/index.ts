@@ -59,6 +59,15 @@ await fastify.register(multipart, {
     files: 10, // allow up to 10 files per request
   },
 });
+
+fastify.setErrorHandler((error, _request, reply) => {
+  if (error.statusCode === 413) {
+    return reply.status(413).send({
+      error: "上传文件总大小超过限制（最大支持 5GB）",
+    });
+  }
+  reply.send(error);
+});
 await fastify.register(swagger, {
   transform: jsonSchemaTransform,
   openapi: {
