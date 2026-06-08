@@ -1,6 +1,5 @@
 import {
   S3Client,
-  PutObjectCommand,
   GetObjectCommand,
   DeleteObjectCommand,
   HeadObjectCommand,
@@ -11,6 +10,7 @@ import {
   PutBucketPolicyCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { Upload } from "@aws-sdk/lib-storage";
 import { env } from "@/lib/env";
 import type { StorageAdapter, PutOptions, ObjectStat } from "./types";
 
@@ -77,15 +77,17 @@ export class S3Adapter implements StorageAdapter {
   }
 
   async put(key: string, data: Buffer | ReadableStream, options?: PutOptions): Promise<void> {
-    const command = new PutObjectCommand({
-      Bucket: this.bucket,
-      Key: key,
-      Body: data,
-      ContentType: options?.contentType,
-      ContentLength: options?.contentLength,
-      Metadata: options?.metadata,
+    const upload = new Upload({
+      client: this.client,
+      params: {
+        Bucket: this.bucket,
+        Key: key,
+        Body: data,
+        ContentType: options?.contentType,
+        Metadata: options?.metadata,
+      },
     });
-    await this.client.send(command);
+    await upload.done();
   }
 
   async get(key: string): Promise<ReadableStream> {
