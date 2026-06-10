@@ -33,6 +33,7 @@ export interface ModelSource {
   id: string;
   url: string;
   visible: boolean;
+  priority?: "critical" | "background";
 }
 
 export interface BabylonSceneProps {
@@ -275,94 +276,103 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
       let cancelled = false;
 
       const loadAll = async () => {
-        try {
-          for (const model of toLoad) {
-            // Skip if already loaded or currently loading (prevents races).
-            if (
-              cancelled ||
-              loadedModelsRef.current.has(model.id) ||
-              loadingIdsRef.current.has(model.id)
-            ) {
-              continue;
+        // Load a single model into the scene.
+        const loadSingleModel = async (model: ModelSource): Promise<void> => {
+          if (
+            cancelled ||
+            loadedModelsRef.current.has(model.id) ||
+            loadingIdsRef.current.has(model.id)
+          ) {
+            return;
+          }
+
+          loadingIdsRef.current.add(model.id);
+          let lastProgress = -1;
+          const onProgress = (event: ISceneLoaderProgressEvent) => {
+            const progress = event.total > 0 ? event.loaded / event.total : 0;
+            const rounded = Math.round(progress * 100) / 100;
+            if (rounded !== lastProgress) {
+              lastProgress = rounded;
+              onModelProgress?.(model.id, rounded);
             }
+          };
 
-            loadingIdsRef.current.add(model.id);
-            let lastProgress = -1;
-            const onProgress = (event: ISceneLoaderProgressEvent) => {
-              const progress = event.total > 0 ? event.loaded / event.total : 0;
-              const rounded = Math.round(progress * 100) / 100;
-              if (rounded !== lastProgress) {
-                lastProgress = rounded;
-                onModelProgress?.(model.id, rounded);
-              }
-            };
-
-            const modelFileUrl = await fetchModelUrl(model.url, false);
-            if (cancelled) {
-              loadingIdsRef.current.delete(model.id);
-              continue;
-            }
-
-            // Progressive texture loading: resolve ImportMeshAsync as soon as
-            // geometry is created; textures continue loading in the background.
-            const loaderObserver = SceneLoader.OnPluginActivatedObservable.add((loader) => {
-              if (loader.name === "gltf") {
-                (loader as GLTFFileLoader).compileMaterials = false;
-              }
-            });
-
-            let result: Awaited<ReturnType<typeof SceneLoader.ImportMeshAsync>>;
-            try {
-              result = await SceneLoader.ImportMeshAsync(
-                "", // mesh names (empty = all)
-                "", // scene root (empty = use rootUrl)
-                modelFileUrl, // original URL — browser HTTP cache handles it
-                scene,
-                onProgress,
-                ".glb", // force GLB loader
-              );
-            } finally {
-              SceneLoader.OnPluginActivatedObservable.remove(loaderObserver);
-            }
-
-            if (cancelled) {
-              // ImportMeshAsync already injected meshes/transformNodes into the
-              // scene. If we bail out we must dispose them, otherwise a later
-              // re-run will duplicate geometry.
-              result.meshes.slice().forEach((mesh) => mesh.dispose(false, true));
-              result.transformNodes.slice().forEach((tn) => tn.dispose(false));
-              loadingIdsRef.current.delete(model.id);
-              continue;
-            }
-
-            // Parent every top-level transform node and mesh to a per-model
-            // root so nothing leaks into the world root.
-            const modelRoot = new TransformNode(`model_${model.id}`, scene);
-            const gltfRoot = result.transformNodes.find((tn) => tn.name === "__root__");
-            if (gltfRoot) {
-              gltfRoot.parent = modelRoot;
-            }
-
-            // Some exporters emit meshes/transformNodes outside __root__;
-            // collect any orphans under the model root as well.
-            result.transformNodes.forEach((tn) => {
-              if (tn !== gltfRoot && tn !== modelRoot && !tn.parent) {
-                tn.parent = modelRoot;
-              }
-            });
-            result.meshes.forEach((mesh) => {
-              if (mesh !== modelRoot && !mesh.parent) {
-                mesh.parent = modelRoot;
-              }
-            });
-
-            loadedModelsRef.current.set(model.id, {
-              root: modelRoot,
-              modelUrl: modelFileUrl,
-              meshes: result.meshes,
-            });
-            onModelProgress?.(model.id, 1);
+          const modelFileUrl = await fetchModelUrl(model.url, false);
+          if (cancelled) {
             loadingIdsRef.current.delete(model.id);
+            return;
+          }
+
+          // Progressive texture loading: resolve ImportMeshAsync as soon as
+          // geometry is created; textures continue loading in the background.
+          const loaderObserver = SceneLoader.OnPluginActivatedObservable.add((loader) => {
+            if (loader.name === "gltf") {
+              (loader as GLTFFileLoader).compileMaterials = false;
+            }
+          });
+
+          let result: Awaited<ReturnType<typeof SceneLoader.ImportMeshAsync>>;
+          try {
+            result = await SceneLoader.ImportMeshAsync(
+              "", // mesh names (empty = all)
+              "", // scene root (empty = use rootUrl)
+              modelFileUrl, // original URL — browser HTTP cache handles it
+              scene,
+              onProgress,
+              ".glb", // force GLB loader
+            );
+          } finally {
+            SceneLoader.OnPluginActivatedObservable.remove(loaderObserver);
+          }
+
+          if (cancelled) {
+            // ImportMeshAsync already injected meshes/transformNodes into the
+            // scene. If we bail out we must dispose them, otherwise a later
+            // re-run will duplicate geometry.
+            result.meshes.slice().forEach((mesh) => mesh.dispose(false, true));
+            result.transformNodes.slice().forEach((tn) => tn.dispose(false));
+            loadingIdsRef.current.delete(model.id);
+            return;
+          }
+
+          // Parent every top-level transform node and mesh to a per-model
+          // root so nothing leaks into the world root.
+          const modelRoot = new TransformNode(`model_${model.id}`, scene);
+          const gltfRoot = result.transformNodes.find((tn) => tn.name === "__root__");
+          if (gltfRoot) {
+            gltfRoot.parent = modelRoot;
+          }
+
+          // Some exporters emit meshes/transformNodes outside __root__;
+          // collect any orphans under the model root as well.
+          result.transformNodes.forEach((tn) => {
+            if (tn !== gltfRoot && tn !== modelRoot && !tn.parent) {
+              tn.parent = modelRoot;
+            }
+          });
+          result.meshes.forEach((mesh) => {
+            if (mesh !== modelRoot && !mesh.parent) {
+              mesh.parent = modelRoot;
+            }
+          });
+
+          loadedModelsRef.current.set(model.id, {
+            root: modelRoot,
+            modelUrl: modelFileUrl,
+            meshes: result.meshes,
+          });
+          onModelProgress?.(model.id, 1);
+          loadingIdsRef.current.delete(model.id);
+        };
+
+        try {
+          const critical = toLoad.filter((m) => m.priority === "critical");
+          const background = toLoad.filter((m) => m.priority !== "critical");
+
+          // Phase 1: critical models — blocking, controls loading overlay.
+          for (const model of critical) {
+            await loadSingleModel(model);
+            if (cancelled) break;
           }
 
           if (!cancelled) {
@@ -374,9 +384,20 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
             frameCameraToVisibleModels(loadedModelsRef.current, models, camera, axesRef.current);
             onModelLoaded?.(rootNodeRef.current!);
           }
+
+          // Phase 2: background models — non-blocking, errors are non-fatal.
+          for (const model of background) {
+            if (cancelled) break;
+            try {
+              await loadSingleModel(model);
+            } catch (bgErr) {
+              console.warn(`Background model "${model.id}" load failed:`, bgErr);
+              loadingIdsRef.current.delete(model.id);
+            }
+          }
         } catch (err) {
           if (cancelled) return;
-          console.error("Model load failed:", err);
+          console.error("Critical model load failed:", err);
           setIsLoading(false);
           setHasError(true);
           setErrorMessage(err instanceof Error ? err.message : "Unknown error");
