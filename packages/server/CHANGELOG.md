@@ -1,5 +1,11 @@
 # @ecoctrl/server
 
+## 0.7.1
+
+### Patch Changes
+
+- 3357a27: Consolidate RC release into Release workflow. Enhance BabylonJS model viewer and dashboard navigation. Add workflow editor, SMTP verification, and config testing.
+
 ## 0.7.0
 
 ### Minor Changes
