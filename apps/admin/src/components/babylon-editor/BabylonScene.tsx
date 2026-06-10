@@ -4,7 +4,6 @@
 
 import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
 import {
-  Engine,
   Scene,
   ArcRotateCamera,
   Camera,
@@ -12,7 +11,6 @@ import {
   DirectionalLight,
   Vector3,
   Color3,
-  SceneLoader,
   TransformNode,
   MeshBuilder,
   StandardMaterial,
@@ -21,9 +19,8 @@ import {
   type ISceneLoaderProgressEvent,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
-import { GLTFFileLoader } from "@babylonjs/loaders";
 import { AdvancedDynamicTexture } from "@babylonjs/gui";
-import { fetchModelUrl } from "@ecoctrl/shared/model-cache";
+import { createEngine, loadGltf, loadModelsByPriority } from "@ecoctrl/shared/babylon";
 
 // ========================================
 // Types
@@ -146,15 +143,10 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
       const canvas = canvasRef.current;
       const container = containerRef.current;
 
-      // Create engine
-      const engine = new Engine(canvas, true, {
-        preserveDrawingBuffer: true,
-        stencil: true,
-        antialias: true,
-      });
+      // Create engine and scene
+      const engine = createEngine(canvas);
       engineRef.current = engine;
 
-      // Create scene
       const scene = new Scene(engine);
       sceneRef.current = scene;
       // Ambient light so PBR materials are visible even before textures compile.
@@ -301,68 +293,31 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
             }
           };
 
-          const modelFileUrl = await fetchModelUrl(model.url, false);
-          if (cancelled) {
-            loadingIdsRef.current.delete(model.id);
-            return;
-          }
-
-          // Progressive texture loading: resolve ImportMeshAsync as soon as
-          // geometry is created; textures continue loading in the background.
-          const loaderObserver = SceneLoader.OnPluginActivatedObservable.add((loader) => {
-            if (loader.name === "gltf") {
-              (loader as GLTFFileLoader).compileMaterials = false;
-            }
-          });
-
-          let result: Awaited<ReturnType<typeof SceneLoader.ImportMeshAsync>>;
+          let result: Awaited<ReturnType<typeof loadGltf>>;
           try {
-            result = await SceneLoader.ImportMeshAsync(
-              "", // mesh names (empty = all)
-              "", // scene root (empty = use rootUrl)
-              modelFileUrl, // original URL — browser HTTP cache handles it
+            result = await loadGltf({
               scene,
+              url: model.url,
+              modelId: model.id,
+              useBlob: false,
+              forceExtension: ".glb",
+              compileMaterials: false,
               onProgress,
-              ".glb", // force GLB loader
-            );
-          } finally {
-            SceneLoader.OnPluginActivatedObservable.remove(loaderObserver);
+            });
+          } catch (err) {
+            loadingIdsRef.current.delete(model.id);
+            throw err;
           }
 
           if (cancelled) {
-            // ImportMeshAsync already injected meshes/transformNodes into the
-            // scene. If we bail out we must dispose them, otherwise a later
-            // re-run will duplicate geometry.
-            result.meshes.slice().forEach((mesh) => mesh.dispose(false, true));
-            result.transformNodes.slice().forEach((tn) => tn.dispose(false));
+            result.modelRoot.dispose(false, true);
             loadingIdsRef.current.delete(model.id);
             return;
           }
-
-          // Parent every top-level transform node and mesh to a per-model
-          // root so nothing leaks into the world root.
-          const modelRoot = new TransformNode(`model_${model.id}`, scene);
-          const gltfRoot = result.transformNodes.find((tn) => tn.name === "__root__");
-          if (gltfRoot) {
-            gltfRoot.parent = modelRoot;
-          }
-
-          // Some exporters emit meshes/transformNodes outside __root__;
-          // collect any orphans under the model root as well.
-          result.transformNodes.forEach((tn) => {
-            if (tn !== gltfRoot && tn !== modelRoot && !tn.parent) {
-              tn.parent = modelRoot;
-            }
-          });
-          result.meshes.forEach((mesh) => {
-            if (mesh !== modelRoot && !mesh.parent) {
-              mesh.parent = modelRoot;
-            }
-          });
 
           loadedModelsRef.current.set(model.id, {
-            root: modelRoot,
-            modelUrl: modelFileUrl,
+            root: result.modelRoot,
+            modelUrl: result.sourceUrl,
             meshes: result.meshes,
           });
           onModelProgress?.(model.id, 1);
@@ -370,35 +325,26 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
         };
 
         try {
-          const critical = toLoad.filter((m) => m.priority === "critical");
-          const background = toLoad.filter((m) => m.priority !== "critical");
-
-          // Phase 1: critical models — blocking, controls loading overlay.
-          for (const model of critical) {
-            await loadSingleModel(model);
-            if (cancelled) break;
-          }
-
-          if (!cancelled) {
-            // Force a render so BabylonJS compiles shaders and the mesh becomes
-            // visible before we hide the loading overlay.
-            scene.render();
-            await new Promise((resolve) => requestAnimationFrame(resolve));
-            setIsLoading(false);
-            frameCameraToVisibleModels(loadedModelsRef.current, models, camera, axesRef.current);
-            onModelLoaded?.(rootNodeRef.current!);
-          }
-
-          // Phase 2: background models — non-blocking, errors are non-fatal.
-          for (const model of background) {
-            if (cancelled) break;
-            try {
-              await loadSingleModel(model);
-            } catch (bgErr) {
-              console.warn(`Background model "${model.id}" load failed:`, bgErr);
+          await loadModelsByPriority({
+            models: toLoad,
+            loadFn: loadSingleModel,
+            parallel: false,
+            onCriticalDone: async () => {
+              if (cancelled) return;
+              // Force a render so BabylonJS compiles shaders and the mesh becomes
+              // visible before we hide the loading overlay.
+              scene.render();
+              await new Promise((resolve) => requestAnimationFrame(resolve));
+              setIsLoading(false);
+              frameCameraToVisibleModels(loadedModelsRef.current, models, camera, axesRef.current);
+              onModelLoaded?.(rootNodeRef.current!);
+            },
+            onBackgroundError: (model, err) => {
+              console.warn(`Background model "${model.id}" load failed:`, err);
               loadingIdsRef.current.delete(model.id);
-            }
-          }
+            },
+            isCancelled: () => cancelled,
+          });
         } catch (err) {
           if (cancelled) return;
           console.error("Critical model load failed:", err);

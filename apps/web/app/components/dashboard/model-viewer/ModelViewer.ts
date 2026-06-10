@@ -2,12 +2,8 @@ import {
   ArcRotateCamera,
   Color3,
   Color4,
-  Engine,
-  GlowLayer,
   HemisphericLight,
   Matrix,
-  Scene,
-  SceneLoader,
   TransformNode,
   Vector3,
   Viewport,
@@ -27,7 +23,7 @@ import {
   type LabelDef,
 } from "./constants";
 import type { ModelFileEntry } from "@ecoctrl/shared";
-import { fetchModelUrl } from "@ecoctrl/shared/model-cache";
+import { createEngine, createScene, createGlowLayer, loadGltf } from "@ecoctrl/shared/babylon";
 import type { ModelGroup, LabelAnchor, ModelLoadConfig, ViewerOptions } from "./types";
 
 // ========================================
@@ -112,14 +108,8 @@ export class ModelViewer implements ModelViewerRef {
     this.defaultCameraRadius = options.defaultCameraRadius;
     this.defaultRotationY = options.defaultRotationY;
 
-    // Create engine
-    this.engine = new Engine(this.canvas, true, {
-      preserveDrawingBuffer: true,
-      stencil: true,
-    });
-
-    // Create scene
-    this.scene = new Scene(this.engine);
+    this.engine = createEngine(this.canvas);
+    this.scene = createScene(this.engine);
 
     // Environment setup — Sandbox style by default, overridable via options
     const envOpts = { ...DEFAULT_ENVIRONMENT, ...options.environment };
@@ -172,8 +162,7 @@ export class ModelViewer implements ModelViewerRef {
     hemi.intensity = 0.8;
 
     // Glow layer
-    this.glow = new GlowLayer("glow", this.scene);
-    this.glow.intensity = options.glowIntensity;
+    this.glow = createGlowLayer(this.scene, options.glowIntensity);
 
     // Root pivot for rotation
     this.pivot = new TransformNode("rotationPivot", this.scene);
@@ -357,55 +346,35 @@ export class ModelViewer implements ModelViewerRef {
    * under the pivot for this group.
    */
   async loadSingle(url: string, groupId: string): Promise<TransformNode> {
-    const pluginExtension = url.includes(".glb")
-      ? ".glb"
-      : url.includes(".gltf")
-        ? ".gltf"
-        : undefined;
-
     console.log(`[ModelViewer] Loading model group "${groupId}" from: ${url}`);
 
-    const blobUrl = await fetchModelUrl(url);
-    const result = await SceneLoader.ImportMeshAsync(
-      null,
-      "",
-      blobUrl,
-      this.scene,
-      (event) => {
+    const groupParent = new TransformNode(`groupParent_${groupId}`, this.scene);
+    groupParent.parent = this.pivot;
+
+    const { meshes, sourceUrl } = await loadGltf({
+      scene: this.scene,
+      url,
+      modelId: groupId,
+      useBlob: true,
+      modelRoot: groupParent,
+      onProgress: (event) => {
         if (event.lengthComputable && event.total > 0) {
           const value = Math.min(99, (event.loaded / event.total) * 100);
           this.onProgress?.(value);
         }
       },
-      pluginExtension,
-    );
-    URL.revokeObjectURL(blobUrl);
-
-    const firstMesh = result.meshes[0];
-    if (!firstMesh) {
-      throw new Error(`No meshes loaded from ${url}`);
-    }
-
-    // Create a dedicated parent TransformNode for this group under the pivot.
-    const groupParent = new TransformNode(`groupParent_${groupId}`, this.scene);
-    groupParent.parent = this.pivot;
-
-    // Use the __root__ from this import batch, not from the global scene
-    // (the scene may already contain __root__ nodes from previous loads).
-    const glbRoot = result.transformNodes.find((n) => n.name === "__root__") ?? firstMesh;
-    glbRoot.parent = groupParent;
+    });
+    URL.revokeObjectURL(sourceUrl);
 
     // Temporarily zero pivot rotation so world-space bounds match groupParent space.
     const savedPivotY = this.pivot.rotation.y;
     this.pivot.rotation.y = 0;
     this.scene.updateTransformMatrix(true);
 
-    // Compute bounds from all imported meshes using world coordinates.
-    // getChildMeshes(true) on __root__ may return empty, so we use result.meshes.
     let min = new Vector3(Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE);
     let max = new Vector3(-Number.MAX_VALUE, -Number.MAX_VALUE, -Number.MAX_VALUE);
 
-    for (const mesh of result.meshes) {
+    for (const mesh of meshes) {
       if (!mesh.getBoundingInfo) continue;
       const bmin = mesh.getBoundingInfo().boundingBox.minimumWorld;
       const bmax = mesh.getBoundingInfo().boundingBox.maximumWorld;
@@ -423,7 +392,7 @@ export class ModelViewer implements ModelViewerRef {
     const localScale = maxSize > 0 ? 10 / maxSize : 1;
 
     console.log(
-      `[ModelViewer] Bounding box for "${groupId}": meshCount=${result.meshes.length}, ` +
+      `[ModelViewer] Bounding box for "${groupId}": meshCount=${meshes.length}, ` +
         `min=(${min.x.toFixed(2)}, ${min.y.toFixed(2)}, ${min.z.toFixed(2)}), ` +
         `max=(${max.x.toFixed(2)}, ${max.y.toFixed(2)}, ${max.z.toFixed(2)}), center=(${center.x.toFixed(2)}, ${center.y.toFixed(2)}, ${center.z.toFixed(2)}), ` +
         `size=(${size.x.toFixed(2)}, ${size.y.toFixed(2)}, ${size.z.toFixed(2)}), localScale=${localScale.toFixed(4)}`,
