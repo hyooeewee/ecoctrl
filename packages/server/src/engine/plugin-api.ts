@@ -224,14 +224,19 @@ export function createPluginApi(
     },
 
     sse: {
-      emit: async (type: string, payload: Record<string, unknown>, targetUserId?: string) => {
+      emit: async (
+        type: string,
+        payload: Record<string, unknown>,
+        targetUserId?: string,
+        id?: string,
+      ) => {
         const eventPayload = { ...payload };
         if (targetUserId) {
           eventPayload._targetUserId = targetUserId;
         }
-        await emitEvent(type, eventPayload);
+        await emitEvent(type, eventPayload, id);
         logger.info(
-          `[sse] emitted event type=${type}${targetUserId ? ` target=${targetUserId}` : " broadcast"}`,
+          `[sse] emitted event type=${type}${targetUserId ? ` target=${targetUserId}` : " broadcast"}${id ? ` id=${id}` : ""}`,
         );
       },
     },

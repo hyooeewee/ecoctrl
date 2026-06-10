@@ -282,12 +282,12 @@ async function injectApi(context: ivm.Context, api: PluginApi): Promise<void> {
 
   // Inject sse.emit (async)
   await context.evalClosure(
-    `globalThis.__sse_emit = async function(type, payload, targetUserId) {
-      return await $0.apply(undefined, [type, payload, targetUserId], { arguments: { copy: true }, result: { copy: true, promise: true } });
+    `globalThis.__sse_emit = async function(type, payload, targetUserId, id) {
+      return await $0.apply(undefined, [type, payload, targetUserId, id], { arguments: { copy: true }, result: { copy: true, promise: true } });
     }`,
     [
-      async (type: string, payload: Record<string, unknown>, targetUserId?: string) =>
-        api.sse.emit(type, payload, targetUserId),
+      async (type: string, payload: Record<string, unknown>, targetUserId?: string, id?: string) =>
+        api.sse.emit(type, payload, targetUserId, id),
     ],
     { arguments: { reference: true } },
   );
@@ -324,7 +324,7 @@ async function injectApi(context: ivm.Context, api: PluginApi): Promise<void> {
         sendMail: function(options) { return __notify_sendMail(options); }
       },
       sse: {
-        emit: async function(type, payload, targetUserId) { return await __sse_emit(type, payload, targetUserId); }
+        emit: async function(type, payload, targetUserId, id) { return await __sse_emit(type, payload, targetUserId, id); }
       },
       env: {
         get: function(key) { return __env_get(key); }
