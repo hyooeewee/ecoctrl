@@ -21,6 +21,7 @@ export const zhCN = {
     tagline: "企业级三维能源管理平台",
     toggleNavShow: "显示导航",
     toggleNavHide: "隐藏导航",
+    openSettings: "打开设置",
     location: "会展中心整体",
     monitoring: "能源监控",
   },

@@ -17,6 +17,7 @@ export const enUS = {
     tagline: "Enterprise-grade 3D energy management platform",
     toggleNavShow: "Show navigation",
     toggleNavHide: "Hide navigation",
+    openSettings: "Open settings",
     location: "Exhibition Center Overall",
     monitoring: "Energy Monitoring",
   },

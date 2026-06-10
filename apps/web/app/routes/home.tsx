@@ -1,10 +1,9 @@
 import { Undo2, Check, Maximize, Minimize, Minus, Plus, RotateCcw, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useLoaderData, useOutletContext } from "react-router";
+import { useLoaderData, useNavigate, useOutletContext } from "react-router";
 
 import { BentoGrid } from "~/components/dashboard/bento-grid";
 import { DashboardHeader } from "~/components/dashboard/dashboard-header";
-import { DashboardNav } from "~/components/dashboard/dashboard-nav";
 import { DashboardWidgets } from "~/components/dashboard/widgets";
 import { fetchDashboardData, type DashboardData } from "~/lib/dashboard-api";
 import { API_PREFIX } from "~/lib/env";
@@ -41,13 +40,13 @@ export async function clientLoader(): Promise<{
 
 export default function Home() {
   const t = useLocale();
+  const navigate = useNavigate();
   const loaderData = useLoaderData() as {
     dashboard: DashboardData | null;
   };
   const { buildingRef, activeLabel, setActiveLabel } = useOutletContext<DashboardOutletContext>();
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn());
   const fetchUser = useAuthStore((state) => state.fetchUser);
-  const navHideDelay = useSettingsStore((state) => state.navHideDelay);
   const bentoDragEnabled = useSettingsStore((state) => state.bentoDragEnabled);
   const bentoLayout = useSettingsStore((state) => state.bentoLayout);
   const editAutoExitDelay = useSettingsStore((state) => state.editAutoExitDelay);
@@ -57,9 +56,7 @@ export default function Home() {
   const resetBentoLayout = useSettingsStore((state) => state.resetBentoLayout);
   const loadSettings = useSettingsStore((state) => state.loadSettings);
 
-  const [navVisible, setNavVisible] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const layoutSnapshotRef = useRef<BentoLayoutItem[] | null>(null);
   const hasSnappedRef = useRef(false);
 
@@ -166,46 +163,6 @@ export default function Home() {
     }
   }, [activeLabel, buildingRef]);
 
-  // Start/reset the auto-hide countdown
-  const resetTimer = useCallback(() => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setNavVisible(false), navHideDelay);
-  }, [navHideDelay]);
-
-  // Toggle nav on logo click
-  const handleLogoClick = useCallback(() => {
-    setNavVisible((prev) => {
-      if (!prev) {
-        if (timerRef.current) clearTimeout(timerRef.current);
-        timerRef.current = setTimeout(() => setNavVisible(false), navHideDelay);
-      } else {
-        if (timerRef.current) clearTimeout(timerRef.current);
-      }
-      return !prev;
-    });
-  }, [navHideDelay]);
-
-  // Reset countdown on any user interaction while nav is open
-  useEffect(() => {
-    if (!navVisible) return;
-    window.addEventListener("pointermove", resetTimer);
-    window.addEventListener("pointerdown", resetTimer);
-    window.addEventListener("keydown", resetTimer);
-    return () => {
-      window.removeEventListener("pointermove", resetTimer);
-      window.removeEventListener("pointerdown", resetTimer);
-      window.removeEventListener("keydown", resetTimer);
-    };
-  }, [navVisible, resetTimer]);
-
-  // Cleanup on unmount
-  useEffect(
-    () => () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    },
-    [],
-  );
-
   // Capture snapshot only when entering edit mode and layout is ready.
   useEffect(() => {
     if (bentoDragEnabled && bentoLayout.length > 0 && !hasSnappedRef.current) {
@@ -242,11 +199,7 @@ export default function Home() {
     <div className="flex h-full flex-col pointer-events-none">
       {/* Header */}
       <div className="pointer-events-auto">
-        <DashboardHeader
-          onLogoClick={handleLogoClick}
-          navVisible={navVisible}
-          sseStatus={sseStatus}
-        />
+        <DashboardHeader onLogoClick={() => navigate("/settings")} sseStatus={sseStatus} />
       </div>
 
       {/* Main bento grid layout — cards re-enable events individually */}
@@ -260,17 +213,6 @@ export default function Home() {
           <DashboardWidgets data={loaderData?.dashboard ?? null} />
         </BentoGrid>
       </main>
-
-      {/* Bottom navigation — absolute at bottom, floats above widgets */}
-      <div
-        className="absolute bottom-0 left-2 right-2 z-20 overflow-hidden transition-all duration-300 ease-in-out pointer-events-auto"
-        style={{
-          maxHeight: navVisible ? "60px" : "0px",
-          opacity: navVisible ? 1 : 0,
-        }}
-      >
-        <DashboardNav />
-      </div>
 
       {/* Floating controls — fullscreen / zoom / reset */}
       <div
