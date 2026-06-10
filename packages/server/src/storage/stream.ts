@@ -81,7 +81,8 @@ export async function streamFile(
     if (
       err?.code === "ERR_STREAM_WRITE_AFTER_END" ||
       err?.code === "ECONNRESET" ||
-      err?.code === "ERR_STREAM_PREMATURE_CLOSE"
+      err?.code === "ERR_STREAM_PREMATURE_CLOSE" ||
+      err?.code === "ERR_STREAM_UNABLE_TO_PIPE"
     ) {
       return;
     }
