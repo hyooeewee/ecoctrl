@@ -1,5 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
-import { toast } from "sonner";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type { Edge, Node } from "@xyflow/react";
 
 import { workflowsApi } from "@/api/workflows";
@@ -42,15 +41,19 @@ export function useWorkflowPersistence(options: UseWorkflowPersistenceOptions) {
     }>;
   } | null>(null);
   const [isDirty, setIsDirty] = useState(false);
-  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "success" | "error">(
-    "idle",
-  );
+  const [saveResult, setSaveResult] = useState<"idle" | "success" | "error">("idle");
+  const [saveMode, setSaveMode] = useState<"manual" | "auto" | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSave = useCallback(
     async (options?: { silent?: boolean; onSuccess?: () => void; onError?: () => void }) => {
       if (!dsl) return;
+
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+
       setSaving(true);
-      if (options?.silent) setAutoSaveStatus("saving");
+      setSaveMode(options?.silent ? "auto" : "manual");
+
       try {
         const newDsl: WorkflowDSL = {
           ...reactFlowToDSL(nodes, edges, dsl.trigger),
@@ -65,23 +68,22 @@ export function useWorkflowPersistence(options: UseWorkflowPersistenceOptions) {
         }
         setDsl(newDsl);
         setIsDirty(false);
-        if (options?.silent) {
-          setAutoSaveStatus("success");
-          setTimeout(() => setAutoSaveStatus("idle"), 2000);
-        } else {
-          toast.success("工作流已保存");
-        }
+        setSaveResult("success");
+        saveTimerRef.current = setTimeout(() => {
+          setSaveResult("idle");
+          setSaveMode(null);
+        }, 3000);
         options?.onSuccess?.();
       } catch (err) {
-        if (options?.silent) {
-          setAutoSaveStatus("error");
-          setTimeout(() => setAutoSaveStatus("idle"), 3000);
-        } else {
-          const msg =
-            (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
-            "保存失败，请检查节点连接是否正确";
-          toast.error(msg);
-        }
+        const msg =
+          (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+          "保存失败";
+        console.error("[Workflow Save Error]", msg, err);
+        setSaveResult("error");
+        saveTimerRef.current = setTimeout(() => {
+          setSaveResult("idle");
+          setSaveMode(null);
+        }, 3000);
         options?.onError?.();
       } finally {
         setSaving(false);
@@ -107,18 +109,13 @@ export function useWorkflowPersistence(options: UseWorkflowPersistenceOptions) {
       setDsl(newDsl);
       setIsDirty(false);
       setWorkflow((prev) => (prev ? { ...prev, enabled: true } : prev));
-      toast.success("工作流已发布");
     } catch (err) {
       const msg =
         (err as { response?: { data?: { error?: string; details?: Array<{ message: string }> } } })
           ?.response?.data?.error || "发布失败";
       const details = (err as { response?: { data?: { details?: Array<{ message: string }> } } })
         ?.response?.data?.details;
-      if (details && details.length > 0) {
-        toast.error(`${msg}: ${details.map((d) => d.message).join("; ")}`);
-      } else {
-        toast.error(msg);
-      }
+      console.error("[Workflow Publish Error]", msg, details, err);
     } finally {
       setPublishing(false);
     }
@@ -126,7 +123,7 @@ export function useWorkflowPersistence(options: UseWorkflowPersistenceOptions) {
 
   const handleTestRun = useCallback(async () => {
     if (!workflowId) {
-      toast.error("请先保存工作流");
+      console.warn("[Workflow Test] Skipped: workflow not saved yet");
       return;
     }
     setTesting(true);
@@ -136,17 +133,11 @@ export function useWorkflowPersistence(options: UseWorkflowPersistenceOptions) {
       await handleSave({ silent: true });
       const result = await workflowsApi.test(workflowId);
       setTestResult(result);
-      const logCount = result.nodeLogs?.length ?? 0;
-      if (result.status === "completed") {
-        toast.success(`测试运行成功，共执行 ${logCount} 个节点`);
-      } else {
-        toast.error(`测试运行失败: ${result.error ?? "未知错误"}`);
-      }
     } catch (err) {
       const msg =
         (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
         "测试运行失败";
-      toast.error(msg);
+      console.error("[Workflow Test Error]", msg, err);
       setTestResult(null);
     } finally {
       setTesting(false);
@@ -156,7 +147,7 @@ export function useWorkflowPersistence(options: UseWorkflowPersistenceOptions) {
   const handleTestNode = useCallback(
     async (nodeId: string) => {
       if (!workflowId) {
-        toast.error("请先保存工作流");
+        console.warn("[Workflow TestNode] Skipped: workflow not saved yet");
         return;
       }
       setTesting(true);
@@ -165,19 +156,11 @@ export function useWorkflowPersistence(options: UseWorkflowPersistenceOptions) {
         await handleSave({ silent: true });
         const result = await workflowsApi.test(workflowId, undefined, nodeId);
         setTestResult(result);
-        const targetLog = result.nodeLogs?.find((log) => log.nodeId === nodeId);
-        if (result.status === "completed" && targetLog?.status === "completed") {
-          toast.success("单节点测试成功");
-        } else if (targetLog?.status === "failed") {
-          toast.error(`单节点测试失败: ${targetLog.error ?? "未知错误"}`);
-        } else {
-          toast.error(`单节点测试失败: ${result.error ?? "未知错误"}`);
-        }
       } catch (err) {
         const msg =
           (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
           "单节点测试失败";
-        toast.error(msg);
+        console.error("[Workflow TestNode Error]", msg, err);
         setTestResult(null);
       } finally {
         setTesting(false);
@@ -205,7 +188,8 @@ export function useWorkflowPersistence(options: UseWorkflowPersistenceOptions) {
     testResult,
     isDirty,
     setIsDirty,
-    autoSaveStatus,
+    saveResult,
+    saveMode,
     handleSave,
     handlePublish,
     handleTestRun,
