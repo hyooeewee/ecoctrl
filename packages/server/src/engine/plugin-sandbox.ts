@@ -280,6 +280,18 @@ async function injectApi(context: ivm.Context, api: PluginApi): Promise<void> {
     { arguments: { reference: true } },
   );
 
+  // Inject sse.emit (async)
+  await context.evalClosure(
+    `globalThis.__sse_emit = async function(type, payload, targetUserId) {
+      return await $0.apply(undefined, [type, payload, targetUserId], { arguments: { copy: true }, result: { copy: true, promise: true } });
+    }`,
+    [
+      async (type: string, payload: Record<string, unknown>, targetUserId?: string) =>
+        api.sse.emit(type, payload, targetUserId),
+    ],
+    { arguments: { reference: true } },
+  );
+
   // Build the __api object inside the isolate
   await context.eval(`
     var __api = {
@@ -310,6 +322,9 @@ async function injectApi(context: ivm.Context, api: PluginApi): Promise<void> {
       notify: {
         send: function(options) { return __notify_send(options); },
         sendMail: function(options) { return __notify_sendMail(options); }
+      },
+      sse: {
+        emit: async function(type, payload, targetUserId) { return await __sse_emit(type, payload, targetUserId); }
       },
       env: {
         get: function(key) { return __env_get(key); }
