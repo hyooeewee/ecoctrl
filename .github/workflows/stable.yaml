@@ -2,11 +2,6 @@ name: Stable
 
 on:
   workflow_dispatch:
-    inputs:
-      rc-tag:
-        description: "RC tag to promote. Leave empty to auto-detect latest prerelease."
-        required: false
-        default: ""
 
 permissions:
   contents: write
@@ -35,19 +30,15 @@ jobs:
       - name: Resolve rc tag
         id: resolve
         run: |
-          if [ -n "${{ github.event.inputs.rc-tag }}" ]; then
-            echo "rc-tag=${{ github.event.inputs.rc-tag }}" >> "$GITHUB_OUTPUT"
-          else
-            TAG=$(gh release list --limit 5 --json tagName --jq '.[].tagName' | grep -- '-rc$' | head -1)
-            if [ -z "$TAG" ]; then
-              echo "ERROR: No rc prerelease found."
-              exit 1
-            fi
-            echo "rc-tag=$TAG" >> "$GITHUB_OUTPUT"
-            echo "Auto-detected: $TAG"
+          # github.ref is refs/tags/vX.Y.Z-rc when triggered from a tag
+          RAW="${{ github.ref }}"
+          TAG="${RAW#refs/tags/}"
+          if [ -z "$TAG" ]; then
+            echo "ERROR: No tag detected. Run this workflow from an RC tag."
+            exit 1
           fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo "rc-tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Selected: $TAG"
 
       - name: Validate rc tag exists
         run: |

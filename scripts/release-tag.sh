@@ -9,15 +9,9 @@ VERSION=$(node -p "require('$PKG_FILE').version")
 PKG_NAME=$(node -p "require('$PKG_FILE').name")
 TAG="v${VERSION}-rc"
 
-# Check if tag already exists on remote
-if git ls-remote --tags origin "refs/tags/$TAG" | grep -q "$TAG"; then
-  echo "Tag $TAG already exists on remote, skipping"
-  exit 0
-fi
-
-# Create and push tag
-git tag "$TAG"
-git push origin "$TAG"
+# Create and push tag (force overwrite so manual re-runs work)
+git tag -f "$TAG"
+git push -f origin "$TAG"
 
 # changesets/action@v1 parses stdout for "New tag:" to determine published=true.
 # This line MUST only appear when a new tag is actually created.
