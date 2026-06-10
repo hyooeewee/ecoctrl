@@ -105,6 +105,7 @@ export default function DashboardModel() {
         id: file.id,
         url: `/api/dashboard-model/file?key=${encodeURIComponent(file.fileKey)}`,
         visible: visibleFileIds.has(file.id),
+        priority: file.priority ?? "background",
       })),
     [existingFiles, visibleFileIds],
   );
