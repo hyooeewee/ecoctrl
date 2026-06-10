@@ -2,6 +2,19 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 import type { UserPreferences } from "@ecoctrl/shared";
+import type { LogNodeItem } from "@/components/LogViewer";
+
+export interface LogViewerData {
+  type: "execution" | "test";
+  workflowId: string;
+  executionId?: string;
+  testResult?: {
+    status: string;
+    error?: string;
+    nodeLogs?: LogNodeItem[];
+  };
+  returnTab?: string;
+}
 
 interface AppState {
   activeTab: string;
@@ -24,6 +37,12 @@ interface AppState {
 
   sidebarCollapsed: boolean;
   setSidebarCollapsed: (collapsed: boolean) => void;
+
+  // Full-screen page states (not persisted)
+  canvasWorkflowId: string | null;
+  setCanvasWorkflowId: (id: string | null) => void;
+  logViewerData: LogViewerData | null;
+  setLogViewerData: (data: LogViewerData | null) => void;
 
   // Local overrides for user preferences. Keys present here take precedence
   // over database defaults. Allows device/session-level customization.
@@ -55,6 +74,11 @@ export const useAppStore = create<AppState>()(
 
       sidebarCollapsed: false,
       setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
+
+      canvasWorkflowId: null,
+      setCanvasWorkflowId: (id) => set({ canvasWorkflowId: id }),
+      logViewerData: null,
+      setLogViewerData: (data) => set({ logViewerData: data }),
 
       preferencesOverride: {},
       setPreferenceOverride: (patch) =>

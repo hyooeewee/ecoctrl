@@ -20,6 +20,7 @@ import {
   Shrink,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useEffect } from "react";
 
 import { PluginNodesContext } from "./nodes-context";
 import { useColorMode } from "@/hooks/useColorMode";
@@ -32,7 +33,6 @@ import { WorkflowTestPanel } from "./WorkflowTestPanel";
 import { WorkflowNodeConfig } from "./WorkflowNodeConfig";
 import { WorkflowDialogs } from "./WorkflowDialogs";
 import { VariableEditor } from "./VariableEditor";
-import TestLogFullscreenViewer from "./TestLogFullscreenViewer";
 
 interface WorkflowCanvasProps {
   workflowId: string | null;
@@ -45,6 +45,37 @@ export default function WorkflowCanvas({ workflowId, onBack, onDirtyChange }: Wo
 
   const theme = useAppStore((s) => s.preferencesOverride.theme ?? "system");
   const colorMode = useColorMode(theme);
+  const setLogViewerData = useAppStore((state) => state.setLogViewerData);
+  const setActiveTab = useAppStore((state) => state.setActiveTab);
+
+  // Navigate to LogViewerPage when test log fullscreen is requested
+  useEffect(() => {
+    if (canvas.testLogFullscreen && canvas.testResult && workflowId) {
+      const nodeLogs = canvas.testResult.nodeLogs?.map((log) => ({
+        nodeId: log.nodeId,
+        nodeName: log.nodeName,
+        nodeType: log.nodeType,
+        status: log.status,
+        startedAt: log.startedAt,
+        completedAt: log.completedAt,
+        durationMs: log.durationMs,
+        output: log.output,
+        error: log.error,
+      }));
+      setLogViewerData({
+        type: "test",
+        workflowId,
+        testResult: {
+          status: canvas.testResult.status,
+          error: canvas.testResult.error,
+          nodeLogs,
+        },
+        returnTab: "workflowCanvas",
+      });
+      setActiveTab("logViewer");
+      canvas.setTestLogFullscreen(false);
+    }
+  }, [canvas.testLogFullscreen, canvas.testResult, workflowId, setLogViewerData, setActiveTab]);
 
   if (canvas.loading) {
     return (
@@ -99,11 +130,6 @@ export default function WorkflowCanvas({ workflowId, onBack, onDirtyChange }: Wo
             canvas.setShowEnvVarsDialog(true);
           }}
           fullscreen={true}
-        />
-      ) : canvas.testLogFullscreen ? (
-        <TestLogFullscreenViewer
-          testResult={canvas.testResult}
-          onBack={() => canvas.setTestLogFullscreen(false)}
         />
       ) : (
         <div className="flex flex-1 overflow-hidden">

@@ -22,6 +22,8 @@ import Preferences from "@/pages/Preferences";
 import Profile from "@/pages/Profile";
 import Reports from "@/pages/Reports";
 import DashboardModel from "@/pages/DashboardModel";
+import WorkflowCanvasPage from "@/pages/WorkflowCanvasPage";
+import LogViewerPage from "@/pages/LogViewerPage";
 import { applyDarkMode } from "@/lib/darkMode";
 import { auth } from "./lib/auth";
 import { authApi } from "./api/auth";
@@ -125,6 +127,10 @@ export default function App() {
         return <DashboardModel />;
       case "workflows":
         return <Workflows />;
+      case "workflowCanvas":
+        return <WorkflowCanvasPage />;
+      case "logViewer":
+        return <LogViewerPage />;
       case "reports":
         return <Reports />;
       case "maintenance":
@@ -148,7 +154,8 @@ export default function App() {
     }
   };
 
-  const isImmersive = activeTab === "settingsGroup";
+  const isImmersive =
+    activeTab === "settingsGroup" || activeTab === "workflowCanvas" || activeTab === "logViewer";
 
   return (
     <SseProvider>

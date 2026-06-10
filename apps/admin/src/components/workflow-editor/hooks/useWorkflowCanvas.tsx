@@ -252,7 +252,10 @@ export function useWorkflowCanvas({ workflowId, onBack, onDirtyChange }: UseWork
 
   const onNodesChange = useCallback(
     (changes: Parameters<typeof _onNodesChange>[0]) => {
-      setIsDirty(true);
+      const isUserChange = changes.some((c) => c.type !== "dimensions" && c.type !== "select");
+      if (isUserChange) {
+        setIsDirty(true);
+      }
       _onNodesChange(changes);
     },
     [_onNodesChange],
@@ -260,7 +263,10 @@ export function useWorkflowCanvas({ workflowId, onBack, onDirtyChange }: UseWork
 
   const onEdgesChange = useCallback(
     (changes: Parameters<typeof _onEdgesChange>[0]) => {
-      setIsDirty(true);
+      const isUserChange = changes.some((c) => c.type !== "select");
+      if (isUserChange) {
+        setIsDirty(true);
+      }
       _onEdgesChange(changes);
     },
     [_onEdgesChange],
