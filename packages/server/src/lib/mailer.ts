@@ -123,6 +123,56 @@ async function buildTransporter(): Promise<Transporter | null> {
   return transporter;
 }
 
+export async function verifySmtp(): Promise<void> {
+  const config = await resolveSmtpConfig();
+  if (!config) {
+    throw new Error("SMTP not configured");
+  }
+
+  const useSecure = config.smtpPort === 465 || config.smtpSecure;
+  const requireTLS = config.smtpPort === 587;
+
+  const t = nodemailer.createTransport({
+    host: config.smtpHost,
+    port: config.smtpPort,
+    secure: useSecure,
+    requireTLS,
+    auth: {
+      user: config.smtpUser,
+      pass: config.smtpPass,
+    },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 15000,
+    tls: {
+      rejectUnauthorized: false,
+    },
+  });
+
+  try {
+    await t.verify();
+  } catch (verifyErr) {
+    const err = verifyErr as Error & { code?: string; command?: string };
+
+    if (err.code === "ETIMEDOUT" || err.message.includes("Timeout")) {
+      throw new Error(
+        `SMTP connection timed out to ${config.smtpHost}:${config.smtpPort}. ` +
+          `Please verify: 1) Host/port are correct. 2) Firewall allows outbound on this port. ` +
+          `3) For 163/QQ mail, you must use the "authorization code" (not login password). ` +
+          `4) Port 465 needs secure=true; port 587 needs secure=false with STARTTLS.`,
+        { cause: verifyErr },
+      );
+    }
+    if (err.message.includes("Invalid login") || err.message.includes("AUTH")) {
+      throw new Error(
+        `SMTP authentication failed. For 163/QQ mail, use the "authorization code" (授权码) instead of your login password.`,
+        { cause: verifyErr },
+      );
+    }
+    throw err;
+  }
+}
+
 export async function sendMail(options: {
   to: string;
   subject: string;
