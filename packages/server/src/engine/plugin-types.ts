@@ -143,6 +143,9 @@ export interface PluginApi {
       returning?: string[],
     ): Promise<Record<string, unknown>>;
   };
+  sse: {
+    emit(type: string, payload: Record<string, unknown>, targetUserId?: string): Promise<void>;
+  };
   workflow: {
     executeSubGraph(nodes: unknown[], edges: unknown[]): Promise<Record<string, unknown>>;
     executeById(
