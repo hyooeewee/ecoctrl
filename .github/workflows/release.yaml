@@ -10,6 +10,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  packages: write
 
 concurrency:
   group: release-${{ github.ref }}
@@ -62,3 +63,53 @@ jobs:
           setupGitUser: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login GHCR
+        if: steps.check.outputs.needed == 'true'
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Set up Docker Buildx
+        if: steps.check.outputs.needed == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Read version
+        if: steps.check.outputs.needed == 'true'
+        id: version
+        run: |
+          VERSION=$(node -p "require('./apps/admin/package.json').version")
+          echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
+          echo "rc-tag=v${VERSION}-rc" >> $GITHUB_OUTPUT
+
+      - name: Build & Push rc images
+        if: steps.check.outputs.needed == 'true'
+        uses: docker/bake-action@v5
+        with:
+          files: ./docker/docker-bake.hcl
+          targets: web,admin,server
+          push: true
+          set: |
+            *.platform=linux/amd64,linux/arm64
+        env:
+          TAG: ${{ steps.version.outputs.rc-tag }}
+          REGISTRY: ghcr.io/${{ github.repository }}
+          LATEST: "false"
+          BUILDER_CONTEXT: docker-image://ghcr.io/${{ github.repository }}/builder:cache
+
+      - name: Create or update GitHub Pre-release
+        if: steps.check.outputs.needed == 'true'
+        run: |
+          RC_TAG="${{ steps.version.outputs.rc-tag }}"
+          TAG="${{ steps.version.outputs.tag }}"
+          if gh release view "$RC_TAG" > /dev/null 2>&1; then
+            gh release edit "$RC_TAG" \
+              --prerelease \
+              --title "$RC_TAG" \
+              --notes "Pre-release of $TAG (updated). Promote to stable via the **Stable Release** workflow."
+          else
+            gh release create "$RC_TAG" \
+              --prerelease \
+              --title "$RC_TAG" \
+              --notes "Pre-release of $TAG. Promote to stable via the **Stable Release** workflow."
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
