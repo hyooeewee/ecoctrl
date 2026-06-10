@@ -67,6 +67,7 @@ export default function Home() {
 
   const onSseMessage = useCallback(
     (msg: SSEMessage) => {
+      console.log("[SSE] received:", msg.type, msg.payload);
       if (msg.type === "widget_update") {
         const { widgetId, data } = msg.payload as {
           widgetId: string;
