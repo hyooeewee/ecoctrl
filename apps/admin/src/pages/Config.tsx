@@ -1,7 +1,6 @@
 import {
   Archive,
   CalendarDays,
-  Check,
   Clock,
   Database,
   Eye,
@@ -20,7 +19,6 @@ import {
 import React, { useEffect, useState } from "react";
 
 import {
-  Button,
   Input,
   Label,
   Select,
@@ -31,6 +29,7 @@ import {
   Switch,
 } from "@ecoctrl/ui";
 import SettingsPage from "@/components/SettingsPage";
+import AsyncActionButton, { useAsyncAction } from "@/components/AsyncActionButton";
 
 import type { SystemConfig } from "@ecoctrl/shared";
 import { systemConfigApi } from "../api/systemConfig";
@@ -39,10 +38,8 @@ import type { AuthUser } from "../api/auth";
 export default function SystemConfig({ user }: { user: AuthUser | null }) {
   const [config, setConfig] = useState<SystemConfig | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
   const [showSmtpPass, setShowSmtpPass] = useState(false);
-  const [testingEmail, setTestingEmail] = useState(false);
+  const { execute: executeVerify } = useAsyncAction();
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -60,36 +57,13 @@ export default function SystemConfig({ user }: { user: AuthUser | null }) {
 
   const handleSave = async () => {
     if (!config) return;
-    setSaving(true);
-    setSaveSuccess(false);
-    try {
-      await systemConfigApi.update(config);
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (err) {
-      console.error(err);
-      alert("保存配置失败，请重试");
-    } finally {
-      setSaving(false);
-    }
+    await systemConfigApi.update(config);
   };
 
   const handleTestEmail = async () => {
-    const to = user?.email;
-    if (!to) {
-      alert("当前用户未设置邮箱地址，无法发送测试邮件");
-      return;
-    }
-    setTestingEmail(true);
-    try {
-      await systemConfigApi.testEmail(to);
-      alert("测试邮件已发送，请查收邮箱");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "发送失败";
-      alert(`测试邮件发送失败：${message}`);
-    } finally {
-      setTestingEmail(false);
-    }
+    await executeVerify(async () => {
+      await systemConfigApi.verifySmtp();
+    });
   };
 
   const currentConfig: SystemConfig = config ?? {
@@ -365,9 +339,16 @@ export default function SystemConfig({ user }: { user: AuthUser | null }) {
             />
           </div>
           <div className="flex justify-end">
-            <Button variant="outline" size="sm" onClick={handleTestEmail} disabled={testingEmail}>
-              {testingEmail ? "发送中..." : "测试邮件连接"}
-            </Button>
+            <AsyncActionButton
+              action={handleTestEmail}
+              variant="outline"
+              size="sm"
+              loading="验证中..."
+              success="验证通过"
+              error="验证失败"
+            >
+              验证 SMTP 配置
+            </AsyncActionButton>
           </div>
         </div>
       ),
@@ -445,16 +426,16 @@ export default function SystemConfig({ user }: { user: AuthUser | null }) {
 
   const actions = (
     <div className="flex items-center justify-end gap-3">
-      {saveSuccess && (
-        <span className="flex items-center gap-1 text-sm text-green-600">
-          <Check size={16} />
-          保存成功
-        </span>
-      )}
-      <Button variant="outline" size="sm" onClick={handleSave} disabled={saving} className="gap-2">
-        <Save size={16} />
-        {saving ? "保存中..." : "保存所有配置"}
-      </Button>
+      <AsyncActionButton
+        action={handleSave}
+        variant="outline"
+        size="sm"
+        idleIcon={<Save size={16} />}
+        loading="保存中..."
+        success="保存成功"
+      >
+        保存所有配置
+      </AsyncActionButton>
     </div>
   );
 
