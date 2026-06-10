@@ -1,5 +1,18 @@
 # @ecoctrl/admin
 
+## 0.7.0
+
+### Minor Changes
+
+- 22b4900: Enhance SSE workflow node with event ID support and schema defaults
+- 22b4900: Add multi-file support and S3 streaming for dashboard models
+- 22b4900: Add BabylonJS-based 3D model viewer and editor with label system
+
+### Patch Changes
+
+- 22b4900: Add auto-detection of header rows in XLSX and CSV parsers
+- 22b4900: Simplify web navigation and remove unused dashboard routes
+
 ## 0.6.0
 
 ### Minor Changes
