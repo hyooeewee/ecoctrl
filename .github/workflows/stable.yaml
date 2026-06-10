@@ -30,15 +30,22 @@ jobs:
       - name: Resolve rc tag
         id: resolve
         run: |
-          # github.ref is refs/tags/vX.Y.Z-rc when triggered from a tag
-          RAW="${{ github.ref }}"
-          TAG="${RAW#refs/tags/}"
+          TAG=$(git describe --tags --exact-match 2>/dev/null || true)
+          if [ -n "$TAG" ]; then
+            echo "rc-tag=$TAG" >> "$GITHUB_OUTPUT"
+            echo "Selected: $TAG"
+            exit 0
+          fi
+
+          TAG=$(gh release list --limit 5 --json tagName --jq '.[].tagName' | grep -- '-rc$' | head -1)
           if [ -z "$TAG" ]; then
-            echo "ERROR: No tag detected. Run this workflow from an RC tag."
+            echo "ERROR: No RC tag detected and no RC prerelease found."
             exit 1
           fi
           echo "rc-tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "Selected: $TAG"
+          echo "Auto-detected: $TAG"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Validate rc tag exists
         run: |
@@ -69,6 +76,66 @@ jobs:
               -t ghcr.io/${{ github.repository }}/${IMG}:latest \
               ghcr.io/${{ github.repository }}/${IMG}:${{ steps.resolve.outputs.rc-tag }}
           done
+
+      # ── Offline Docker bundle ──
+      - name: Export all images
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          # Pull project images from GHCR + third-party images
+          for IMG in web admin server; do
+            docker pull "ghcr.io/${{ github.repository }}/${IMG}:${VERSION}"
+          done
+          docker pull "postgres:16-alpine"
+          docker pull "minio/minio:latest"
+
+          # Save to tar
+          docker save -o ecoctrl-images.tar \
+            "ghcr.io/${{ github.repository }}/web:${VERSION}" \
+            "ghcr.io/${{ github.repository }}/admin:${VERSION}" \
+            "ghcr.io/${{ github.repository }}/server:${VERSION}" \
+            "postgres:16-alpine" \
+            "minio/minio:latest"
+
+          # Package offline bundle
+          mkdir -p docker-bundle
+          mv ecoctrl-images.tar docker-bundle/
+          cp docker/compose.yaml docker-bundle/
+          cp scripts/migrate-images.sh docker-bundle/
+
+          {
+            echo "EcoCtrl Docker Offline Bundle ${VERSION}"
+            echo ""
+            echo "1. Ensure docker and docker compose are installed"
+            echo "2. Run: bash migrate-images.sh compose.yaml --load ecoctrl-images.tar"
+            echo "3. Copy .env.local to this directory"
+            echo "4. Run: docker compose up -d"
+          } > docker-bundle/README.txt
+
+          zip -r "ecoctrl-docker-v${VERSION}.zip" docker-bundle
+          rm -rf docker-bundle
+
+      # ── Upload to R2 ──
+      - name: Upload Docker bundle to R2
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          VERSION=${VERSION#v}
+
+          ENDPOINT="https://${CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com"
+
+          aws s3 cp "ecoctrl-docker-v${VERSION}.zip" \
+            "s3://ecoctrl/images/v${VERSION}/ecoctrl.zip" \
+            --endpoint-url "$ENDPOINT"
+
+          aws s3 cp "ecoctrl-docker-v${VERSION}.zip" \
+            "s3://ecoctrl/images/latest/ecoctrl.zip" \
+            --endpoint-url "$ENDPOINT"
+
+          rm "ecoctrl-docker-v${VERSION}.zip"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       # ── GitHub Release ──
       - name: Generate release body
