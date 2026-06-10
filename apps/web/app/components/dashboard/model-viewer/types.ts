@@ -61,9 +61,5 @@ export interface ViewerOptions {
   onLoad?: () => void;
   onCriticalLoaded?: () => void;
   onProgress?: (progress: number) => void;
-  glowIntensity: number;
   defaultCameraRadius: number;
-  defaultRotationY: number;
-  /** Environment configuration. Uses Sandbox-style defaults; pass partial overrides to customize. */
-  environment?: EnvironmentOptions;
 }

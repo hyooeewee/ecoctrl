@@ -1,16 +1,14 @@
 import {
   ArcRotateCamera,
-  Color3,
-  Color4,
   HemisphericLight,
   Matrix,
+  Mesh,
   TransformNode,
   Vector3,
   Viewport,
 } from "@babylonjs/core";
 import "@babylonjs/loaders/glTF";
 import type { DashboardModelLabel, LabelOperation } from "@ecoctrl/shared";
-import { animateCameraRadius, animateCameraTo } from "./camera-utils";
 import { updateClipPlane, setClipTarget, type ClipState } from "./clipping-utils";
 import {
   INITIAL_ALPHA,
@@ -19,11 +17,10 @@ import {
   FALLBACK_URL,
   DEFAULT_LABELS,
   DEFAULT_V2_LABELS,
-  DEFAULT_ENVIRONMENT,
   type LabelDef,
 } from "./constants";
 import type { ModelFileEntry } from "@ecoctrl/shared";
-import { createEngine, createScene, createGlowLayer, loadGltf } from "@ecoctrl/shared/babylon";
+import { createEngine, createScene, loadGltf } from "@ecoctrl/shared/babylon";
 import type { ModelGroup, LabelAnchor, ModelLoadConfig, ViewerOptions } from "./types";
 
 // ========================================
@@ -37,7 +34,6 @@ export interface ModelViewerRef {
   ensureCloseUp: (minRadius: number) => void;
   resetToDefaultRadius: () => void;
   focusOnLabel: (key: string) => void;
-  setViewportOffset: (px: number, canvasWidth: number) => void;
   setClipping: (enabled: boolean) => void;
 }
 
@@ -46,8 +42,6 @@ export class ModelViewer implements ModelViewerRef {
   readonly engine: Engine;
   readonly scene: Scene;
   readonly camera: ArcRotateCamera;
-  readonly glow: GlowLayer;
-  readonly pivot: TransformNode;
 
   // Canvas reference
   private readonly canvas: HTMLCanvasElement;
@@ -58,22 +52,13 @@ export class ModelViewer implements ModelViewerRef {
   private onProgress?: (progress: number) => void;
 
   // Runtime state
-  private isInteracting = false;
-  private autoRotate = false;
-  private rotateSpeed = 1;
   private showLabels = true;
 
   // Camera defaults
   private defaultCameraRadius: number;
-  private defaultRotationY: number;
 
-  // Post-load camera state for resetCamera
-  private postLoadCameraState: {
-    alpha: number;
-    beta: number;
-    radius: number;
-    target: Vector3;
-  } | null = null;
+  // Post-load camera target for resetCamera
+  private postLoadTarget: Vector3 | null = null;
 
   // Label anchors (computed after model load)
   private labelAnchors: LabelAnchor[] = [];
@@ -106,33 +91,18 @@ export class ModelViewer implements ModelViewerRef {
     this.onCriticalLoaded = options.onCriticalLoaded;
     this.onProgress = options.onProgress;
     this.defaultCameraRadius = options.defaultCameraRadius;
-    this.defaultRotationY = options.defaultRotationY;
 
     this.engine = createEngine(this.canvas);
     this.scene = createScene(this.engine);
 
-    // Environment setup — Sandbox style by default, overridable via options
-    const envOpts = { ...DEFAULT_ENVIRONMENT, ...options.environment };
+    // Performance: reduce render resolution to ease GPU fragment-shader load
+    // for heavy scenes with multiple large GLB models.
+    this.engine.setHardwareScalingLevel(0.5);
 
-    if (envOpts.clearColor) {
-      this.scene.clearColor = Color4.FromHexString(envOpts.clearColor);
+    // Cap texture size if the engine supports it (tree-shaking may drop ThinEngine method).
+    if (typeof (this.engine as any).setMaximumTextureSize === "function") {
+      (this.engine as any).setMaximumTextureSize(1024);
     }
-
-    // Create default environment (skybox + ground + image processing)
-    this.scene.createDefaultEnvironment({
-      createSkybox: envOpts.createSkybox,
-      skyboxSize: envOpts.skyboxSize,
-      skyboxColor: Color3.FromHexString(envOpts.skyboxColor),
-      createGround: envOpts.createGround,
-      groundSize: envOpts.groundSize,
-      groundColor: Color3.FromHexString(envOpts.groundColor),
-      enableGroundShadow: envOpts.enableGroundShadow,
-      groundShadowLevel: envOpts.groundShadowLevel,
-      cameraExposure: envOpts.cameraExposure,
-      cameraContrast: envOpts.cameraContrast,
-      toneMappingEnabled: envOpts.toneMappingEnabled,
-      setupImageProcessing: envOpts.setupImageProcessing,
-    });
 
     // Create camera
     this.camera = new ArcRotateCamera(
@@ -151,22 +121,9 @@ export class ModelViewer implements ModelViewerRef {
     this.camera.upperBetaLimit = Math.PI / 2.2;
     this.camera.viewport = new Viewport(0, 0, 1, 1);
 
-    // Track user interaction
-    this.canvas.addEventListener("pointerdown", this.onPointerDown);
-    this.canvas.addEventListener("pointerup", this.onPointerUp);
-    this.canvas.addEventListener("pointercancel", this.onPointerUp);
-    this.canvas.addEventListener("pointerleave", this.onPointerUp);
-
     // Additional hemisphere light for model visibility
     const hemi = new HemisphericLight("hemi", new Vector3(0, 1, 0), this.scene);
     hemi.intensity = 0.8;
-
-    // Glow layer
-    this.glow = createGlowLayer(this.scene, options.glowIntensity);
-
-    // Root pivot for rotation
-    this.pivot = new TransformNode("rotationPivot", this.scene);
-    this.pivot.rotation.y = (this.defaultRotationY * Math.PI) / 180;
 
     // Start render loop
     this.engine.runRenderLoop(() => this.render());
@@ -186,11 +143,6 @@ export class ModelViewer implements ModelViewerRef {
   private render(): void {
     const start = performance.now();
 
-    // Auto-rotate
-    if (this.autoRotate && !this.isInteracting) {
-      this.camera.alpha += 0.002 * this.rotateSpeed;
-    }
-
     this.scene.render();
 
     // Update clip plane
@@ -204,7 +156,7 @@ export class ModelViewer implements ModelViewerRef {
         console.warn(
           `[ModelViewer] Slow render loop detected: ${elapsed.toFixed(2)}ms/frame ` +
             `(${this.slowFrameCount} slow frames since start). ` +
-            `Consider reducing scene complexity or disabling auto-rotate/glow.`,
+            `Consider reducing scene complexity.`,
         );
       }
     }
@@ -349,7 +301,6 @@ export class ModelViewer implements ModelViewerRef {
     console.log(`[ModelViewer] Loading model group "${groupId}" from: ${url}`);
 
     const groupParent = new TransformNode(`groupParent_${groupId}`, this.scene);
-    groupParent.parent = this.pivot;
 
     const { meshes, sourceUrl } = await loadGltf({
       scene: this.scene,
@@ -366,9 +317,28 @@ export class ModelViewer implements ModelViewerRef {
     });
     URL.revokeObjectURL(sourceUrl);
 
-    // Temporarily zero pivot rotation so world-space bounds match groupParent space.
-    const savedPivotY = this.pivot.rotation.y;
-    this.pivot.rotation.y = 0;
+    // Merge meshes by material to reduce draw calls.
+    const mergeable = meshes.filter(
+      (m): m is Mesh => m instanceof Mesh && !(m as any).isAnInstance,
+    );
+    if (mergeable.length > 1) {
+      try {
+        const merged = Mesh.MergeMeshes(mergeable, true, true, undefined, true, true);
+        if (merged) {
+          merged.parent = groupParent;
+        }
+      } catch {
+        /* merge failed — keep original meshes */
+      }
+    }
+
+    // Freeze world matrices for static meshes.
+    meshes.forEach((mesh) => {
+      if ((mesh as any).freezeWorldMatrix) {
+        mesh.freezeWorldMatrix();
+      }
+    });
+
     this.scene.updateTransformMatrix(true);
 
     let min = new Vector3(Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE);
@@ -382,8 +352,6 @@ export class ModelViewer implements ModelViewerRef {
       max = Vector3.Maximize(max, bmax);
     }
 
-    // Restore pivot rotation.
-    this.pivot.rotation.y = savedPivotY;
     this.scene.updateTransformMatrix(true);
 
     const size = max.subtract(min);
@@ -464,7 +432,7 @@ export class ModelViewer implements ModelViewerRef {
   }
 
   /**
-   * Set up camera target and post-load state after critical models are loaded.
+   * Set up camera target after critical models are loaded.
    */
   private setupPostLoadState(): void {
     // Compute combined bounding box of all loaded groups.
@@ -493,11 +461,9 @@ export class ModelViewer implements ModelViewerRef {
     if (combinedMin && combinedMax) {
       const size = combinedMax.subtract(combinedMin);
       const center = combinedMin.add(size.scale(0.5));
-      // Aim the camera at the actual world-space center of the loaded models,
-      // not the hard-coded origin, so the scene is centered regardless of
-      // pivot rotation.
       const target = center.clone();
       this.camera.setTarget(target);
+      this.postLoadTarget = target.clone();
 
       console.log(
         `[ModelViewer] setupPostLoadState: combinedMin=(${combinedMin.x.toFixed(2)}, ${combinedMin.y.toFixed(2)}, ${combinedMin.z.toFixed(2)}), ` +
@@ -505,14 +471,6 @@ export class ModelViewer implements ModelViewerRef {
           `size=(${size.x.toFixed(2)}, ${size.y.toFixed(2)}, ${size.z.toFixed(2)}), target=(${target.x.toFixed(2)}, ${target.y.toFixed(2)}, ${target.z.toFixed(2)}), ` +
           `camera.radius=${this.camera.radius.toFixed(2)}, alpha=${this.camera.alpha.toFixed(2)}, beta=${this.camera.beta.toFixed(2)}`,
       );
-
-      // Snapshot post-load camera state
-      this.postLoadCameraState = {
-        alpha: this.camera.alpha,
-        beta: this.camera.beta,
-        radius: this.camera.radius,
-        target: target.clone(),
-      };
     } else {
       console.warn(
         `[ModelViewer] setupPostLoadState: no bounding box computed (groups=${this.groups.length})`,
@@ -601,54 +559,36 @@ export class ModelViewer implements ModelViewerRef {
   // ========================================
 
   zoomIn(): void {
-    const next = Math.max(this.camera.radius * 0.8, this.camera.lowerRadiusLimit ?? 8);
-    animateCameraRadius(this.camera, next);
+    this.camera.radius = Math.max(this.camera.radius * 0.8, this.camera.lowerRadiusLimit ?? 8);
   }
 
   zoomOut(): void {
-    const next = Math.min(this.camera.radius * 1.25, this.camera.upperRadiusLimit ?? 60);
-    animateCameraRadius(this.camera, next);
+    this.camera.radius = Math.min(this.camera.radius * 1.25, this.camera.upperRadiusLimit ?? 60);
   }
 
   resetCamera(): void {
-    this.scene.stopAnimation(this.camera);
-    this.camera.animations = [];
+    this.camera.alpha = INITIAL_ALPHA;
+    this.camera.beta = INITIAL_BETA;
+    this.camera.radius = this.defaultCameraRadius;
+    this.camera.target = this.postLoadTarget?.clone() ?? INITIAL_TARGET.clone();
 
-    const saved = this.postLoadCameraState;
-    if (saved) {
-      this.camera.alpha = saved.alpha;
-      this.camera.beta = saved.beta;
-      this.camera.radius = saved.radius;
-      this.camera.target = saved.target.clone();
-    } else {
-      this.camera.alpha = INITIAL_ALPHA;
-      this.camera.beta = INITIAL_BETA;
-      this.camera.radius = this.defaultCameraRadius;
-      this.camera.target = INITIAL_TARGET.clone();
-    }
-
-    // Reset viewport (remove sidebar offset)
+    // Reset viewport
     this.camera.viewport = new Viewport(0, 0, 1, 1);
 
     // Reset clip plane
     this.clipState.targetY = 999;
     this.clipState.currentY = 999;
     this.scene.clipPlane = null;
-
-    // Reset pivot rotation
-    this.pivot.rotation.setAll(0);
-    this.pivot.rotationQuaternion = null;
-    this.pivot.rotation.y = (this.defaultRotationY * Math.PI) / 180;
   }
 
   ensureCloseUp(minRadius: number): void {
     if (this.camera.radius >= minRadius) {
-      animateCameraRadius(this.camera, minRadius * 0.9);
+      this.camera.radius = minRadius * 0.9;
     }
   }
 
   resetToDefaultRadius(): void {
-    animateCameraRadius(this.camera, this.defaultCameraRadius);
+    this.camera.radius = this.defaultCameraRadius;
   }
 
   focusOnLabel(key: string): void {
@@ -673,13 +613,9 @@ export class ModelViewer implements ModelViewerRef {
         const targetAlpha = Math.atan2(direction.x, direction.z);
         const horizontalDist = Math.sqrt(direction.x * direction.x + direction.z * direction.z);
         const targetBeta = Math.atan2(direction.y, horizontalDist) + Math.PI / 2;
-        animateCameraTo(
-          this.camera,
-          targetAlpha,
-          Math.max(0.1, Math.min(Math.PI / 2.2, targetBeta)),
-          cfg.distance,
-          cfg.duration,
-        );
+        this.camera.alpha = targetAlpha;
+        this.camera.beta = Math.max(0.1, Math.min(Math.PI / 2.2, targetBeta));
+        this.camera.radius = cfg.distance;
         break;
       }
 
@@ -713,21 +649,9 @@ export class ModelViewer implements ModelViewerRef {
       }
 
       case "postprocess": {
-        const cfg = op.config;
-        if (cfg.effect === "glow") {
-          this.glow.intensity = cfg.value;
-        }
+        // Postprocess operations are not supported in the simplified viewer.
         break;
       }
-    }
-  }
-
-  setViewportOffset(px: number, canvasWidth: number): void {
-    if (px > 0 && canvasWidth > 0) {
-      const x = px / canvasWidth;
-      this.camera.viewport = new Viewport(x, 0, 1 - x, 1);
-    } else {
-      this.camera.viewport = new Viewport(0, 0, 1, 1);
     }
   }
 
@@ -740,30 +664,13 @@ export class ModelViewer implements ModelViewerRef {
   // State setters
   // ========================================
 
-  setAutoRotate(enabled: boolean): void {
-    this.autoRotate = enabled;
-  }
-
-  setRotateSpeed(speed: number): void {
-    this.rotateSpeed = speed;
-  }
-
   setShowLabels(show: boolean): void {
     this.showLabels = show;
   }
 
-  setGlowIntensity(intensity: number): void {
-    this.glow.intensity = intensity;
-  }
-
   setDefaultCameraRadius(radius: number): void {
     this.defaultCameraRadius = radius;
-    animateCameraRadius(this.camera, radius);
-  }
-
-  setDefaultRotationY(degrees: number): void {
-    this.defaultRotationY = degrees;
-    this.pivot.rotation.y = (degrees * Math.PI) / 180;
+    this.camera.radius = radius;
   }
 
   // ========================================
@@ -857,27 +764,11 @@ export class ModelViewer implements ModelViewerRef {
   }
 
   // ========================================
-  // Event handlers
-  // ========================================
-
-  private onPointerDown = (): void => {
-    this.isInteracting = true;
-  };
-
-  private onPointerUp = (): void => {
-    this.isInteracting = false;
-  };
-
-  // ========================================
   // Cleanup
   // ========================================
 
   dispose(): void {
     window.removeEventListener("resize", this.handleResize);
-    this.canvas.removeEventListener("pointerdown", this.onPointerDown);
-    this.canvas.removeEventListener("pointerup", this.onPointerUp);
-    this.canvas.removeEventListener("pointercancel", this.onPointerUp);
-    this.canvas.removeEventListener("pointerleave", this.onPointerUp);
 
     this.engine.stopRenderLoop();
     this.camera.detachControl();

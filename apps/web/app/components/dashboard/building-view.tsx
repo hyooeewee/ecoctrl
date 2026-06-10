@@ -51,7 +51,6 @@ export interface BuildingViewRef {
   ensureCloseUp: (minRadius: number) => void;
   resetToDefaultRadius: () => void;
   focusOnLabel: (key: string) => void;
-  setViewportOffset: (px: number) => void;
   setClipping: (enabled: boolean) => void;
 }
 
@@ -79,9 +78,9 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
   {
     className,
     activeLabel,
-    sidebarWidth = 320,
+    sidebarWidth: _sidebarWidth = 320,
     onLabelClick,
-    onCanvasClick,
+    onCanvasClick: _onCanvasClick,
     onLoad,
     onProgress,
     modelUrl,
@@ -95,14 +94,7 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
   const lastLabelStateRef = useRef<Record<string, { x: number; y: number; visible: boolean }>>({});
   const rafRef = useRef<number>(0);
 
-  const {
-    autoRotate,
-    rotateSpeed,
-    showLabels,
-    glowIntensity,
-    defaultCameraRadius,
-    defaultRotationY,
-  } = useSettingsStore();
+  const { showLabels, defaultCameraRadius } = useSettingsStore();
   const t = useLocale();
 
   const labelText: Record<string, string> = {
@@ -123,9 +115,7 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
       canvas,
       onLoad,
       onProgress,
-      glowIntensity,
       defaultCameraRadius,
-      defaultRotationY,
     });
     viewerRef.current = viewer;
 
@@ -186,34 +176,12 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
 
   // Sync reactive props.
   useEffect(() => {
-    viewerRef.current?.setAutoRotate(autoRotate);
-  }, [autoRotate]);
-
-  useEffect(() => {
-    viewerRef.current?.setRotateSpeed(rotateSpeed);
-  }, [rotateSpeed]);
-
-  useEffect(() => {
     viewerRef.current?.setShowLabels(showLabels);
   }, [showLabels]);
 
   useEffect(() => {
-    viewerRef.current?.setGlowIntensity(glowIntensity);
-  }, [glowIntensity]);
-
-  useEffect(() => {
     viewerRef.current?.setDefaultCameraRadius(defaultCameraRadius);
   }, [defaultCameraRadius]);
-
-  useEffect(() => {
-    viewerRef.current?.setDefaultRotationY(defaultRotationY);
-  }, [defaultRotationY]);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    viewerRef.current?.setViewportOffset(sidebarWidth > 0 ? sidebarWidth : 0, canvas.clientWidth);
-  }, [sidebarWidth]);
 
   // Forward imperative methods.
   useImperativeHandle(
@@ -225,12 +193,6 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
       ensureCloseUp: (minRadius: number) => viewerRef.current?.ensureCloseUp(minRadius),
       resetToDefaultRadius: () => viewerRef.current?.resetToDefaultRadius(),
       focusOnLabel: (key: string) => viewerRef.current?.focusOnLabel(key),
-      setViewportOffset: (px: number) => {
-        const canvas = canvasRef.current;
-        if (canvas) {
-          viewerRef.current?.setViewportOffset(px, canvas.clientWidth);
-        }
-      },
       setClipping: (enabled: boolean) => viewerRef.current?.setClipping(enabled),
     }),
     [],
