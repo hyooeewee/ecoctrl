@@ -260,7 +260,7 @@ export default function SettingsPage() {
       : t.settings.saved;
 
   return (
-    <div className="dark text-foreground relative h-screen overflow-hidden bg-[#060d18]/90 backdrop-blur-sm font-sans">
+    <div className="dark text-foreground pointer-events-auto relative h-screen overflow-hidden bg-[#060d18]/90 backdrop-blur-sm font-sans">
       {/* Back button */}
       <button
         type="button"

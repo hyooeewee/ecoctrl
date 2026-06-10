@@ -8,14 +8,12 @@ import { useSettingsStore } from "~/store/settings";
 export interface DashboardHeaderProps {
   className?: string;
   onLogoClick?: () => void;
-  navVisible?: boolean;
   sseStatus?: "connected" | "reconnecting" | "disconnected";
 }
 
 export function DashboardHeader({
   className,
   onLogoClick,
-  navVisible,
   sseStatus = "connected",
 }: DashboardHeaderProps) {
   const t = useLocale();
@@ -111,7 +109,7 @@ export function DashboardHeader({
           type="button"
           onClick={onLogoClick}
           className="group focus-visible:ring-cyber-cyan/50 z-10 flex items-center gap-3 rounded-lg px-1 py-0.5 transition-colors hover:bg-white/5 focus-visible:ring-1 focus-visible:outline-none"
-          title={navVisible ? t.header.toggleNavHide : t.header.toggleNavShow}
+          title={t.header.openSettings}
         >
           <div className="border-cyber-cyan/40 bg-cyber-cyan/10 group-hover:bg-cyber-cyan/15 relative flex size-9 items-center justify-center rounded-full border transition-colors">
             <img src="/favicon.ico" alt={t.common.logoAlt} className="size-4 object-contain" />
