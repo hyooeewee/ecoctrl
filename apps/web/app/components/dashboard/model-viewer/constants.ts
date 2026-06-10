@@ -1,27 +1,5 @@
 import { Vector3 } from "@babylonjs/core";
 import type { DashboardModelLabel } from "@ecoctrl/shared";
-import type { EnvironmentOptions } from "./types";
-
-// ========================================
-// Environment defaults (Sandbox style)
-// ========================================
-
-/** Default environment matching BabylonJS Sandbox style. All values can be overridden via ViewerOptions.environment. */
-export const DEFAULT_ENVIRONMENT: Required<EnvironmentOptions> = {
-  createSkybox: true,
-  skyboxSize: 100,
-  skyboxColor: "#ffffff",
-  createGround: true,
-  groundSize: 100,
-  groundColor: "#7d7d7d",
-  enableGroundShadow: true,
-  groundShadowLevel: 0.5,
-  cameraExposure: 0.6,
-  cameraContrast: 1.6,
-  toneMappingEnabled: true,
-  setupImageProcessing: true,
-  clearColor: "",
-};
 
 // ========================================
 // Camera defaults
