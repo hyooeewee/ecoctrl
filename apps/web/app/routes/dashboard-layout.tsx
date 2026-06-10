@@ -76,6 +76,14 @@ export async function clientLoader(): Promise<{
   return { model };
 }
 
+export function HydrateFallback() {
+  return (
+    <div className="flex h-screen items-center justify-center bg-[#060d18]">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-cyber-cyan border-t-transparent" />
+    </div>
+  );
+}
+
 // ========================================
 // Layout
 // ========================================
@@ -124,7 +132,7 @@ export default function DashboardLayout() {
       )}
 
       {/* Route-specific UI overlays */}
-      <div className="absolute inset-0 z-10">
+      <div className="pointer-events-none absolute inset-0 z-10">
         <Outlet
           context={
             {
