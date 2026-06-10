@@ -97,7 +97,8 @@ export default function WorkflowCanvas({ workflowId, onBack, onDirtyChange }: Wo
           saving={canvas.saving}
           publishing={canvas.publishing}
           testing={canvas.testing}
-          autoSaveStatus={canvas.autoSaveStatus}
+          saveResult={canvas.saveResult}
+          saveMode={canvas.saveMode}
           workflowId={workflowId}
           onBack={canvas.handleBack}
           onNameClick={canvas.handleNameClick}

@@ -9,6 +9,8 @@ import {
   Pencil,
   Cloud,
   CloudOff,
+  Check,
+  X,
 } from "lucide-react";
 import { Button } from "@ecoctrl/ui/button";
 import { Input } from "@ecoctrl/ui/input";
@@ -24,7 +26,8 @@ interface WorkflowToolbarProps {
   saving: boolean;
   publishing: boolean;
   testing: boolean;
-  autoSaveStatus: "idle" | "saving" | "success" | "error";
+  saveResult: "idle" | "success" | "error";
+  saveMode: "manual" | "auto" | null;
   workflowId: string | null;
   onBack: () => void;
   onNameClick: () => void;
@@ -49,7 +52,8 @@ export function WorkflowToolbar({
   saving,
   publishing,
   testing,
-  autoSaveStatus,
+  saveResult,
+  saveMode,
   workflowId,
   onBack,
   onNameClick,
@@ -64,6 +68,39 @@ export function WorkflowToolbar({
   onEnvVars,
   onSettings,
 }: WorkflowToolbarProps) {
+  // Save button icon & label
+  const saveIcon = (() => {
+    if (saving) {
+      return saveMode === "auto" ? (
+        <Cloud size={14} className="animate-pulse" />
+      ) : (
+        <Loader2 size={14} className="animate-spin" />
+      );
+    }
+    if (saveResult === "success") {
+      return saveMode === "auto" ? (
+        <Cloud size={14} className="text-emerald-500" />
+      ) : (
+        <Check size={14} className="text-green-500" />
+      );
+    }
+    if (saveResult === "error") {
+      return saveMode === "auto" ? (
+        <CloudOff size={14} className="text-rose-500" />
+      ) : (
+        <X size={14} className="text-red-500" />
+      );
+    }
+    return <Save size={14} />;
+  })();
+
+  const saveLabel = (() => {
+    if (saving) return "保存中...";
+    if (saveResult === "success") return "已保存";
+    if (saveResult === "error") return "保存失败";
+    return "保存";
+  })();
+
   return (
     <div className="flex h-12 items-center justify-between border-b bg-white px-4 dark:bg-zinc-900">
       <div className="flex items-center gap-3">
@@ -119,24 +156,15 @@ export function WorkflowToolbar({
           {testing ? <Loader2 size={14} className="animate-spin" /> : <Bug size={14} />}
           调试
         </Button>
-        {autoSaveStatus !== "idle" && (
-          <span className="flex items-center gap-1 text-xs">
-            {autoSaveStatus === "saving" && (
-              <Cloud size={14} className="text-muted-foreground animate-pulse" />
-            )}
-            {autoSaveStatus === "success" && <Cloud size={14} className="text-emerald-500" />}
-            {autoSaveStatus === "error" && <CloudOff size={14} className="text-rose-500" />}
-          </span>
-        )}
         <Button
           variant="outline"
           size="sm"
-          className="h-8 gap-1.5"
+          className="h-8 gap-1.5 min-w-[72px] justify-center"
           onClick={onSave}
           disabled={saving || publishing || testing}
         >
-          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-          保存
+          {saveIcon}
+          {saveLabel}
         </Button>
         <Button
           size="sm"
