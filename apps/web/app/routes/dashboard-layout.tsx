@@ -76,14 +76,6 @@ export async function clientLoader(): Promise<{
   return { model };
 }
 
-export function HydrateFallback() {
-  return (
-    <div className="flex h-screen items-center justify-center bg-[#060d18]">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-cyber-cyan border-t-transparent" />
-    </div>
-  );
-}
-
 // ========================================
 // Layout
 // ========================================
