@@ -152,9 +152,10 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
       // for heavy PBR scenes with multiple large GLB models.
       engine.setHardwareScalingLevel(0.5);
 
-      // Cap texture size to 1024 to prevent GPU memory thrashing
-      // when many large GLB models load simultaneously.
-      engine.setMaximumTextureSize(1024);
+      // Cap texture size if the engine supports it (tree-shaking may drop ThinEngine method).
+      if (typeof (engine as any).setMaximumTextureSize === "function") {
+        (engine as any).setMaximumTextureSize(1024);
+      }
 
       const scene = new Scene(engine);
       sceneRef.current = scene;
