@@ -6,9 +6,12 @@
   "exports": {
     ".": "./index.ts",
     "./vite": "./config/vite.config.base.ts",
-    "./model-cache": "./model-cache.ts"
+    "./model-cache": "./model-cache.ts",
+    "./babylon": "./babylon/index.ts"
   },
   "dependencies": {
+    "@babylonjs/core": "catalog:",
+    "@babylonjs/loaders": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

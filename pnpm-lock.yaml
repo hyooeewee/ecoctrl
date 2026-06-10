@@ -590,6 +590,12 @@ importers:
 
   packages/shared:
     dependencies:
+      '@babylonjs/core':
+        specifier: 'catalog:'
+        version: 9.11.0
+      '@babylonjs/loaders':
+        specifier: 'catalog:'
+        version: 9.11.0(@babylonjs/core@9.11.0)(babylonjs-gltf2interface@9.11.0)
       zod:
         specifier: 'catalog:'
         version: 4.4.3
