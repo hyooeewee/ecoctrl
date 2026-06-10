@@ -3,20 +3,17 @@
  * Category: action
  */
 module.exports = async function execute(ctx, api) {
-  const eventType = String(ctx.config.eventType || "");
-  if (!eventType) {
-    throw new Error("SSE 事件类型 (eventType) 不能为空");
-  }
+  const eventType = String(ctx.config.eventType || "update:widgets");
 
-  const payloadStr = String(ctx.config.payload || "{}");
+  const payloadStr = String(ctx.config.payload || "");
   let payload;
   try {
-    payload = JSON.parse(payloadStr);
+    payload = payloadStr ? JSON.parse(payloadStr) : {};
   } catch {
     payload = { message: payloadStr };
   }
 
-  const targetMode = String(ctx.config.targetMode || "trigger");
+  const targetMode = String(ctx.config.targetMode || "broadcast");
   let targetUserId;
 
   if (targetMode === "user") {
@@ -29,11 +26,13 @@ module.exports = async function execute(ctx, api) {
   }
   // broadcast: targetUserId stays undefined
 
+  const eventId = String(ctx.config.eventId || String(Date.now()));
+
   api.log.info(
-    `[sse-send] emitting type=${eventType} target=${targetMode}${targetUserId ? ` user=${targetUserId}` : ""}`,
+    `[sse-send] emitting type=${eventType} target=${targetMode}${targetUserId ? ` user=${targetUserId}` : ""} id=${eventId}`,
   );
 
-  await api.sse.emit(eventType, payload, targetUserId || undefined);
+  await api.sse.emit(eventType, payload, targetUserId || undefined, eventId);
 
   api.log.info(`[sse-send] event emitted successfully`);
 
@@ -42,5 +41,7 @@ module.exports = async function execute(ctx, api) {
     type: eventType,
     target: targetMode,
     targetUserId: targetUserId || null,
+    eventId,
+    payload,
   };
 };

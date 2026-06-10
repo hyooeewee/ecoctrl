@@ -6,7 +6,8 @@
     "eventType": {
       "type": "string",
       "title": "事件类型",
-      "description": "SSE 事件类型标识，如 alert、notification、custom 等"
+      "description": "SSE 事件类型标识",
+      "default": "update:widgets"
     },
     "payload": {
       "type": "string",
@@ -18,17 +19,17 @@
       "type": "string",
       "title": "发送目标",
       "enum": ["broadcast", "trigger", "user"],
-      "default": "trigger"
+      "default": "broadcast"
     },
     "targetUserId": {
       "type": "string",
       "title": "目标用户 ID",
-      "description": "当发送目标为\"指定用户\"时填写，支持 {{表达式}}"
+      "description": "仅当发送目标为 \"指定用户\" 时生效，支持 {{表达式}}"
     },
     "eventId": {
       "type": "string",
       "title": "事件 ID",
-      "description": "可选的事件唯一标识"
+      "description": "事件唯一标识，留空时默认使用当前时间戳"
     }
   },
   "required": ["eventType", "payload", "targetMode"]
