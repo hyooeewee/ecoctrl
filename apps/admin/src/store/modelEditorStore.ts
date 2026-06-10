@@ -44,6 +44,8 @@ interface ModelEditorState {
   // Actions — model files
   toggleFileVisible: (id: string) => void;
   deleteFile: (id: string) => Promise<void>;
+  updateFilePriority: (id: string, priority: "critical" | "background") => Promise<void>;
+  moveFile: (id: string, direction: "up" | "down") => Promise<void>;
   setModelProgress: (id: string, progress: number) => void;
 
   // Actions — upload
@@ -153,6 +155,47 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
     } catch (err) {
       console.error("Delete failed:", err);
       toast.error("删除失败");
+    }
+  },
+
+  updateFilePriority: async (id, priority) => {
+    const { config } = get();
+    if (!config) return;
+    const newFiles = config.modelFiles?.map((f) => (f.id === id ? { ...f, priority } : f)) ?? [];
+    try {
+      await dashboardModelApi.update({ modelFiles: newFiles });
+      set((state) => ({
+        config: state.config ? { ...state.config, modelFiles: newFiles } : null,
+      }));
+      toast.success("优先级已更新");
+    } catch (err) {
+      console.error("Priority update failed:", err);
+      toast.error("更新失败");
+    }
+  },
+
+  moveFile: async (id, direction) => {
+    const { config } = get();
+    if (!config) return;
+    const files = config.modelFiles ? [...config.modelFiles] : [];
+    const idx = files.findIndex((f) => f.id === id);
+    if (idx === -1) return;
+
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= files.length) return;
+
+    // Swap and reassign order values to match new indices.
+    [files[idx], files[swapIdx]] = [files[swapIdx], files[idx]];
+    const reordered = files.map((f, i) => ({ ...f, order: i }));
+
+    try {
+      await dashboardModelApi.update({ modelFiles: reordered });
+      set((state) => ({
+        config: state.config ? { ...state.config, modelFiles: reordered } : null,
+      }));
+    } catch (err) {
+      console.error("Reorder failed:", err);
+      toast.error("排序失败");
     }
   },
 

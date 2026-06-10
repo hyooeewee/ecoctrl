@@ -91,6 +91,7 @@ export const ModelFileEntrySchema = z.object({
   fileKey: z.string(),
   name: z.string().optional(),
   priority: z.enum(["critical", "background"]).default("background"),
+  order: z.number().default(0),
   labels: z.array(DashboardModelLabelSchema).optional(),
 });
 export type ModelFileEntry = z.infer<typeof ModelFileEntrySchema>;

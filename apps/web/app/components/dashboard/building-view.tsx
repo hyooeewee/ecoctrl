@@ -1,10 +1,9 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import type { DashboardModelConfig } from "@ecoctrl/shared";
 import { cn } from "~/lib/utils";
 import { useLocale } from "~/locales";
 import { useSettingsStore } from "~/store/settings";
 import { ModelViewer } from "./model-viewer";
-import type { ModelViewerRef } from "./model-viewer";
 
 // ========================================
 // 3D-projected area label floating pill
@@ -168,7 +167,9 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
 
     if (modelConfig) {
       // V2 multi-model config path.
-      const entries = modelConfig.modelFiles ?? [];
+      const entries = (modelConfig.modelFiles ?? [])
+        .slice()
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
       viewer.load({
         groups: entries.length > 0 ? entries : undefined,
         fallbackUrl: modelConfig.modelFileUrl ?? undefined,

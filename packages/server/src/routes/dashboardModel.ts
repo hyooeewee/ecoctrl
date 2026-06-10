@@ -88,7 +88,13 @@ export default async function dashboardModelRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       try {
         const parts = request.parts();
-        const uploadedMetas: { id: string; fileKey: string; name: string; priority: string }[] = [];
+        const uploadedMetas: {
+          id: string;
+          fileKey: string;
+          name: string;
+          priority: string;
+          order: number;
+        }[] = [];
 
         for await (const part of parts) {
           if (part.type === "file") {
@@ -106,6 +112,7 @@ export default async function dashboardModelRoutes(fastify: FastifyInstance) {
               fileKey: key,
               name: part.filename,
               priority: "background",
+              order: (existing?.modelFiles?.length ?? 0) + uploadedMetas.length,
             });
           }
         }

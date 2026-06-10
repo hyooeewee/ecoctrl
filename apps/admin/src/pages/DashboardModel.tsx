@@ -59,6 +59,8 @@ export default function DashboardModel() {
     saveLabels,
     toggleFileVisible,
     deleteFile,
+    updateFilePriority,
+    moveFile,
     setModelProgress,
     addPendingFiles,
     removePendingFile,
@@ -254,7 +256,7 @@ export default function DashboardModel() {
                       <>
                         {existingFiles.length > 0 && (
                           <div className="mb-3 space-y-1.5">
-                            {existingFiles.map((file) => {
+                            {existingFiles.map((file, index) => {
                               const fileName = file.name || file.fileKey.split("/").pop() || "未知";
                               const ext = fileName.split(".").pop()?.toUpperCase() ?? "";
                               const isVisible = visibleFileIds.has(file.id);
@@ -275,9 +277,41 @@ export default function DashboardModel() {
                                     />
                                     <File size={14} className="shrink-0 text-blue-500" />
                                     <span className="flex-1 truncate text-xs">{fileName}</span>
+                                    <select
+                                      value={file.priority ?? "background"}
+                                      onChange={(e) =>
+                                        updateFilePriority(
+                                          file.id,
+                                          e.target.value as "critical" | "background",
+                                        )
+                                      }
+                                      className="h-5 shrink-0 rounded border bg-background px-1 text-[10px] outline-none"
+                                      title="加载优先级"
+                                    >
+                                      <option value="critical">优先加载</option>
+                                      <option value="background">后台加载</option>
+                                    </select>
                                     <Badge variant="secondary" className="shrink-0 text-[10px]">
                                       {ext}
                                     </Badge>
+                                    <button
+                                      type="button"
+                                      disabled={index === 0}
+                                      className="rounded p-0.5 text-muted-foreground hover:bg-muted disabled:opacity-30"
+                                      onClick={() => moveFile(file.id, "up")}
+                                      title="上移"
+                                    >
+                                      ↑
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={index === existingFiles.length - 1}
+                                      className="rounded p-0.5 text-muted-foreground hover:bg-muted disabled:opacity-30"
+                                      onClick={() => moveFile(file.id, "down")}
+                                      title="下移"
+                                    >
+                                      ↓
+                                    </button>
                                     <button
                                       type="button"
                                       className="ml-1 rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
