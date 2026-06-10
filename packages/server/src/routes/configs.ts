@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { findPlatformConfig, updatePlatformConfig } from "@/repositories/platformConfig";
 import { findUserById } from "@/repositories/users";
-import { sendMail } from "@/lib/mailer";
+import { sendMail, verifySmtp } from "@/lib/mailer";
 import { errors } from "@/lib/schemas";
 
 const configSchema = z.object({
@@ -129,6 +129,35 @@ export default async function configRoutes(fastify: FastifyInstance) {
         ...updated,
         smtpPass: updated.smtpPass ? "****" : "",
       });
+    },
+  );
+
+  fastify.post(
+    "/verify-smtp",
+    {
+      schema: {
+        tags: ["Configs"],
+        summary: "Verify SMTP connection without sending email",
+        response: {
+          200: z.object({ success: z.boolean() }),
+          ...errors,
+        },
+      },
+    },
+    async (request, reply) => {
+      const payload = request.user as { userId: string } | undefined;
+      const user = payload?.userId ? await findUserById(payload.userId) : null;
+      if (user?.role !== "super_admin") {
+        return reply.status(403).send({ error: "Forbidden" });
+      }
+
+      try {
+        await verifySmtp();
+        return reply.send({ success: true });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "验证失败";
+        return reply.status(500).send({ error: message });
+      }
     },
   );
 
