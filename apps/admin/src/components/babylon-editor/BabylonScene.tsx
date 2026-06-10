@@ -262,6 +262,10 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
         }
       });
 
+      // Clear stale loading IDs from a previous cancelled load cycle
+      // so models that were mid-flight can be re-queued.
+      loadingIdsRef.current.clear();
+
       // Load new visible models.
       const toLoad = models.filter(
         (m) => m.visible && !loadedModelsRef.current.has(m.id) && !loadingIdsRef.current.has(m.id),
