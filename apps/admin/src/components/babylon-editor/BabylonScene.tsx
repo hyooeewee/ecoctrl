@@ -13,6 +13,7 @@ import {
   Color3,
   TransformNode,
   MeshBuilder,
+  Mesh,
   StandardMaterial,
   AbstractMesh,
   Node,
@@ -147,6 +148,14 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
       const engine = createEngine(canvas);
       engineRef.current = engine;
 
+      // Reduce render resolution to 50% to ease GPU fragment-shader load
+      // for heavy PBR scenes with multiple large GLB models.
+      engine.setHardwareScalingLevel(0.5);
+
+      // Cap texture size to 1024 to prevent GPU memory thrashing
+      // when many large GLB models load simultaneously.
+      engine.setMaximumTextureSize(1024);
+
       const scene = new Scene(engine);
       sceneRef.current = scene;
       // Ambient light so PBR materials are visible even before textures compile.
@@ -184,6 +193,9 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
       gridRef.current = createGrid(scene);
       axesRef.current = createAxes(scene);
 
+      // Disable per-frame raycast picking — admin scene does not need hover detection.
+      scene.skipPointerMovePicking = true;
+
       // Setup GUI overlay
       const guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("guiOverlay", true, scene);
       guiTextureRef.current = guiTexture;
@@ -192,8 +204,32 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
       const rootNode = new TransformNode("modelRoot", scene);
       rootNodeRef.current = rootNode;
 
-      // Render loop
+      // Interaction-aware render loop: full 60fps while user interacts,
+      // throttled to 10fps when idle to save GPU/CPU for static scenes.
+      const isInteracting = { current: false };
+      let idleTimer: ReturnType<typeof setTimeout> | null = null;
+      const IDLE_INTERVAL = 100; // ms between frames when idle (10fps)
+      let lastRenderTime = 0;
+
+      const markInteracting = () => {
+        isInteracting.current = true;
+        if (idleTimer) clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+          isInteracting.current = false;
+        }, 150);
+      };
+
+      canvas.addEventListener("pointerdown", markInteracting);
+      canvas.addEventListener("pointermove", markInteracting);
+      canvas.addEventListener("pointerup", markInteracting);
+      canvas.addEventListener("wheel", markInteracting, { passive: true });
+
       engine.runRenderLoop(() => {
+        const now = performance.now();
+        if (!isInteracting.current && now - lastRenderTime < IDLE_INTERVAL) {
+          return;
+        }
+        lastRenderTime = now;
         scene.render();
       });
 
@@ -207,6 +243,11 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
       onSceneReady?.(scene, engine);
 
       return () => {
+        canvas.removeEventListener("pointerdown", markInteracting);
+        canvas.removeEventListener("pointermove", markInteracting);
+        canvas.removeEventListener("pointerup", markInteracting);
+        canvas.removeEventListener("wheel", markInteracting);
+        if (idleTimer) clearTimeout(idleTimer);
         resizeObserver.disconnect();
         loadedModelsRef.current.forEach((data) => {
           data.root.dispose(false, true);
@@ -314,6 +355,31 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
             loadingIdsRef.current.delete(model.id);
             return;
           }
+
+          // Merge meshes by material to drastically reduce draw calls
+          // (one draw call per material instead of one per mesh).
+          const mergeable = result.meshes.filter(
+            (m): m is Mesh => m instanceof Mesh && !(m as any).isAnInstance,
+          );
+          if (mergeable.length > 1) {
+            try {
+              const merged = Mesh.MergeMeshes(mergeable, true, true, undefined, true, true);
+              if (merged) {
+                merged.parent = result.modelRoot;
+                result.meshes = [merged];
+              }
+            } catch {
+              /* merge failed — keep original meshes */
+            }
+          }
+
+          // Freeze world matrices for static building meshes so BabylonJS
+          // skips per-frame matrix recomputation.
+          result.meshes.forEach((mesh) => {
+            if ((mesh as any).freezeWorldMatrix) {
+              mesh.freezeWorldMatrix();
+            }
+          });
 
           loadedModelsRef.current.set(model.id, {
             root: result.modelRoot,
