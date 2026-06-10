@@ -1,8 +1,10 @@
 import {
+  AbstractMesh,
   ArcRotateCamera,
+  Color3,
+  DirectionalLight,
   HemisphericLight,
   Matrix,
-  Mesh,
   TransformNode,
   Vector3,
   Viewport,
@@ -104,14 +106,22 @@ export class ModelViewer implements ModelViewerRef {
     this.engine = createEngine(this.canvas);
     this.scene = createScene(this.engine);
 
-    // Performance: reduce render resolution to ease GPU fragment-shader load
-    // for heavy scenes with multiple large GLB models.
-    this.engine.setHardwareScalingLevel(0.5);
+    // Ambient light so PBR materials are visible even without an environment map.
+    this.scene.ambientColor = new Color3(0.4, 0.4, 0.4);
+
+    // NOTE: hardware scaling disabled — it causes grid-like rendering artifacts
+    // on PBR materials with this model set. Re-enable after root cause is found.
+    // this.engine.setHardwareScalingLevel(0.5);
 
     // Cap texture size if the engine supports it (tree-shaking may drop ThinEngine method).
     if (typeof (this.engine as any).setMaximumTextureSize === "function") {
       (this.engine as any).setMaximumTextureSize(1024);
     }
+
+    // Defensive: explicitly disable debug rendering modes.
+    this.scene.forceWireframe = false;
+    this.scene.forcePointsCloud = false;
+    this.scene.forceShowBoundingBoxes = false;
 
     // Create camera
     this.camera = new ArcRotateCamera(
@@ -130,9 +140,15 @@ export class ModelViewer implements ModelViewerRef {
     this.camera.upperBetaLimit = Math.PI / 2.2;
     this.camera.viewport = new Viewport(0, 0, 1, 1);
 
-    // Additional hemisphere light for model visibility
+    // Lighting — match admin setup exactly
     const hemi = new HemisphericLight("hemi", new Vector3(0, 1, 0), this.scene);
-    hemi.intensity = 0.8;
+    hemi.intensity = 0.7;
+    hemi.diffuse = new Color3(1, 1, 1);
+    hemi.groundColor = new Color3(0.5, 0.5, 0.5);
+
+    const dir = new DirectionalLight("dir", new Vector3(-1, -2, 1), this.scene);
+    dir.intensity = 0.5;
+    dir.position = new Vector3(5, 10, -5);
 
     // Interaction-aware render loop: full 60fps while user interacts,
     // throttled to 10fps when idle to save GPU/CPU for static scenes.
@@ -328,12 +344,13 @@ export class ModelViewer implements ModelViewerRef {
 
     const groupParent = new TransformNode(`groupParent_${groupId}`, this.scene);
 
-    const { meshes, sourceUrl } = await loadGltf({
+    const result = await loadGltf({
       scene: this.scene,
       url,
       modelId: groupId,
-      useBlob: true,
-      modelRoot: groupParent,
+      useBlob: false,
+      forceExtension: ".glb",
+      compileMaterials: false,
       onProgress: (event) => {
         if (event.lengthComputable && event.total > 0) {
           const value = Math.min(99, (event.loaded / event.total) * 100);
@@ -341,30 +358,35 @@ export class ModelViewer implements ModelViewerRef {
         }
       },
     });
-    URL.revokeObjectURL(sourceUrl);
+    URL.revokeObjectURL(result.sourceUrl);
+
+    // Match admin: parent the returned modelRoot under groupParent.
+    // loadGltf already parents __root__ and orphan meshes under modelRoot.
+    result.modelRoot.parent = groupParent;
+    const meshes = result.meshes;
 
     // Compute bounds BEFORE mesh merge — MergeMeshes disposes source meshes,
     // and their bounding info becomes invalid afterwards.
-    // Traverse the entire hierarchy under groupParent (including TransformNodes)
-    // because loadGltf may return an empty meshes array when __root__ is filtered.
+    // loadGltf parents only gltfRoot under groupParent; the remaining meshes may
+    // still sit under the original __root__ TransformNode, so we must union both
+    // sets to get the true bounds of the entire model.
     this.scene.updateTransformMatrix(true);
 
     let min = new Vector3(Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE);
     let max = new Vector3(-Number.MAX_VALUE, -Number.MAX_VALUE, -Number.MAX_VALUE);
 
-    const stack: Node[] = [groupParent];
-    while (stack.length > 0) {
-      const node = stack.pop()!;
-      if ((node as any).getBoundingInfo) {
-        const bi = (node as any).getBoundingInfo();
-        if (bi) {
-          const bmin = bi.boundingBox.minimumWorld;
-          const bmax = bi.boundingBox.maximumWorld;
-          min = Vector3.Minimize(min, bmin);
-          max = Vector3.Maximize(max, bmax);
-        }
-      }
-      stack.push(...node.getChildren());
+    const seenIds = new Set<number>();
+    const allMeshes: AbstractMesh[] = [...meshes, ...groupParent.getChildMeshes()];
+    for (const mesh of allMeshes) {
+      if (seenIds.has(mesh.uniqueId)) continue;
+      seenIds.add(mesh.uniqueId);
+      if (!mesh.getBoundingInfo) continue;
+      const bi = mesh.getBoundingInfo();
+      if (!bi) continue;
+      const bmin = bi.boundingBox.minimumWorld;
+      const bmax = bi.boundingBox.maximumWorld;
+      min = Vector3.Minimize(min, bmin);
+      max = Vector3.Maximize(max, bmax);
     }
 
     const size = max.subtract(min);
@@ -377,27 +399,15 @@ export class ModelViewer implements ModelViewerRef {
     (groupParent as any).__boundsMin = min.clone();
     (groupParent as any).__boundsCenter = center.clone();
 
-    // Merge meshes by material to reduce draw calls.
-    const mergeable = meshes.filter(
-      (m): m is Mesh => m instanceof Mesh && !(m as any).isAnInstance,
-    );
-    if (mergeable.length > 1) {
-      try {
-        const merged = Mesh.MergeMeshes(mergeable, true, true, undefined, true, true);
-        if (merged) {
-          merged.parent = groupParent;
-        }
-      } catch {
-        /* merge failed — keep original meshes */
-      }
-    }
+    // Skip mesh merging for now — with 8000+ meshes per model MergeMeshes
+    // can silently fail or produce invalid bounds, causing the model to
+    // appear huge. We rely on groupParent scaling + critical-only loading
+    // to keep performance acceptable.
+    // TODO: re-enable mesh merging after verifying it works with these models.
 
-    // Freeze world matrices for static meshes.
-    meshes.forEach((mesh) => {
-      if ((mesh as any).freezeWorldMatrix) {
-        mesh.freezeWorldMatrix();
-      }
-    });
+    // NOTE: Do NOT freeze world matrices here — applyUnifiedScale runs later
+    // in loadMultiModel and changes groupParent.scaling. Freezing before that
+    // locks the world matrices at scale=1, making the model appear huge.
 
     console.log(
       `[ModelViewer] Bounding box for "${groupId}": meshCount=${meshes.length}, ` +
@@ -476,13 +486,16 @@ export class ModelViewer implements ModelViewerRef {
 
     for (const group of this.groups) {
       if (!group.rootNode) continue;
-      const meshes = group.rootNode.getChildMeshes(true);
+      // getChildMeshes() recurses through TransformNodes (__root__ etc.)
+      const meshes = group.rootNode.getChildMeshes();
       if (meshes.length === 0) continue;
 
       for (const mesh of meshes) {
         if (!mesh.getBoundingInfo) continue;
-        const min = mesh.getBoundingInfo().boundingBox.minimumWorld;
-        const max = mesh.getBoundingInfo().boundingBox.maximumWorld;
+        const bi = mesh.getBoundingInfo();
+        if (!bi) continue;
+        const min = bi.boundingBox.minimumWorld;
+        const max = bi.boundingBox.maximumWorld;
         if (!combinedMin) {
           combinedMin = min.clone();
           combinedMax = max.clone();
@@ -495,8 +508,9 @@ export class ModelViewer implements ModelViewerRef {
 
     if (combinedMin && combinedMax) {
       const size = combinedMax.subtract(combinedMin);
-      const center = combinedMin.add(size.scale(0.5));
-      const target = center.clone();
+      // Aim camera at the coordinate origin so the axes/grid stay centered
+      // on screen regardless of model position.
+      const target = Vector3.Zero();
       this.camera.setTarget(target);
       this.postLoadTarget = target.clone();
 
