@@ -6,4 +6,5 @@ export const systemConfigApi = {
   getPublic: () => get<PublicSystemConfig>("/public/config"),
   update: (data: Partial<SystemConfig>) => put<SystemConfig>("/configs", data),
   testEmail: (to: string) => post<{ success: boolean }>("/configs/test-email", { to }),
+  verifySmtp: () => post<{ success: boolean }>("/configs/verify-smtp"),
 };
