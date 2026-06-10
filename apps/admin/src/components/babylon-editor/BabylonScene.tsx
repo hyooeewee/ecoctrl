@@ -21,6 +21,7 @@ import {
   type ISceneLoaderProgressEvent,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
+import { GLTFFileLoader } from "@babylonjs/loaders";
 import { AdvancedDynamicTexture } from "@babylonjs/gui";
 import { fetchModelUrl } from "@ecoctrl/shared/model-cache";
 
@@ -155,6 +156,8 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
       // Create scene
       const scene = new Scene(engine);
       sceneRef.current = scene;
+      // Ambient light so PBR materials are visible even before textures compile.
+      scene.ambientColor = new Color3(0.4, 0.4, 0.4);
 
       // Setup camera in orthographic mode for a true axonometric view.
       const camera = new ArcRotateCamera(
@@ -300,14 +303,27 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
               continue;
             }
 
-            const result = await SceneLoader.ImportMeshAsync(
-              "", // mesh names (empty = all)
-              "", // scene root (empty = use rootUrl)
-              modelFileUrl, // original URL — browser HTTP cache handles it
-              scene,
-              onProgress,
-              ".glb", // force GLB loader
-            );
+            // Progressive texture loading: resolve ImportMeshAsync as soon as
+            // geometry is created; textures continue loading in the background.
+            const loaderObserver = SceneLoader.OnPluginActivatedObservable.add((loader) => {
+              if (loader.name === "gltf") {
+                (loader as GLTFFileLoader).compileMaterials = false;
+              }
+            });
+
+            let result: Awaited<ReturnType<typeof SceneLoader.ImportMeshAsync>>;
+            try {
+              result = await SceneLoader.ImportMeshAsync(
+                "", // mesh names (empty = all)
+                "", // scene root (empty = use rootUrl)
+                modelFileUrl, // original URL — browser HTTP cache handles it
+                scene,
+                onProgress,
+                ".glb", // force GLB loader
+              );
+            } finally {
+              SceneLoader.OnPluginActivatedObservable.remove(loaderObserver);
+            }
 
             if (cancelled) {
               // ImportMeshAsync already injected meshes/transformNodes into the
@@ -350,6 +366,10 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
           }
 
           if (!cancelled) {
+            // Force a render so BabylonJS compiles shaders and the mesh becomes
+            // visible before we hide the loading overlay.
+            scene.render();
+            await new Promise((resolve) => requestAnimationFrame(resolve));
             setIsLoading(false);
             frameCameraToVisibleModels(loadedModelsRef.current, models, camera, axesRef.current);
             onModelLoaded?.(rootNodeRef.current!);
@@ -387,10 +407,11 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
         ref={containerRef}
         className={`relative flex h-full w-full overflow-hidden bg-black ${className ?? ""}`}
       >
-        {/* Loading overlay */}
+        {/* Loading overlay — z-0 stays below panel (z-10); pointer-events-none lets
+             clicks pass through to the panel. */}
         {isLoading && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50">
-            <div className="flex flex-col items-center gap-3">
+          <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center bg-black/50">
+            <div className="pointer-events-auto flex flex-col items-center gap-3">
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
               <span className="text-sm text-muted-foreground">加载模型中...</span>
             </div>
@@ -399,8 +420,8 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
 
         {/* Error overlay */}
         {hasError && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center">
-            <div className="flex flex-col items-center gap-3 text-center">
+          <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center">
+            <div className="pointer-events-auto flex flex-col items-center gap-3 text-center">
               <div className="text-4xl">⚠️</div>
               <p className="text-sm font-medium text-foreground">模型加载失败</p>
               <p className="max-w-xs text-xs text-muted-foreground">{errorMessage}</p>
