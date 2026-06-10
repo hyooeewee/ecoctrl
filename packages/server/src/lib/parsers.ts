@@ -148,6 +148,64 @@ export function parseCsvPoints(buffer: Buffer): ParseResult {
   return { deviceType, devices: [{ deviceName: "default", points }] };
 }
 
+// Known header candidates used for auto-detection
+const HEADER_CANDIDATES = [
+  "设备名称",
+  "deviceName",
+  "点位类型",
+  "pointType",
+  "类型",
+  "type",
+  "点位地址",
+  "pointNo",
+  "地址",
+  "addr",
+  "address",
+  "点位名",
+  "name",
+  "点位名称",
+  "pointName",
+  "保存历史",
+  "saveHistory",
+  "后台采数",
+  "collectData",
+  "运算符1",
+  "operator1",
+  "运算符1参数",
+  "operator1Param",
+  "运算符2",
+  "operator2",
+  "运算符2参数",
+  "operator2Param",
+  "描述",
+  "description",
+  "desc",
+];
+
+/**
+ * Find the header row by scanning for known column names.
+ * Returns the header row index and the normalized header cells.
+ */
+function findHeaderRow(rows: (string | number | undefined)[][]): {
+  headerIdx: number;
+  headerRow: string[];
+} {
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i].map((h) => String(h ?? "").trim());
+    const matches = row.filter((cell) =>
+      HEADER_CANDIDATES.some((c) => cell === c || cell.startsWith(c)),
+    );
+    // Treat as header if at least 2 known columns are found
+    if (matches.length >= 2) {
+      return { headerIdx: i, headerRow: row };
+    }
+  }
+  throw new Error(
+    "无法识别表头行。请确保文件包含以下列名中的至少两项：" +
+      "设备名称、点位类型、点位地址、点位名、描述等。",
+  );
+}
+
 export function parseXlsxPoints(buffer: Buffer): ParseResult {
   const workbook = xlsx.read(buffer, { type: "buffer" });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -164,7 +222,9 @@ export function parseXlsxPoints(buffer: Buffer): ParseResult {
     throw new Error("XLSX file must contain at least a header row and one data row");
   }
 
-  const headerRow = rows[0].map((h) => String(h ?? "").trim());
+  // Auto-detect header row instead of assuming rows[0]
+  const { headerIdx, headerRow } = findHeaderRow(rows);
+
   const getHeaderIndex = (candidates: string[]) => {
     for (const c of candidates) {
       const idx = headerRow.findIndex((h) => h === c || h.startsWith(c));
@@ -185,8 +245,14 @@ export function parseXlsxPoints(buffer: Buffer): ParseResult {
   const idxOp2Param = getHeaderIndex(["运算符2参数", "operator2Param"]);
   const idxDesc = getHeaderIndex(["描述", "description", "desc"]);
 
+  // Data starts right after the detected header row
+  const firstDataIdx = headerIdx + 1;
+  if (firstDataIdx >= rows.length) {
+    throw new Error("XLSX file has a header row but no data rows");
+  }
+
   // Extract deviceType from the first data row's point name
-  const firstRow = rows[1];
+  const firstRow = rows[firstDataIdx];
   const firstName = idxName >= 0 ? String(firstRow[idxName] ?? "").trim() : "";
   const deviceType = extractDeviceTypeFromName(firstName);
   if (!deviceType) {
@@ -198,8 +264,14 @@ export function parseXlsxPoints(buffer: Buffer): ParseResult {
   // Group by device name
   const deviceMap = new Map<string, PointItem[]>();
 
-  for (let i = 1; i < rows.length; i++) {
+  for (let i = firstDataIdx; i < rows.length; i++) {
     const row = rows[i];
+
+    // Skip empty rows
+    if (row.every((cell) => cell === undefined || String(cell).trim() === "")) {
+      continue;
+    }
+
     const deviceName = idxDevice >= 0 ? String(row[idxDevice] ?? "").trim() : "";
     const pointType = (idxType >= 0 ? String(row[idxType] ?? "") : "").toUpperCase();
     const pointNo = pad4(idxAddr >= 0 ? (row[idxAddr] ?? "0") : "0");
