@@ -33,8 +33,6 @@ import { useSseEvents } from "@/hooks/useSseEvents";
 import type { SseWorkflowExecution } from "@/types/sse";
 import { workflowsApi } from "@/api/workflows";
 import type { WorkflowListItem } from "@/components/workflow-editor/types";
-import { WorkflowCanvas } from "@/components/workflow-editor";
-import ExecutionLogViewer from "@/components/ExecutionLogViewer";
 
 const TRIGGER_LABELS: Record<string, string> = {
   state_change: "状态变更",
@@ -62,9 +60,7 @@ export default function Workflows() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [triggerLoadingId, setTriggerLoadingId] = useState<string | null>(null);
-  const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
   const [recentExecutions, setRecentExecutions] = useState<SseWorkflowExecution[]>([]);
-  const [selectedExecutionId, setSelectedExecutionId] = useState<string | null>(null);
 
   // Execution deletion state
   const [selectedExecutionIds, setSelectedExecutionIds] = useState<string[]>([]);
@@ -74,60 +70,10 @@ export default function Workflows() {
 
   const activeTab = useAppStore((state) => state.workflowsTab);
   const setActiveTab = useAppStore((state) => state.setWorkflowsTab);
-  const appActiveTab = useAppStore((state) => state.activeTab);
   const setAppActiveTab = useAppStore((state) => state.setActiveTab);
+  const setCanvasWorkflowId = useAppStore((state) => state.setCanvasWorkflowId);
+  const setLogViewerData = useAppStore((state) => state.setLogViewerData);
   const sseStatus = useSseStore((state) => state.status);
-
-  const [canvasDirty, setCanvasDirty] = useState(false);
-  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
-  const [pendingNavigation, setPendingNavigation] = useState<{
-    appTab: string;
-    subTab: string;
-  } | null>(null);
-
-  const prevAppTabRef = useRef(appActiveTab);
-  const prevSubTabRef = useRef(activeTab);
-
-  // Close execution log when switching sub-tabs
-  useEffect(() => {
-    if (selectedExecutionId) {
-      setSelectedExecutionId(null);
-    }
-  }, [activeTab]);
-
-  // Intercept navigation while canvas has unsaved changes
-  useEffect(() => {
-    if (!editingWorkflowId) {
-      prevAppTabRef.current = appActiveTab;
-      prevSubTabRef.current = activeTab;
-      return;
-    }
-    const appChanged = appActiveTab !== prevAppTabRef.current;
-    const subChanged = activeTab !== prevSubTabRef.current;
-    if (!appChanged && !subChanged) return;
-
-    if (!canvasDirty) {
-      // No changes — close canvas directly and allow navigation
-      setEditingWorkflowId(null);
-      prevAppTabRef.current = appActiveTab;
-      prevSubTabRef.current = activeTab;
-      return;
-    }
-
-    // Has changes — intercept and show confirmation dialog
-    setPendingNavigation({ appTab: appActiveTab, subTab: activeTab });
-    if (appChanged) setAppActiveTab(prevAppTabRef.current);
-    if (subChanged) setActiveTab(prevSubTabRef.current);
-    setShowLeaveDialog(true);
-  }, [
-    appActiveTab,
-    activeTab,
-    editingWorkflowId,
-    canvasDirty,
-    setEditingWorkflowId,
-    setActiveTab,
-    setAppActiveTab,
-  ]);
 
   const [runningExecutions, setRunningExecutions] = useState<Record<string, SseWorkflowExecution>>(
     {},
@@ -189,10 +135,8 @@ export default function Workflows() {
   }, [pageIndex, pageSize]);
 
   useEffect(() => {
-    if (!editingWorkflowId) {
-      fetchWorkflows();
-    }
-  }, [fetchWorkflows, editingWorkflowId]);
+    fetchWorkflows();
+  }, [fetchWorkflows]);
 
   const handleToggleEnabled = useCallback(async (id: string, enabled: boolean) => {
     try {
@@ -279,7 +223,8 @@ export default function Workflows() {
           const { id } = await workflowsApi.create(body);
           toast.success("导入成功");
           fetchWorkflows();
-          setEditingWorkflowId(id);
+          setCanvasWorkflowId(id);
+          setAppActiveTab("workflowCanvas");
         } catch {
           toast.error("导入失败：文件解析错误");
         }
@@ -288,7 +233,7 @@ export default function Workflows() {
       };
       reader.readAsText(file);
     },
-    [fetchWorkflows],
+    [fetchWorkflows, setCanvasWorkflowId, setAppActiveTab],
   );
 
   const openCreate = useCallback(async () => {
@@ -304,44 +249,32 @@ export default function Workflows() {
     };
     try {
       const { id } = await workflowsApi.create({ slug, name: slug, enabled: true, dsl });
-      setEditingWorkflowId(id);
+      setCanvasWorkflowId(id);
+      setAppActiveTab("workflowCanvas");
     } catch {
       // silently fail
     }
-  }, []);
+  }, [setCanvasWorkflowId, setAppActiveTab]);
 
-  const openEditor = useCallback((id: string) => {
-    setEditingWorkflowId(id);
-  }, []);
+  const openEditor = useCallback(
+    (id: string) => {
+      setCanvasWorkflowId(id);
+      setAppActiveTab("workflowCanvas");
+    },
+    [setCanvasWorkflowId, setAppActiveTab],
+  );
 
-  const closeEditor = useCallback(() => {
-    setEditingWorkflowId(null);
-    fetchWorkflows();
-  }, [fetchWorkflows]);
-
-  const closeExecutionLog = useCallback(() => {
-    setSelectedExecutionId(null);
-  }, []);
-
-  const handleLeaveConfirm = useCallback(() => {
-    setShowLeaveDialog(false);
-    if (pendingNavigation) {
-      setEditingWorkflowId(null);
-      setCanvasDirty(false);
-      if (pendingNavigation.appTab !== appActiveTab) {
-        setAppActiveTab(pendingNavigation.appTab);
-      }
-      if (pendingNavigation.subTab !== activeTab) {
-        setActiveTab(pendingNavigation.subTab);
-      }
-      setPendingNavigation(null);
-    }
-  }, [pendingNavigation, appActiveTab, activeTab]);
-
-  const handleLeaveCancel = useCallback(() => {
-    setShowLeaveDialog(false);
-    setPendingNavigation(null);
-  }, []);
+  const openExecutionLog = useCallback(
+    (row: SseWorkflowExecution) => {
+      setLogViewerData({
+        type: "execution",
+        workflowId: row.workflowId,
+        executionId: row.executionId,
+      });
+      setAppActiveTab("logViewer");
+    },
+    [setLogViewerData, setAppActiveTab],
+  );
 
   const confirmDeleteExecutions = useCallback(async () => {
     if (deletingExecutionIds.length === 0) return;
@@ -629,124 +562,87 @@ export default function Workflows() {
     <div className="flex h-full flex-col overflow-hidden">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full flex-col">
         <TabsContent value="workflows" className="mt-0 flex h-full flex-col overflow-hidden">
-          {editingWorkflowId ? (
-            <WorkflowCanvas
-              workflowId={editingWorkflowId}
-              onBack={closeEditor}
-              onDirtyChange={setCanvasDirty}
+          <div className="h-full p-6">
+            <DataTablePanel
+              title="工作流"
+              description="管理工作流定义与触发配置"
+              action={
+                <div className="flex items-center gap-3">
+                  {sseStatusIndicator}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".dsl"
+                    className="hidden"
+                    onChange={handleImport}
+                  />
+                  <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                    <Upload size={16} className="mr-1.5" />
+                    导入
+                  </Button>
+                  <Button onClick={openCreate}>
+                    <Plus size={16} className="mr-1.5" />
+                    新建工作流
+                  </Button>
+                </div>
+              }
+              loading={loading}
+              emptyIcon={<Workflow className="h-12 w-12 text-muted-foreground/40" />}
+              emptyTitle="暂无工作流"
+              emptyDescription="点击右上角「新建工作流」按钮创建。"
+              data={workflows}
+              columns={workflowColumns}
+              getRowId={(row) => row.id}
+              onRowClick={(row) => openEditor(row.id)}
+              manualPagination
+              pageCount={Math.max(1, Math.ceil(total / pageSize))}
+              rowCount={total}
+              pagination={{ pageIndex, pageSize }}
+              onPaginationChange={({ pageIndex: idx, pageSize: size }) => {
+                setPageIndex(idx);
+                setPageSize(size);
+              }}
+              pageSizeOptions={[10, 20, 50]}
+              onPageSizeChange={setPageSize}
             />
-          ) : (
-            <div className="h-full p-6">
-              <DataTablePanel
-                title="工作流"
-                description="管理工作流定义与触发配置"
-                action={
-                  <div className="flex items-center gap-3">
-                    {sseStatusIndicator}
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".dsl"
-                      className="hidden"
-                      onChange={handleImport}
-                    />
-                    <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                      <Upload size={16} className="mr-1.5" />
-                      导入
-                    </Button>
-                    <Button onClick={openCreate}>
-                      <Plus size={16} className="mr-1.5" />
-                      新建工作流
-                    </Button>
-                  </div>
-                }
-                loading={loading}
-                emptyIcon={<Workflow className="h-12 w-12 text-muted-foreground/40" />}
-                emptyTitle="暂无工作流"
-                emptyDescription="点击右上角「新建工作流」按钮创建。"
-                data={workflows}
-                columns={workflowColumns}
-                getRowId={(row) => row.id}
-                onRowClick={(row) => openEditor(row.id)}
-                manualPagination
-                pageCount={Math.max(1, Math.ceil(total / pageSize))}
-                rowCount={total}
-                pagination={{ pageIndex, pageSize }}
-                onPaginationChange={({ pageIndex: idx, pageSize: size }) => {
-                  setPageIndex(idx);
-                  setPageSize(size);
-                }}
-                pageSizeOptions={[10, 20, 50]}
-                onPageSizeChange={setPageSize}
-              />
-            </div>
-          )}
+          </div>
         </TabsContent>
 
         <TabsContent value="executions" className="mt-0 flex h-full flex-col overflow-hidden">
-          {selectedExecutionId ? (
-            <ExecutionLogViewer
-              workflowId={
-                recentExecutions.find((e) => e.executionId === selectedExecutionId)?.workflowId ??
-                ""
+          <div className="h-full p-6">
+            <DataTablePanel
+              title="执行记录"
+              description="最近 50 条工作流执行记录（实时更新）"
+              emptyIcon={<History className="h-12 w-12 text-muted-foreground/40" />}
+              emptyTitle="暂无执行记录"
+              emptyDescription="执行工作流后将在此显示记录。"
+              data={recentExecutions}
+              columns={executionColumns}
+              getRowId={(row) => row.executionId}
+              onRowClick={(row) => openExecutionLog(row)}
+              enableRowSelection
+              selectedRowIds={selectedExecutionIds}
+              onSelectionChange={setSelectedExecutionIds}
+              batchActions={
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="h-8"
+                  onClick={() => {
+                    setDeletingExecutionIds(selectedExecutionIds);
+                    setIsExecutionDeleteOpen(true);
+                  }}
+                  disabled={selectedExecutionIds.length === 0}
+                >
+                  <Trash2 size={14} className="mr-1.5" />
+                  批量删除 ({selectedExecutionIds.length})
+                </Button>
               }
-              executionId={selectedExecutionId}
-              onBack={closeExecutionLog}
+              pageSizeOptions={[10, 25, 50]}
             />
-          ) : (
-            <div className="h-full p-6">
-              <DataTablePanel
-                title="执行记录"
-                description="最近 50 条工作流执行记录（实时更新）"
-                emptyIcon={<History className="h-12 w-12 text-muted-foreground/40" />}
-                emptyTitle="暂无执行记录"
-                emptyDescription="执行工作流后将在此显示记录。"
-                data={recentExecutions}
-                columns={executionColumns}
-                getRowId={(row) => row.executionId}
-                onRowClick={(row) => setSelectedExecutionId(row.executionId)}
-                enableRowSelection
-                selectedRowIds={selectedExecutionIds}
-                onSelectionChange={setSelectedExecutionIds}
-                batchActions={
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="h-8"
-                    onClick={() => {
-                      setDeletingExecutionIds(selectedExecutionIds);
-                      setIsExecutionDeleteOpen(true);
-                    }}
-                    disabled={selectedExecutionIds.length === 0}
-                  >
-                    <Trash2 size={14} className="mr-1.5" />
-                    批量删除 ({selectedExecutionIds.length})
-                  </Button>
-                }
-                pageSizeOptions={[10, 25, 50]}
-              />
-            </div>
-          )}
+          </div>
         </TabsContent>
       </Tabs>
-
-      {/* Leave canvas without saving confirmation */}
-      <Dialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>确认离开</DialogTitle>
-            <DialogDescription>有未保存的修改，离开后将丢失。是否继续？</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={handleLeaveCancel}>
-              留在当前页面
-            </Button>
-            <Button variant="destructive" onClick={handleLeaveConfirm}>
-              离开
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Confirm Dialog */}
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
