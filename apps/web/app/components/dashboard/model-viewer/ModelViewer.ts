@@ -53,6 +53,7 @@ export class ModelViewer implements ModelViewerRef {
 
   // Runtime state
   private showLabels = true;
+  private isInteracting = false;
 
   // Camera defaults
   private defaultCameraRadius: number;
@@ -81,6 +82,14 @@ export class ModelViewer implements ModelViewerRef {
 
   // Resize handler reference for cleanup
   private handleResize: () => void;
+
+  // Interaction listener references for cleanup
+  private interactionListeners: {
+    down: () => void;
+    move: () => void;
+    up: () => void;
+    wheel: (e: Event) => void;
+  } | null = null;
 
   // Unified scale factor computed from first critical model.
   private unifiedScale: number | null = null;
@@ -125,8 +134,37 @@ export class ModelViewer implements ModelViewerRef {
     const hemi = new HemisphericLight("hemi", new Vector3(0, 1, 0), this.scene);
     hemi.intensity = 0.8;
 
-    // Start render loop
-    this.engine.runRenderLoop(() => this.render());
+    // Interaction-aware render loop: full 60fps while user interacts,
+    // throttled to 10fps when idle to save GPU/CPU for static scenes.
+    let lastRenderTime = 0;
+    const IDLE_INTERVAL = 100; // ms between frames when idle (10fps)
+
+    const markInteracting = () => {
+      this.isInteracting = true;
+    };
+    const markIdle = () => {
+      this.isInteracting = false;
+    };
+
+    this.interactionListeners = {
+      down: markInteracting,
+      move: markInteracting,
+      up: markIdle,
+      wheel: markInteracting,
+    };
+    this.canvas.addEventListener("pointerdown", markInteracting);
+    this.canvas.addEventListener("pointermove", markInteracting);
+    this.canvas.addEventListener("pointerup", markIdle);
+    this.canvas.addEventListener("wheel", markInteracting, { passive: true });
+
+    this.engine.runRenderLoop(() => {
+      const now = performance.now();
+      if (!this.isInteracting && now - lastRenderTime < IDLE_INTERVAL) {
+        return;
+      }
+      lastRenderTime = now;
+      this.render();
+    });
 
     // Resize handling
     this.handleResize = () => this.engine.resize();
@@ -197,8 +235,9 @@ export class ModelViewer implements ModelViewerRef {
    * Multi-model progressive loading.
    */
   private async loadMultiModel(entries: ModelFileEntry[], fallbackUrl: string): Promise<void> {
+    // Hard-coded: only load critical-priority models to reduce GPU load.
+    // Background models are skipped entirely.
     const critical = entries.filter((e) => e.priority === "critical");
-    const background = entries.filter((e) => e.priority !== "critical");
 
     // Step 1: Load critical models in parallel, blocking.
     const criticalResults = await Promise.all(
@@ -219,14 +258,17 @@ export class ModelViewer implements ModelViewerRef {
       }
     }
 
-    // If no critical models loaded, block-load the first background model
-    // so we have a reference for unified scale and camera positioning.
+    // If no critical models at all, load the first entry as fallback
+    // so we still have a reference for unified scale and camera positioning.
     let firstModelLoaded = criticalLoaded.length > 0;
-    if (!firstModelLoaded && background.length > 0) {
-      const firstBg = await this.tryLoadGroup(background[0]).catch(() => null);
-      if (firstBg) {
+    if (!firstModelLoaded && entries.length > 0) {
+      const firstEntry = entries[0];
+      console.warn(
+        `[ModelViewer] No critical models found; loading first entry "${firstEntry.id}" as fallback`,
+      );
+      const fallbackGroup = await this.tryLoadGroup(firstEntry).catch(() => null);
+      if (fallbackGroup) {
         firstModelLoaded = true;
-        background.splice(0, 1);
       }
     }
 
@@ -245,22 +287,6 @@ export class ModelViewer implements ModelViewerRef {
 
     this.onProgress?.(100);
     this.onCriticalLoaded?.();
-
-    // Load remaining background models in parallel, non-blocking.
-    if (background.length > 0) {
-      Promise.all(background.map((entry) => this.tryLoadGroup(entry).catch(() => null))).then(
-        (results) => {
-          const loaded = results.filter((r): r is NonNullable<typeof r> => r !== null);
-          for (const group of loaded) {
-            if (group.rootNode) {
-              this.applyUnifiedScale(group.rootNode);
-            }
-          }
-          this.computeLabelAnchors();
-          this.detectLobbyTopFromScene();
-        },
-      );
-    }
   }
 
   /**
@@ -317,6 +343,40 @@ export class ModelViewer implements ModelViewerRef {
     });
     URL.revokeObjectURL(sourceUrl);
 
+    // Compute bounds BEFORE mesh merge — MergeMeshes disposes source meshes,
+    // and their bounding info becomes invalid afterwards.
+    // Traverse the entire hierarchy under groupParent (including TransformNodes)
+    // because loadGltf may return an empty meshes array when __root__ is filtered.
+    this.scene.updateTransformMatrix(true);
+
+    let min = new Vector3(Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE);
+    let max = new Vector3(-Number.MAX_VALUE, -Number.MAX_VALUE, -Number.MAX_VALUE);
+
+    const stack: Node[] = [groupParent];
+    while (stack.length > 0) {
+      const node = stack.pop()!;
+      if ((node as any).getBoundingInfo) {
+        const bi = (node as any).getBoundingInfo();
+        if (bi) {
+          const bmin = bi.boundingBox.minimumWorld;
+          const bmax = bi.boundingBox.maximumWorld;
+          min = Vector3.Minimize(min, bmin);
+          max = Vector3.Maximize(max, bmax);
+        }
+      }
+      stack.push(...node.getChildren());
+    }
+
+    const size = max.subtract(min);
+    const center = min.add(size.scale(0.5));
+    const maxSize = Math.max(size.x, size.y, size.z);
+    const localScale = maxSize > 0 ? 10 / maxSize : 1;
+
+    // Store bounds / scale on the groupParent BEFORE merge so they survive disposal.
+    (groupParent as any).__localScale = localScale;
+    (groupParent as any).__boundsMin = min.clone();
+    (groupParent as any).__boundsCenter = center.clone();
+
     // Merge meshes by material to reduce draw calls.
     const mergeable = meshes.filter(
       (m): m is Mesh => m instanceof Mesh && !(m as any).isAnInstance,
@@ -339,37 +399,12 @@ export class ModelViewer implements ModelViewerRef {
       }
     });
 
-    this.scene.updateTransformMatrix(true);
-
-    let min = new Vector3(Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE);
-    let max = new Vector3(-Number.MAX_VALUE, -Number.MAX_VALUE, -Number.MAX_VALUE);
-
-    for (const mesh of meshes) {
-      if (!mesh.getBoundingInfo) continue;
-      const bmin = mesh.getBoundingInfo().boundingBox.minimumWorld;
-      const bmax = mesh.getBoundingInfo().boundingBox.maximumWorld;
-      min = Vector3.Minimize(min, bmin);
-      max = Vector3.Maximize(max, bmax);
-    }
-
-    this.scene.updateTransformMatrix(true);
-
-    const size = max.subtract(min);
-    const center = min.add(size.scale(0.5));
-    const maxSize = Math.max(size.x, size.y, size.z);
-    const localScale = maxSize > 0 ? 10 / maxSize : 1;
-
     console.log(
       `[ModelViewer] Bounding box for "${groupId}": meshCount=${meshes.length}, ` +
         `min=(${min.x.toFixed(2)}, ${min.y.toFixed(2)}, ${min.z.toFixed(2)}), ` +
         `max=(${max.x.toFixed(2)}, ${max.y.toFixed(2)}, ${max.z.toFixed(2)}), center=(${center.x.toFixed(2)}, ${center.y.toFixed(2)}, ${center.z.toFixed(2)}), ` +
         `size=(${size.x.toFixed(2)}, ${size.y.toFixed(2)}, ${size.z.toFixed(2)}), localScale=${localScale.toFixed(4)}`,
     );
-
-    // Store the local scale on the groupParent for later unified scaling.
-    (groupParent as any).__localScale = localScale;
-    (groupParent as any).__boundsMin = min.clone();
-    (groupParent as any).__boundsCenter = center.clone();
 
     // Placeholder group entry (will be replaced by tryLoadGroup with full data).
     this.groups.push({
@@ -769,6 +804,13 @@ export class ModelViewer implements ModelViewerRef {
 
   dispose(): void {
     window.removeEventListener("resize", this.handleResize);
+
+    if (this.interactionListeners) {
+      this.canvas.removeEventListener("pointerdown", this.interactionListeners.down);
+      this.canvas.removeEventListener("pointermove", this.interactionListeners.move);
+      this.canvas.removeEventListener("pointerup", this.interactionListeners.up);
+      this.canvas.removeEventListener("wheel", this.interactionListeners.wheel);
+    }
 
     this.engine.stopRenderLoop();
     this.camera.detachControl();
