@@ -22,4 +22,5 @@
 //   - Web uses V2 labels with operations (camera, clipping, visibility, postprocess)
 //   - Admin uses simpler label placement (position + meshKeywords)
 //   - Need to reconcile the two label schemas into a unified type
-//
+
+export {}; // placeholder — TODO: extract label system

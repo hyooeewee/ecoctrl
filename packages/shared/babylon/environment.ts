@@ -20,4 +20,5 @@
 //   - Admin sets environment config; web reads and applies it
 //   - Should accept a config object rather than hard-coded defaults
 //   - Web's DEFAULT_ENVIRONMENT constants should live here
-//
+
+export {}; // placeholder — TODO: extract environment setup

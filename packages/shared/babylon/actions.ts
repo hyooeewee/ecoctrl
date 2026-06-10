@@ -28,4 +28,5 @@
 // Naming note:
 //   Using "actions" instead of "clipping" because the system handles
 //   camera moves, visibility toggles, and post-processing — not just clipping.
-//
+
+export {}; // placeholder — TODO: extract action system
