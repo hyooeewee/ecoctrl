@@ -11,7 +11,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Button,
 } from "@ecoctrl/ui";
+import { MapPin } from "lucide-react";
 
 // ========================================
 // Types
@@ -31,6 +33,7 @@ interface LabelConfigFormProps {
   config: LabelConfig;
   parentOptions: { id: string; name: string }[];
   onChange: (config: LabelConfig) => void;
+  onPickPosition?: () => void;
   disabled?: boolean;
 }
 
@@ -42,6 +45,7 @@ export default function LabelConfigForm({
   config,
   parentOptions,
   onChange,
+  onPickPosition,
   disabled,
 }: LabelConfigFormProps) {
   const updateField = <K extends keyof LabelConfig>(field: K, value: LabelConfig[K]) => {
@@ -152,41 +156,56 @@ export default function LabelConfigForm({
           </label>
         </div>
         {hasPosition && (
-          <div className="grid grid-cols-3 gap-2">
-            <div>
-              <Label className="text-[10px] text-muted-foreground mb-1 block">X</Label>
-              <Input
-                type="number"
-                step="any"
-                value={config.position!.x}
-                onChange={(e) => updatePosition("x", e.target.value)}
+          <>
+            {onPickPosition && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="w-full gap-2"
+                onClick={onPickPosition}
                 disabled={disabled}
-                className="h-8 text-sm"
-              />
+              >
+                <MapPin size={14} />
+                在场景中拾取位置
+              </Button>
+            )}
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <Label className="text-[10px] text-muted-foreground mb-1 block">X</Label>
+                <Input
+                  type="number"
+                  step="any"
+                  value={config.position!.x}
+                  onChange={(e) => updatePosition("x", e.target.value)}
+                  disabled={disabled}
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-[10px] text-muted-foreground mb-1 block">Y</Label>
+                <Input
+                  type="number"
+                  step="any"
+                  value={config.position!.y}
+                  onChange={(e) => updatePosition("y", e.target.value)}
+                  disabled={disabled}
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-[10px] text-muted-foreground mb-1 block">Z</Label>
+                <Input
+                  type="number"
+                  step="any"
+                  value={config.position!.z}
+                  onChange={(e) => updatePosition("z", e.target.value)}
+                  disabled={disabled}
+                  className="h-8 text-sm"
+                />
+              </div>
             </div>
-            <div>
-              <Label className="text-[10px] text-muted-foreground mb-1 block">Y</Label>
-              <Input
-                type="number"
-                step="any"
-                value={config.position!.y}
-                onChange={(e) => updatePosition("y", e.target.value)}
-                disabled={disabled}
-                className="h-8 text-sm"
-              />
-            </div>
-            <div>
-              <Label className="text-[10px] text-muted-foreground mb-1 block">Z</Label>
-              <Input
-                type="number"
-                step="any"
-                value={config.position!.z}
-                onChange={(e) => updatePosition("z", e.target.value)}
-                disabled={disabled}
-                className="h-8 text-sm"
-              />
-            </div>
-          </div>
+          </>
         )}
       </div>
 
