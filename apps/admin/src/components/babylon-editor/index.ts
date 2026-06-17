@@ -22,3 +22,4 @@ export type { LabelConfig } from "./LabelConfigForm";
 
 export { default as OperationConfig } from "./OperationConfig";
 export type { LabelOperation } from "@ecoctrl/shared";
+export { default as ActionStepsConfig } from "./ActionStepsConfig";

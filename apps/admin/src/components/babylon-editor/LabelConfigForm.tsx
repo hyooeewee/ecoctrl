@@ -23,8 +23,8 @@ export interface LabelConfig {
   name: string;
   description?: string;
   parentId: string | null;
-  position: { x: number; y: number; z: number };
-  meshKeywords: string[];
+  position?: { x: number; y: number; z: number };
+  meshKeywords?: string[];
 }
 
 interface LabelConfigFormProps {
@@ -50,11 +50,14 @@ export default function LabelConfigForm({
 
   const updatePosition = (axis: "x" | "y" | "z", value: string) => {
     const num = parseFloat(value) || 0;
+    const current = config.position ?? { x: 0, y: 0, z: 0 };
     onChange({
       ...config,
-      position: { ...config.position, [axis]: num },
+      position: { ...current, [axis]: num },
     });
   };
+
+  const hasPosition = config.position !== undefined;
 
   return (
     <div className="grid gap-4">
@@ -82,7 +85,7 @@ export default function LabelConfigForm({
           id="label-name"
           value={config.name}
           onChange={(e) => updateField("name", e.target.value)}
-          placeholder="如: 变压器A相"
+          placeholder="如: 变压器A相 / 大厅"
           disabled={disabled}
           className="h-8 text-sm"
         />
@@ -127,61 +130,85 @@ export default function LabelConfigForm({
 
       {/* Position */}
       <div className="grid gap-2">
-        <Label className="text-xs">3D 坐标</Label>
-        <div className="grid grid-cols-3 gap-2">
-          <div>
-            <Label className="text-[10px] text-muted-foreground mb-1 block">X</Label>
-            <Input
-              type="number"
-              step="any"
-              value={config.position.x}
-              onChange={(e) => updatePosition("x", e.target.value)}
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">3D 坐标</Label>
+          <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={hasPosition}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  updateField("position", { x: 0, y: 1, z: 0 });
+                } else {
+                  const next = { ...config };
+                  delete next.position;
+                  onChange(next);
+                }
+              }}
               disabled={disabled}
-              className="h-8 text-sm"
+              className="h-3 w-3"
             />
-          </div>
-          <div>
-            <Label className="text-[10px] text-muted-foreground mb-1 block">Y</Label>
-            <Input
-              type="number"
-              step="any"
-              value={config.position.y}
-              onChange={(e) => updatePosition("y", e.target.value)}
-              disabled={disabled}
-              className="h-8 text-sm"
-            />
-          </div>
-          <div>
-            <Label className="text-[10px] text-muted-foreground mb-1 block">Z</Label>
-            <Input
-              type="number"
-              step="any"
-              value={config.position.z}
-              onChange={(e) => updatePosition("z", e.target.value)}
-              disabled={disabled}
-              className="h-8 text-sm"
-            />
-          </div>
+            在 3D 场景中显示
+          </label>
         </div>
+        {hasPosition && (
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <Label className="text-[10px] text-muted-foreground mb-1 block">X</Label>
+              <Input
+                type="number"
+                step="any"
+                value={config.position!.x}
+                onChange={(e) => updatePosition("x", e.target.value)}
+                disabled={disabled}
+                className="h-8 text-sm"
+              />
+            </div>
+            <div>
+              <Label className="text-[10px] text-muted-foreground mb-1 block">Y</Label>
+              <Input
+                type="number"
+                step="any"
+                value={config.position!.y}
+                onChange={(e) => updatePosition("y", e.target.value)}
+                disabled={disabled}
+                className="h-8 text-sm"
+              />
+            </div>
+            <div>
+              <Label className="text-[10px] text-muted-foreground mb-1 block">Z</Label>
+              <Input
+                type="number"
+                step="any"
+                value={config.position!.z}
+                onChange={(e) => updatePosition("z", e.target.value)}
+                disabled={disabled}
+                className="h-8 text-sm"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Mesh Keywords */}
-      <div className="grid gap-2">
-        <Label className="text-xs">Mesh 关键词</Label>
-        <Input
-          value={config.meshKeywords.join(", ")}
-          onChange={(e) => {
-            const keywords = e.target.value
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean);
-            updateField("meshKeywords", keywords);
-          }}
-          placeholder="用逗号分隔，如: shell, casing"
-          disabled={disabled}
-          className="h-8 text-sm"
-        />
-      </div>
+      {hasPosition && (
+        <div className="grid gap-2">
+          <Label className="text-xs">Mesh 关键词</Label>
+          <Input
+            value={(config.meshKeywords ?? []).join(", ")}
+            onChange={(e) => {
+              const keywords = e.target.value
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean);
+              updateField("meshKeywords", keywords);
+            }}
+            placeholder="用逗号分隔，如: shell, casing"
+            disabled={disabled}
+            className="h-8 text-sm"
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -52,6 +52,7 @@ export interface BuildingViewRef {
   resetToDefaultRadius: () => void;
   focusOnLabel: (key: string) => void;
   setClipping: (enabled: boolean) => void;
+  executeTagActions: (labelKey: string) => Promise<void>;
 }
 
 // ========================================
@@ -194,6 +195,8 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
       resetToDefaultRadius: () => viewerRef.current?.resetToDefaultRadius(),
       focusOnLabel: (key: string) => viewerRef.current?.focusOnLabel(key),
       setClipping: (enabled: boolean) => viewerRef.current?.setClipping(enabled),
+      executeTagActions: (key: string) =>
+        viewerRef.current?.executeTagActions(key) ?? Promise.resolve(),
     }),
     [],
   );

@@ -20,6 +20,7 @@ export type DashboardModelHotspot = z.infer<typeof DashboardModelHotspotSchema>;
 
 export const CameraOperationSchema = z.object({
   type: z.literal("camera"),
+  targetModelFileId: z.string().optional(),
   config: z.object({
     target: z.object({ x: z.number(), y: z.number(), z: z.number() }),
     distance: z.number(),
@@ -31,6 +32,7 @@ export const CameraOperationSchema = z.object({
 
 export const ClippingOperationSchema = z.object({
   type: z.literal("clipping"),
+  targetModelFileId: z.string().optional(),
   config: z.object({
     planeNormal: z.object({ x: z.number(), y: z.number(), z: z.number() }),
     planeOffset: z.number(),
@@ -41,6 +43,7 @@ export const ClippingOperationSchema = z.object({
 
 export const VisibilityOperationSchema = z.object({
   type: z.literal("visibility"),
+  targetModelFileId: z.string().optional(),
   config: z.object({
     targets: z.array(z.string()),
     action: z.enum(["show", "hide", "toggle"]),
@@ -50,6 +53,7 @@ export const VisibilityOperationSchema = z.object({
 
 export const PostProcessOperationSchema = z.object({
   type: z.literal("postprocess"),
+  targetModelFileId: z.string().optional(),
   config: z.object({
     effect: z.string(),
     value: z.number(),
@@ -66,7 +70,7 @@ export const LabelOperationSchema = z.discriminatedUnion("type", [
 export type LabelOperation = z.infer<typeof LabelOperationSchema>;
 
 // ========================================
-// Label Schema (New - with operations & tree)
+// Label Schema (Tags with optional 3D position)
 // ========================================
 
 export const DashboardModelLabelSchema = z.object({
@@ -75,8 +79,8 @@ export const DashboardModelLabelSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
   parentId: z.string().nullable().optional(),
-  position: z.object({ x: z.number(), y: z.number(), z: z.number() }),
-  meshKeywords: z.array(z.string()),
+  position: z.object({ x: z.number(), y: z.number(), z: z.number() }).optional(),
+  meshKeywords: z.array(z.string()).default([]),
   operations: z.array(LabelOperationSchema),
   order: z.number(),
 });

@@ -27,6 +27,8 @@ interface LabelTreeProps {
   onAdd?: (parentId?: string) => void;
   onDelete?: (id: string) => void;
   onEdit?: (id: string) => void;
+  disabled?: boolean;
+  addTitle?: string;
 }
 
 // ========================================
@@ -40,6 +42,8 @@ export default function LabelTree({
   onAdd,
   onDelete,
   onEdit,
+  disabled,
+  addTitle = "添加标签",
 }: LabelTreeProps) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
@@ -56,6 +60,7 @@ export default function LabelTree({
   };
 
   const handleAddRoot = () => {
+    if (disabled) return;
     onAdd?.();
   };
 
@@ -64,9 +69,15 @@ export default function LabelTree({
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">标签树</h3>
-        <AppButton level="action" size="sm" onClick={handleAddRoot}>
+        <AppButton
+          level="action"
+          size="sm"
+          onClick={handleAddRoot}
+          disabled={disabled}
+          title={disabled ? "请先上传模型文件" : addTitle}
+        >
           <Plus size={14} className="mr-1" />
-          添加标签
+          {addTitle}
         </AppButton>
       </div>
 
@@ -89,6 +100,7 @@ export default function LabelTree({
               onAdd={onAdd}
               onDelete={onDelete}
               onEdit={onEdit}
+              disabled={disabled}
             />
           ))
         )}
@@ -111,6 +123,7 @@ interface LabelTreeItemProps {
   onAdd?: (parentId?: string) => void;
   onDelete?: (id: string) => void;
   onEdit?: (id: string) => void;
+  disabled?: boolean;
 }
 
 function LabelTreeItem({
@@ -123,6 +136,7 @@ function LabelTreeItem({
   onAdd,
   onDelete,
   onEdit,
+  disabled,
 }: LabelTreeItemProps) {
   const isExpanded = expandedIds.has(label.id);
   const isSelected = selectedId === label.id;
@@ -172,7 +186,8 @@ function LabelTreeItem({
             level="ghost"
             size="icon-xs"
             onClick={() => onAdd?.(label.id)}
-            title="添加子标签"
+            title={disabled ? "请先上传模型文件" : "添加子标签"}
+            disabled={disabled}
           >
             <Plus size={12} />
           </AppButton>
@@ -205,6 +220,7 @@ function LabelTreeItem({
               onAdd={onAdd}
               onDelete={onDelete}
               onEdit={onEdit}
+              disabled={disabled}
             />
           ))}
         </div>
