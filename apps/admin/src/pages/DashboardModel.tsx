@@ -170,7 +170,10 @@ export default function DashboardModel() {
     guiTexture: sceneRef.current?.guiTexture ?? null,
     labels: labelMarkers,
     selectedId: selectedLabelId,
-    onLabelClick: selectLabel,
+    onLabelClick: (id) => {
+      selectLabel(id);
+      setEditorMode("placeLabel");
+    },
   });
 
   // Auto-save labels after 1s of inactivity.
