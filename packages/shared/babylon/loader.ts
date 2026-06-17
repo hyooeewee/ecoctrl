@@ -7,10 +7,23 @@ import {
   TransformNode,
   SceneLoader,
   AbstractMesh,
+  DracoCompression,
   type ISceneLoaderProgressEvent,
 } from "@babylonjs/core";
 import { GLTFFileLoader } from "@babylonjs/loaders";
 import { fetchModelUrl } from "../model-cache";
+
+// Configure Draco decoder once. If optimized assets use KHR_draco_mesh_compression,
+// Babylon will lazy-load the decoder from these URLs. For air-gapped deployments,
+// copy the Draco decoder files to your public directory and update the paths.
+DracoCompression.Configuration = {
+  ...DracoCompression.Configuration,
+  decoder: {
+    wasmUrl: "https://cdn.babylonjs.com/draco_wasm_wrapper_gltf.js",
+    wasmBinaryUrl: "https://cdn.babylonjs.com/draco_decoder_gltf.wasm",
+    fallbackUrl: "https://cdn.babylonjs.com/draco_decoder_gltf.js",
+  },
+};
 
 export interface LoadGltfOptions {
   scene: Scene;

@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import JSZip from "jszip";
+import { Readable } from "node:stream";
 import { DataModelSchema } from "@ecoctrl/shared";
 import { getModelStorage } from "@/storage";
 import { streamFile } from "@/storage/stream";
@@ -12,7 +12,7 @@ import {
   updateModel,
   deleteModel,
 } from "@/repositories/models";
-import { findObjectByCodeAndModelId, createObject, updateObject } from "@/repositories/objects";
+import { findObjectByCodeAndModelId, createObject } from "@/repositories/objects";
 import { createPoint, findPointByObjectTypeNo } from "@/repositories/points";
 import { errors } from "@/lib/schemas";
 import { parseJsonPoints, parseCsvPoints, parseXlsxPoints } from "@/lib/parsers";
@@ -27,12 +27,6 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
 }
 
-const FORMAT_MAP: Record<string, string> = {
-  glb: "GLB",
-  gltf: "GLTF",
-  zip: "ZIP",
-};
-
 async function collectStream(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];
   for await (const chunk of stream) {
@@ -40,6 +34,17 @@ async function collectStream(stream: NodeJS.ReadableStream): Promise<Buffer> {
   }
   return Buffer.concat(chunks);
 }
+
+function toWebStream(stream: NodeJS.ReadableStream): ReadableStream {
+  return Readable.toWeb(stream as Readable) as unknown as ReadableStream;
+}
+
+const FORMAT_MAP: Record<string, string> = {
+  glb: "GLB",
+  gltf: "GLTF",
+  obj: "OBJ",
+  fbx: "FBX",
+};
 
 export default async function modelRoutes(fastify: FastifyInstance) {
   fastify.get(
@@ -60,9 +65,11 @@ export default async function modelRoutes(fastify: FastifyInstance) {
   fastify.post(
     "/",
     {
+      bodyLimit: 5 * 1024 * 1024 * 1024, // 5GB cap for model uploads
       schema: {
         tags: ["Models"],
         summary: "Upload a 3D model",
+        consumes: ["multipart/form-data"],
         response: {
           201: DataModelSchema,
           ...errors,
@@ -70,87 +77,74 @@ export default async function modelRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const parts = request.parts();
-      let fileBuffer: Buffer | undefined;
-      let filename = "";
-      let name = "";
-      let version = "";
-      let code = "";
+      try {
+        const parts = request.parts();
+        let filename = "";
+        let name = "";
+        let version = "";
+        let code = "";
+        let fileUrl = "";
+        let format = "";
+        let sizeBytes = 0;
+        let fileProcessed = false;
 
-      for await (const part of parts) {
-        if (part.type === "file") {
-          fileBuffer = await collectStream(part.file);
-          filename = part.filename;
-        } else {
-          if (part.fieldname === "name") name = part.value as string;
-          if (part.fieldname === "version") version = part.value as string;
-          if (part.fieldname === "code") code = part.value as string;
-        }
-      }
+        for await (const part of parts) {
+          if (part.type === "file") {
+            filename = part.filename;
+            const modelId = crypto.randomUUID();
+            const ext = filename.slice(filename.lastIndexOf(".")).toLowerCase();
 
-      if (!fileBuffer) {
-        return reply.status(400).send({ error: "No file uploaded" });
-      }
+            // Stream the model file directly to storage without buffering it
+            // in memory. This avoids Cloudflare 524 origin timeouts on large
+            // GLB uploads.
+            const key = `${modelId}${ext}`;
+            await storage.put(key, toWebStream(part.file));
+            const fileStat = await storage.stat(key);
 
-      const finalName = name || filename.replace(/\.[^/.]+$/, "");
-      const finalVersion = version || "v1.0";
-
-      const ext = filename.slice(filename.lastIndexOf(".")).toLowerCase();
-      const modelId = crypto.randomUUID();
-      let fileUrl: string;
-      let format: string;
-      let sizeBytes: number;
-
-      if (ext === ".zip") {
-        sizeBytes = fileBuffer.length;
-        const zip = await JSZip.loadAsync(fileBuffer);
-        const uploadedKeys: string[] = [];
-        let gltfEntryName: string | undefined;
-
-        for (const [entryName, entry] of Object.entries(zip.files)) {
-          if (entry.dir) continue;
-          const content = await entry.async("nodebuffer");
-          const key = `${modelId}/${entryName}`;
-          await storage.put(key, content);
-          uploadedKeys.push(key);
-          if (!gltfEntryName && entryName.toLowerCase().endsWith(".gltf")) {
-            gltfEntryName = entryName;
+            fileUrl = key;
+            sizeBytes = fileStat.size;
+            format = FORMAT_MAP[ext.slice(1)] || ext.slice(1).toUpperCase();
+            fileProcessed = true;
+          } else {
+            if (part.fieldname === "name") name = part.value as string;
+            if (part.fieldname === "version") version = part.value as string;
+            if (part.fieldname === "code") code = part.value as string;
           }
         }
 
-        if (!gltfEntryName) {
-          for (const key of uploadedKeys) {
-            await storage.delete(key);
-          }
-          return reply.status(400).send({ error: "ZIP must contain a .gltf file" });
+        if (!fileProcessed) {
+          return reply.status(400).send({ error: "No file uploaded" });
         }
 
-        fileUrl = `${modelId}/${gltfEntryName}`;
-        format = "GLTF";
-      } else {
-        sizeBytes = fileBuffer.length;
-        const key = `${modelId}${ext}`;
-        await storage.put(key, fileBuffer);
-        fileUrl = key;
-        format = FORMAT_MAP[ext.slice(1)] || ext.slice(1).toUpperCase();
-      }
+        const finalName = name || filename.replace(/\.[^/.]+$/, "");
+        const finalVersion = version || "v1.0";
 
-      const created = await createModel({
-        code,
-        name: finalName,
-        description: null,
-        version: finalVersion,
-        format,
-        size: formatFileSize(sizeBytes),
-        fileUrl,
-        thumbnailUrl: null,
-        docUrl: null,
-      });
-      const response = {
-        ...created,
-        fileUrl: created.fileUrl,
-      };
-      return reply.status(201).send(response);
+        const created = await createModel({
+          code,
+          name: finalName,
+          description: null,
+          version: finalVersion,
+          format,
+          size: formatFileSize(sizeBytes),
+          fileUrl,
+          thumbnailUrl: null,
+          docUrl: null,
+        });
+        const response = {
+          ...created,
+          fileUrl: created.fileUrl,
+        };
+        return reply.status(201).send(response);
+      } catch (err) {
+        const code = (err as { code?: string }).code;
+        if (code === "FST_FILES_LIMIT") {
+          return reply.status(413).send({ error: "单次上传文件数量超过限制（最多 10 个）" });
+        }
+        if (code === "FST_REQ_FILE_TOO_LARGE") {
+          return reply.status(413).send({ error: "单个文件大小超过 500MB 限制" });
+        }
+        throw err;
+      }
     },
   );
 
@@ -210,10 +204,12 @@ export default async function modelRoutes(fastify: FastifyInstance) {
   fastify.put(
     "/:id/file",
     {
+      bodyLimit: 5 * 1024 * 1024 * 1024, // 5GB cap for model uploads
       schema: {
         tags: ["Models"],
         summary: "Replace model file",
         params: z.object({ id: z.string().describe("Model ID") }),
+        consumes: ["multipart/form-data"],
         response: {
           200: DataModelSchema,
           ...errors,
@@ -221,88 +217,70 @@ export default async function modelRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const { id } = request.params as { id: string };
-      const existing = await findModelById(id);
-      if (!existing) {
-        return reply.status(404).send({ error: "Model not found" });
-      }
-
-      const parts = request.parts();
-      let fileBuffer: Buffer | undefined;
-      let filename = "";
-
-      for await (const part of parts) {
-        if (part.type === "file") {
-          fileBuffer = await collectStream(part.file);
-          filename = part.filename;
+      try {
+        const { id } = request.params as { id: string };
+        const existing = await findModelById(id);
+        if (!existing) {
+          return reply.status(404).send({ error: "Model not found" });
         }
-      }
 
-      if (!fileBuffer) {
-        return reply.status(400).send({ error: "No file uploaded" });
-      }
+        const parts = request.parts();
+        let filename = "";
+        let fileUrl = "";
+        let format = "";
+        let sizeBytes = 0;
+        let fileProcessed = false;
 
-      // Delete old files
-      if (existing.fileUrl) {
-        const keys = await storage.list(`${id}/`);
-        for (const key of keys) {
-          await storage.delete(key);
-        }
-      }
+        for await (const part of parts) {
+          if (part.type === "file") {
+            filename = part.filename;
+            const ext = filename.slice(filename.lastIndexOf(".")).toLowerCase();
 
-      // Save new file (same logic as POST)
-      const ext = filename.slice(filename.lastIndexOf(".")).toLowerCase();
-      let fileUrl: string;
-      let format: string;
-      let sizeBytes: number;
+            const key = `${id}${ext}`;
+            await storage.put(key, toWebStream(part.file));
+            const fileStat = await storage.stat(key);
 
-      if (ext === ".zip") {
-        sizeBytes = fileBuffer.length;
-        const zip = await JSZip.loadAsync(fileBuffer);
-        const uploadedKeys: string[] = [];
-        let gltfEntryName: string | undefined;
-
-        for (const [entryName, entry] of Object.entries(zip.files)) {
-          if (entry.dir) continue;
-          const content = await entry.async("nodebuffer");
-          const key = `${id}/${entryName}`;
-          await storage.put(key, content);
-          uploadedKeys.push(key);
-          if (!gltfEntryName && entryName.toLowerCase().endsWith(".gltf")) {
-            gltfEntryName = entryName;
+            fileUrl = key;
+            sizeBytes = fileStat.size;
+            format = FORMAT_MAP[ext.slice(1)] || ext.slice(1).toUpperCase();
+            fileProcessed = true;
           }
         }
 
-        if (!gltfEntryName) {
-          for (const key of uploadedKeys) {
-            await storage.delete(key);
-          }
-          return reply.status(400).send({ error: "ZIP must contain a .gltf file" });
+        if (!fileProcessed) {
+          return reply.status(400).send({ error: "No file uploaded" });
         }
 
-        fileUrl = `${id}/${gltfEntryName}`;
-        format = "GLTF";
-      } else {
-        sizeBytes = fileBuffer.length;
-        const key = `${id}${ext}`;
-        await storage.put(key, fileBuffer);
-        fileUrl = key;
-        format = FORMAT_MAP[ext.slice(1)] || ext.slice(1).toUpperCase();
-      }
+        // Delete old files after the new file is successfully stored so the
+        // model never ends up without a file if the upload fails partway.
+        if (existing.fileUrl) {
+          const keys = await storage.list(`${id}/`);
+          await Promise.all(keys.map((key) => storage.delete(key)));
+        }
 
-      const updated = await updateModel(id, {
-        format,
-        size: formatFileSize(sizeBytes),
-        fileUrl,
-      });
-      if (!updated) {
-        return reply.status(404).send({ error: "Model not found" });
+        const updated = await updateModel(id, {
+          format,
+          size: formatFileSize(sizeBytes),
+          fileUrl,
+        });
+        if (!updated) {
+          return reply.status(404).send({ error: "Model not found" });
+        }
+        const response = {
+          ...updated,
+          fileUrl: updated.fileUrl,
+        };
+        return response;
+      } catch (err) {
+        const code = (err as { code?: string }).code;
+        if (code === "FST_FILES_LIMIT") {
+          return reply.status(413).send({ error: "单次上传文件数量超过限制（最多 10 个）" });
+        }
+        if (code === "FST_REQ_FILE_TOO_LARGE") {
+          return reply.status(413).send({ error: "单个文件大小超过 500MB 限制" });
+        }
+        throw err;
       }
-      const response = {
-        ...updated,
-        fileUrl: updated.fileUrl,
-      };
-      return response;
     },
   );
 

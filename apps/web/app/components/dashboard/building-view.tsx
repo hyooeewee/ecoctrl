@@ -94,6 +94,9 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
   const labelElsRef = useRef<Record<string, HTMLDivElement | null>>({});
   const lastLabelStateRef = useRef<Record<string, { x: number; y: number; visible: boolean }>>({});
   const rafRef = useRef<number>(0);
+  const loopActiveRef = useRef(false);
+  const startLoopRef = useRef<(() => void) | null>(null);
+  const stopLoopRef = useRef<(() => void) | null>(null);
 
   const { showLabels, defaultCameraRadius } = useSettingsStore();
   const t = useLocale();
@@ -120,36 +123,76 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
     });
     viewerRef.current = viewer;
 
-    // Start label projection loop.
-    const projectLabels = () => {
-      const labels = viewer.projectLabels();
-      for (const [key, { x, y, visible }] of Object.entries(labels)) {
-        const el = labelElsRef.current[key];
-        if (!el) continue;
+    const startLoop = () => {
+      if (loopActiveRef.current) return;
+      loopActiveRef.current = true;
 
-        const last = lastLabelStateRef.current[key];
-        if (
-          !last ||
-          last.visible !== visible ||
-          Math.abs(last.x - x) > 1 ||
-          Math.abs(last.y - y) > 1
-        ) {
-          el.style.display = visible ? "flex" : "none";
-          el.style.transform = `translate(${x}px, ${y}px)`;
-          lastLabelStateRef.current[key] = { x, y, visible };
+      const projectLabels = () => {
+        if (!loopActiveRef.current) return;
+
+        const labels = viewer.projectLabels();
+        for (const [key, { x, y, visible }] of Object.entries(labels)) {
+          const el = labelElsRef.current[key];
+          if (!el) continue;
+
+          const last = lastLabelStateRef.current[key];
+          if (
+            !last ||
+            last.visible !== visible ||
+            Math.abs(last.x - x) > 1 ||
+            Math.abs(last.y - y) > 1
+          ) {
+            el.style.display = visible ? "flex" : "none";
+            el.style.transform = `translate(${x}px, ${y}px)`;
+            lastLabelStateRef.current[key] = { x, y, visible };
+          }
         }
-      }
+        rafRef.current = requestAnimationFrame(projectLabels);
+      };
       rafRef.current = requestAnimationFrame(projectLabels);
     };
-    rafRef.current = requestAnimationFrame(projectLabels);
+
+    const stopLoop = () => {
+      loopActiveRef.current = false;
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
+    };
+
+    startLoopRef.current = startLoop;
+    stopLoopRef.current = stopLoop;
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        stopLoop();
+      } else if (showLabels) {
+        startLoop();
+      }
+    };
+
+    if (showLabels) {
+      startLoop();
+    }
+    document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
-      cancelAnimationFrame(rafRef.current);
+      stopLoop();
+      document.removeEventListener("visibilitychange", handleVisibility);
+      startLoopRef.current = null;
+      stopLoopRef.current = null;
       viewer.dispose();
       viewerRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Pause/resume the label projection loop when label visibility changes.
+  useEffect(() => {
+    if (showLabels && !document.hidden) {
+      startLoopRef.current?.();
+    } else {
+      stopLoopRef.current?.();
+    }
+  }, [showLabels]);
 
   // Load model when config or URL changes.
   useEffect(() => {

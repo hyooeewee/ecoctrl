@@ -62,4 +62,6 @@ export interface ViewerOptions {
   onCriticalLoaded?: () => void;
   onProgress?: (progress: number) => void;
   defaultCameraRadius: number;
+  /** Optional hardware scaling level. Defaults to 1 (native resolution). */
+  hardwareScalingLevel?: number;
 }

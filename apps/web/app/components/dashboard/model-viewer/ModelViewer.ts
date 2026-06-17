@@ -109,6 +109,12 @@ export class ModelViewer implements ModelViewerRef {
     this.engine = createEngine(this.canvas);
     this.scene = createScene(this.engine);
 
+    // Optional hardware scaling. Values below 1 reduce fill-rate on high-DPI
+    // displays but may cause grid-like artifacts on some PBR materials.
+    if (options.hardwareScalingLevel !== undefined && options.hardwareScalingLevel > 0) {
+      this.engine.setHardwareScalingLevel(options.hardwareScalingLevel);
+    }
+
     // Ambient light so PBR materials are visible even without an environment map.
     this.scene.ambientColor = new Color3(0.4, 0.4, 0.4);
 
@@ -141,6 +147,7 @@ export class ModelViewer implements ModelViewerRef {
     this.camera.upperRadiusLimit = 60;
     this.camera.lowerBetaLimit = 0.1;
     this.camera.upperBetaLimit = Math.PI / 2.2;
+    this.camera.maxZ = 200;
     this.camera.viewport = new Viewport(0, 0, 1, 1);
 
     // Lighting — match admin setup exactly
@@ -152,6 +159,10 @@ export class ModelViewer implements ModelViewerRef {
     const dir = new DirectionalLight("dir", new Vector3(-1, -2, 1), this.scene);
     dir.intensity = 0.5;
     dir.position = new Vector3(5, 10, -5);
+
+    // Skip pointer-move picking unless hover interactions are needed. This saves
+    // a full scene raycast on every pointermove event.
+    this.scene.skipPointerMovePicking = true;
 
     // Interaction-aware render loop: full 60fps while user interacts,
     // throttled to 10fps when idle to save GPU/CPU for static scenes.
@@ -196,6 +207,10 @@ export class ModelViewer implements ModelViewerRef {
 
   private lastFrameTime = 0;
   private slowFrameCount = 0;
+  private slowFrameLogCount = 0;
+  private slowFrameLogDeadline = 0;
+  private static readonly SLOW_FRAME_LOG_INTERVAL = 5000;
+  private static readonly SLOW_FRAME_LOG_MAX = 5;
 
   private render(): void {
     const start = performance.now();
@@ -206,10 +221,17 @@ export class ModelViewer implements ModelViewerRef {
     updateClipPlane(this.scene, this.clipState);
 
     const elapsed = performance.now() - start;
-    // Log every 60 slow frames (about 1s at 60fps) to avoid console spam.
+    // Throttle slow-frame warnings: log at most once every 5s and max 5 times.
+    // console.warn itself can cause jank on some browsers.
     if (elapsed > 16.67) {
       this.slowFrameCount++;
-      if (this.slowFrameCount % 60 === 0) {
+      const now = performance.now();
+      if (
+        this.slowFrameLogCount < ModelViewer.SLOW_FRAME_LOG_MAX &&
+        now >= this.slowFrameLogDeadline
+      ) {
+        this.slowFrameLogCount++;
+        this.slowFrameLogDeadline = now + ModelViewer.SLOW_FRAME_LOG_INTERVAL;
         console.warn(
           `[ModelViewer] Slow render loop detected: ${elapsed.toFixed(2)}ms/frame ` +
             `(${this.slowFrameCount} slow frames since start). ` +
@@ -299,6 +321,7 @@ export class ModelViewer implements ModelViewerRef {
           this.applyUnifiedScale(group.rootNode);
         }
       }
+      this.freezeStaticMeshes();
       this.setupPostLoadState();
       this.computeLabelAnchors();
       this.detectLobbyTopFromScene();
@@ -477,6 +500,26 @@ export class ModelViewer implements ModelViewerRef {
       `[ModelViewer] applyUnifiedScale: unifiedScale=${this.unifiedScale.toFixed(4)}, ` +
         `groupParent.pos=(${groupParent.position.x.toFixed(2)}, ${groupParent.position.y.toFixed(2)}, ${groupParent.position.z.toFixed(2)})`,
     );
+  }
+
+  /**
+   * Freeze static meshes and materials after all transforms are applied.
+   * This is safe because the building model does not animate at runtime.
+   */
+  private freezeStaticMeshes(): void {
+    this.scene.updateTransformMatrix(true);
+
+    for (const group of this.groups) {
+      if (!group.rootNode) continue;
+      for (const mesh of group.rootNode.getChildMeshes()) {
+        if (!mesh.isEnabled()) continue;
+        mesh.freezeWorldMatrix();
+        mesh.cullingStrategy = AbstractMesh.CULLINGSTRATEGY_BOUNDINGSPHERE_ONLY;
+        mesh.material?.freeze();
+      }
+    }
+
+    this.scene.freezeMaterials();
   }
 
   /**
