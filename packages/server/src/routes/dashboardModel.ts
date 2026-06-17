@@ -5,11 +5,12 @@ import {
   DashboardModelHotspotSchema,
   DashboardModelLabelSchema,
   ModelFileEntrySchema,
+  type ModelFileEntry,
 } from "@ecoctrl/shared";
 import { findDashboardModel, updateDashboardModel } from "@/repositories/dashboardModel";
 import { getModelStorage } from "@/storage";
 import { streamFile } from "@/storage/stream";
-import { errors, errorResponseSchema } from "@/lib/schemas";
+import { errors } from "@/lib/schemas";
 
 const storage = getModelStorage();
 
@@ -80,21 +81,17 @@ export default async function dashboardModelRoutes(fastify: FastifyInstance) {
         consumes: ["multipart/form-data"],
         response: {
           200: DashboardModelConfigSchema,
-          413: errorResponseSchema,
           ...errors,
         },
       },
     },
     async (request, reply) => {
       try {
+        // Load existing config before streaming parts so we can compute the
+        // insertion order without referencing a not-yet-declared variable.
+        const existing = await findDashboardModel();
         const parts = request.parts();
-        const uploadedMetas: {
-          id: string;
-          fileKey: string;
-          name: string;
-          priority: string;
-          order: number;
-        }[] = [];
+        const uploadedMetas: ModelFileEntry[] = [];
 
         for await (const part of parts) {
           if (part.type === "file") {
@@ -121,7 +118,6 @@ export default async function dashboardModelRoutes(fastify: FastifyInstance) {
           return reply.status(400).send({ error: "No file uploaded" });
         }
 
-        const existing = await findDashboardModel();
         const modelFiles = existing?.modelFiles
           ? [...existing.modelFiles, ...uploadedMetas]
           : uploadedMetas;
@@ -166,22 +162,29 @@ export default async function dashboardModelRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       const body = request.body as {
         modelFileUrl?: string | null;
-        modelFiles?: { id: string; fileKey: string; name?: string; priority?: string }[];
+        modelFiles?: ModelFileEntry[];
         cameraPreset?: string;
         ambientLightIntensity?: number;
         hotspots?: unknown[];
         labels?: unknown[];
       };
       const existing = await findDashboardModel();
-      const updated = {
-        modelFileUrl:
-          body.modelFileUrl !== undefined ? body.modelFileUrl : (existing?.modelFileUrl ?? null),
-        modelFiles: body.modelFiles ?? existing?.modelFiles ?? [],
+      const updated: Parameters<typeof updateDashboardModel>[0] = {
+        modelFileUrl: (body.modelFileUrl !== undefined
+          ? body.modelFileUrl
+          : (existing?.modelFileUrl ?? null)) as string | null,
+        modelFiles: (body.modelFiles ?? existing?.modelFiles ?? []) as Parameters<
+          typeof updateDashboardModel
+        >[0]["modelFiles"],
         cameraPreset: body.cameraPreset ?? existing?.cameraPreset ?? "Default_View_01",
         ambientLightIntensity:
           body.ambientLightIntensity ?? existing?.ambientLightIntensity ?? 0.85,
-        hotspots: body.hotspots ?? existing?.hotspots ?? [],
-        labels: body.labels ?? existing?.labels ?? [],
+        hotspots: (body.hotspots ?? existing?.hotspots ?? []) as Parameters<
+          typeof updateDashboardModel
+        >[0]["hotspots"],
+        labels: (body.labels ?? existing?.labels ?? []) as Parameters<
+          typeof updateDashboardModel
+        >[0]["labels"],
       };
       const result = await updateDashboardModel(updated);
       if (result?.modelFileUrl) {
