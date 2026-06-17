@@ -292,7 +292,7 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
 
   markDirty: () => set({ isDirty: true }),
 
-  selectLabel: (id) => set({ selectedLabelId: id, editorMode: id ? "select" : get().editorMode }),
+  selectLabel: (id) => set({ selectedLabelId: id }),
 
   addLabel: (parentId) => {
     const { labels } = get();
