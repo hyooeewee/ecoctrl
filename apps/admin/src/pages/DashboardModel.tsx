@@ -20,7 +20,7 @@ import {
   useLabelMarkers,
   LabelTree,
   LabelConfigForm,
-  OperationConfig,
+  ActionStepsConfig,
   type LabelTreeNode,
   type LabelMarkerData,
 } from "@/components/babylon-editor";
@@ -138,14 +138,16 @@ export default function DashboardModel() {
 
   const labelMarkers: LabelMarkerData[] = useMemo(
     () =>
-      labels.map((l) => ({
-        id: l.id,
-        key: l.key,
-        name: l.name,
-        position: new Vector3(l.position.x, l.position.y, l.position.z),
-        isSelected: l.id === selectedLabelId,
-        hasChildren: labels.some((child) => child.parentId === l.id),
-      })),
+      labels
+        .filter((l) => l.position !== undefined)
+        .map((l) => ({
+          id: l.id,
+          key: l.key,
+          name: l.name,
+          position: new Vector3(l.position!.x, l.position!.y, l.position!.z),
+          isSelected: l.id === selectedLabelId,
+          hasChildren: labels.some((child) => child.parentId === l.id),
+        })),
     [labels, selectedLabelId],
   );
 
@@ -393,7 +395,14 @@ export default function DashboardModel() {
                         onAdd={addLabel}
                         onDelete={deleteLabel}
                         onEdit={(id) => selectLabel(id)}
+                        disabled={existingFiles.length === 0}
                       />
+
+                      {existingFiles.length === 0 && (
+                        <div className="rounded-md border border-dashed border-border bg-muted/20 px-3 py-3 text-center text-xs text-muted-foreground">
+                          请先上传模型文件，再创建标签
+                        </div>
+                      )}
 
                       {selectedLabel && (
                         <div className="border-t pt-4">
@@ -414,16 +423,6 @@ export default function DashboardModel() {
                                 .map((l) => ({ id: l.id, name: l.name }))}
                               onChange={updateLabelConfig}
                             />
-
-                            <div className="mt-4">
-                              <OperationConfig
-                                operations={selectedLabel.operations}
-                                availableLabelIds={labels
-                                  .filter((l) => l.id !== selectedLabelId)
-                                  .map((l) => l.id)}
-                                onChange={updateLabelOperations}
-                              />
-                            </div>
                           </div>
                         </div>
                       )}
@@ -431,7 +430,46 @@ export default function DashboardModel() {
                   )}
 
                   {editorMode === "clipPreview" && (
-                    <div className="text-sm text-muted-foreground">动作配置</div>
+                    <div className="grid gap-4">
+                      <LabelTree
+                        labels={labelTreeData}
+                        selectedId={selectedLabelId}
+                        onSelect={selectLabel}
+                        addTitle="选择标签"
+                        disabled
+                      />
+
+                      {selectedLabel ? (
+                        <>
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-sm font-semibold">
+                              {selectedLabel.name || selectedLabel.key} 的动作
+                            </h3>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={async () => {
+                                await sceneRef.current?.executeOperations(selectedLabel.operations);
+                              }}
+                            >
+                              预览执行
+                            </Button>
+                          </div>
+                          <ActionStepsConfig
+                            operations={selectedLabel.operations}
+                            modelFiles={existingFiles}
+                            availableLabelIds={labels
+                              .filter((l) => l.id !== selectedLabelId)
+                              .map((l) => l.id)}
+                            onChange={updateLabelOperations}
+                          />
+                        </>
+                      ) : (
+                        <div className="rounded-md border border-dashed border-border bg-muted/20 px-3 py-6 text-center text-xs text-muted-foreground">
+                          选择一个标签来配置动作
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </ScrollArea>

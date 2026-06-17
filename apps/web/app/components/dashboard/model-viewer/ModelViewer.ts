@@ -8,6 +8,8 @@ import {
   TransformNode,
   Vector3,
   Viewport,
+  type Engine,
+  type Scene,
 } from "@babylonjs/core";
 import "@babylonjs/loaders/glTF";
 import type { DashboardModelLabel, LabelOperation } from "@ecoctrl/shared";
@@ -37,6 +39,7 @@ export interface ModelViewerRef {
   resetToDefaultRadius: () => void;
   focusOnLabel: (key: string) => void;
   setClipping: (enabled: boolean) => void;
+  executeTagActions: (labelKey: string) => Promise<void>;
 }
 
 export class ModelViewer implements ModelViewerRef {
@@ -650,6 +653,23 @@ export class ModelViewer implements ModelViewerRef {
   }
 
   /**
+   * Execute all operations bound to a tag/label by key.
+   * Used by the large-screen dashboard when a tag pill is clicked.
+   */
+  async executeTagActions(labelKey: string): Promise<void> {
+    const label = this.v2Labels.find((l) => l.key === labelKey);
+    if (!label) {
+      console.warn(`[ModelViewer] tag not found: ${labelKey}`);
+      return;
+    }
+
+    for (const op of label.operations) {
+      // TODO: support targetModelFileId and sequential animation with duration/easing.
+      this.executeOperation(op);
+    }
+  }
+
+  /**
    * Execute a single label operation.
    */
   private executeOperation(op: LabelOperation): void {
@@ -805,11 +825,13 @@ export class ModelViewer implements ModelViewerRef {
    * Only fallbackPosition and meshKeywords are needed for anchor lookup.
    */
   private toLabelDefs(labels: DashboardModelLabel[]): LabelDef[] {
-    return labels.map((l) => ({
-      key: l.key,
-      fallbackPosition: new Vector3(l.position.x, l.position.y, l.position.z),
-      meshKeywords: l.meshKeywords,
-    }));
+    return labels
+      .filter((l) => l.position !== undefined)
+      .map((l) => ({
+        key: l.key,
+        fallbackPosition: new Vector3(l.position!.x, l.position!.y, l.position!.z),
+        meshKeywords: l.meshKeywords,
+      }));
   }
 
   // ========================================

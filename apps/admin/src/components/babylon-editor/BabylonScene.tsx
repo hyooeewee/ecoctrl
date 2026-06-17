@@ -17,11 +17,13 @@ import {
   StandardMaterial,
   AbstractMesh,
   Node,
+  Animation,
   type ISceneLoaderProgressEvent,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
 import { AdvancedDynamicTexture } from "@babylonjs/gui";
 import { createEngine, loadGltf, loadModelsByPriority } from "@ecoctrl/shared/babylon";
+import type { LabelOperation } from "@ecoctrl/shared";
 
 // ========================================
 // Types
@@ -53,6 +55,7 @@ export interface BabylonSceneRef {
   zoomIn: () => void;
   zoomOut: () => void;
   resetView: () => void;
+  executeOperations: (operations: LabelOperation[]) => Promise<void>;
 }
 
 // ========================================
@@ -131,6 +134,76 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
           cameraRef.current,
           axesRef.current,
         );
+      },
+      async executeOperations(operations: LabelOperation[]) {
+        const camera = cameraRef.current;
+        const scene = sceneRef.current;
+        if (!camera || !scene) return;
+
+        for (const op of operations) {
+          switch (op.type) {
+            case "camera": {
+              const cfg = op.config as {
+                target: { x: number; y: number; z: number };
+                distance: number;
+                fov: number;
+                duration: number;
+                easing?: string;
+              };
+              const target = new Vector3(cfg.target.x, cfg.target.y, cfg.target.z);
+              const duration = cfg.duration ?? 0.8;
+
+              // Animate target and radius using Babylon Animation
+              const targetAnim = new Animation(
+                "cameraTargetAnim",
+                "target",
+                60,
+                Animation.ANIMATIONTYPE_VECTOR3,
+                Animation.ANIMATIONLOOPMODE_CONSTANT,
+              );
+              const targetKeys = [
+                { frame: 0, value: camera.target.clone() },
+                { frame: Math.max(1, Math.round(duration * 60)), value: target },
+              ];
+              targetAnim.setKeys(targetKeys);
+
+              const radiusAnim = new Animation(
+                "cameraRadiusAnim",
+                "radius",
+                60,
+                Animation.ANIMATIONTYPE_FLOAT,
+                Animation.ANIMATIONLOOPMODE_CONSTANT,
+              );
+              const radiusKeys = [
+                { frame: 0, value: camera.radius },
+                { frame: Math.max(1, Math.round(duration * 60)), value: cfg.distance ?? 30 },
+              ];
+              radiusAnim.setKeys(radiusKeys);
+
+              scene.beginDirectAnimation(
+                camera,
+                [targetAnim, radiusAnim],
+                0,
+                Math.max(1, Math.round(duration * 60)),
+                false,
+                1,
+              );
+              await new Promise((resolve) => setTimeout(resolve, duration * 1000));
+              break;
+            }
+            case "clipping":
+              console.warn("[BabylonScene] clipping execution not implemented in admin preview");
+              break;
+            case "visibility":
+              console.warn("[BabylonScene] visibility execution not implemented in admin preview");
+              break;
+            case "postprocess":
+              console.warn("[BabylonScene] postprocess execution not implemented in admin preview");
+              break;
+            default:
+              break;
+          }
+        }
       },
     }));
 
