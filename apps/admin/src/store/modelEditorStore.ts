@@ -22,6 +22,7 @@ interface ModelEditorState {
   // Labels
   labels: Label[];
   selectedLabelId: string | null;
+  placingLabelId: string | null;
 
   // UI toggles
   editorMode: EditorMode;
@@ -61,6 +62,8 @@ interface ModelEditorState {
   deleteLabel: (id: string) => void;
   updateLabelConfig: (config: LabelConfig) => void;
   updateLabelOperations: (operations: LabelOperation[]) => void;
+  startPlacingLabel: (id: string) => void;
+  stopPlacingLabel: () => void;
 
   // Actions — UI
   setEditorMode: (mode: EditorMode) => void;
@@ -76,6 +79,7 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
   saving: false,
   labels: [],
   selectedLabelId: null,
+  placingLabelId: null,
   editorMode: "select",
   showGrid: true,
   showAxes: true,
@@ -235,8 +239,24 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
 
   // Labels — pick from 3D scene
   pickLabel: (position) => {
-    const { editorMode, labels } = get();
+    const { editorMode, labels, placingLabelId } = get();
     if (editorMode !== "placeLabel") return;
+
+    const rounded = {
+      x: parseFloat(position.x.toFixed(3)),
+      y: parseFloat(position.y.toFixed(3)),
+      z: parseFloat(position.z.toFixed(3)),
+    };
+
+    if (placingLabelId) {
+      set({
+        labels: labels.map((l) => (l.id === placingLabelId ? { ...l, position: rounded } : l)),
+        placingLabelId: null,
+        editorMode: "placeLabel",
+      });
+      toast.success("位置已更新");
+      return;
+    }
 
     const newLabel: Label = {
       id: `label_${Date.now()}`,
@@ -244,11 +264,7 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
       name: `标签 ${labels.length + 1}`,
       description: "",
       parentId: null,
-      position: {
-        x: parseFloat(position.x.toFixed(3)),
-        y: parseFloat(position.y.toFixed(3)),
-        z: parseFloat(position.z.toFixed(3)),
-      },
+      position: rounded,
       meshKeywords: [],
       operations: [],
       order: labels.length,
@@ -261,6 +277,9 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
     });
     toast.success("标签已添加");
   },
+
+  startPlacingLabel: (id) => set({ placingLabelId: id, editorMode: "placeLabel" }),
+  stopPlacingLabel: () => set({ placingLabelId: null, editorMode: "select" }),
 
   selectLabel: (id) => set({ selectedLabelId: id, editorMode: id ? "select" : get().editorMode }),
 
