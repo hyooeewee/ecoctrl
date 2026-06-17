@@ -3,8 +3,17 @@
 // ========================================
 
 import { useEffect, useRef } from "react";
-import { Scene, Vector3, TransformNode, Color3 } from "@babylonjs/core";
-import { AdvancedDynamicTexture, TextBlock, Ellipse, Rectangle, Control } from "@babylonjs/gui";
+import {
+  Scene,
+  Vector3,
+  TransformNode,
+  Color3,
+  Mesh,
+  MeshBuilder,
+  PointerDragBehavior,
+  StandardMaterial,
+} from "@babylonjs/core";
+import { AdvancedDynamicTexture, TextBlock, Ellipse, Rectangle } from "@babylonjs/gui";
 
 export interface LabelMarkerData {
   id: string;
@@ -22,6 +31,7 @@ interface UseLabelMarkersOptions {
   labels: LabelMarkerData[];
   selectedId: string | null;
   onLabelClick?: (id: string) => void;
+  onLabelDragEnd?: (id: string, position: Vector3) => void;
 }
 
 export function useLabelMarkers({
@@ -30,10 +40,13 @@ export function useLabelMarkers({
   labels,
   selectedId,
   onLabelClick,
+  onLabelDragEnd,
 }: UseLabelMarkersOptions) {
   const markersRef = useRef<Map<string, { container: Rectangle; anchor: TransformNode }>>(
     new Map(),
   );
+  const dragMeshRef = useRef<Mesh | null>(null);
+  const dragMaterialRef = useRef<StandardMaterial | null>(null);
 
   // ========================================
   // Create marker for a label
@@ -130,6 +143,56 @@ export function useLabelMarkers({
   }, [guiTexture, labels, selectedId, onLabelClick]);
 
   // ========================================
+  // Draggable handle for selected label
+  // ========================================
+
+  useEffect(() => {
+    if (!scene) return;
+
+    // Clean up old drag mesh
+    dragMeshRef.current?.dispose();
+    dragMeshRef.current = null;
+
+    if (!selectedId) return;
+
+    const label = labels.find((l) => l.id === selectedId);
+    if (!label) return;
+
+    // Reuse material
+    if (!dragMaterialRef.current) {
+      const material = new StandardMaterial("dragHandleMaterial", scene);
+      material.diffuseColor = new Color3(0.23, 0.51, 0.96);
+      material.emissiveColor = new Color3(0.1, 0.3, 0.6);
+      material.alpha = 0.6;
+      dragMaterialRef.current = material;
+    }
+
+    const mesh = MeshBuilder.CreateSphere(`drag_${selectedId}`, { diameter: 0.4 }, scene);
+    mesh.position = label.position.clone();
+    mesh.material = dragMaterialRef.current;
+
+    const dragBehavior = new PointerDragBehavior({});
+    dragBehavior.useObjectOrientationForDragging = false;
+    dragBehavior.onDragObservable.add(() => {
+      const marker = markersRef.current.get(selectedId);
+      if (marker) {
+        marker.anchor.position = mesh.position.clone();
+      }
+    });
+    dragBehavior.onDragEndObservable.add(() => {
+      onLabelDragEnd?.(selectedId, mesh.position);
+    });
+
+    mesh.addBehavior(dragBehavior);
+    dragMeshRef.current = mesh;
+
+    return () => {
+      dragMeshRef.current?.dispose();
+      dragMeshRef.current = null;
+    };
+  }, [scene, selectedId, labels, onLabelDragEnd]);
+
+  // ========================================
   // Cleanup
   // ========================================
 
@@ -140,6 +203,10 @@ export function useLabelMarkers({
         marker.anchor.dispose();
       });
       markersRef.current.clear();
+      dragMeshRef.current?.dispose();
+      dragMeshRef.current = null;
+      dragMaterialRef.current?.dispose();
+      dragMaterialRef.current = null;
     };
   }, []);
 
