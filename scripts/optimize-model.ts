@@ -3,14 +3,36 @@
 // GLB asset optimizer
 // ========================================
 //
-// Run against one or more GLB files, or an entire directory:
+// Reduces draw calls for large architectural GLBs by instancing repeated
+// geometry and joining meshes that share the same material. Named nodes are
+// preserved so label anchors keep working.
 //
+// Usage:
 //   pnpm optimize-model -- input.glb output.glb
 //   pnpm optimize-model -- --input-dir ./raw --output-dir ./optimized
 //
-// The pipeline preserves named nodes (needed for label anchors) while
-// merging/deduplicating everything else, then Draco-compresses geometry
-// and converts textures to WebP at the configured max size.
+// Options:
+//   --texture-size N       Max width/height for newly encoded textures.
+//                          Default: 2048. Only affects PNG/JPEG sources.
+//   --texture-quality N    WebP quality (1-100) for base-color/emissive
+//                          textures converted from PNG/JPEG. Default: 90.
+//   --no-texture-compress  Keep every texture exactly as-is. Use this if you
+//                          need a 100% pixel-perfect A/B comparison.
+//   --draco                Enable Draco geometry compression. Disabled by
+//                          default because some models use KHR_mesh_primitive
+//                          restart, which gltf-transform's Draco encoder does
+//                          not yet support.
+//   --no-instancing        Do not convert repeated meshes to instances.
+//   --no-join              Do not merge sibling meshes by material.
+//
+// Texture handling notes:
+// - Already-compressed sources (WebP/AVIF/KTX2) are NEVER re-encoded. Re-
+//   encoding a lossy format wipes fine surface detail (e.g. steel roofing).
+// - PNG/JPEG base-color textures become lossy WebP at --texture-quality.
+// - PNG/JPEG normal/ORM/occlusion textures become lossless WebP so material
+//   detail is preserved.
+// - If the input only contains WebP textures (common for exports from this
+//   pipeline), the file-size drop comes almost entirely from mesh reduction.
 
 import { NodeIO } from "@gltf-transform/core";
 import {
@@ -26,7 +48,8 @@ import path from "node:path";
 import sharp from "sharp";
 import { MeshoptDecoder, MeshoptEncoder } from "meshoptimizer";
 
-const DEFAULT_TEXTURE_SIZE = 1024;
+const DEFAULT_TEXTURE_SIZE = 2048;
+const DEFAULT_TEXTURE_QUALITY = 90;
 
 interface Stats {
   meshes: number;
@@ -46,9 +69,11 @@ function parseArgs(argv: string[]) {
   let inputDir: string | undefined;
   let outputDir: string | undefined;
   let textureSize = DEFAULT_TEXTURE_SIZE;
+  let textureQuality = DEFAULT_TEXTURE_QUALITY;
   let useDraco = false;
   let noInstancing = false;
   let noJoin = false;
+  let noTextureCompress = false;
   let positional: string[] = [];
 
   for (let i = 0; i < args.length; i++) {
@@ -63,6 +88,12 @@ function parseArgs(argv: string[]) {
       case "--texture-size":
         textureSize = Number(args[++i]) || DEFAULT_TEXTURE_SIZE;
         break;
+      case "--texture-quality":
+        textureQuality = Number(args[++i]);
+        if (Number.isNaN(textureQuality) || textureQuality < 1 || textureQuality > 100) {
+          textureQuality = DEFAULT_TEXTURE_QUALITY;
+        }
+        break;
       case "--draco":
         useDraco = true;
         break;
@@ -71,6 +102,9 @@ function parseArgs(argv: string[]) {
         break;
       case "--no-join":
         noJoin = true;
+        break;
+      case "--no-texture-compress":
+        noTextureCompress = true;
         break;
       default:
         if (!arg.startsWith("-")) {
@@ -86,15 +120,27 @@ function parseArgs(argv: string[]) {
       inputDir,
       outputDir,
       textureSize,
+      textureQuality,
       useDraco,
       noInstancing,
       noJoin,
+      noTextureCompress,
     };
   }
 
   if (positional.length >= 2) {
     const [input, output] = positional;
-    return { mode: "file" as const, input, output, textureSize, useDraco, noInstancing, noJoin };
+    return {
+      mode: "file" as const,
+      input,
+      output,
+      textureSize,
+      textureQuality,
+      useDraco,
+      noInstancing,
+      noJoin,
+      noTextureCompress,
+    };
   }
 
   return { mode: "help" as const };
@@ -106,10 +152,12 @@ function printHelp() {
   pnpm optimize-model -- --input-dir ./raw --output-dir ./optimized
 
 Options:
-  --texture-size N   Max texture width/height (default: ${DEFAULT_TEXTURE_SIZE})
-  --draco            Enable Draco compression (opt-in; some models use primitive restart, which Draco does not support)
-  --no-instancing    Skip instancing of repeated meshes
-  --no-join          Skip mesh joining`);
+  --texture-size N       Max texture width/height (default: ${DEFAULT_TEXTURE_SIZE})
+  --texture-quality N    WebP quality for color textures, 1-100 (default: ${DEFAULT_TEXTURE_QUALITY})
+  --no-texture-compress  Keep original textures unchanged
+  --draco                Enable Draco compression (opt-in; some models use primitive restart, which Draco does not support)
+  --no-instancing        Skip instancing of repeated meshes
+  --no-join              Skip mesh joining`);
 }
 
 function getStats(document: Awaited<ReturnType<InstanceType<typeof NodeIO>["read"]>>): Stats {
@@ -150,7 +198,14 @@ interface CompressionModules {
 async function optimizeFile(
   inputPath: string,
   outputPath: string,
-  options: { textureSize: number; useDraco: boolean; noInstancing: boolean; noJoin: boolean },
+  options: {
+    textureSize: number;
+    textureQuality: number;
+    useDraco: boolean;
+    noInstancing: boolean;
+    noJoin: boolean;
+    noTextureCompress: boolean;
+  },
   modules: CompressionModules,
 ) {
   const io = new NodeIO()
@@ -175,12 +230,26 @@ async function optimizeFile(
     dedup(),
     !options.noInstancing && instance(),
     !options.noJoin && join({ keepNamed: true }),
-    textureCompress({
-      encoder: sharp,
-      targetFormat: "webp",
-      resize: [options.textureSize, options.textureSize],
-      slots: /.*/,
-    }),
+    // Only re-encode uncompressed textures (png/jpeg). Already-compressed
+    // textures like WebP are left untouched to avoid generational quality loss.
+    !options.noTextureCompress &&
+      textureCompress({
+        encoder: sharp,
+        targetFormat: "webp",
+        resize: [options.textureSize, options.textureSize],
+        quality: options.textureQuality,
+        formats: /image\/png|image\/jpe?g/,
+        slots: /baseColorTexture|emissiveTexture/,
+      }),
+    !options.noTextureCompress &&
+      textureCompress({
+        encoder: sharp,
+        targetFormat: "webp",
+        resize: [options.textureSize, options.textureSize],
+        lossless: true,
+        formats: /image\/png|image\/jpe?g/,
+        slots: /normalTexture|metallicRoughnessTexture|occlusionTexture/,
+      }),
     options.useDraco &&
       draco({
         encoder: modules.dracoEncoder,
@@ -239,9 +308,11 @@ async function main() {
       args.output,
       {
         textureSize: args.textureSize,
+        textureQuality: args.textureQuality,
         useDraco: args.useDraco,
         noInstancing: args.noInstancing,
         noJoin: args.noJoin,
+        noTextureCompress: args.noTextureCompress,
       },
       modules,
     );
@@ -267,9 +338,11 @@ async function main() {
       outputPath,
       {
         textureSize: args.textureSize,
+        textureQuality: args.textureQuality,
         useDraco: args.useDraco,
         noInstancing: args.noInstancing,
         noJoin: args.noJoin,
+        noTextureCompress: args.noTextureCompress,
       },
       modules,
     );
