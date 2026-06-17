@@ -64,6 +64,7 @@ interface ModelEditorState {
   addLabel: (parentId?: string) => void;
   deleteLabel: (id: string) => void;
   updateLabelConfig: (config: LabelConfig) => void;
+  updateLabelPosition: (id: string, position: { x: number; y: number; z: number }) => void;
   updateLabelOperations: (operations: LabelOperation[]) => void;
   startPlacingLabel: (id: string) => void;
   stopPlacingLabel: () => void;
@@ -120,7 +121,6 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
     try {
       await dashboardModelApi.update({ labels });
       set({ isDirty: false });
-      toast.success("配置已保存");
     } catch (err) {
       console.error("Save failed:", err);
       toast.error("保存失败");
@@ -331,6 +331,23 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
               ...(config.position !== undefined && { position: config.position }),
               ...(config.position === undefined && { position: undefined }),
               meshKeywords: config.meshKeywords ?? [],
+            }
+          : l,
+      ),
+      isDirty: true,
+    })),
+
+  updateLabelPosition: (id, position) =>
+    set((state) => ({
+      labels: state.labels.map((l) =>
+        l.id === id
+          ? {
+              ...l,
+              position: {
+                x: parseFloat(position.x.toFixed(3)),
+                y: parseFloat(position.y.toFixed(3)),
+                z: parseFloat(position.z.toFixed(3)),
+              },
             }
           : l,
       ),

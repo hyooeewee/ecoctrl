@@ -74,6 +74,7 @@ export default function DashboardModel() {
     deleteLabel,
     updateLabelConfig,
     updateLabelOperations,
+    updateLabelPosition,
     startPlacingLabel,
     setEditorMode,
     toggleGrid,
@@ -174,6 +175,9 @@ export default function DashboardModel() {
       selectLabel(id);
       setEditorMode("placeLabel");
     },
+    onLabelDragEnd: (id, position) => {
+      updateLabelPosition(id, { x: position.x, y: position.y, z: position.z });
+    },
   });
 
   // Auto-save labels after 1s of inactivity.
@@ -203,7 +207,6 @@ export default function DashboardModel() {
         onBack={() => setActiveTab("models")}
         onSave={saveLabels}
         saving={saving}
-        isDirty={isDirty}
       />
 
       <div className="relative flex-1 overflow-hidden">
