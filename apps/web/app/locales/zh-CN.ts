@@ -81,8 +81,6 @@ export const zhCN = {
     voiceEnabled: "语音播报",
     voiceEnabledDesc: "AI 回复时自动朗读",
     voiceSpeed: "语速",
-    wakeWordEnabled: "唤醒词",
-    wakeWordEnabledDesc: "说「蓝宝」唤醒宠物",
     // Account / Login
     loginEmail: "邮箱地址",
     loginPassword: "密码",
@@ -105,6 +103,13 @@ export const zhCN = {
     done: "完成",
     cancel: "取消",
     reset: "还原",
+  },
+
+  // ── 宠物聊天 ───────────────────────────────────────────────────────────────
+  pet: {
+    inputPlaceholder: "输入消息...",
+    voiceInput: "按住说话",
+    voiceInputActive: "松开结束",
   },
 
   // ── 三维建筑视图 ───────────────────────────────────────────────────────────

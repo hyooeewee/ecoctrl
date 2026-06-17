@@ -10,7 +10,6 @@ describe("pet store", () => {
       theme: "usagi",
       voiceEnabled: true,
       voiceSpeed: 1.0,
-      wakeWordEnabled: true,
       messages: [],
       isLoading: false,
       sessionId: null,
@@ -75,11 +74,6 @@ describe("pet store", () => {
     expect(usePetStore.getState().voiceSpeed).toBe(1.5);
   });
 
-  it("sets wake word enabled", () => {
-    usePetStore.getState().setWakeWordEnabled(false);
-    expect(usePetStore.getState().wakeWordEnabled).toBe(false);
-  });
-
   it("persists only selected fields", () => {
     // The persist middleware's partialize config controls this.
     // We verify the store has the expected shape.
@@ -87,7 +81,6 @@ describe("pet store", () => {
     expect(state.theme).toBeDefined();
     expect(state.voiceEnabled).toBeDefined();
     expect(state.voiceSpeed).toBeDefined();
-    expect(state.wakeWordEnabled).toBeDefined();
     expect(state.position).toBeDefined();
     expect(state.messages).toBeDefined();
     expect(state.isLoading).toBeDefined();

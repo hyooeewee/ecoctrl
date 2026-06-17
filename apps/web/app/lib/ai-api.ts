@@ -30,7 +30,6 @@ export interface PetPreferences {
   voiceSpeed: number;
   petPositionX: number | null;
   petPositionY: number | null;
-  wakeWordEnabled: boolean;
 }
 
 export function chatStream(

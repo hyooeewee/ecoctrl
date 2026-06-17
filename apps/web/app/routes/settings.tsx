@@ -96,11 +96,9 @@ export default function SettingsPage() {
     theme: petTheme,
     voiceEnabled,
     voiceSpeed,
-    wakeWordEnabled,
     setTheme: setPetTheme,
     setVoiceEnabled,
     setVoiceSpeed,
-    setWakeWordEnabled,
   } = usePetStore();
 
   const isLayoutModified = bentoLayout.length > 0;
@@ -401,17 +399,6 @@ export default function SettingsPage() {
                     step={0.1}
                     onValueChange={(v) => setVoiceSpeed(Array.isArray(v) ? v[0] : v)}
                   />
-                </div>
-
-                {/* Wake word */}
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="text-sm font-medium">{t.settings.wakeWordEnabled}</Label>
-                    <p className="text-muted-foreground text-xs">
-                      {t.settings.wakeWordEnabledDesc}
-                    </p>
-                  </div>
-                  <Switch checked={wakeWordEnabled} onCheckedChange={setWakeWordEnabled} />
                 </div>
               </div>
             </section>

@@ -5,17 +5,14 @@ import { chatStream } from "~/lib/ai-api";
 import { useVoiceInput } from "./hooks/useVoiceInput";
 import { useVoiceOutput } from "./hooks/useVoiceOutput";
 import { usePetPosition } from "./hooks/usePetPosition";
-import { useWakeWord } from "./hooks/useWakeWord";
 import { PetAvatar } from "./PetAvatar";
 import { ChatBubble } from "./ChatBubble";
 
 export function ScreenPet() {
   const location = useLocation();
   const theme = usePetStore((s) => s.theme);
-  const isOpen = usePetStore((s) => s.isOpen);
   const voiceEnabled = usePetStore((s) => s.voiceEnabled);
   const voiceSpeed = usePetStore((s) => s.voiceSpeed);
-  const wakeWordEnabled = usePetStore((s) => s.wakeWordEnabled);
   const addMessage = usePetStore((s) => s.addMessage);
   const setLoading = usePetStore((s) => s.setLoading);
   const toggleOpen = usePetStore((s) => s.toggleOpen);
@@ -38,10 +35,6 @@ export function ScreenPet() {
   const [isHovered, setIsHovered] = useState(false);
   const [isJumping, setIsJumping] = useState(false);
   const [isFailed, setIsFailed] = useState(false);
-
-  useWakeWord(wakeWordEnabled && !isOpen, () => {
-    toggleOpen();
-  });
 
   const triggerJump = useCallback(() => {
     setIsJumping(true);
@@ -164,7 +157,7 @@ export function ScreenPet() {
     ],
   );
 
-  const { isRecording } = useVoiceInput(
+  const { isRecording, isSupported, startRecording, stopRecording } = useVoiceInput(
     useCallback(
       (text: string) => {
         if (text.trim()) handleSend(text);
@@ -182,7 +175,13 @@ export function ScreenPet() {
         cursor: isDragging ? "grabbing" : "grab",
       }}
     >
-      <ChatBubble onSend={handleSend} />
+      <ChatBubble
+        onSend={handleSend}
+        isRecording={isRecording}
+        isSupported={isSupported}
+        onStartRecording={startRecording}
+        onStopRecording={stopRecording}
+      />
 
       <div
         onPointerDown={handlePointerDown}

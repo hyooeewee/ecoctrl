@@ -5,9 +5,19 @@ import { ChatInput } from "./ChatInput";
 
 interface ChatBubbleProps {
   onSend: (text: string) => void;
+  isRecording?: boolean;
+  isSupported?: boolean;
+  onStartRecording?: () => void;
+  onStopRecording?: () => void;
 }
 
-export function ChatBubble({ onSend }: ChatBubbleProps) {
+export function ChatBubble({
+  onSend,
+  isRecording = false,
+  isSupported = false,
+  onStartRecording,
+  onStopRecording,
+}: ChatBubbleProps) {
   const isOpen = usePetStore((s) => s.isOpen);
   const isLoading = usePetStore((s) => s.isLoading);
   const toggleOpen = usePetStore((s) => s.toggleOpen);
@@ -31,7 +41,14 @@ export function ChatBubble({ onSend }: ChatBubbleProps) {
 
       <MessageList />
 
-      <ChatInput onSend={onSend} isLoading={isLoading} />
+      <ChatInput
+        onSend={onSend}
+        isLoading={isLoading}
+        isRecording={isRecording}
+        isSupported={isSupported}
+        onStartRecording={onStartRecording}
+        onStopRecording={onStopRecording}
+      />
     </div>
   );
 }
