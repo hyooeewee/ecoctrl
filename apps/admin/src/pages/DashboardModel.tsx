@@ -52,6 +52,8 @@ export default function DashboardModel() {
   const uploading = useModelEditorStore((s) => s.uploading);
   const labels = useModelEditorStore((s) => s.labels);
   const selectedLabelId = useModelEditorStore((s) => s.selectedLabelId);
+  const placingLabelId = useModelEditorStore((s) => s.placingLabelId);
+  const isDirty = useModelEditorStore((s) => s.isDirty);
 
   // Store actions (stable references)
   const {
@@ -72,6 +74,7 @@ export default function DashboardModel() {
     deleteLabel,
     updateLabelConfig,
     updateLabelOperations,
+    startPlacingLabel,
     setEditorMode,
     toggleGrid,
     toggleAxes,
@@ -170,6 +173,15 @@ export default function DashboardModel() {
     onLabelClick: selectLabel,
   });
 
+  // Auto-save labels after 1s of inactivity.
+  useEffect(() => {
+    if (!isDirty || saving) return;
+    const timer = setTimeout(() => {
+      saveLabels();
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [isDirty, saving, saveLabels]);
+
   // ========================================
   // Render
   // ========================================
@@ -188,6 +200,7 @@ export default function DashboardModel() {
         onBack={() => setActiveTab("models")}
         onSave={saveLabels}
         saving={saving}
+        isDirty={isDirty}
       />
 
       <div className="relative flex-1 overflow-hidden">
@@ -223,6 +236,19 @@ export default function DashboardModel() {
                   <TabsTrigger value="clipPreview">动作</TabsTrigger>
                 </TabsList>
               </Tabs>
+
+              {placingLabelId && (
+                <div className="bg-primary/10 text-primary px-3 py-2 text-xs font-medium">
+                  请在场景中点击以设置标签位置
+                  <button
+                    type="button"
+                    className="ml-2 underline hover:text-primary/80"
+                    onClick={() => useModelEditorStore.getState().stopPlacingLabel()}
+                  >
+                    取消
+                  </button>
+                </div>
+              )}
 
               {/* Panel Content */}
               <ScrollArea className="flex-1">
@@ -422,6 +448,7 @@ export default function DashboardModel() {
                                 .filter((l) => l.id !== selectedLabel.id)
                                 .map((l) => ({ id: l.id, name: l.name }))}
                               onChange={updateLabelConfig}
+                              onPickPosition={() => startPlacingLabel(selectedLabel.id)}
                             />
                           </div>
                         </div>

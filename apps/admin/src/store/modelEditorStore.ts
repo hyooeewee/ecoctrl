@@ -22,6 +22,10 @@ interface ModelEditorState {
   // Labels
   labels: Label[];
   selectedLabelId: string | null;
+  placingLabelId: string | null;
+
+  // Auto-save
+  isDirty: boolean;
 
   // UI toggles
   editorMode: EditorMode;
@@ -61,6 +65,9 @@ interface ModelEditorState {
   deleteLabel: (id: string) => void;
   updateLabelConfig: (config: LabelConfig) => void;
   updateLabelOperations: (operations: LabelOperation[]) => void;
+  startPlacingLabel: (id: string) => void;
+  stopPlacingLabel: () => void;
+  markDirty: () => void;
 
   // Actions — UI
   setEditorMode: (mode: EditorMode) => void;
@@ -76,6 +83,8 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
   saving: false,
   labels: [],
   selectedLabelId: null,
+  placingLabelId: null,
+  isDirty: false,
   editorMode: "select",
   showGrid: true,
   showAxes: true,
@@ -105,10 +114,12 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
 
   // Save
   saveLabels: async () => {
-    const { labels } = get();
+    const { labels, isDirty } = get();
+    if (!isDirty) return;
     set({ saving: true });
     try {
       await dashboardModelApi.update({ labels });
+      set({ isDirty: false });
       toast.success("配置已保存");
     } catch (err) {
       console.error("Save failed:", err);
@@ -235,8 +246,25 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
 
   // Labels — pick from 3D scene
   pickLabel: (position) => {
-    const { editorMode, labels } = get();
+    const { editorMode, labels, placingLabelId } = get();
     if (editorMode !== "placeLabel") return;
+
+    const rounded = {
+      x: parseFloat(position.x.toFixed(3)),
+      y: parseFloat(position.y.toFixed(3)),
+      z: parseFloat(position.z.toFixed(3)),
+    };
+
+    if (placingLabelId) {
+      set({
+        labels: labels.map((l) => (l.id === placingLabelId ? { ...l, position: rounded } : l)),
+        placingLabelId: null,
+        editorMode: "placeLabel",
+        isDirty: true,
+      });
+      toast.success("位置已更新");
+      return;
+    }
 
     const newLabel: Label = {
       id: `label_${Date.now()}`,
@@ -244,11 +272,7 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
       name: `标签 ${labels.length + 1}`,
       description: "",
       parentId: null,
-      position: {
-        x: parseFloat(position.x.toFixed(3)),
-        y: parseFloat(position.y.toFixed(3)),
-        z: parseFloat(position.z.toFixed(3)),
-      },
+      position: rounded,
       meshKeywords: [],
       operations: [],
       order: labels.length,
@@ -258,9 +282,15 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
       labels: [...labels, newLabel],
       selectedLabelId: newLabel.id,
       editorMode: "select",
+      isDirty: true,
     });
     toast.success("标签已添加");
   },
+
+  startPlacingLabel: (id) => set({ placingLabelId: id, editorMode: "placeLabel" }),
+  stopPlacingLabel: () => set({ placingLabelId: null, editorMode: "select" }),
+
+  markDirty: () => set({ isDirty: true }),
 
   selectLabel: (id) => set({ selectedLabelId: id, editorMode: id ? "select" : get().editorMode }),
 
@@ -276,13 +306,14 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
       operations: [],
       order: labels.length,
     };
-    set({ labels: [...labels, newLabel], selectedLabelId: newLabel.id });
+    set({ labels: [...labels, newLabel], selectedLabelId: newLabel.id, isDirty: true });
   },
 
   deleteLabel: (id) => {
     set((state) => ({
       labels: state.labels.filter((l) => l.id !== id),
       selectedLabelId: state.selectedLabelId === id ? null : state.selectedLabelId,
+      isDirty: true,
     }));
     toast.success("标签已删除");
   },
@@ -303,6 +334,7 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
             }
           : l,
       ),
+      isDirty: true,
     })),
 
   updateLabelOperations: (operations) =>
@@ -311,6 +343,7 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
       if (!selectedLabelId) return state;
       return {
         labels: state.labels.map((l) => (l.id === selectedLabelId ? { ...l, operations } : l)),
+        isDirty: true,
       };
     }),
 
