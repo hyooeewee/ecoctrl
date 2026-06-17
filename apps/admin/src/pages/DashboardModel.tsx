@@ -53,6 +53,7 @@ export default function DashboardModel() {
   const labels = useModelEditorStore((s) => s.labels);
   const selectedLabelId = useModelEditorStore((s) => s.selectedLabelId);
   const placingLabelId = useModelEditorStore((s) => s.placingLabelId);
+  const isDirty = useModelEditorStore((s) => s.isDirty);
 
   // Store actions (stable references)
   const {
@@ -172,6 +173,15 @@ export default function DashboardModel() {
     onLabelClick: selectLabel,
   });
 
+  // Auto-save labels after 1s of inactivity.
+  useEffect(() => {
+    if (!isDirty || saving) return;
+    const timer = setTimeout(() => {
+      saveLabels();
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [isDirty, saving, saveLabels]);
+
   // ========================================
   // Render
   // ========================================
@@ -190,6 +200,7 @@ export default function DashboardModel() {
         onBack={() => setActiveTab("models")}
         onSave={saveLabels}
         saving={saving}
+        isDirty={isDirty}
       />
 
       <div className="relative flex-1 overflow-hidden">

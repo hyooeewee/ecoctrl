@@ -6,6 +6,7 @@ import React, { useEffect, useState } from "react";
 import { ArrowLeft, Monitor, Moon, Save, Sun } from "lucide-react";
 import { Button } from "@ecoctrl/ui";
 import { Avatar, AvatarFallback, AvatarImage } from "@ecoctrl/ui";
+import AsyncActionButton from "@/components/AsyncActionButton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,11 +35,17 @@ const ThemeIcon: Record<Theme, React.ReactNode> = {
 
 interface ModelEditorTopBarProps {
   onBack: () => void;
-  onSave: () => void;
+  onSave: () => Promise<void>;
   saving: boolean;
+  isDirty: boolean;
 }
 
-export default function ModelEditorTopBar({ onBack, onSave, saving }: ModelEditorTopBarProps) {
+export default function ModelEditorTopBar({
+  onBack,
+  onSave,
+  saving,
+  isDirty,
+}: ModelEditorTopBarProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [avatarVersion, setAvatarVersion] = useState(0);
   const [theme, setTheme] = useState<Theme>("system");
@@ -84,20 +91,24 @@ export default function ModelEditorTopBar({ onBack, onSave, saving }: ModelEdito
       </div>
 
       {/* Right: save + theme + user */}
-      <div className="flex items-center gap-1">
-        <Button size="sm" onClick={onSave} disabled={saving} className="gap-1.5">
-          {saving ? (
+      <div className="flex items-center gap-2">
+        <AsyncActionButton
+          size="sm"
+          action={onSave}
+          disabled={saving}
+          idle={
             <>
-              <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              保存中...
-            </>
-          ) : (
-            <>
-              <Save size={14} />
+              <Save size={14} className="mr-1.5" />
               保存
             </>
-          )}
-        </Button>
+          }
+          loading="保存中..."
+          success="已保存"
+          error="保存失败"
+        />
+        <span className="text-xs text-muted-foreground">
+          {saving ? "保存中..." : isDirty ? "未保存" : "已保存"}
+        </span>
 
         <Button
           variant="ghost"
