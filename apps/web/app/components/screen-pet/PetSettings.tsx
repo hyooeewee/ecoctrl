@@ -8,11 +8,9 @@ export function PetSettings() {
   const theme = usePetStore((s) => s.theme);
   const voiceEnabled = usePetStore((s) => s.voiceEnabled);
   const voiceSpeed = usePetStore((s) => s.voiceSpeed);
-  const wakeWordEnabled = usePetStore((s) => s.wakeWordEnabled);
   const setTheme = usePetStore((s) => s.setTheme);
   const setVoiceEnabled = usePetStore((s) => s.setVoiceEnabled);
   const setVoiceSpeed = usePetStore((s) => s.setVoiceSpeed);
-  const setWakeWordEnabled = usePetStore((s) => s.setWakeWordEnabled);
 
   const { pets } = usePets();
   const themes = pets.map((p) => ({
@@ -91,22 +89,6 @@ export function PetSettings() {
                 onChange={(e) => setVoiceSpeed(parseFloat(e.target.value))}
                 className="w-full accent-cyan-500"
               />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <label className="text-sm text-slate-400">唤醒词 &quot;蓝宝&quot;</label>
-              <button
-                onClick={() => setWakeWordEnabled(!wakeWordEnabled)}
-                className={`relative h-6 w-11 rounded-full transition-colors ${
-                  wakeWordEnabled ? "bg-cyan-600" : "bg-slate-700"
-                }`}
-              >
-                <span
-                  className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-transform ${
-                    wakeWordEnabled ? "left-6" : "left-1"
-                  }`}
-                />
-              </button>
             </div>
           </div>
         </div>

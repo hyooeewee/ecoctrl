@@ -26,7 +26,6 @@ interface PetState {
   theme: PetTheme;
   voiceEnabled: boolean;
   voiceSpeed: number;
-  wakeWordEnabled: boolean;
   messages: Message[];
   isLoading: boolean;
   sessionId: string | null;
@@ -38,7 +37,6 @@ interface PetState {
   setTheme: (theme: PetTheme) => void;
   setVoiceEnabled: (enabled: boolean) => void;
   setVoiceSpeed: (speed: number) => void;
-  setWakeWordEnabled: (enabled: boolean) => void;
   addMessage: (msg: Message) => void;
   setMessages: (msgs: Message[]) => void;
   setLoading: (loading: boolean) => void;
@@ -56,7 +54,6 @@ const defaults = {
   theme: defaultPetId as PetTheme,
   voiceEnabled: true,
   voiceSpeed: 1.0,
-  wakeWordEnabled: true,
   messages: [],
   isLoading: false,
   sessionId: null,
@@ -74,7 +71,6 @@ export const usePetStore = create<PetState>()(
       setTheme: (theme) => set({ theme }),
       setVoiceEnabled: (enabled) => set({ voiceEnabled: enabled }),
       setVoiceSpeed: (speed) => set({ voiceSpeed: speed }),
-      setWakeWordEnabled: (enabled) => set({ wakeWordEnabled: enabled }),
       addMessage: (msg) => set((state) => ({ messages: [...state.messages, msg] })),
       setMessages: (msgs) => set({ messages: msgs }),
       setLoading: (loading) => set({ isLoading: loading }),
@@ -87,7 +83,6 @@ export const usePetStore = create<PetState>()(
         theme: state.theme,
         voiceEnabled: state.voiceEnabled,
         voiceSpeed: state.voiceSpeed,
-        wakeWordEnabled: state.wakeWordEnabled,
         position: state.position,
       }),
     },

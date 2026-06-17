@@ -77,8 +77,6 @@ export const enUS = {
     voiceEnabled: "Voice Announcement",
     voiceEnabledDesc: "Auto-read AI replies aloud",
     voiceSpeed: "Voice Speed",
-    wakeWordEnabled: "Wake Word",
-    wakeWordEnabledDesc: 'Say "Lambo" to wake the pet',
     // Account / Login
     loginEmail: "Email Address",
     loginPassword: "Password",
@@ -101,6 +99,13 @@ export const enUS = {
     done: "Done",
     cancel: "Cancel",
     reset: "Reset",
+  },
+
+  // ── Pet Chat ─────────────────────────────────────────────────────────────────
+  pet: {
+    inputPlaceholder: "Type a message...",
+    voiceInput: "Hold to speak",
+    voiceInputActive: "Release to send",
   },
 
   // ── 3D Building View ───────────────────────────────────────────────────────

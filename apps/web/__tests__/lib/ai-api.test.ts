@@ -200,7 +200,6 @@ describe("pet preferences API", () => {
         voiceSpeed: 1,
         petPositionX: 100,
         petPositionY: 200,
-        wakeWordEnabled: true,
       },
     });
 
