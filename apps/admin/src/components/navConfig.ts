@@ -9,6 +9,7 @@ import {
   Wrench,
   AlertTriangle,
   Zap,
+  Shield,
   Settings,
 } from "lucide-react";
 
@@ -84,6 +85,7 @@ export const navNodes: NavNode[] = [
     ],
     tabStoreKey: "energyTab",
   },
+  { id: "advancedManagement", label: "高级管理", icon: Shield },
   { id: "config", label: "系统配置", icon: Settings },
   { id: "profile", label: "个人信息", icon: Settings, parentId: "config" },
   { id: "preferences", label: "偏好设置", icon: Settings, parentId: "config" },

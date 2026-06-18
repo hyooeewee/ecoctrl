@@ -12,6 +12,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, "");
 
   return mergeConfig(viteConfig, {
+    envPrefix: "ADVANCED_",
     plugins: [resolveUiAlias(), react(), tailwindcss()],
     resolve: {
       alias: {
