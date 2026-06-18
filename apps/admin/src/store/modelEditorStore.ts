@@ -302,6 +302,7 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
       name: `标签 ${labels.length + 1}`,
       description: "",
       parentId: parentId ?? null,
+      position: { x: 0, y: 1, z: 0 },
       meshKeywords: [],
       operations: [],
       order: labels.length,
