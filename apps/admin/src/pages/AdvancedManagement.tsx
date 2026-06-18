@@ -101,7 +101,7 @@ export default function AdvancedManagement() {
         )}
         name={IFRAME_NAME}
         onLoad={() => setIsLoading(false)}
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        sandbox="allow-scripts allow-same-origin allow-forms"
         src="about:blank"
         title="高级管理"
       />
