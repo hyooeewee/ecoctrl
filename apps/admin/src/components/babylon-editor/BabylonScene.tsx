@@ -450,6 +450,12 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
               const merged = Mesh.MergeMeshes(mergeable, true, true, undefined, true, true);
               if (merged) {
                 merged.parent = result.modelRoot;
+                // Preserve original mesh names so visibility actions can still
+                // target individual parts after merging.
+                merged.metadata = {
+                  ...merged.metadata,
+                  originalMeshNames: mergeable.map((m) => m.name),
+                };
                 result.meshes = [merged];
               }
             } catch {
@@ -583,9 +589,15 @@ async function executeVisibility(
   loadedModels.forEach(({ meshes, modelUrl }, id) => {
     const modelBasename = modelUrl.split("/").pop()?.toLowerCase() ?? "";
     meshes.forEach((mesh) => {
-      const nameLower = mesh.name.toLowerCase();
+      const originalNames: string[] = Array.isArray(mesh.metadata?.originalMeshNames)
+        ? mesh.metadata.originalMeshNames
+        : [];
+      const namesToCheck = [mesh.name, ...originalNames].map((n) => n.toLowerCase());
       const isMatch = keywords.some(
-        (k) => nameLower.includes(k) || id.toLowerCase().includes(k) || modelBasename.includes(k),
+        (k) =>
+          namesToCheck.some((n) => n.includes(k)) ||
+          id.toLowerCase().includes(k) ||
+          modelBasename.includes(k),
       );
       if (!isMatch) return;
 
@@ -608,9 +620,29 @@ async function executeVisibility(
   });
 
   if (matched.length === 0) {
-    console.warn("[BabylonScene] visibility: no meshes matched keywords", config.targets);
+    const allNames: string[] = [];
+    loadedModels.forEach(({ meshes }) => {
+      meshes.forEach((mesh) => {
+        allNames.push(mesh.name);
+        if (Array.isArray(mesh.metadata?.originalMeshNames)) {
+          allNames.push(...mesh.metadata.originalMeshNames);
+        }
+      });
+    });
+    console.warn("[BabylonScene] visibility: no meshes matched keywords", {
+      targets: config.targets,
+      action: config.action,
+      loadedMeshNames: allNames,
+    });
     return;
   }
+
+  console.log("[BabylonScene] visibility: matched meshes", {
+    targets: config.targets,
+    action: config.action,
+    count: matched.length,
+    names: matched.map(({ mesh }) => mesh.name),
+  });
 
   for (const { mesh, targetVis } of matched) {
     const anim = new Animation(
