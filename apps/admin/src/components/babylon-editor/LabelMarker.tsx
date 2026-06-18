@@ -3,16 +3,7 @@
 // ========================================
 
 import { useEffect, useRef } from "react";
-import {
-  Scene,
-  Vector3,
-  TransformNode,
-  Color3,
-  Mesh,
-  MeshBuilder,
-  PointerDragBehavior,
-  StandardMaterial,
-} from "@babylonjs/core";
+import { Scene, Vector3, TransformNode, Color3, Plane, Matrix } from "@babylonjs/core";
 import { AdvancedDynamicTexture, TextBlock, Ellipse, Rectangle } from "@babylonjs/gui";
 
 export interface LabelMarkerData {
@@ -42,11 +33,16 @@ export function useLabelMarkers({
   onLabelClick,
   onLabelDragEnd,
 }: UseLabelMarkersOptions) {
-  const markersRef = useRef<Map<string, { container: Rectangle; anchor: TransformNode }>>(
-    new Map(),
-  );
-  const dragMeshRef = useRef<Mesh | null>(null);
-  const dragMaterialRef = useRef<StandardMaterial | null>(null);
+  const markersRef = useRef<
+    Map<
+      string,
+      {
+        container: Rectangle;
+        anchor: TransformNode;
+        isSelected: boolean;
+      }
+    >
+  >(new Map());
 
   // ========================================
   // Create marker for a label
@@ -92,12 +88,64 @@ export function useLabelMarkers({
     gui.addControl(container);
     container.linkWithMesh(anchor);
 
-    // Click handler
+    // Click / drag handler
+    let isDragging = false;
+    let hasMoved = false;
+    let dragStartPointer = { x: 0, y: 0 };
+    let dragStartPosition = Vector3.Zero();
+    let dragPlane = new Plane(0, 1, 0, 0);
+
     container.onPointerDownObservable.add(() => {
-      onLabelClick?.(label.id);
+      const current = markersRef.current.get(label.id);
+      if (!current?.isSelected) {
+        onLabelClick?.(label.id);
+        return;
+      }
+      if (!scene) return;
+
+      isDragging = true;
+      hasMoved = false;
+      dragStartPointer = { x: scene.pointerX, y: scene.pointerY };
+      dragStartPosition = anchor.position.clone();
+
+      const camera = scene.activeCamera;
+      if (camera) {
+        const normal = camera.getForwardRay().direction;
+        dragPlane = Plane.FromPositionAndNormal(dragStartPosition, normal);
+      }
     });
 
-    return { container, anchor };
+    container.onPointerMoveObservable.add(() => {
+      if (!isDragging || !scene) return;
+
+      const dx = scene.pointerX - dragStartPointer.x;
+      const dy = scene.pointerY - dragStartPointer.y;
+      if (Math.abs(dx) + Math.abs(dy) > 3) {
+        hasMoved = true;
+      }
+      if (!hasMoved) return;
+
+      const camera = scene.activeCamera;
+      if (!camera) return;
+
+      const ray = scene.createPickingRay(scene.pointerX, scene.pointerY, Matrix.Identity(), camera);
+      const distance = ray.intersectsPlane(dragPlane);
+      if (distance !== null) {
+        anchor.position = ray.origin.add(ray.direction.scale(distance));
+      }
+    });
+
+    container.onPointerUpObservable.add(() => {
+      if (!isDragging) return;
+      isDragging = false;
+      if (hasMoved) {
+        onLabelDragEnd?.(label.id, anchor.position);
+      } else {
+        onLabelClick?.(label.id);
+      }
+    });
+
+    return { container, anchor, isSelected: !!label.isSelected };
   };
 
   // ========================================
@@ -128,6 +176,7 @@ export function useLabelMarkers({
 
       if (existing) {
         // Update existing marker
+        existing.isSelected = !!label.isSelected;
         existing.anchor.position = label.position;
         existing.container.background = label.isSelected ? "#3b82f6" : "#1e293b";
         const text = existing.container.children[0] as TextBlock;
@@ -143,56 +192,6 @@ export function useLabelMarkers({
   }, [guiTexture, labels, selectedId, onLabelClick]);
 
   // ========================================
-  // Draggable handle for selected label
-  // ========================================
-
-  useEffect(() => {
-    if (!scene) return;
-
-    // Clean up old drag mesh
-    dragMeshRef.current?.dispose();
-    dragMeshRef.current = null;
-
-    if (!selectedId) return;
-
-    const label = labels.find((l) => l.id === selectedId);
-    if (!label) return;
-
-    // Reuse material
-    if (!dragMaterialRef.current) {
-      const material = new StandardMaterial("dragHandleMaterial", scene);
-      material.diffuseColor = new Color3(0.23, 0.51, 0.96);
-      material.emissiveColor = new Color3(0.1, 0.3, 0.6);
-      material.alpha = 0.6;
-      dragMaterialRef.current = material;
-    }
-
-    const mesh = MeshBuilder.CreateSphere(`drag_${selectedId}`, { diameter: 0.4 }, scene);
-    mesh.position = label.position.clone();
-    mesh.material = dragMaterialRef.current;
-
-    const dragBehavior = new PointerDragBehavior({});
-    dragBehavior.useObjectOrientationForDragging = false;
-    dragBehavior.onDragObservable.add(() => {
-      const marker = markersRef.current.get(selectedId);
-      if (marker) {
-        marker.anchor.position = mesh.position.clone();
-      }
-    });
-    dragBehavior.onDragEndObservable.add(() => {
-      onLabelDragEnd?.(selectedId, mesh.position);
-    });
-
-    mesh.addBehavior(dragBehavior);
-    dragMeshRef.current = mesh;
-
-    return () => {
-      dragMeshRef.current?.dispose();
-      dragMeshRef.current = null;
-    };
-  }, [scene, selectedId, labels, onLabelDragEnd]);
-
-  // ========================================
   // Cleanup
   // ========================================
 
@@ -203,10 +202,6 @@ export function useLabelMarkers({
         marker.anchor.dispose();
       });
       markersRef.current.clear();
-      dragMeshRef.current?.dispose();
-      dragMeshRef.current = null;
-      dragMaterialRef.current?.dispose();
-      dragMaterialRef.current = null;
     };
   }, []);
 
