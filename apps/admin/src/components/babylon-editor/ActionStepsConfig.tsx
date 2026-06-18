@@ -25,7 +25,7 @@ import type { ModelFileEntry } from "@ecoctrl/shared";
 interface ActionStepsConfigProps {
   operations: LabelOperation[];
   modelFiles: ModelFileEntry[];
-  availableLabelIds?: string[];
+  availableLabels?: { id: string; name: string }[];
   onChange: (operations: LabelOperation[]) => void;
   disabled?: boolean;
 }
@@ -37,7 +37,7 @@ interface ActionStepsConfigProps {
 export default function ActionStepsConfig({
   operations,
   modelFiles,
-  availableLabelIds = [],
+  availableLabels = [],
   onChange,
   disabled,
 }: ActionStepsConfigProps) {
@@ -84,6 +84,15 @@ export default function ActionStepsConfig({
 
       {operations.map((op, index) => {
         const targetModelFileId = (op.targetModelFileId as string | undefined) ?? undefined;
+        const targetLabel =
+          targetModelFileId === undefined
+            ? "整个场景"
+            : modelFiles.find((f) => f.id === targetModelFileId)?.name ||
+              modelFiles
+                .find((f) => f.id === targetModelFileId)
+                ?.fileKey.split("/")
+                .pop() ||
+              targetModelFileId;
         return (
           <div key={`${op.type}-${index}`} className="rounded-md border bg-muted/30 p-3">
             <div className="mb-3 flex items-center justify-between gap-2">
@@ -135,7 +144,7 @@ export default function ActionStepsConfig({
                   disabled={disabled}
                 >
                   <SelectTrigger className="h-8 text-sm">
-                    <SelectValue />
+                    <SelectValue>{targetLabel}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__scene__">整个场景</SelectItem>
@@ -159,7 +168,7 @@ export default function ActionStepsConfig({
               {op.type === "clipping" && (
                 <ClippingConfig
                   config={op.config}
-                  availableLabelIds={availableLabelIds}
+                  availableLabels={availableLabels}
                   onChange={(k, v) => updateStepConfig(index, k, v)}
                   disabled={disabled}
                 />
@@ -210,6 +219,27 @@ const OPERATION_LABELS: Record<LabelOperation["type"], string> = {
   clipping: "剖切效果",
   visibility: "可见性控制",
   postprocess: "后期效果",
+};
+
+const EASING_LABELS: Record<string, string> = {
+  linear: "线性",
+  easeIn: "缓入",
+  easeOut: "缓出",
+  easeInOut: "缓入缓出",
+};
+
+const ACTION_LABELS: Record<string, string> = {
+  show: "显示",
+  hide: "隐藏",
+  toggle: "切换",
+};
+
+const EFFECT_LABELS: Record<string, string> = {
+  exposure: "曝光",
+  tone: "色调",
+  bloom: "泛光",
+  vignette: "暗角",
+  depthOfField: "景深",
 };
 
 // ========================================
@@ -323,7 +353,10 @@ function CameraConfig({
             disabled={disabled}
           >
             <SelectTrigger className="h-8 text-sm">
-              <SelectValue />
+              <SelectValue>
+                {EASING_LABELS[(config.easing as string) ?? "easeInOut"] ??
+                  (config.easing as string)}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="linear">线性</SelectItem>
@@ -344,12 +377,12 @@ function CameraConfig({
 
 function ClippingConfig({
   config,
-  availableLabelIds,
+  availableLabels,
   onChange,
   disabled,
 }: {
   config: Record<string, unknown>;
-  availableLabelIds: string[];
+  availableLabels: { id: string; name: string }[];
   onChange: (key: string, value: unknown) => void;
   disabled?: boolean;
 }) {
@@ -473,11 +506,11 @@ function ClippingConfig({
             <SelectValue placeholder="添加标签..." />
           </SelectTrigger>
           <SelectContent>
-            {availableLabelIds
-              .filter((id) => !revealIds.includes(id))
-              .map((id) => (
-                <SelectItem key={id} value={id}>
-                  {id}
+            {availableLabels
+              .filter((l) => !revealIds.includes(l.id))
+              .map((l) => (
+                <SelectItem key={l.id} value={l.id}>
+                  {l.name || l.id}
                 </SelectItem>
               ))}
           </SelectContent>
@@ -530,7 +563,9 @@ function VisibilityConfig({
             disabled={disabled}
           >
             <SelectTrigger className="h-8 text-sm">
-              <SelectValue />
+              <SelectValue>
+                {ACTION_LABELS[(config.action as string) ?? "show"] ?? (config.action as string)}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="show">显示</SelectItem>
@@ -578,7 +613,9 @@ function PostProcessConfig({
           disabled={disabled}
         >
           <SelectTrigger className="h-8 text-sm">
-            <SelectValue />
+            <SelectValue>
+              {EFFECT_LABELS[(config.effect as string) ?? "exposure"] ?? (config.effect as string)}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="exposure">曝光</SelectItem>
