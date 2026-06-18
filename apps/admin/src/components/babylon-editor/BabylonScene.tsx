@@ -55,14 +55,7 @@ export interface BabylonSceneRef {
   zoomIn: () => void;
   zoomOut: () => void;
   resetView: () => void;
-  executeOperations: (operations: LabelOperation[]) => Promise<void>;
-}
-
-interface VisibilityConfig {
-  targetModelFileId?: string;
-  targets: string[];
-  action: "show" | "hide" | "toggle";
-  duration?: number;
+  executeOperations: (operations: LabelOperation[], signal?: AbortSignal) => Promise<void>;
 }
 
 // ========================================
@@ -142,77 +135,104 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
           axesRef.current,
         );
       },
-      async executeOperations(operations: LabelOperation[]) {
+      async executeOperations(operations: LabelOperation[], signal?: AbortSignal) {
         const camera = cameraRef.current;
         const scene = sceneRef.current;
         if (!camera || !scene) return;
 
-        for (const op of operations) {
-          switch (op.type) {
-            case "camera": {
-              const cfg = op.config as {
-                target: { x: number; y: number; z: number };
-                distance: number;
-                fov: number;
-                duration: number;
-                easing?: string;
-              };
-              const target = new Vector3(cfg.target.x, cfg.target.y, cfg.target.z);
-              const duration = cfg.duration ?? 0.8;
+        const snapshot = captureSceneSnapshot(camera, loadedModelsRef.current);
 
-              // Animate target and radius using Babylon Animation
-              const targetAnim = new Animation(
-                "cameraTargetAnim",
-                "target",
-                60,
-                Animation.ANIMATIONTYPE_VECTOR3,
-                Animation.ANIMATIONLOOPMODE_CONSTANT,
-              );
-              const targetKeys = [
-                { frame: 0, value: camera.target.clone() },
-                { frame: Math.max(1, Math.round(duration * 60)), value: target },
-              ];
-              targetAnim.setKeys(targetKeys);
+        const throwIfAborted = () => {
+          if (signal?.aborted) throw new Error("aborted");
+        };
 
-              const radiusAnim = new Animation(
-                "cameraRadiusAnim",
-                "radius",
-                60,
-                Animation.ANIMATIONTYPE_FLOAT,
-                Animation.ANIMATIONLOOPMODE_CONSTANT,
-              );
-              const radiusKeys = [
-                { frame: 0, value: camera.radius },
-                { frame: Math.max(1, Math.round(duration * 60)), value: cfg.distance ?? 30 },
-              ];
-              radiusAnim.setKeys(radiusKeys);
+        try {
+          for (const op of operations) {
+            throwIfAborted();
+            switch (op.type) {
+              case "camera": {
+                const cfg = op.config as {
+                  target: { x: number; y: number; z: number };
+                  distance: number;
+                  fov: number;
+                  duration: number;
+                  easing?: string;
+                };
+                const target = new Vector3(cfg.target.x, cfg.target.y, cfg.target.z);
+                const duration = cfg.duration ?? 0.8;
+                const frameCount = Math.max(1, Math.round(duration * 60));
 
-              scene.beginDirectAnimation(
-                camera,
-                [targetAnim, radiusAnim],
-                0,
-                Math.max(1, Math.round(duration * 60)),
-                false,
-                1,
-              );
-              await new Promise((resolve) => setTimeout(resolve, duration * 1000));
-              break;
+                // Animate target and radius using Babylon Animation.
+                const targetAnim = new Animation(
+                  "cameraTargetAnim",
+                  "target",
+                  60,
+                  Animation.ANIMATIONTYPE_VECTOR3,
+                  Animation.ANIMATIONLOOPMODE_CONSTANT,
+                );
+                const targetKeys = [
+                  { frame: 0, value: camera.target.clone() },
+                  { frame: frameCount, value: target },
+                ];
+                targetAnim.setKeys(targetKeys);
+
+                const radiusAnim = new Animation(
+                  "cameraRadiusAnim",
+                  "radius",
+                  60,
+                  Animation.ANIMATIONTYPE_FLOAT,
+                  Animation.ANIMATIONLOOPMODE_CONSTANT,
+                );
+                const radiusKeys = [
+                  { frame: 0, value: camera.radius },
+                  { frame: frameCount, value: cfg.distance ?? 30 },
+                ];
+                radiusAnim.setKeys(radiusKeys);
+
+                scene.beginDirectAnimation(
+                  camera,
+                  [targetAnim, radiusAnim],
+                  0,
+                  frameCount,
+                  false,
+                  1,
+                );
+                await new Promise<void>((resolve, reject) => {
+                  const timeout = setTimeout(resolve, duration * 1000);
+                  if (!signal) return;
+                  const onAbort = () => {
+                    clearTimeout(timeout);
+                    scene.stopAnimation(camera);
+                    reject(new Error("aborted"));
+                  };
+                  if (signal.aborted) {
+                    onAbort();
+                    return;
+                  }
+                  signal.addEventListener("abort", onAbort, { once: true });
+                });
+                break;
+              }
+              case "clipping":
+                console.warn("[BabylonScene] clipping execution not implemented in admin preview");
+                break;
+              case "visibility": {
+                await executeVisibility(op, loadedModelsRef.current, signal);
+                break;
+              }
+              case "postprocess":
+                console.warn(
+                  "[BabylonScene] postprocess execution not implemented in admin preview",
+                );
+                break;
+              default:
+                break;
             }
-            case "clipping":
-              console.warn("[BabylonScene] clipping execution not implemented in admin preview");
-              break;
-            case "visibility":
-              await executeVisibility(scene, loadedModelsRef.current, {
-                targetModelFileId: op.targetModelFileId,
-                ...(op.config as VisibilityConfig),
-              });
-              break;
-            case "postprocess":
-              console.warn("[BabylonScene] postprocess execution not implemented in admin preview");
-              break;
-            default:
-              break;
           }
+        } finally {
+          // Preview is non-destructive: restore camera and mesh visibility
+          // whether the sequence completed, was cancelled, or threw.
+          restoreSceneSnapshot(camera, snapshot);
         }
       },
     }));
@@ -450,8 +470,8 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
               const merged = Mesh.MergeMeshes(mergeable, true, true, undefined, true, true);
               if (merged) {
                 merged.parent = result.modelRoot;
-                // Preserve original mesh names so visibility actions can still
-                // target individual parts after merging.
+                // MergeMeshes discards original mesh names; preserve them so
+                // visibility actions can still match by keyword.
                 merged.metadata = {
                   ...merged.metadata,
                   originalMeshNames: mergeable.map((m) => m.name),
@@ -570,110 +590,6 @@ export default BabylonScene;
 // ========================================
 // Helpers
 // ========================================
-
-async function executeVisibility(
-  scene: Scene,
-  loadedModels: Map<string, { root: TransformNode; modelUrl: string; meshes: AbstractMesh[] }>,
-  config: VisibilityConfig,
-): Promise<void> {
-  const keywords = config.targets.map((t) => t.toLowerCase()).filter(Boolean);
-  const hasTargetModel = config.targetModelFileId !== undefined && config.targetModelFileId !== "";
-
-  if (!hasTargetModel && keywords.length === 0) {
-    console.warn("[BabylonScene] visibility: no target model file or keywords provided");
-    return;
-  }
-
-  const duration = config.duration ?? 0.3;
-  const endFrame = Math.max(1, Math.round(duration * 60));
-  const matched: { mesh: AbstractMesh; targetVis: number }[] = [];
-
-  loadedModels.forEach(({ meshes, modelUrl }, id) => {
-    // When a target model file is selected, restrict to that model.
-    if (hasTargetModel && id !== config.targetModelFileId) return;
-
-    const modelBasename = modelUrl.split("/").pop()?.toLowerCase() ?? "";
-    meshes.forEach((mesh) => {
-      const originalNames: string[] = Array.isArray(mesh.metadata?.originalMeshNames)
-        ? mesh.metadata.originalMeshNames
-        : [];
-      const namesToCheck = [mesh.name, ...originalNames].map((n) => n.toLowerCase());
-
-      // Match by keywords if provided; otherwise match every mesh in the target model.
-      const isMatch =
-        keywords.length === 0 ||
-        keywords.some(
-          (k) =>
-            namesToCheck.some((n) => n.includes(k)) ||
-            id.toLowerCase().includes(k) ||
-            modelBasename.includes(k),
-        );
-      if (!isMatch) return;
-
-      const current = mesh.visibility;
-      let targetVis: number;
-      switch (config.action) {
-        case "show":
-          targetVis = 1;
-          break;
-        case "hide":
-          targetVis = 0;
-          break;
-        case "toggle":
-        default:
-          targetVis = current > 0 ? 0 : 1;
-          break;
-      }
-      matched.push({ mesh, targetVis });
-    });
-  });
-
-  if (matched.length === 0) {
-    const allNames: string[] = [];
-    loadedModels.forEach(({ meshes }, id) => {
-      if (hasTargetModel && id !== config.targetModelFileId) return;
-      meshes.forEach((mesh) => {
-        allNames.push(mesh.name);
-        if (Array.isArray(mesh.metadata?.originalMeshNames)) {
-          allNames.push(...mesh.metadata.originalMeshNames);
-        }
-      });
-    });
-    console.warn("[BabylonScene] visibility: no meshes matched", {
-      targetModelFileId: config.targetModelFileId,
-      targets: config.targets,
-      action: config.action,
-      loadedMeshNames: allNames,
-    });
-    return;
-  }
-
-  console.log("[BabylonScene] visibility: matched meshes", {
-    targetModelFileId: config.targetModelFileId,
-    targets: config.targets,
-    action: config.action,
-    count: matched.length,
-    names: matched.map(({ mesh }) => mesh.name),
-  });
-
-  for (const { mesh, targetVis } of matched) {
-    const anim = new Animation(
-      `visibilityAnim-${mesh.name}`,
-      "visibility",
-      60,
-      Animation.ANIMATIONTYPE_FLOAT,
-      Animation.ANIMATIONLOOPMODE_CONSTANT,
-    );
-    anim.setKeys([
-      { frame: 0, value: mesh.visibility },
-      { frame: endFrame, value: targetVis },
-    ]);
-    mesh.animations = [anim];
-    scene.beginAnimation(mesh, 0, endFrame, false);
-  }
-
-  await new Promise((resolve) => setTimeout(resolve, duration * 1000));
-}
 
 function createGrid(scene: Scene) {
   const gridMaterial = new StandardMaterial("gridMat", scene);
@@ -808,4 +724,134 @@ function frameCameraToVisibleModels(
   camera.orthoRight = orthoExtent;
   camera.orthoTop = orthoExtent;
   camera.orthoBottom = -orthoExtent;
+}
+
+// ========================================
+// Operation Helpers
+// ========================================
+
+interface VisibilityConfig {
+  targetModelFileId?: string;
+  targets: string[];
+  action: "show" | "hide" | "toggle";
+  duration?: number;
+}
+
+async function executeVisibility(
+  op: Extract<LabelOperation, { type: "visibility" }>,
+  loadedModels: Map<string, { root: TransformNode; modelUrl: string; meshes: AbstractMesh[] }>,
+  signal?: AbortSignal,
+) {
+  const config = op.config as VisibilityConfig;
+  const keywords = (config.targets ?? []).map((k) => k.toLowerCase()).filter(Boolean);
+  const hasTargetModel = Boolean(config.targetModelFileId);
+
+  loadedModels.forEach(({ meshes, modelUrl }, id) => {
+    if (signal?.aborted) return;
+    if (hasTargetModel && id !== config.targetModelFileId) return;
+
+    const modelBasename = modelUrl.split("/").pop()?.toLowerCase() ?? "";
+    meshes.forEach((mesh) => {
+      if (signal?.aborted) return;
+      const originalNames: string[] = Array.isArray(mesh.metadata?.originalMeshNames)
+        ? mesh.metadata.originalMeshNames
+        : [];
+      const namesToCheck = [mesh.name, ...originalNames].map((n) => n.toLowerCase());
+      const isMatch =
+        keywords.length === 0 ||
+        keywords.some(
+          (k) =>
+            namesToCheck.some((n) => n.includes(k)) ||
+            id.toLowerCase().includes(k) ||
+            modelBasename.includes(k),
+        );
+
+      if (!isMatch) return;
+
+      const current = mesh.isVisible ?? true;
+      let next: boolean;
+      switch (config.action) {
+        case "hide":
+          next = false;
+          break;
+        case "show":
+          next = true;
+          break;
+        case "toggle":
+        default:
+          next = !current;
+          break;
+      }
+      mesh.setEnabled(next);
+      mesh.isVisible = next;
+    });
+  });
+}
+
+// ========================================
+// Scene Snapshot Helpers
+// ========================================
+
+interface SceneSnapshot {
+  camera: {
+    target: Vector3;
+    radius: number;
+    alpha: number;
+    beta: number;
+    orthoLeft: number;
+    orthoRight: number;
+    orthoTop: number;
+    orthoBottom: number;
+  };
+  meshes: Array<{
+    mesh: AbstractMesh;
+    isVisible: boolean;
+    isEnabled: boolean;
+  }>;
+}
+
+function captureSceneSnapshot(
+  camera: ArcRotateCamera,
+  loadedModels: Map<string, { root: TransformNode; modelUrl: string; meshes: AbstractMesh[] }>,
+): SceneSnapshot {
+  const meshes: SceneSnapshot["meshes"] = [];
+  loadedModels.forEach(({ meshes: modelMeshes }) => {
+    modelMeshes.forEach((mesh) => {
+      meshes.push({
+        mesh,
+        isVisible: mesh.isVisible,
+        isEnabled: mesh.isEnabled(),
+      });
+    });
+  });
+
+  return {
+    camera: {
+      target: camera.target.clone(),
+      radius: camera.radius,
+      alpha: camera.alpha,
+      beta: camera.beta,
+      orthoLeft: camera.orthoLeft,
+      orthoRight: camera.orthoRight,
+      orthoTop: camera.orthoTop,
+      orthoBottom: camera.orthoBottom,
+    },
+    meshes,
+  };
+}
+
+function restoreSceneSnapshot(camera: ArcRotateCamera, snapshot: SceneSnapshot) {
+  snapshot.meshes.forEach(({ mesh, isVisible, isEnabled }) => {
+    mesh.setEnabled(isEnabled);
+    mesh.isVisible = isVisible;
+  });
+
+  camera.target = snapshot.camera.target;
+  camera.radius = snapshot.camera.radius;
+  camera.alpha = snapshot.camera.alpha;
+  camera.beta = snapshot.camera.beta;
+  camera.orthoLeft = snapshot.camera.orthoLeft;
+  camera.orthoRight = snapshot.camera.orthoRight;
+  camera.orthoTop = snapshot.camera.orthoTop;
+  camera.orthoBottom = snapshot.camera.orthoBottom;
 }
