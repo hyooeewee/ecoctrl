@@ -3,7 +3,7 @@ name: ecn-manager
 description: Create, modify, and validate EcoCtrl .ecn plugin node packages. Use whenever the user wants to build a custom workflow node, edit an existing plugin, or validate a .ecn file. Also use when the user mentions 'plugin node', 'custom node', 'workflow node', '.ecn file', or wants to extend the workflow engine with new actions, triggers, or conditions.
 license: MIT
 metadata:
-  version: 1.1.0
+  version: 2.0.0
   author: EcoCtrl Team
 ---
 
@@ -19,6 +19,13 @@ An `.ecn` file is a ZIP archive containing:
 - `backend.js` — JavaScript code executed in a sandboxed `isolated-vm`
 - `schema.json` — JSON Schema defining the node's configuration form
 - `icon.svg` — Optional node icon
+
+## Core Principle
+
+> **AI decides, scripts generate, scripts validate.**
+>
+> The AI's job is to understand user intent and produce structured parameters.
+> All file generation is handled by scripts — never write JSON/SVG by hand.
 
 ## Workflow
 
@@ -54,89 +61,119 @@ Do NOT use generic defaults. Derive every value from the stated purpose:
 | `description`   | One sentence summarizing what the node does                                                                                                                                                                                   |
 | `config fields` | Infer the minimal useful fields from the purpose. A sensor reader needs `endpoint` + `interval`; a threshold alert needs `threshold` + `comparison`.                                                                          |
 | `version`       | Always `1.0.0`                                                                                                                                                                                                                |
-| `icon_svg`      | AI generates a semantic Lucide-style SVG string based on purpose (see below). Passed as `icon_svg` in the JSON payload. If omitted, a generic placeholder is used.                                                            |
+| `icon`          | Pick an icon NAME from the icon library (see below). Do NOT generate SVG strings.                                                                                                                                             |
 | `author`        | Empty (omitted from manifest)                                                                                                                                                                                                 |
 
-**Icon generation rules:**
+**Icon selection rules:**
 
-- Always generate a 24x24 Lucide-style SVG: `xmlns="http://www.w3.org/2000/svg"`, `width="24"`, `height="24"`, `viewBox="0 0 24 24"`, `fill="none"`, `stroke="currentColor"`, `stroke-width="2"`, `stroke-linecap="round"`, `stroke-linejoin="round"`
-- Derive the icon shape from the node purpose:
-  - cron / schedule / timer → `clock` or `timer`
-  - email / mail / notify → `mail` or `bell`
-  - database / storage → `database`
-  - API / HTTP / webhook → `globe` or `webhook`
-  - sensor / metric / read → `activity` or `gauge`
-  - alert / warning → `alert-triangle`
-  - energy / power → `zap`
-  - file / export / import → `file-text`
-  - filter / condition → `filter`
-  - calculate / math → `calculator`
-  - default fallback → `box` (same as the placeholder)
-- Pass the complete SVG string as the `icon_svg` field in the `--json` payload. The script writes it to `icon.svg`.
+Pick an icon name from the available library. The script resolves it to SVG automatically.
+
+| Purpose keywords        | Icon name             |
+| ----------------------- | --------------------- |
+| cron / schedule / timer | `clock` or `timer`    |
+| email / mail / notify   | `mail` or `bell`      |
+| database / storage      | `database`            |
+| API / HTTP / webhook    | `globe` or `webhook`  |
+| sensor / metric / read  | `activity` or `gauge` |
+| alert / warning         | `alert-triangle`      |
+| energy / power          | `zap`                 |
+| file / export / import  | `file-text`           |
+| filter / condition      | `filter`              |
+| calculate / math        | `calculator`          |
+| start / trigger         | `play`                |
+| stop / end              | `square`              |
+| loop / repeat           | `loop`                |
+| parallel                | `layers`              |
+| switch / route          | `shuffle`             |
+| send / push             | `send`                |
+| code / transform        | `code`                |
+| settings / config       | `settings`            |
+| success / done          | `check-circle`        |
+| error / fail            | `x-circle`            |
+| forward / next          | `arrow-right`         |
+| more / expand           | `chevron-right`       |
+| generic / default       | `box`                 |
+
+To see all available icons, run: `python <skill-path>/scripts/create_ecn.py --list-icons`
 
 ### 2. Scaffold (new node)
 
-After collecting all information via AskUserQuestion, generate an **unpacked source directory** first. Do NOT create the `.ecn` archive yet.
+After collecting all information via AskUserQuestion, call the script to generate all files. **Do NOT write JSON or SVG manually.**
 
-**Option A — Use the non-interactive script (preferred):**
+**Step A — Build the JSON payload:**
 
-```bash
-python <skill-path>/scripts/create_ecn.py <output-directory> --json '<metadata-json>'
-```
-
-**Prefer `.` (the session's working directory) as `<output-directory>`.** Only use a different path if the user explicitly requests it or the context requires it (e.g. CI, ephemeral workspace).
-
-This creates a folder like `./<plugin-id>/` containing:
-
-- `manifest.json`
-- `backend.js`
-- `schema.json`
-- `icon.svg`
-
-Pass a single JSON string with all fields:
+Construct a JSON object with all collected parameters. Include `outputs` if the node produces data for downstream nodes.
 
 ```json
 {
   "id": "energy-monitor",
-  "name": "Energy Monitor",
+  "name": "能源监控",
   "version": "1.0.0",
   "category": "trigger",
-  "description": "...",
-  "author": "...",
-  "color": "#3b82f6",
-  "icon_svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83\"/></svg>",
+  "description": "定时读取能源监控数据",
+  "color": "#22c55e",
+  "icon": "zap",
   "fields": [
     {
-      "name": "threshold",
-      "type": "number",
-      "title": "Threshold",
-      "description": "...",
+      "name": "pointName",
+      "type": "string",
+      "title": "点位名称",
+      "description": "要读取的 IoT 测点",
       "required": true
+    },
+    {
+      "name": "interval",
+      "type": "number",
+      "title": "间隔 (毫秒)",
+      "default": 5000
+    }
+  ],
+  "outputs": [
+    {
+      "name": "value",
+      "type": "number",
+      "description": "读取到的测点值"
+    },
+    {
+      "name": "pointName",
+      "type": "string",
+      "description": "测点名称"
     }
   ]
 }
 ```
 
-**Option B — Direct file generation:**
+**Step B — Run the script:**
 
-If the script is unavailable, write the 4 files directly with `Write` into a folder under the **current working directory**:
+```bash
+python <skill-path>/scripts/create_ecn.py . --json '<json-string>'
+```
 
-- `<plugin-id>/manifest.json`
-- `<plugin-id>/backend.js`
-- `<plugin-id>/schema.json`
-- `<plugin-id>/icon.svg`
+This generates a folder `./<plugin-id>/` with all 4 files (manifest.json, backend.js, schema.json, icon.svg).
+
+**What the script guarantees (so you don't have to):**
+
+- `manifest.json` has all required fields, correct types, and valid values
+- `schema.json` has proper `type: "object"`, `properties`, `required`, and `outputs` sections
+- `icon.svg` is a valid Lucide-style 24x24 SVG from the icon library
+- `backend.js` has proper structure: named `execute` function, input validation, type coercion, structured logging with `[node_id]` prefix, try/catch with `{ cause: err }`, Chinese error messages
 
 ### 3. Implement backend.js
 
-Edit the generated `backend.js` to implement the node's logic. Use the PluginApi reference (see `references/plugin_api_reference.md`) for available APIs.
+The script generates a skeleton. Edit it to implement the actual business logic.
+
+**Read the skeleton first**, then fill in the `// TODO: implement business logic here` section.
 
 Key rules:
 
-- Must export via `module.exports = async function(ctx, api) { ... }`
+- Must export via `module.exports = async function execute(ctx, api) { ... }`
 - `ctx.config` contains values from the node's config form (defined by schema.json)
 - Return an object — it becomes the node's output for downstream nodes
-- Use `api.log.info/warn/error` for debugging
+- Use `api.log.info/warn/error` for debugging — always with `[node_id]` prefix
 - Handle errors gracefully; uncaught errors fail the workflow execution
+- Use `api.*` methods only (see `references/plugin_api_reference.md`)
+
+**Reference patterns** when implementing: `references/backend_patterns.md`
 
 ### 4. Package
 
@@ -175,7 +212,7 @@ Read these when you need detailed API docs:
 
 - `references/manifest_schema.md` — manifest.json field reference
 - `references/plugin_api_reference.md` — Full PluginApi interface
-- `references/backend_patterns.md` — Common backend.js code patterns
+- `references/backend_patterns.md` — Common backend.js code patterns (includes built-in node quality patterns)
 
 ## Modifying an Existing Node
 
@@ -184,3 +221,16 @@ Read these when you need detailed API docs:
 3. Re-package with `package_ecn.py`
 4. Validate with `validate_ecn.py`
 5. Re-install through Admin UI (uninstall old version first if id/version changed)
+
+## Available Scripts
+
+| Script            | Purpose                                        |
+| ----------------- | ---------------------------------------------- |
+| `create_ecn.py`   | Scaffold a new node from structured parameters |
+| `package_ecn.py`  | Pack source directory into `.ecn` archive      |
+| `validate_ecn.py` | Validate a `.ecn` file                         |
+| `extract_ecn.py`  | Extract a `.ecn` archive for editing           |
+
+## Available Icon Names
+
+Run `python <skill-path>/scripts/create_ecn.py --list-icons` to see all options. Common ones: `zap`, `clock`, `database`, `globe`, `mail`, `bell`, `activity`, `gauge`, `filter`, `calculator`, `alert-triangle`, `webhook`, `play`, `square`, `loop`, `layers`, `shuffle`, `send`, `code`, `settings`, `box`.
