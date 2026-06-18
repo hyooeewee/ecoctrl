@@ -27,7 +27,8 @@
     "test": "pnpm -r --if-present test",
     "test:watch": "pnpm -r --parallel --if-present test:watch",
     "test:coverage": "pnpm -r --if-present test:coverage",
-    "optimize-model": "tsx scripts/optimize-model.ts"
+    "optimize_model": "tsx scripts/optimize-model.ts",
+    "sync_local_to_worktree": "uv run scripts/sync-local-to-worktree.py --all"
   },
   "devDependencies": {
     "@changesets/changelog-github": "^0.5.1",
