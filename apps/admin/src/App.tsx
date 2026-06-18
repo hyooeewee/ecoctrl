@@ -10,6 +10,7 @@ import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import { SseProvider } from "@/components/SseProvider";
 import Accounts from "@/pages/Accounts";
+import AdvancedManagement from "@/pages/AdvancedManagement";
 import Config from "@/pages/Config";
 import Overview from "@/pages/Overview";
 import Energy from "@/pages/Energy";
@@ -139,6 +140,8 @@ export default function App() {
         return <Faults />;
       case "energy":
         return <Energy />;
+      case "advancedManagement":
+        return <AdvancedManagement />;
       case "profile":
         return <Profile />;
       case "preferences":
@@ -186,7 +189,8 @@ export default function App() {
                 activeTab === "workflows" ||
                 activeTab === "models" ||
                 activeTab === "faults" ||
-                activeTab === "energy" ? (
+                activeTab === "energy" ||
+                activeTab === "advancedManagement" ? (
                   <div className="flex-1 flex flex-col overflow-hidden">{renderContent()}</div>
                 ) : (
                   <ScrollArea className="h-full w-full">
