@@ -165,7 +165,7 @@ export default function AdvancedManagement() {
         name={IFRAME_NAME}
         onLoad={handleIframeLoad}
         sandbox="allow-scripts allow-same-origin allow-forms"
-        src={submitted ? RUNFRAME_URL : "about:blank"}
+        src="about:blank"
         title="高级管理"
       />
 
