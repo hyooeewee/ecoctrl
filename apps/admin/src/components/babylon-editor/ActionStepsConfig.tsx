@@ -482,19 +482,22 @@ function ClippingConfig({
       <div className="grid gap-2">
         <Label className="text-xs">剖切后显示的标签</Label>
         <div className="flex flex-wrap gap-1">
-          {revealIds.map((id) => (
-            <Badge key={id} variant="secondary" className="gap-1 pr-1">
-              {id}
-              <button
-                type="button"
-                className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20"
-                onClick={() => removeRevealId(id)}
-                disabled={disabled}
-              >
-                <X size={10} />
-              </button>
-            </Badge>
-          ))}
+          {revealIds.map((id) => {
+            const labelName = availableLabels.find((l) => l.id === id)?.name;
+            return (
+              <Badge key={id} variant="secondary" className="gap-1 pr-1">
+                {labelName || id}
+                <button
+                  type="button"
+                  className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20"
+                  onClick={() => removeRevealId(id)}
+                  disabled={disabled}
+                >
+                  <X size={10} />
+                </button>
+              </Badge>
+            );
+          })}
         </div>
         <Select
           onValueChange={(v) => {

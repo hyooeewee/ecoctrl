@@ -257,257 +257,264 @@ export default function DashboardModel() {
               )}
 
               {/* Panel Content */}
-              <ScrollArea className="flex-1">
-                <div className="p-3">
-                  {editorMode === "select" && (
-                    <div className="mb-4">
-                      <div className="mb-2 flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">
-                          {existingFiles.length} 个文件
-                        </span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => fileInputRef.current?.click()}
-                        >
-                          <Upload size={14} className="mr-1" />
-                          上传
-                        </Button>
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept=".glb,.gltf,.obj"
-                          multiple
-                          className="hidden"
-                          onChange={(e) => {
-                            if (e.target.files?.length) {
-                              addPendingFiles(Array.from(e.target.files));
-                              e.target.value = "";
-                            }
-                          }}
-                        />
-                      </div>
-
-                      <>
-                        {existingFiles.length > 0 && (
-                          <div className="mb-3 space-y-1.5">
-                            {existingFiles.map((file, index) => {
-                              const fileName = file.name || file.fileKey.split("/").pop() || "未知";
-                              const ext = fileName.split(".").pop()?.toUpperCase() ?? "";
-                              const isVisible = visibleFileIds.has(file.id);
-                              const progress = loadingProgress.get(file.id);
-                              const isLoading = progress !== undefined && progress < 1;
-                              return (
-                                <div
-                                  key={file.id}
-                                  className="rounded-md border bg-muted/30 px-3 py-2"
-                                >
-                                  <div className="group flex items-center gap-2">
-                                    <input
-                                      type="checkbox"
-                                      checked={isVisible}
-                                      onChange={() => toggleFileVisible(file.id)}
-                                      className="h-3.5 w-3.5 shrink-0 accent-primary"
-                                      title={isVisible ? "隐藏模型" : "显示模型"}
-                                    />
-                                    <File size={14} className="shrink-0 text-blue-500" />
-                                    <span className="flex-1 truncate text-xs">{fileName}</span>
-                                    <Badge variant="secondary" className="shrink-0 text-[10px]">
-                                      {ext}
-                                    </Badge>
-                                    <div className="hidden shrink-0 items-center gap-1 group-hover:flex">
-                                      <select
-                                        value={file.priority ?? "background"}
-                                        onChange={(e) =>
-                                          updateFilePriority(
-                                            file.id,
-                                            e.target.value as "critical" | "background",
-                                          )
-                                        }
-                                        className="h-5 shrink-0 rounded border bg-background px-1 text-[10px] outline-none"
-                                        title="加载优先级"
-                                      >
-                                        <option value="critical">优先加载</option>
-                                        <option value="background">后台加载</option>
-                                      </select>
-                                      <button
-                                        type="button"
-                                        disabled={index === 0}
-                                        className="rounded p-0.5 text-muted-foreground hover:bg-muted disabled:opacity-30"
-                                        onClick={() => moveFile(file.id, "up")}
-                                        title="上移"
-                                      >
-                                        ↑
-                                      </button>
-                                      <button
-                                        type="button"
-                                        disabled={index === existingFiles.length - 1}
-                                        className="rounded p-0.5 text-muted-foreground hover:bg-muted disabled:opacity-30"
-                                        onClick={() => moveFile(file.id, "down")}
-                                        title="下移"
-                                      >
-                                        ↓
-                                      </button>
-                                      <button
-                                        type="button"
-                                        className="rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                                        onClick={() => deleteFile(file.id)}
-                                        title="删除"
-                                      >
-                                        <Trash2 size={12} />
-                                      </button>
-                                    </div>
-                                  </div>
-                                  {isLoading && (
-                                    <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-muted">
-                                      <div
-                                        className="h-full bg-blue-500 transition-all"
-                                        style={{ width: `${progress * 100}%` }}
-                                      />
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        {pendingFiles.length > 0 && (
-                          <div className="mb-3 space-y-1.5">
-                            <div className="text-xs font-medium text-muted-foreground">待上传</div>
-                            {pendingFiles.map((file, index) => (
-                              <div
-                                key={index}
-                                className="flex items-center gap-2 rounded-md border border-dashed border-blue-400 bg-blue-50/50 px-3 py-2"
-                              >
-                                <File size={14} className="shrink-0 text-blue-500" />
-                                <span className="flex-1 truncate text-xs">{file.name}</span>
-                                <Badge variant="secondary" className="shrink-0 text-[10px]">
-                                  {file.name.split(".").pop()?.toUpperCase()}
-                                </Badge>
-                                <button
-                                  type="button"
-                                  className="ml-1 rounded p-0.5 hover:bg-muted-foreground/20"
-                                  onClick={() => removePendingFile(index)}
-                                >
-                                  <Trash2 size={12} />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {existingFiles.length === 0 && pendingFiles.length === 0 && (
-                          <ModelFileZone
-                            file={null}
-                            onFileSelect={(file) => addPendingFiles([file])}
-                            onFileClear={() => {}}
-                            acceptedFormats=".glb,.gltf,.obj"
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <ScrollArea className="h-full w-full">
+                  <div className="p-3">
+                    {editorMode === "select" && (
+                      <div className="mb-4">
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">
+                            {existingFiles.length} 个文件
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => fileInputRef.current?.click()}
+                          >
+                            <Upload size={14} className="mr-1" />
+                            上传
+                          </Button>
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept=".glb,.gltf,.obj"
+                            multiple
+                            className="hidden"
+                            onChange={(e) => {
+                              if (e.target.files?.length) {
+                                addPendingFiles(Array.from(e.target.files));
+                                e.target.value = "";
+                              }
+                            }}
                           />
+                        </div>
+
+                        <>
+                          {existingFiles.length > 0 && (
+                            <div className="mb-3 space-y-1.5">
+                              {existingFiles.map((file, index) => {
+                                const fileName =
+                                  file.name || file.fileKey.split("/").pop() || "未知";
+                                const ext = fileName.split(".").pop()?.toUpperCase() ?? "";
+                                const isVisible = visibleFileIds.has(file.id);
+                                const progress = loadingProgress.get(file.id);
+                                const isLoading = progress !== undefined && progress < 1;
+                                return (
+                                  <div
+                                    key={file.id}
+                                    className="rounded-md border bg-muted/30 px-3 py-2"
+                                  >
+                                    <div className="group flex items-center gap-2">
+                                      <input
+                                        type="checkbox"
+                                        checked={isVisible}
+                                        onChange={() => toggleFileVisible(file.id)}
+                                        className="h-3.5 w-3.5 shrink-0 accent-primary"
+                                        title={isVisible ? "隐藏模型" : "显示模型"}
+                                      />
+                                      <File size={14} className="shrink-0 text-blue-500" />
+                                      <span className="flex-1 truncate text-xs">{fileName}</span>
+                                      <Badge variant="secondary" className="shrink-0 text-[10px]">
+                                        {ext}
+                                      </Badge>
+                                      <div className="hidden shrink-0 items-center gap-1 group-hover:flex">
+                                        <select
+                                          value={file.priority ?? "background"}
+                                          onChange={(e) =>
+                                            updateFilePriority(
+                                              file.id,
+                                              e.target.value as "critical" | "background",
+                                            )
+                                          }
+                                          className="h-5 shrink-0 rounded border bg-background px-1 text-[10px] outline-none"
+                                          title="加载优先级"
+                                        >
+                                          <option value="critical">优先加载</option>
+                                          <option value="background">后台加载</option>
+                                        </select>
+                                        <button
+                                          type="button"
+                                          disabled={index === 0}
+                                          className="rounded p-0.5 text-muted-foreground hover:bg-muted disabled:opacity-30"
+                                          onClick={() => moveFile(file.id, "up")}
+                                          title="上移"
+                                        >
+                                          ↑
+                                        </button>
+                                        <button
+                                          type="button"
+                                          disabled={index === existingFiles.length - 1}
+                                          className="rounded p-0.5 text-muted-foreground hover:bg-muted disabled:opacity-30"
+                                          onClick={() => moveFile(file.id, "down")}
+                                          title="下移"
+                                        >
+                                          ↓
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                          onClick={() => deleteFile(file.id)}
+                                          title="删除"
+                                        >
+                                          <Trash2 size={12} />
+                                        </button>
+                                      </div>
+                                    </div>
+                                    {isLoading && (
+                                      <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-muted">
+                                        <div
+                                          className="h-full bg-blue-500 transition-all"
+                                          style={{ width: `${progress * 100}%` }}
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {pendingFiles.length > 0 && (
+                            <div className="mb-3 space-y-1.5">
+                              <div className="text-xs font-medium text-muted-foreground">
+                                待上传
+                              </div>
+                              {pendingFiles.map((file, index) => (
+                                <div
+                                  key={index}
+                                  className="flex items-center gap-2 rounded-md border border-dashed border-blue-400 bg-blue-50/50 px-3 py-2"
+                                >
+                                  <File size={14} className="shrink-0 text-blue-500" />
+                                  <span className="flex-1 truncate text-xs">{file.name}</span>
+                                  <Badge variant="secondary" className="shrink-0 text-[10px]">
+                                    {file.name.split(".").pop()?.toUpperCase()}
+                                  </Badge>
+                                  <button
+                                    type="button"
+                                    className="ml-1 rounded p-0.5 hover:bg-muted-foreground/20"
+                                    onClick={() => removePendingFile(index)}
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {existingFiles.length === 0 && pendingFiles.length === 0 && (
+                            <ModelFileZone
+                              file={null}
+                              onFileSelect={(file) => addPendingFiles([file])}
+                              onFileClear={() => {}}
+                              acceptedFormats=".glb,.gltf,.obj"
+                            />
+                          )}
+
+                          {pendingFiles.length > 0 && (
+                            <div className="mt-2 flex gap-2">
+                              <Button className="flex-1" onClick={uploadAll} disabled={uploading}>
+                                {uploading ? "上传中..." : `上传全部 (${pendingFiles.length})`}
+                              </Button>
+                              <Button variant="outline" onClick={clearPendingFiles}>
+                                清空
+                              </Button>
+                            </div>
+                          )}
+                        </>
+                      </div>
+                    )}
+
+                    {editorMode === "placeLabel" && (
+                      <>
+                        <LabelTree
+                          labels={labelTreeData}
+                          selectedId={selectedLabelId}
+                          onSelect={selectLabel}
+                          onAdd={addLabel}
+                          onDelete={deleteLabel}
+                          onEdit={(id) => selectLabel(id)}
+                          disabled={existingFiles.length === 0}
+                        />
+
+                        {existingFiles.length === 0 && (
+                          <div className="rounded-md border border-dashed border-border bg-muted/20 px-3 py-3 text-center text-xs text-muted-foreground">
+                            请先上传模型文件，再创建标签
+                          </div>
                         )}
 
-                        {pendingFiles.length > 0 && (
-                          <div className="mt-2 flex gap-2">
-                            <Button className="flex-1" onClick={uploadAll} disabled={uploading}>
-                              {uploading ? "上传中..." : `上传全部 (${pendingFiles.length})`}
-                            </Button>
-                            <Button variant="outline" onClick={clearPendingFiles}>
-                              清空
-                            </Button>
+                        {selectedLabel && (
+                          <div className="border-t pt-4">
+                            <h3 className="mb-3 text-sm font-semibold">标签配置</h3>
+                            <div className="max-h-[300px] overflow-auto">
+                              <LabelConfigForm
+                                config={{
+                                  id: selectedLabel.id,
+                                  key: selectedLabel.key,
+                                  name: selectedLabel.name,
+                                  description: selectedLabel.description,
+                                  parentId: selectedLabel.parentId ?? null,
+                                  position: selectedLabel.position,
+                                  meshKeywords: selectedLabel.meshKeywords,
+                                }}
+                                parentOptions={labels
+                                  .filter((l) => l.id !== selectedLabel.id)
+                                  .map((l) => ({ id: l.id, name: l.name }))}
+                                onChange={updateLabelConfig}
+                                onPickPosition={() => startPlacingLabel(selectedLabel.id)}
+                              />
+                            </div>
                           </div>
                         )}
                       </>
-                    </div>
-                  )}
+                    )}
 
-                  {editorMode === "placeLabel" && (
-                    <>
-                      <LabelTree
-                        labels={labelTreeData}
-                        selectedId={selectedLabelId}
-                        onSelect={selectLabel}
-                        onAdd={addLabel}
-                        onDelete={deleteLabel}
-                        onEdit={(id) => selectLabel(id)}
-                        disabled={existingFiles.length === 0}
-                      />
+                    {editorMode === "clipPreview" && (
+                      <div className="grid gap-4">
+                        <LabelTree
+                          labels={labelTreeData}
+                          selectedId={selectedLabelId}
+                          onSelect={selectLabel}
+                          addTitle="选择标签"
+                          disabled
+                        />
 
-                      {existingFiles.length === 0 && (
-                        <div className="rounded-md border border-dashed border-border bg-muted/20 px-3 py-3 text-center text-xs text-muted-foreground">
-                          请先上传模型文件，再创建标签
-                        </div>
-                      )}
-
-                      {selectedLabel && (
-                        <div className="border-t pt-4">
-                          <h3 className="mb-3 text-sm font-semibold">标签配置</h3>
-                          <div className="max-h-[300px] overflow-auto">
-                            <LabelConfigForm
-                              config={{
-                                id: selectedLabel.id,
-                                key: selectedLabel.key,
-                                name: selectedLabel.name,
-                                description: selectedLabel.description,
-                                parentId: selectedLabel.parentId ?? null,
-                                position: selectedLabel.position,
-                                meshKeywords: selectedLabel.meshKeywords,
-                              }}
-                              parentOptions={labels
-                                .filter((l) => l.id !== selectedLabel.id)
+                        {selectedLabel ? (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <h3 className="text-sm font-semibold">
+                                {selectedLabel.name || selectedLabel.key} 的动作
+                              </h3>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={async () => {
+                                  await sceneRef.current?.executeOperations(
+                                    selectedLabel.operations,
+                                  );
+                                }}
+                              >
+                                预览执行
+                              </Button>
+                            </div>
+                            <ActionStepsConfig
+                              operations={selectedLabel.operations}
+                              modelFiles={existingFiles}
+                              availableLabels={labels
+                                .filter((l) => l.id !== selectedLabelId)
                                 .map((l) => ({ id: l.id, name: l.name }))}
-                              onChange={updateLabelConfig}
-                              onPickPosition={() => startPlacingLabel(selectedLabel.id)}
+                              onChange={updateLabelOperations}
                             />
+                          </>
+                        ) : (
+                          <div className="rounded-md border border-dashed border-border bg-muted/20 px-3 py-6 text-center text-xs text-muted-foreground">
+                            选择一个标签来配置动作
                           </div>
-                        </div>
-                      )}
-                    </>
-                  )}
-
-                  {editorMode === "clipPreview" && (
-                    <div className="grid gap-4">
-                      <LabelTree
-                        labels={labelTreeData}
-                        selectedId={selectedLabelId}
-                        onSelect={selectLabel}
-                        addTitle="选择标签"
-                        disabled
-                      />
-
-                      {selectedLabel ? (
-                        <>
-                          <div className="flex items-center justify-between">
-                            <h3 className="text-sm font-semibold">
-                              {selectedLabel.name || selectedLabel.key} 的动作
-                            </h3>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={async () => {
-                                await sceneRef.current?.executeOperations(selectedLabel.operations);
-                              }}
-                            >
-                              预览执行
-                            </Button>
-                          </div>
-                          <ActionStepsConfig
-                            operations={selectedLabel.operations}
-                            modelFiles={existingFiles}
-                            availableLabels={labels
-                              .filter((l) => l.id !== selectedLabelId)
-                              .map((l) => ({ id: l.id, name: l.name }))}
-                            onChange={updateLabelOperations}
-                          />
-                        </>
-                      ) : (
-                        <div className="rounded-md border border-dashed border-border bg-muted/20 px-3 py-6 text-center text-xs text-muted-foreground">
-                          选择一个标签来配置动作
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </ScrollArea>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

@@ -58,6 +58,12 @@ export interface BabylonSceneRef {
   executeOperations: (operations: LabelOperation[]) => Promise<void>;
 }
 
+interface VisibilityConfig {
+  targets: string[];
+  action: "show" | "hide" | "toggle";
+  duration?: number;
+}
+
 // ========================================
 // Component
 // ========================================
@@ -195,7 +201,11 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
               console.warn("[BabylonScene] clipping execution not implemented in admin preview");
               break;
             case "visibility":
-              console.warn("[BabylonScene] visibility execution not implemented in admin preview");
+              await executeVisibility(
+                scene,
+                loadedModelsRef.current,
+                op.config as VisibilityConfig,
+              );
               break;
             case "postprocess":
               console.warn("[BabylonScene] postprocess execution not implemented in admin preview");
@@ -554,6 +564,72 @@ export default BabylonScene;
 // ========================================
 // Helpers
 // ========================================
+
+async function executeVisibility(
+  scene: Scene,
+  loadedModels: Map<string, { root: TransformNode; modelUrl: string; meshes: AbstractMesh[] }>,
+  config: VisibilityConfig,
+): Promise<void> {
+  const keywords = config.targets.map((t) => t.toLowerCase()).filter(Boolean);
+  if (keywords.length === 0) {
+    console.warn("[BabylonScene] visibility: no target keywords provided");
+    return;
+  }
+
+  const duration = config.duration ?? 0.3;
+  const endFrame = Math.max(1, Math.round(duration * 60));
+  const matched: { mesh: AbstractMesh; targetVis: number }[] = [];
+
+  loadedModels.forEach(({ meshes, modelUrl }, id) => {
+    const modelBasename = modelUrl.split("/").pop()?.toLowerCase() ?? "";
+    meshes.forEach((mesh) => {
+      const nameLower = mesh.name.toLowerCase();
+      const isMatch = keywords.some(
+        (k) => nameLower.includes(k) || id.toLowerCase().includes(k) || modelBasename.includes(k),
+      );
+      if (!isMatch) return;
+
+      const current = mesh.visibility;
+      let targetVis: number;
+      switch (config.action) {
+        case "show":
+          targetVis = 1;
+          break;
+        case "hide":
+          targetVis = 0;
+          break;
+        case "toggle":
+        default:
+          targetVis = current > 0 ? 0 : 1;
+          break;
+      }
+      matched.push({ mesh, targetVis });
+    });
+  });
+
+  if (matched.length === 0) {
+    console.warn("[BabylonScene] visibility: no meshes matched keywords", config.targets);
+    return;
+  }
+
+  for (const { mesh, targetVis } of matched) {
+    const anim = new Animation(
+      `visibilityAnim-${mesh.name}`,
+      "visibility",
+      60,
+      Animation.ANIMATIONTYPE_FLOAT,
+      Animation.ANIMATIONLOOPMODE_CONSTANT,
+    );
+    anim.setKeys([
+      { frame: 0, value: mesh.visibility },
+      { frame: endFrame, value: targetVis },
+    ]);
+    mesh.animations = [anim];
+    scene.beginAnimation(mesh, 0, endFrame, false);
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, duration * 1000));
+}
 
 function createGrid(scene: Scene) {
   const gridMaterial = new StandardMaterial("gridMat", scene);
