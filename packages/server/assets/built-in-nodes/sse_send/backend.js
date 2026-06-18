@@ -5,12 +5,19 @@
 module.exports = async function execute(ctx, api) {
   const eventType = String(ctx.config.eventType || "update:widgets");
 
-  const payloadStr = String(ctx.config.payload || "");
-  let payload;
-  try {
-    payload = payloadStr ? JSON.parse(payloadStr) : {};
-  } catch {
-    payload = { message: payloadStr };
+  let payload = ctx.config.payload ?? {};
+  if (typeof payload === "string") {
+    const raw = payload.trim();
+    if (!raw) {
+      payload = {};
+    } else {
+      try {
+        payload = JSON.parse(raw);
+      } catch (err) {
+        api.log.warn(`[sse-send] payload is not valid JSON, sending as message: ${err.message}`);
+        payload = { message: raw };
+      }
+    }
   }
 
   const targetMode = String(ctx.config.targetMode || "broadcast");
