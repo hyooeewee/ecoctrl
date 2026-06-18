@@ -2,7 +2,7 @@
 // Dashboard Model Configuration Page
 // ========================================
 
-import React, { useEffect, useRef, useMemo } from "react";
+import React, { useEffect, useRef, useMemo, useState } from "react";
 import { File, Upload, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { Button } from "@ecoctrl/ui";
@@ -35,6 +35,9 @@ import { useAppStore } from "@/store/appStore";
 export default function DashboardModel() {
   const sceneRef = useRef<BabylonSceneRef>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const previewAbortRef = useRef<AbortController | null>(null);
+
+  const [previewing, setPreviewing] = useState(false);
 
   const setActiveTab = useAppStore((state) => state.setActiveTab);
 
@@ -188,6 +191,39 @@ export default function DashboardModel() {
     }, 1000);
     return () => clearTimeout(timer);
   }, [isDirty, saving, saveLabels]);
+
+  // Cancel any running preview if the component unmounts.
+  useEffect(() => {
+    return () => {
+      previewAbortRef.current?.abort();
+      previewAbortRef.current = null;
+    };
+  }, []);
+
+  const handlePreview = async () => {
+    if (previewing) {
+      previewAbortRef.current?.abort();
+      return;
+    }
+    if (!selectedLabel || selectedLabel.operations.length === 0) return;
+
+    const controller = new AbortController();
+    previewAbortRef.current = controller;
+    setPreviewing(true);
+
+    try {
+      await sceneRef.current?.executeOperations(selectedLabel.operations, controller.signal);
+    } catch (err) {
+      if (err instanceof Error && err.message === "aborted") {
+        // Cancellation is intentional — no user-facing error.
+      } else {
+        console.error("[DashboardModel] preview operations failed:", err);
+      }
+    } finally {
+      setPreviewing(false);
+      previewAbortRef.current = null;
+    }
+  };
 
   // ========================================
   // Render
@@ -482,12 +518,11 @@ export default function DashboardModel() {
                             </h3>
                             <Button
                               size="sm"
-                              variant="outline"
-                              onClick={async () => {
-                                await sceneRef.current?.executeOperations(selectedLabel.operations);
-                              }}
+                              variant={previewing ? "secondary" : "outline"}
+                              onClick={handlePreview}
+                              disabled={!selectedLabel || selectedLabel.operations.length === 0}
                             >
-                              预览执行
+                              {previewing ? "取消执行" : "预览执行"}
                             </Button>
                           </div>
                           <ActionStepsConfig

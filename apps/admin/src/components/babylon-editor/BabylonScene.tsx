@@ -55,7 +55,7 @@ export interface BabylonSceneRef {
   zoomIn: () => void;
   zoomOut: () => void;
   resetView: () => void;
-  executeOperations: (operations: LabelOperation[]) => Promise<void>;
+  executeOperations: (operations: LabelOperation[], signal?: AbortSignal) => Promise<void>;
 }
 
 // ========================================
@@ -135,12 +135,17 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
           axesRef.current,
         );
       },
-      async executeOperations(operations: LabelOperation[]) {
+      async executeOperations(operations: LabelOperation[], signal?: AbortSignal) {
         const camera = cameraRef.current;
         const scene = sceneRef.current;
         if (!camera || !scene) return;
 
+        const throwIfAborted = () => {
+          if (signal?.aborted) throw new Error("aborted");
+        };
+
         for (const op of operations) {
+          throwIfAborted();
           switch (op.type) {
             case "camera": {
               const cfg = op.config as {
@@ -152,8 +157,9 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
               };
               const target = new Vector3(cfg.target.x, cfg.target.y, cfg.target.z);
               const duration = cfg.duration ?? 0.8;
+              const frameCount = Math.max(1, Math.round(duration * 60));
 
-              // Animate target and radius using Babylon Animation
+              // Animate target and radius using Babylon Animation.
               const targetAnim = new Animation(
                 "cameraTargetAnim",
                 "target",
@@ -163,7 +169,7 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
               );
               const targetKeys = [
                 { frame: 0, value: camera.target.clone() },
-                { frame: Math.max(1, Math.round(duration * 60)), value: target },
+                { frame: frameCount, value: target },
               ];
               targetAnim.setKeys(targetKeys);
 
@@ -176,27 +182,34 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
               );
               const radiusKeys = [
                 { frame: 0, value: camera.radius },
-                { frame: Math.max(1, Math.round(duration * 60)), value: cfg.distance ?? 30 },
+                { frame: frameCount, value: cfg.distance ?? 30 },
               ];
               radiusAnim.setKeys(radiusKeys);
 
-              scene.beginDirectAnimation(
-                camera,
-                [targetAnim, radiusAnim],
-                0,
-                Math.max(1, Math.round(duration * 60)),
-                false,
-                1,
-              );
-              await new Promise((resolve) => setTimeout(resolve, duration * 1000));
+              scene.beginDirectAnimation(camera, [targetAnim, radiusAnim], 0, frameCount, false, 1);
+              await new Promise<void>((resolve, reject) => {
+                const timeout = setTimeout(resolve, duration * 1000);
+                if (!signal) return;
+                const onAbort = () => {
+                  clearTimeout(timeout);
+                  scene.stopAnimation(camera);
+                  reject(new Error("aborted"));
+                };
+                if (signal.aborted) {
+                  onAbort();
+                  return;
+                }
+                signal.addEventListener("abort", onAbort, { once: true });
+              });
               break;
             }
             case "clipping":
               console.warn("[BabylonScene] clipping execution not implemented in admin preview");
               break;
-            case "visibility":
-              console.warn("[BabylonScene] visibility execution not implemented in admin preview");
+            case "visibility": {
+              await executeVisibility(op, loadedModelsRef.current, signal);
               break;
+            }
             case "postprocess":
               console.warn("[BabylonScene] postprocess execution not implemented in admin preview");
               break;
@@ -440,6 +453,12 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
               const merged = Mesh.MergeMeshes(mergeable, true, true, undefined, true, true);
               if (merged) {
                 merged.parent = result.modelRoot;
+                // MergeMeshes discards original mesh names; preserve them so
+                // visibility actions can still match by keyword.
+                merged.metadata = {
+                  ...merged.metadata,
+                  originalMeshNames: mergeable.map((m) => m.name),
+                };
                 result.meshes = [merged];
               }
             } catch {
@@ -688,4 +707,66 @@ function frameCameraToVisibleModels(
   camera.orthoRight = orthoExtent;
   camera.orthoTop = orthoExtent;
   camera.orthoBottom = -orthoExtent;
+}
+
+// ========================================
+// Operation Helpers
+// ========================================
+
+interface VisibilityConfig {
+  targetModelFileId?: string;
+  targets: string[];
+  action: "show" | "hide" | "toggle";
+  duration?: number;
+}
+
+async function executeVisibility(
+  op: Extract<LabelOperation, { type: "visibility" }>,
+  loadedModels: Map<string, { root: TransformNode; modelUrl: string; meshes: AbstractMesh[] }>,
+  signal?: AbortSignal,
+) {
+  const config = op.config as VisibilityConfig;
+  const keywords = (config.targets ?? []).map((k) => k.toLowerCase()).filter(Boolean);
+  const hasTargetModel = Boolean(config.targetModelFileId);
+
+  loadedModels.forEach(({ meshes, modelUrl }, id) => {
+    if (signal?.aborted) return;
+    if (hasTargetModel && id !== config.targetModelFileId) return;
+
+    const modelBasename = modelUrl.split("/").pop()?.toLowerCase() ?? "";
+    meshes.forEach((mesh) => {
+      if (signal?.aborted) return;
+      const originalNames: string[] = Array.isArray(mesh.metadata?.originalMeshNames)
+        ? mesh.metadata.originalMeshNames
+        : [];
+      const namesToCheck = [mesh.name, ...originalNames].map((n) => n.toLowerCase());
+      const isMatch =
+        keywords.length === 0 ||
+        keywords.some(
+          (k) =>
+            namesToCheck.some((n) => n.includes(k)) ||
+            id.toLowerCase().includes(k) ||
+            modelBasename.includes(k),
+        );
+
+      if (!isMatch) return;
+
+      const current = mesh.isVisible ?? true;
+      let next: boolean;
+      switch (config.action) {
+        case "hide":
+          next = false;
+          break;
+        case "show":
+          next = true;
+          break;
+        case "toggle":
+        default:
+          next = !current;
+          break;
+      }
+      mesh.setEnabled(next);
+      mesh.isVisible = next;
+    });
+  });
 }
