@@ -63,6 +63,11 @@ export default function LabelConfigForm({
 
   const hasPosition = config.position !== undefined;
 
+  const parentLabel =
+    config.parentId === null || config.parentId === "none"
+      ? "无 (顶级标签)"
+      : (parentOptions.find((o) => o.id === config.parentId)?.name ?? config.parentId);
+
   return (
     <div className="grid gap-4">
       {/* Key */}
@@ -119,7 +124,7 @@ export default function LabelConfigForm({
           disabled={disabled}
         >
           <SelectTrigger className="h-8 text-sm">
-            <SelectValue placeholder="无 (顶级标签)" />
+            <SelectValue placeholder="无 (顶级标签)">{parentLabel}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">无 (顶级标签)</SelectItem>
