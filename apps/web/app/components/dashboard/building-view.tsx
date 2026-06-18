@@ -259,7 +259,7 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
       {labelDefs.map((cfg) => (
         <AreaLabel
           key={cfg.key}
-          label={labelText[cfg.key]}
+          label={cfg.name ?? labelText[cfg.key] ?? cfg.key}
           isActive={activeLabel === cfg.key}
           onClick={() => onLabelClick?.(cfg.key)}
           ref={(el) => {

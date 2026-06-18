@@ -807,8 +807,9 @@ export class ModelViewer implements ModelViewerRef {
     const globalViewport = this.camera.viewport.toGlobal(renderWidth, renderHeight);
 
     for (const { key, worldPos, groupId } of this.labelAnchors) {
-      // Skip if the anchor's group is not visible.
-      const groupVisible = visibleGroupIds.has(groupId);
+      // Labels not matched to a specific mesh group use the "default" group id
+      // and should remain visible regardless of which model groups are toggled.
+      const groupVisible = groupId === "default" || visibleGroupIds.has(groupId);
 
       const p = Vector3.Project(worldPos, Matrix.Identity(), transformMatrix, globalViewport);
       const onScreen =
@@ -872,6 +873,7 @@ export class ModelViewer implements ModelViewerRef {
       .filter((l) => l.position !== undefined)
       .map((l) => ({
         key: l.key,
+        name: l.name,
         fallbackPosition: new Vector3(l.position!.x, l.position!.y, l.position!.z),
         meshKeywords: l.meshKeywords,
       }));

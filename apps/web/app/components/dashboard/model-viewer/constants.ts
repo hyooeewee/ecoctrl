@@ -21,6 +21,7 @@ export const FALLBACK_URL = "/building.glb";
 
 export interface LabelDef {
   key: string;
+  name: string;
   fallbackPosition: Vector3;
   meshKeywords: string[];
 }
@@ -28,31 +29,37 @@ export interface LabelDef {
 export const DEFAULT_LABELS: LabelDef[] = [
   {
     key: "office1",
+    name: "Office Area 1",
     fallbackPosition: new Vector3(-4, 2.5, -3),
     meshKeywords: ["office", "办公"],
   },
   {
     key: "meeting",
+    name: "Meeting Room",
     fallbackPosition: new Vector3(0, 3.2, -3),
     meshKeywords: ["meeting", "会议"],
   },
   {
     key: "dataCenter",
+    name: "Data Center",
     fallbackPosition: new Vector3(-1.5, 1.5, 0),
     meshKeywords: ["data", "server", "机房", "数据"],
   },
   {
     key: "exhibition",
+    name: "Exhibition Hall",
     fallbackPosition: new Vector3(2.5, 2.2, -2),
     meshKeywords: ["exhibition", "hall", "展示", "展厅"],
   },
   {
     key: "office2",
+    name: "Office Area 2",
     fallbackPosition: new Vector3(3.5, 2.5, -3),
     meshKeywords: ["office", "办公"],
   },
   {
     key: "lobby",
+    name: "Lobby",
     fallbackPosition: new Vector3(3.5, 0.8, 2),
     meshKeywords: ["lobby", "大堂", "大厅", "entrance"],
   },
