@@ -140,82 +140,99 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
         const scene = sceneRef.current;
         if (!camera || !scene) return;
 
+        const snapshot = captureSceneSnapshot(camera, loadedModelsRef.current);
+
         const throwIfAborted = () => {
           if (signal?.aborted) throw new Error("aborted");
         };
 
-        for (const op of operations) {
-          throwIfAborted();
-          switch (op.type) {
-            case "camera": {
-              const cfg = op.config as {
-                target: { x: number; y: number; z: number };
-                distance: number;
-                fov: number;
-                duration: number;
-                easing?: string;
-              };
-              const target = new Vector3(cfg.target.x, cfg.target.y, cfg.target.z);
-              const duration = cfg.duration ?? 0.8;
-              const frameCount = Math.max(1, Math.round(duration * 60));
-
-              // Animate target and radius using Babylon Animation.
-              const targetAnim = new Animation(
-                "cameraTargetAnim",
-                "target",
-                60,
-                Animation.ANIMATIONTYPE_VECTOR3,
-                Animation.ANIMATIONLOOPMODE_CONSTANT,
-              );
-              const targetKeys = [
-                { frame: 0, value: camera.target.clone() },
-                { frame: frameCount, value: target },
-              ];
-              targetAnim.setKeys(targetKeys);
-
-              const radiusAnim = new Animation(
-                "cameraRadiusAnim",
-                "radius",
-                60,
-                Animation.ANIMATIONTYPE_FLOAT,
-                Animation.ANIMATIONLOOPMODE_CONSTANT,
-              );
-              const radiusKeys = [
-                { frame: 0, value: camera.radius },
-                { frame: frameCount, value: cfg.distance ?? 30 },
-              ];
-              radiusAnim.setKeys(radiusKeys);
-
-              scene.beginDirectAnimation(camera, [targetAnim, radiusAnim], 0, frameCount, false, 1);
-              await new Promise<void>((resolve, reject) => {
-                const timeout = setTimeout(resolve, duration * 1000);
-                if (!signal) return;
-                const onAbort = () => {
-                  clearTimeout(timeout);
-                  scene.stopAnimation(camera);
-                  reject(new Error("aborted"));
+        try {
+          for (const op of operations) {
+            throwIfAborted();
+            switch (op.type) {
+              case "camera": {
+                const cfg = op.config as {
+                  target: { x: number; y: number; z: number };
+                  distance: number;
+                  fov: number;
+                  duration: number;
+                  easing?: string;
                 };
-                if (signal.aborted) {
-                  onAbort();
-                  return;
-                }
-                signal.addEventListener("abort", onAbort, { once: true });
-              });
-              break;
+                const target = new Vector3(cfg.target.x, cfg.target.y, cfg.target.z);
+                const duration = cfg.duration ?? 0.8;
+                const frameCount = Math.max(1, Math.round(duration * 60));
+
+                // Animate target and radius using Babylon Animation.
+                const targetAnim = new Animation(
+                  "cameraTargetAnim",
+                  "target",
+                  60,
+                  Animation.ANIMATIONTYPE_VECTOR3,
+                  Animation.ANIMATIONLOOPMODE_CONSTANT,
+                );
+                const targetKeys = [
+                  { frame: 0, value: camera.target.clone() },
+                  { frame: frameCount, value: target },
+                ];
+                targetAnim.setKeys(targetKeys);
+
+                const radiusAnim = new Animation(
+                  "cameraRadiusAnim",
+                  "radius",
+                  60,
+                  Animation.ANIMATIONTYPE_FLOAT,
+                  Animation.ANIMATIONLOOPMODE_CONSTANT,
+                );
+                const radiusKeys = [
+                  { frame: 0, value: camera.radius },
+                  { frame: frameCount, value: cfg.distance ?? 30 },
+                ];
+                radiusAnim.setKeys(radiusKeys);
+
+                scene.beginDirectAnimation(
+                  camera,
+                  [targetAnim, radiusAnim],
+                  0,
+                  frameCount,
+                  false,
+                  1,
+                );
+                await new Promise<void>((resolve, reject) => {
+                  const timeout = setTimeout(resolve, duration * 1000);
+                  if (!signal) return;
+                  const onAbort = () => {
+                    clearTimeout(timeout);
+                    scene.stopAnimation(camera);
+                    reject(new Error("aborted"));
+                  };
+                  if (signal.aborted) {
+                    onAbort();
+                    return;
+                  }
+                  signal.addEventListener("abort", onAbort, { once: true });
+                });
+                break;
+              }
+              case "clipping":
+                console.warn("[BabylonScene] clipping execution not implemented in admin preview");
+                break;
+              case "visibility": {
+                await executeVisibility(op, loadedModelsRef.current, signal);
+                break;
+              }
+              case "postprocess":
+                console.warn(
+                  "[BabylonScene] postprocess execution not implemented in admin preview",
+                );
+                break;
+              default:
+                break;
             }
-            case "clipping":
-              console.warn("[BabylonScene] clipping execution not implemented in admin preview");
-              break;
-            case "visibility": {
-              await executeVisibility(op, loadedModelsRef.current, signal);
-              break;
-            }
-            case "postprocess":
-              console.warn("[BabylonScene] postprocess execution not implemented in admin preview");
-              break;
-            default:
-              break;
           }
+        } finally {
+          // Preview is non-destructive: restore camera and mesh visibility
+          // whether the sequence completed, was cancelled, or threw.
+          restoreSceneSnapshot(camera, snapshot);
         }
       },
     }));
@@ -769,4 +786,72 @@ async function executeVisibility(
       mesh.isVisible = next;
     });
   });
+}
+
+// ========================================
+// Scene Snapshot Helpers
+// ========================================
+
+interface SceneSnapshot {
+  camera: {
+    target: Vector3;
+    radius: number;
+    alpha: number;
+    beta: number;
+    orthoLeft: number;
+    orthoRight: number;
+    orthoTop: number;
+    orthoBottom: number;
+  };
+  meshes: Array<{
+    mesh: AbstractMesh;
+    isVisible: boolean;
+    isEnabled: boolean;
+  }>;
+}
+
+function captureSceneSnapshot(
+  camera: ArcRotateCamera,
+  loadedModels: Map<string, { root: TransformNode; modelUrl: string; meshes: AbstractMesh[] }>,
+): SceneSnapshot {
+  const meshes: SceneSnapshot["meshes"] = [];
+  loadedModels.forEach(({ meshes: modelMeshes }) => {
+    modelMeshes.forEach((mesh) => {
+      meshes.push({
+        mesh,
+        isVisible: mesh.isVisible,
+        isEnabled: mesh.isEnabled(),
+      });
+    });
+  });
+
+  return {
+    camera: {
+      target: camera.target.clone(),
+      radius: camera.radius,
+      alpha: camera.alpha,
+      beta: camera.beta,
+      orthoLeft: camera.orthoLeft,
+      orthoRight: camera.orthoRight,
+      orthoTop: camera.orthoTop,
+      orthoBottom: camera.orthoBottom,
+    },
+    meshes,
+  };
+}
+
+function restoreSceneSnapshot(camera: ArcRotateCamera, snapshot: SceneSnapshot) {
+  snapshot.meshes.forEach(({ mesh, isVisible, isEnabled }) => {
+    mesh.setEnabled(isEnabled);
+    mesh.isVisible = isVisible;
+  });
+
+  camera.target = snapshot.camera.target;
+  camera.radius = snapshot.camera.radius;
+  camera.alpha = snapshot.camera.alpha;
+  camera.beta = snapshot.camera.beta;
+  camera.orthoLeft = snapshot.camera.orthoLeft;
+  camera.orthoRight = snapshot.camera.orthoRight;
+  camera.orthoTop = snapshot.camera.orthoTop;
+  camera.orthoBottom = snapshot.camera.orthoBottom;
 }

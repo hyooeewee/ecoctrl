@@ -3,6 +3,7 @@
 // ========================================
 
 import React, { useEffect, useRef, useMemo, useState } from "react";
+import { flushSync } from "react-dom";
 import { File, Upload, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { Button } from "@ecoctrl/ui";
@@ -209,20 +210,29 @@ export default function DashboardModel() {
 
     const controller = new AbortController();
     previewAbortRef.current = controller;
-    setPreviewing(true);
+    // Force the button to render as "取消执行" immediately so users can cancel
+    // even for very fast operation sequences.
+    flushSync(() => setPreviewing(true));
 
+    const startTime = performance.now();
     try {
       await sceneRef.current?.executeOperations(selectedLabel.operations, controller.signal);
     } catch (err) {
-      if (err instanceof Error && err.message === "aborted") {
-        // Cancellation is intentional — no user-facing error.
-      } else {
+      if (err instanceof Error && err.message !== "aborted") {
         console.error("[DashboardModel] preview operations failed:", err);
       }
-    } finally {
-      setPreviewing(false);
-      previewAbortRef.current = null;
     }
+
+    // Keep the executing state visible for at least 500ms so the state change
+    // is not a sub-frame flash.
+    const elapsed = performance.now() - startTime;
+    const minDuration = 500;
+    if (elapsed < minDuration) {
+      await new Promise((resolve) => setTimeout(resolve, minDuration - elapsed));
+    }
+
+    setPreviewing(false);
+    previewAbortRef.current = null;
   };
 
   // ========================================
