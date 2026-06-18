@@ -302,7 +302,7 @@ export default function DashboardModel() {
                                   key={file.id}
                                   className="rounded-md border bg-muted/30 px-3 py-2"
                                 >
-                                  <div className="flex items-center gap-2">
+                                  <div className="group flex items-center gap-2">
                                     <input
                                       type="checkbox"
                                       checked={isVisible}
@@ -312,49 +312,51 @@ export default function DashboardModel() {
                                     />
                                     <File size={14} className="shrink-0 text-blue-500" />
                                     <span className="flex-1 truncate text-xs">{fileName}</span>
-                                    <select
-                                      value={file.priority ?? "background"}
-                                      onChange={(e) =>
-                                        updateFilePriority(
-                                          file.id,
-                                          e.target.value as "critical" | "background",
-                                        )
-                                      }
-                                      className="h-5 shrink-0 rounded border bg-background px-1 text-[10px] outline-none"
-                                      title="加载优先级"
-                                    >
-                                      <option value="critical">优先加载</option>
-                                      <option value="background">后台加载</option>
-                                    </select>
                                     <Badge variant="secondary" className="shrink-0 text-[10px]">
                                       {ext}
                                     </Badge>
-                                    <button
-                                      type="button"
-                                      disabled={index === 0}
-                                      className="rounded p-0.5 text-muted-foreground hover:bg-muted disabled:opacity-30"
-                                      onClick={() => moveFile(file.id, "up")}
-                                      title="上移"
-                                    >
-                                      ↑
-                                    </button>
-                                    <button
-                                      type="button"
-                                      disabled={index === existingFiles.length - 1}
-                                      className="rounded p-0.5 text-muted-foreground hover:bg-muted disabled:opacity-30"
-                                      onClick={() => moveFile(file.id, "down")}
-                                      title="下移"
-                                    >
-                                      ↓
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="ml-1 rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                                      onClick={() => deleteFile(file.id)}
-                                      title="删除"
-                                    >
-                                      <Trash2 size={12} />
-                                    </button>
+                                    <div className="hidden shrink-0 items-center gap-1 group-hover:flex">
+                                      <select
+                                        value={file.priority ?? "background"}
+                                        onChange={(e) =>
+                                          updateFilePriority(
+                                            file.id,
+                                            e.target.value as "critical" | "background",
+                                          )
+                                        }
+                                        className="h-5 shrink-0 rounded border bg-background px-1 text-[10px] outline-none"
+                                        title="加载优先级"
+                                      >
+                                        <option value="critical">优先加载</option>
+                                        <option value="background">后台加载</option>
+                                      </select>
+                                      <button
+                                        type="button"
+                                        disabled={index === 0}
+                                        className="rounded p-0.5 text-muted-foreground hover:bg-muted disabled:opacity-30"
+                                        onClick={() => moveFile(file.id, "up")}
+                                        title="上移"
+                                      >
+                                        ↑
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={index === existingFiles.length - 1}
+                                        className="rounded p-0.5 text-muted-foreground hover:bg-muted disabled:opacity-30"
+                                        onClick={() => moveFile(file.id, "down")}
+                                        title="下移"
+                                      >
+                                        ↓
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                        onClick={() => deleteFile(file.id)}
+                                        title="删除"
+                                      >
+                                        <Trash2 size={12} />
+                                      </button>
+                                    </div>
                                   </div>
                                   {isLoading && (
                                     <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-muted">
