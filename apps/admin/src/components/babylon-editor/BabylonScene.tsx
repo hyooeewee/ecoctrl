@@ -59,6 +59,7 @@ export interface BabylonSceneRef {
 }
 
 interface VisibilityConfig {
+  targetModelFileId?: string;
   targets: string[];
   action: "show" | "hide" | "toggle";
   duration?: number;
@@ -201,11 +202,10 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
               console.warn("[BabylonScene] clipping execution not implemented in admin preview");
               break;
             case "visibility":
-              await executeVisibility(
-                scene,
-                loadedModelsRef.current,
-                op.config as VisibilityConfig,
-              );
+              await executeVisibility(scene, loadedModelsRef.current, {
+                targetModelFileId: op.targetModelFileId,
+                ...(op.config as VisibilityConfig),
+              });
               break;
             case "postprocess":
               console.warn("[BabylonScene] postprocess execution not implemented in admin preview");
@@ -450,6 +450,12 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
               const merged = Mesh.MergeMeshes(mergeable, true, true, undefined, true, true);
               if (merged) {
                 merged.parent = result.modelRoot;
+                // Preserve original mesh names so visibility actions can still
+                // target individual parts after merging.
+                merged.metadata = {
+                  ...merged.metadata,
+                  originalMeshNames: mergeable.map((m) => m.name),
+                };
                 result.meshes = [merged];
               }
             } catch {
@@ -571,8 +577,10 @@ async function executeVisibility(
   config: VisibilityConfig,
 ): Promise<void> {
   const keywords = config.targets.map((t) => t.toLowerCase()).filter(Boolean);
-  if (keywords.length === 0) {
-    console.warn("[BabylonScene] visibility: no target keywords provided");
+  const hasTargetModel = config.targetModelFileId !== undefined && config.targetModelFileId !== "";
+
+  if (!hasTargetModel && keywords.length === 0) {
+    console.warn("[BabylonScene] visibility: no target model file or keywords provided");
     return;
   }
 
@@ -581,12 +589,25 @@ async function executeVisibility(
   const matched: { mesh: AbstractMesh; targetVis: number }[] = [];
 
   loadedModels.forEach(({ meshes, modelUrl }, id) => {
+    // When a target model file is selected, restrict to that model.
+    if (hasTargetModel && id !== config.targetModelFileId) return;
+
     const modelBasename = modelUrl.split("/").pop()?.toLowerCase() ?? "";
     meshes.forEach((mesh) => {
-      const nameLower = mesh.name.toLowerCase();
-      const isMatch = keywords.some(
-        (k) => nameLower.includes(k) || id.toLowerCase().includes(k) || modelBasename.includes(k),
-      );
+      const originalNames: string[] = Array.isArray(mesh.metadata?.originalMeshNames)
+        ? mesh.metadata.originalMeshNames
+        : [];
+      const namesToCheck = [mesh.name, ...originalNames].map((n) => n.toLowerCase());
+
+      // Match by keywords if provided; otherwise match every mesh in the target model.
+      const isMatch =
+        keywords.length === 0 ||
+        keywords.some(
+          (k) =>
+            namesToCheck.some((n) => n.includes(k)) ||
+            id.toLowerCase().includes(k) ||
+            modelBasename.includes(k),
+        );
       if (!isMatch) return;
 
       const current = mesh.visibility;
@@ -608,9 +629,32 @@ async function executeVisibility(
   });
 
   if (matched.length === 0) {
-    console.warn("[BabylonScene] visibility: no meshes matched keywords", config.targets);
+    const allNames: string[] = [];
+    loadedModels.forEach(({ meshes }, id) => {
+      if (hasTargetModel && id !== config.targetModelFileId) return;
+      meshes.forEach((mesh) => {
+        allNames.push(mesh.name);
+        if (Array.isArray(mesh.metadata?.originalMeshNames)) {
+          allNames.push(...mesh.metadata.originalMeshNames);
+        }
+      });
+    });
+    console.warn("[BabylonScene] visibility: no meshes matched", {
+      targetModelFileId: config.targetModelFileId,
+      targets: config.targets,
+      action: config.action,
+      loadedMeshNames: allNames,
+    });
     return;
   }
+
+  console.log("[BabylonScene] visibility: matched meshes", {
+    targetModelFileId: config.targetModelFileId,
+    targets: config.targets,
+    action: config.action,
+    count: matched.length,
+    names: matched.map(({ mesh }) => mesh.name),
+  });
 
   for (const { mesh, targetVis } of matched) {
     const anim = new Animation(
