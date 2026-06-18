@@ -189,12 +189,13 @@ export async function executeWorkflow(
   dryRun = false,
   workflowId = "unknown",
   executionId = "unknown",
+  prePopulatedOutputs?: Map<string, Record<string, unknown>>,
   callbacks: ExecutionCallbacks = {},
 ): Promise<ExecutionResult> {
   const ctx: ExecutionContext = {
     triggerData,
     variables: new Map(),
-    nodeOutputs: new Map(),
+    nodeOutputs: new Map(prePopulatedOutputs ?? []),
     env: envVars,
     secrets,
   };

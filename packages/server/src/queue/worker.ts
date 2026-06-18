@@ -80,6 +80,7 @@ async function processJob(job: Job<ExecutionJobData>): Promise<void> {
       false,
       workflowId,
       executionId,
+      undefined,
       {
         onNodeLog: async (log) => {
           await publishWorkflowNodeStatus(

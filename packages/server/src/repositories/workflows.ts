@@ -1,7 +1,7 @@
 import { eq, and, desc, count, inArray } from "drizzle-orm";
 import { db } from "@/config/database";
 import { workflows, workflowExecutions } from "@/schemas/workflows";
-import type { WorkflowDSL } from "@/engine/types";
+import type { WorkflowDSL, NodeLogEntry } from "@/engine/types";
 
 export interface WorkflowListItem {
   id: string;
@@ -235,6 +235,33 @@ export async function findRecentExecutions(
     return query.where(whereClause);
   }
   return query;
+}
+
+export async function findLatestNodeOutput(
+  workflowId: string,
+  nodeId: string,
+): Promise<Record<string, unknown> | null> {
+  const executions = await db
+    .select({ nodeLogs: workflowExecutions.nodeLogs })
+    .from(workflowExecutions)
+    .where(
+      and(
+        eq(workflowExecutions.workflowId, workflowId),
+        eq(workflowExecutions.status, "completed"),
+      ),
+    )
+    .orderBy(desc(workflowExecutions.createdAt))
+    .limit(10);
+
+  for (const row of executions) {
+    const logs = (row.nodeLogs ?? []) as NodeLogEntry[];
+    const log = logs.find((entry) => entry.nodeId === nodeId && entry.status === "completed");
+    if (log) {
+      return log.output ?? {};
+    }
+  }
+
+  return null;
 }
 
 export async function deleteExecution(id: string): Promise<void> {

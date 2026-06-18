@@ -19,6 +19,7 @@ import {
 import { triggerEngine } from "@/engine/trigger";
 import { validateDsl } from "@/engine/validator";
 import { executeWorkflow } from "@/engine/executor";
+import { resolveUpstreamOutputs } from "@/engine/upstream-resolver";
 import { splitEnvVars, mergeServerEnv } from "@/engine/env-utils";
 import type { WorkflowDSL } from "@/engine/types";
 
@@ -292,6 +293,25 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
       const body = (request.body as { data?: Record<string, unknown> }) ?? {};
       const query = request.query as { nodeId?: string };
 
+      const serverEnv: Record<string, string> = {};
+      const allowed = [
+        "SMTP_HOST",
+        "SMTP_PORT",
+        "SMTP_USER",
+        "SMTP_PASS",
+        "SMTP_SECURE",
+        "DATABASE_URL",
+        "JWT_SECRET",
+        "CORS_ORIGIN",
+      ];
+      for (const key of allowed) {
+        const value = process.env[key];
+        if (value) serverEnv[key] = value;
+      }
+
+      const { env: workflowEnv, secrets } = splitEnvVars(workflow.dsl as WorkflowDSL);
+      const mergedEnv = mergeServerEnv(serverEnv, workflowEnv);
+
       let dsl = workflow.dsl as WorkflowDSL;
 
       // Single-node test: build a temporary DSL with start -> target -> end
@@ -321,50 +341,70 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
           });
         }
 
-        const startNode = dsl.nodes.find((n) => n.type === "start") ?? {
-          id: "start",
-          type: "start",
-          name: "开始",
-          config: {},
-        };
-        const endNode = dsl.nodes.find((n) => n.type === "end") ?? {
-          id: "end",
-          type: "end",
-          name: "结束",
-          config: {},
-        };
+        try {
+          const { nodeOutputs, nodeLogs: upstreamLogs } = await resolveUpstreamOutputs(
+            id,
+            targetNode.id,
+            workflow.dsl as WorkflowDSL,
+            (request.server as any).pluginRegistry,
+            mergedEnv,
+            secrets,
+            true,
+            { ...body.data, source: "test" },
+          );
 
-        dsl = {
-          version: "1.0",
-          trigger: { type: "manual", config: {} },
-          nodes: [startNode, targetNode, endNode],
-          edges: [
-            { id: `e-start-${targetNode.id}`, source: "start", target: targetNode.id },
-            { id: `e-${targetNode.id}-end`, source: targetNode.id, target: "end" },
-          ],
-          envVars: dsl.envVars,
-          settings: dsl.settings,
-        };
+          const startNode = dsl.nodes.find((n) => n.type === "start") ?? {
+            id: "start",
+            type: "start",
+            name: "开始",
+            config: {},
+          };
+          const endNode = dsl.nodes.find((n) => n.type === "end") ?? {
+            id: "end",
+            type: "end",
+            name: "结束",
+            config: {},
+          };
+
+          dsl = {
+            version: "1.0",
+            trigger: { type: "manual", config: {} },
+            nodes: [startNode, targetNode, endNode],
+            edges: [
+              { id: `e-start-${targetNode.id}`, source: "start", target: targetNode.id },
+              { id: `e-${targetNode.id}-end`, source: targetNode.id, target: "end" },
+            ],
+            envVars: dsl.envVars,
+            settings: dsl.settings,
+          };
+
+          const result = await executeWorkflow(
+            dsl,
+            { ...body.data, source: "test" },
+            mergedEnv,
+            secrets,
+            (request.server as any).pluginRegistry,
+            true,
+            id,
+            "test",
+            nodeOutputs,
+          );
+
+          return reply.send({
+            status: result.status,
+            output: result.output,
+            nodeLogs: [...upstreamLogs, ...result.nodeLogs],
+            dryRun: true,
+          });
+        } catch (err) {
+          const msg = (err as Error).message;
+          request.log.warn(
+            { err, workflowId: id, nodeId: query.nodeId },
+            "single-node test failed",
+          );
+          return reply.status(400).send({ error: msg });
+        }
       }
-
-      const serverEnv: Record<string, string> = {};
-      const allowed = [
-        "SMTP_HOST",
-        "SMTP_PORT",
-        "SMTP_USER",
-        "SMTP_PASS",
-        "SMTP_SECURE",
-        "DATABASE_URL",
-        "JWT_SECRET",
-        "CORS_ORIGIN",
-      ];
-      for (const key of allowed) {
-        const value = process.env[key];
-        if (value) serverEnv[key] = value;
-      }
-
-      const { env: workflowEnv, secrets } = splitEnvVars(dsl);
-      const mergedEnv = mergeServerEnv(serverEnv, workflowEnv);
 
       const result = await executeWorkflow(
         dsl,
