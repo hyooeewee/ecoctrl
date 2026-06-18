@@ -22,6 +22,7 @@ import {
   Label,
 } from "@ecoctrl/ui";
 import { Eye, EyeOff, LogIn, RotateCcw, Shield } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const IFRAME_NAME = "advanced-management-frame";
 const IFRAME_URL = import.meta.env.ADVANCED_MANAGEMENT_URL || "http://localhost:5001/";
@@ -94,7 +95,10 @@ export default function AdvancedManagement() {
       <iframe
         key={iframeKey}
         allow="fullscreen"
-        className={`h-full w-full border-0 ${submitted ? "block" : "hidden"}`}
+        className={cn(
+          "h-full w-full border-0 transition-opacity",
+          submitted ? "opacity-100" : "pointer-events-none absolute inset-0 opacity-0",
+        )}
         name={IFRAME_NAME}
         onLoad={() => setIsLoading(false)}
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
