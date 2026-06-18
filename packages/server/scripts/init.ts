@@ -278,7 +278,7 @@ async function initDashboardWidgets(force = false) {
 
   const widgets = [
     {
-      titleKey: "totalEnergy",
+      metricKey: "energy-total",
       icon: "Wind",
       layoutX: 4,
       layoutY: 1,
@@ -298,7 +298,7 @@ async function initDashboardWidgets(force = false) {
       sortOrder: 0,
     },
     {
-      titleKey: "todayCost",
+      metricKey: "energy-cost",
       icon: "Banknote",
       layoutX: 1,
       layoutY: 1,
@@ -318,7 +318,7 @@ async function initDashboardWidgets(force = false) {
       sortOrder: 1,
     },
     {
-      titleKey: "carbonEmission",
+      metricKey: "carbon-emission",
       icon: "Leaf",
       layoutX: 1,
       layoutY: 3,
@@ -338,7 +338,7 @@ async function initDashboardWidgets(force = false) {
       sortOrder: 2,
     },
     {
-      titleKey: "energyIntensity",
+      metricKey: "energy-intensity",
       icon: "Gauge",
       layoutX: 1,
       layoutY: 5,
@@ -358,7 +358,7 @@ async function initDashboardWidgets(force = false) {
       sortOrder: 3,
     },
     {
-      titleKey: "loadStatus",
+      metricKey: "load-status",
       icon: "Activity",
       layoutX: 1,
       layoutY: 7,
@@ -378,7 +378,7 @@ async function initDashboardWidgets(force = false) {
       sortOrder: 4,
     },
     {
-      titleKey: "renewableRate",
+      metricKey: "renewable-rate",
       icon: "Sun",
       layoutX: 4,
       layoutY: 3,
@@ -398,7 +398,7 @@ async function initDashboardWidgets(force = false) {
       sortOrder: 5,
     },
     {
-      titleKey: "weather",
+      metricKey: "weather",
       icon: "Cloud",
       layoutX: 14,
       layoutY: 1,
@@ -410,7 +410,7 @@ async function initDashboardWidgets(force = false) {
       sortOrder: 6,
     },
     {
-      titleKey: "charts.trendTitle",
+      metricKey: "energy-chart",
       icon: "TrendingUp",
       layoutX: 4,
       layoutY: 6,
@@ -433,7 +433,7 @@ async function initDashboardWidgets(force = false) {
       sortOrder: 7,
     },
     {
-      titleKey: "charts.breakdownTitle",
+      metricKey: "energy-breakdown",
       icon: "ChartPie",
       layoutX: 10,
       layoutY: 6,
@@ -453,7 +453,7 @@ async function initDashboardWidgets(force = false) {
       sortOrder: 8,
     },
     {
-      titleKey: "alerts.title",
+      metricKey: "alerts-list",
       icon: "Bell",
       layoutX: 14,
       layoutY: 7,
@@ -489,7 +489,7 @@ async function initDashboardWidgets(force = false) {
       sortOrder: 9,
     },
     {
-      titleKey: "devices.title",
+      metricKey: "devices-status",
       icon: "Monitor",
       layoutX: 14,
       layoutY: 5,
@@ -508,7 +508,7 @@ async function initDashboardWidgets(force = false) {
       sortOrder: 10,
     },
     {
-      titleKey: "ai.title",
+      metricKey: "ai-suggestions",
       icon: "BrainCircuit",
       layoutX: 14,
       layoutY: 3,

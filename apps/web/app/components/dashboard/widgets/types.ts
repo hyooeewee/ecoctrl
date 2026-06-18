@@ -1,5 +1,5 @@
 // Widget system types — aligned with backend JSON contract
-// Backend controls: id, titleKey, icon, layout, data
+// Backend controls: id, metricKey, icon, layout, data
 // Frontend controls: rendering based on data shape
 
 export interface WidgetLayout {
@@ -58,7 +58,7 @@ export type WidgetData = StatData | ChartData | ListData | WeatherData;
 
 export interface WidgetConfig {
   id: string;
-  titleKey: string;
+  metricKey: string;
   icon: string;
   layoutX: number;
   layoutY: number;

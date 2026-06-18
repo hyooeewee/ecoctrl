@@ -22,7 +22,7 @@ export function useLocale() {
 
 /**
  * Resolve a dot-path i18n key against a locale object.
- * Example: getNestedLocaleValue(t, "cards.totalEnergy") → "今日总用电"
+ * Example: getNestedLocaleValue(t, "widgets.weather") → "天气"
  */
 export function getNestedLocaleValue(t: Locale, key: string): string | undefined {
   const resolve = (parts: string[]): string | undefined => {
@@ -37,14 +37,13 @@ export function getNestedLocaleValue(t: Locale, key: string): string | undefined
     return typeof obj === "string" ? obj : undefined;
   };
 
-  // Try exact path first
-  const exact = resolve(key.split("."));
-  if (exact !== undefined) return exact;
+  return resolve(key.split("."));
+}
 
-  // Fallback: bare keys like "totalEnergy" may live under "cards" namespace
-  if (!key.includes(".")) {
-    return resolve(["cards", key]);
-  }
-
-  return undefined;
+/**
+ * Resolve a widget title from its metric key.
+ * Falls back to the raw metric key if no translation is found.
+ */
+export function getWidgetTitle(t: Locale, metricKey: string): string {
+  return getNestedLocaleValue(t, `widgets.${metricKey}`) ?? metricKey;
 }

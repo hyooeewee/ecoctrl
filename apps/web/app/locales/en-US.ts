@@ -125,24 +125,34 @@ export const enUS = {
   // ── Left Stat Cards ────────────────────────────────────────────────────────
   cards: {
     noData: "No data",
-    totalEnergy: "Today's Total Power",
     totalEnergyFooter: "24h cumulative usage",
 
-    carbonEmission: "Today's Carbon Emission",
     carbonFooter: "7-day comparison trend",
 
-    energyIntensity: "Energy Intensity",
     intensityFooter: "Continuous decline trend ↓",
 
-    todayCost: "Today's Electricity Cost",
     costUnit: "CNY",
     costFooter: "Compared to yesterday baseline",
 
-    renewableRate: "Renewable Energy Ratio",
     renewableTarget: "Target: 90%",
 
-    loadStatus: "Load Status",
     loadNormal: "● Normal",
+  },
+
+  // ── Widget Titles ───────────────────────────────────────────────────────────
+  widgets: {
+    "energy-total": "Today's Total Power",
+    "energy-cost": "Today's Electricity Cost",
+    "carbon-emission": "Today's Carbon Emission",
+    "energy-intensity": "Energy Intensity",
+    "load-status": "Load Status",
+    "renewable-rate": "Renewable Energy Ratio",
+    weather: "Weather",
+    "energy-chart": "24h Energy Trend",
+    "energy-breakdown": "Energy Breakdown",
+    "alerts-list": "Real-time Alerts",
+    "devices-status": "Device Status",
+    "ai-suggestions": "AI Optimization",
   },
 
   // ── Control Buttons ────────────────────────────────────────────────────────
@@ -166,9 +176,7 @@ export const enUS = {
   // ── Bottom Charts ──────────────────────────────────────────────────────────
   charts: {
     noData: "No data",
-    trendTitle: "24h Energy Trend",
     trendTimeUnit: "h",
-    breakdownTitle: "Energy Breakdown",
     hvac: "HVAC",
     lighting: "Lighting",
     equipment: "Equipment",
@@ -177,7 +185,6 @@ export const enUS = {
 
   // ── Right Panel — Device Status ────────────────────────────────────────────
   devices: {
-    title: "Device Status",
     airConditioning: "Air Conditioning",
     lighting: "Lighting System",
     elevators: "Elevators",
@@ -186,18 +193,7 @@ export const enUS = {
 
   // ── Right Panel — Real-time Alerts ─────────────────────────────────────────
   alerts: {
-    title: "Real-time Alerts",
     activeSuffix: "Active",
-  },
-
-  // ── Right Panel — AI Optimization Suggestions ──────────────────────────────
-  ai: {
-    title: "AI Optimization",
-  },
-
-  // ── Weather Widget ─────────────────────────────────────────────────────────
-  weather: {
-    title: "Weather",
   },
 
   // ── Label Info Panel ───────────────────────────────────────────────────────

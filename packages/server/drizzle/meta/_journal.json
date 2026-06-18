@@ -15,6 +15,13 @@
       "when": 1780807813533,
       "tag": "0001_bent_ravenous",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781747185454,
+      "tag": "0002_demonic_inhumans",
+      "breakpoints": true
     }
   ]
 }

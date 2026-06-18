@@ -125,24 +125,34 @@ export const zhCN = {
   // ── 左侧统计卡片 ───────────────────────────────────────────────────────────
   cards: {
     noData: "无数据",
-    totalEnergy: "今日总用电",
     totalEnergyFooter: "24 小时累计用量",
 
-    carbonEmission: "今日碳排放",
     carbonFooter: "7 天对比趋势",
 
-    energyIntensity: "能耗强度",
     intensityFooter: "持续下降趋势 ↓",
 
-    todayCost: "今日电费",
     costUnit: "元",
     costFooter: "对比昨日基准",
 
-    renewableRate: "可再生能源占比",
     renewableTarget: "目标：90%",
 
-    loadStatus: "负载状态",
     loadNormal: "● 正常",
+  },
+
+  // ── Widget Titles ───────────────────────────────────────────────────────────
+  widgets: {
+    "energy-total": "今日总用电",
+    "energy-cost": "今日电费",
+    "carbon-emission": "今日碳排放",
+    "energy-intensity": "能耗强度",
+    "load-status": "负载状态",
+    "renewable-rate": "可再生能源占比",
+    weather: "天气",
+    "energy-chart": "24 小时能耗趋势",
+    "energy-breakdown": "能耗分布",
+    "alerts-list": "实时告警",
+    "devices-status": "设备状态",
+    "ai-suggestions": "AI 优化建议",
   },
 
   // ── 控制按钮 ───────────────────────────────────────────────────────────────
@@ -166,9 +176,7 @@ export const zhCN = {
   // ── 底部图表 ───────────────────────────────────────────────────────────────
   charts: {
     noData: "无数据",
-    trendTitle: "24 小时能耗趋势",
     trendTimeUnit: "时",
-    breakdownTitle: "能耗分布",
     hvac: "暖通空调",
     lighting: "照明",
     equipment: "设备",
@@ -177,7 +185,6 @@ export const zhCN = {
 
   // ── 右侧面板 — 设备状态 ────────────────────────────────────────────────────
   devices: {
-    title: "设备状态",
     airConditioning: "空调系统",
     lighting: "照明系统",
     elevators: "电梯",
@@ -186,18 +193,7 @@ export const zhCN = {
 
   // ── 右侧面板 — 实时告警 ────────────────────────────────────────────────────
   alerts: {
-    title: "实时告警",
     activeSuffix: "条激活",
-  },
-
-  // ── 右侧面板 — AI 优化建议 ─────────────────────────────────────────────────
-  ai: {
-    title: "AI 优化建议",
-  },
-
-  // ── 天气 Widget ────────────────────────────────────────────────────────────
-  weather: {
-    title: "天气",
   },
 
   // ── 标签介绍面板 ───────────────────────────────────────────────────────────
