@@ -37,15 +37,9 @@ interface ModelEditorTopBarProps {
   onBack: () => void;
   onSave: () => Promise<void>;
   saving: boolean;
-  isDirty: boolean;
 }
 
-export default function ModelEditorTopBar({
-  onBack,
-  onSave,
-  saving,
-  isDirty,
-}: ModelEditorTopBarProps) {
+export default function ModelEditorTopBar({ onBack, onSave, saving }: ModelEditorTopBarProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [avatarVersion, setAvatarVersion] = useState(0);
   const [theme, setTheme] = useState<Theme>("system");
@@ -106,9 +100,6 @@ export default function ModelEditorTopBar({
           success="已保存"
           error="保存失败"
         />
-        <span className="text-xs text-muted-foreground">
-          {saving ? "保存中..." : isDirty ? "未保存" : "已保存"}
-        </span>
 
         <Button
           variant="ghost"
