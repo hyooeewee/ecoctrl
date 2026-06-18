@@ -7,7 +7,7 @@
 // response, which either redirects to the app on success or shows the login
 // error page on failure.
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Button,
   Card,
@@ -25,8 +25,12 @@ import { Eye, EyeOff, LogIn, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const IFRAME_NAME = "advanced-management-frame";
-const IFRAME_URL = import.meta.env.ADVANCED_MANAGEMENT_URL || "http://localhost:5001/";
-const LOGIN_URL = new URL("_webtalk/_cur/loginA.php", IFRAME_URL).href;
+const IFRAME_URL = import.meta.env.ADVANCED_MANAGEMENT_URL;
+const LOGIN_URL = IFRAME_URL ? new URL("_webtalk/_cur/loginA.php", IFRAME_URL).href : "";
+const RUNFRAME_URL = IFRAME_URL
+  ? new URL("_webtalk/_cur/_frame/runframe.php", IFRAME_URL).href
+  : "";
+const LOGIN_TIMEOUT_MS = 10_000;
 
 export default function AdvancedManagement() {
   const [username, setUsername] = useState("");
@@ -37,63 +41,131 @@ export default function AdvancedManagement() {
   const [submitted, setSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const formContainerRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  const cleanup = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    if (formContainerRef.current) {
+      formContainerRef.current.innerHTML = "";
+    }
+  };
+
+  const resetForm = () => {
+    cleanup();
+    setSubmitted(false);
+    setIsLoading(false);
+    setIsSubmitting(false);
+  };
+
+  const handleIframeLoad = () => {
+    if (!iframeRef.current) return;
+
+    try {
+      const href = iframeRef.current.contentWindow?.location.href ?? "";
+      if (href.includes("runframe.php")) {
+        setIsLoading(false);
+        cleanup();
+      }
+    } catch (err) {
+      // The iframe may still be cross-origin in some deployment scenarios;
+      // fall back to hiding the spinner on any load event.
+      console.error("[AdvancedManagement] failed to read iframe location:", err);
+      setIsLoading(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    if (!username.trim() || !password.trim()) {
+    if (!IFRAME_URL || !LOGIN_URL || !RUNFRAME_URL) {
+      setError("未配置 ADVANCED_MANAGEMENT_URL");
+      return;
+    }
+
+    const user = username.trim();
+    const pwd = password.trim();
+
+    if (!user || !pwd) {
       setError("请输入用户名和密码");
       return;
     }
 
     setIsSubmitting(true);
     setIsLoading(true);
+    setSubmitted(true);
 
-    try {
-      const form = document.createElement("form");
-      form.method = "POST";
-      form.action = LOGIN_URL;
-      form.target = IFRAME_NAME;
-      form.style.display = "none";
-
-      const userInput = document.createElement("input");
-      userInput.type = "hidden";
-      userInput.name = "userID";
-      userInput.value = username.trim();
-      form.appendChild(userInput);
-
-      const pwdInput = document.createElement("input");
-      pwdInput.type = "hidden";
-      pwdInput.name = "pwdID";
-      pwdInput.value = password;
-      form.appendChild(pwdInput);
-
-      document.body.appendChild(form);
-      form.submit();
-      document.body.removeChild(form);
-
-      setSubmitted(true);
-    } catch (err) {
-      console.error("[AdvancedManagement] form submit failed:", err);
-      setError("登录提交失败，请重试");
-      setIsLoading(false);
-    } finally {
-      setIsSubmitting(false);
+    // Remove any leftover form from a previous attempt.
+    if (formContainerRef.current) {
+      formContainerRef.current.innerHTML = "";
     }
+
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = LOGIN_URL;
+    form.target = IFRAME_NAME;
+    form.style.display = "none";
+
+    const userInput = document.createElement("input");
+    userInput.type = "hidden";
+    userInput.name = "userID";
+    userInput.value = user;
+    form.appendChild(userInput);
+
+    const pwdInput = document.createElement("input");
+    pwdInput.type = "hidden";
+    pwdInput.name = "pwdID";
+    pwdInput.value = password;
+    form.appendChild(pwdInput);
+
+    formContainerRef.current?.appendChild(form);
+    form.submit();
+
+    timeoutRef.current = setTimeout(() => {
+      try {
+        const href = iframeRef.current?.contentWindow?.location.href ?? "";
+        if (!href.includes("runframe.php")) {
+          setError("登录失败，请检查用户名和密码");
+          resetForm();
+        }
+      } catch (err) {
+        console.error("[AdvancedManagement] login timeout check failed:", err);
+        setError("登录状态检查失败，请重试");
+        resetForm();
+      }
+    }, LOGIN_TIMEOUT_MS);
+
+    setIsSubmitting(false);
   };
 
   return (
     <div className="bg-background relative h-full overflow-hidden">
+      <div ref={formContainerRef} className="hidden" />
+
       <iframe
+        ref={iframeRef}
         allow="fullscreen"
         className={cn(
           "h-full w-full border-0 transition-opacity",
           submitted ? "opacity-100" : "pointer-events-none absolute inset-0 opacity-0",
         )}
         name={IFRAME_NAME}
-        onLoad={() => setIsLoading(false)}
+        onLoad={handleIframeLoad}
         sandbox="allow-scripts allow-same-origin allow-forms"
-        src="about:blank"
+        src={submitted ? RUNFRAME_URL : "about:blank"}
         title="高级管理"
       />
 
