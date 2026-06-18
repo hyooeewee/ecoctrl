@@ -8,8 +8,20 @@
 // error page on failure.
 
 import React, { useState } from "react";
-import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from "@ecoctrl/ui";
-import { LogIn, RotateCcw, Shield } from "lucide-react";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+  Label,
+} from "@ecoctrl/ui";
+import { Eye, EyeOff, LogIn, RotateCcw, Shield } from "lucide-react";
 
 const IFRAME_NAME = "advanced-management-frame";
 const IFRAME_URL = import.meta.env.ADVANCED_MANAGEMENT_URL || "http://localhost:5001/";
@@ -18,6 +30,7 @@ const LOGIN_URL = new URL("_webtalk/_cur/loginA.php", IFRAME_URL).href;
 export default function AdvancedManagement() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -84,7 +97,7 @@ export default function AdvancedManagement() {
         className={`h-full w-full border-0 ${submitted ? "block" : "hidden"}`}
         name={IFRAME_NAME}
         onLoad={() => setIsLoading(false)}
-        sandbox="allow-scripts allow-same-origin allow-forms"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
         src="about:blank"
         title="高级管理"
       />
@@ -132,14 +145,26 @@ export default function AdvancedManagement() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="am-password">密码</Label>
-                  <Input
-                    autoComplete="current-password"
-                    id="am-password"
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="请输入密码"
-                    type="password"
-                    value={password}
-                  />
+                  <InputGroup>
+                    <InputGroupInput
+                      autoComplete="current-password"
+                      id="am-password"
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="请输入密码"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                    />
+                    <InputGroupAddon align="inline-end">
+                      <InputGroupButton
+                        onClick={() => setShowPassword((v) => !v)}
+                        size="icon-xs"
+                        type="button"
+                        variant="ghost"
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </InputGroupButton>
+                    </InputGroupAddon>
+                  </InputGroup>
                 </div>
                 {error && (
                   <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-500">
