@@ -285,7 +285,7 @@ module.exports = async function execute(ctx, api) {{
 
 {ret_block}
   }} catch (err) {{
-    api.log.error("[{plugin_id}] execution failed: ${{err.message}}");
+    api.log.error(`[{plugin_id}] execution failed: ${{err.message}}`);
     throw new Error("{name} 执行失败: " + err.message, {{ cause: err }});
   }}
 }};
