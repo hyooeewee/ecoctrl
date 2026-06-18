@@ -25,11 +25,23 @@ import { Eye, EyeOff, LogIn, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const IFRAME_NAME = "advanced-management-frame";
+const IS_DEV = import.meta.env.DEV;
 const IFRAME_URL = import.meta.env.ADVANCED_MANAGEMENT_URL;
-const LOGIN_URL = IFRAME_URL ? new URL("_webtalk/_cur/loginA.php", IFRAME_URL).href : "";
-const RUNFRAME_URL = IFRAME_URL
-  ? new URL("_webtalk/_cur/_frame/runframe.php", IFRAME_URL).href
-  : "";
+
+// In development, route WebTalk requests through the Vite dev proxy so the
+// iframe stays same-origin and cookies work. In production, use the configured
+// absolute URL (assumes admin and WebTalk are served from the same origin or
+// that third-party cookie settings permit it).
+const LOGIN_URL = IS_DEV
+  ? "/webtalk/_cur/loginA.php"
+  : IFRAME_URL
+    ? new URL("_webtalk/_cur/loginA.php", IFRAME_URL).href
+    : "";
+const RUNFRAME_URL = IS_DEV
+  ? "/webtalk/_cur/_frame/runframe.php"
+  : IFRAME_URL
+    ? new URL("_webtalk/_cur/_frame/runframe.php", IFRAME_URL).href
+    : "";
 const LOGIN_TIMEOUT_MS = 10_000;
 
 export default function AdvancedManagement() {
@@ -91,7 +103,7 @@ export default function AdvancedManagement() {
     e.preventDefault();
     setError("");
 
-    if (!IFRAME_URL || !LOGIN_URL || !RUNFRAME_URL) {
+    if (!IS_DEV && (!IFRAME_URL || !LOGIN_URL || !RUNFRAME_URL)) {
       setError("未配置 ADVANCED_MANAGEMENT_URL");
       return;
     }
