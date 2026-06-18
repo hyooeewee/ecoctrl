@@ -491,9 +491,9 @@ export default function DashboardModel() {
                           <ActionStepsConfig
                             operations={selectedLabel.operations}
                             modelFiles={existingFiles}
-                            availableLabelIds={labels
+                            availableLabels={labels
                               .filter((l) => l.id !== selectedLabelId)
-                              .map((l) => l.id)}
+                              .map((l) => ({ id: l.id, name: l.name }))}
                             onChange={updateLabelOperations}
                           />
                         </>
