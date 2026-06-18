@@ -101,7 +101,7 @@ export type WidgetData = z.infer<typeof WidgetDataSchema>;
 
 export const WidgetConfigSchema = z.object({
   id: z.string().uuid(),
-  titleKey: z.string(),
+  metricKey: z.string(),
   icon: z.string(),
   data: WidgetDataSchema,
 });

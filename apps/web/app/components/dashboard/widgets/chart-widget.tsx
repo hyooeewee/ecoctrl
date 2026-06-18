@@ -1,4 +1,4 @@
-import { getNestedLocaleValue, useLocale } from "~/locales";
+import { getNestedLocaleValue, getWidgetTitle, useLocale } from "~/locales";
 
 import { DynamicIcon } from "./dynamic-icon";
 import type { WidgetConfig, ChartData } from "./types";
@@ -11,7 +11,7 @@ interface ChartWidgetProps {
 
 export function ChartWidget({ widget, data }: ChartWidgetProps) {
   const t = useLocale();
-  const title = getNestedLocaleValue(t, widget.titleKey) ?? widget.titleKey;
+  const title = getWidgetTitle(t, widget.metricKey);
 
   if (data.chartType === "area" || data.chartType === "line" || data.chartType === "bar") {
     return (

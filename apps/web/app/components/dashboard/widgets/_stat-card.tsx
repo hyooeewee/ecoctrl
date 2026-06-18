@@ -3,14 +3,14 @@ import {
   GraphButtonBlockDetail,
 } from "~/components/dashboard/graph-button-block";
 import { ExpandableModal } from "~/components/expandable-modal";
-import { getNestedLocaleValue, useLocale } from "~/locales";
+import { getWidgetTitle, useLocale } from "~/locales";
 
 import { DynamicIcon } from "./dynamic-icon";
 import type { StatData, WidgetConfig } from "./types";
 
 export function StatCard({ widget, data }: { widget: WidgetConfig; data: StatData }) {
   const t = useLocale();
-  const title = getNestedLocaleValue(t, widget.titleKey) ?? widget.titleKey;
+  const title = getWidgetTitle(t, widget.metricKey);
   const footer = data.footerKey ? getNestedLocaleValue(t, data.footerKey) : undefined;
   const unit = getNestedLocaleValue(t, data.unit) ?? data.unit;
   const delta = data.delta ? (getNestedLocaleValue(t, data.delta) ?? data.delta) : undefined;

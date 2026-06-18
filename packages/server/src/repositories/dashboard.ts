@@ -193,7 +193,7 @@ export async function findDashboardData(userId?: string): Promise<{
 
     widgets.push({
       id: r.id,
-      titleKey: r.titleKey,
+      metricKey: r.metricKey,
       icon: r.icon,
       data,
       hidden: override?.hidden ?? r.hidden,

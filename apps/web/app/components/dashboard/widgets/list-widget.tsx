@@ -1,5 +1,5 @@
 import { cn } from "~/lib/utils";
-import { getNestedLocaleValue, useLocale } from "~/locales";
+import { getNestedLocaleValue, getWidgetTitle, useLocale } from "~/locales";
 
 import { DynamicIcon } from "./dynamic-icon";
 import type { WidgetConfig, ListData } from "./types";
@@ -333,7 +333,7 @@ function GenericListWidget({
 
 export function ListWidget({ widget, data }: ListWidgetProps) {
   const t = useLocale();
-  const title = getNestedLocaleValue(t, widget.titleKey) ?? widget.titleKey;
+  const title = getWidgetTitle(t, widget.metricKey);
   const type = detectListType(data.items);
 
   switch (type) {

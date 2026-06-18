@@ -19,7 +19,7 @@ export function DashboardWidgets({ data }: DashboardWidgetsProps) {
         <BentoItem key={widget.id} id={widget.id}>
           <WidgetRenderer
             widget={widget}
-            liveData={sseDataMap[widget.id] as unknown as WidgetData | undefined}
+            liveData={sseDataMap[widget.metricKey] as unknown as WidgetData | undefined}
           />
         </BentoItem>
       ))}
