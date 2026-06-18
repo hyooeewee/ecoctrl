@@ -36,7 +36,7 @@ jobs:
             echo "needed=true" >> $GITHUB_OUTPUT
             exit 0
           fi
-          if ls .changeset/*.md >/dev/null 2>&1; then
+          if find .changeset -maxdepth 1 -name '*.md' ! -name 'README.md' -print -quit | grep -q .; then
             echo "needed=true" >> $GITHUB_OUTPUT
             exit 0
           fi
