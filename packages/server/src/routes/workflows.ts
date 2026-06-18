@@ -301,9 +301,24 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
           return reply.status(400).send({ error: `Node ${query.nodeId} not found in workflow` });
         }
         if (targetNode.type === "start" || targetNode.type === "end") {
-          return reply
-            .status(400)
-            .send({ error: `Cannot test node type '${targetNode.type}' directly` });
+          const now = new Date().toISOString();
+          return reply.send({
+            status: "completed",
+            output: {},
+            nodeLogs: [
+              {
+                nodeId: targetNode.id,
+                nodeName: targetNode.name,
+                nodeType: targetNode.type,
+                status: "completed",
+                startedAt: now,
+                completedAt: now,
+                durationMs: 0,
+                output: {},
+              },
+            ],
+            dryRun: true,
+          });
         }
 
         const startNode = dsl.nodes.find((n) => n.type === "start") ?? {
