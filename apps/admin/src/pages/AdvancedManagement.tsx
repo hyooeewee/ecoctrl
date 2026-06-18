@@ -21,7 +21,7 @@ import {
   InputGroupInput,
   Label,
 } from "@ecoctrl/ui";
-import { Eye, EyeOff, LogIn, RotateCcw, Shield } from "lucide-react";
+import { Eye, EyeOff, LogIn, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const IFRAME_NAME = "advanced-management-frame";
@@ -36,7 +36,6 @@ export default function AdvancedManagement() {
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [iframeKey, setIframeKey] = useState(0);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,17 +82,9 @@ export default function AdvancedManagement() {
     }
   };
 
-  const handleRetry = () => {
-    setSubmitted(false);
-    setIsLoading(false);
-    setPassword("");
-    setIframeKey((k) => k + 1);
-  };
-
   return (
     <div className="bg-background relative h-full overflow-hidden">
       <iframe
-        key={iframeKey}
         allow="fullscreen"
         className={cn(
           "h-full w-full border-0 transition-opacity",
@@ -110,18 +101,6 @@ export default function AdvancedManagement() {
         <div className="absolute inset-0 flex items-center justify-center bg-background/80">
           <div className="text-muted-foreground text-sm">登录中...</div>
         </div>
-      )}
-
-      {submitted && !isLoading && (
-        <Button
-          className="absolute top-4 right-4 gap-2"
-          onClick={handleRetry}
-          size="sm"
-          variant="outline"
-        >
-          <RotateCcw size={14} />
-          重新登录
-        </Button>
       )}
 
       {!submitted && (
