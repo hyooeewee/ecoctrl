@@ -5,7 +5,7 @@ import { X } from "lucide-react";
 import { BuildingView, type BuildingViewRef } from "~/components/dashboard/building-view";
 import { LoadingOverlay } from "~/components/dashboard/loading-overlay";
 import { fetchPublicModel } from "~/lib/model-api";
-import type { DashboardModelConfig } from "@ecoctrl/shared";
+import type { DashboardModelConfig, DashboardModelLabel } from "@ecoctrl/shared";
 import { useSettingsStore } from "~/store/settings";
 import { useLocale } from "~/locales";
 
@@ -32,9 +32,20 @@ const SIDEBAR_W = 320;
 // Label info sidebar
 // ========================================
 
-function LabelInfoPanel({ labelKey, onClose }: { labelKey: string; onClose: () => void }) {
+function LabelInfoPanel({
+  labelKey,
+  labels,
+  onClose,
+}: {
+  labelKey: string;
+  labels: DashboardModelLabel[];
+  onClose: () => void;
+}) {
   const t = useLocale();
-  const info = t.labelInfo[labelKey as keyof typeof t.labelInfo];
+  const modelLabel = labels.find((l) => l.key === labelKey);
+  const info = modelLabel
+    ? { title: modelLabel.name, description: modelLabel.description ?? "" }
+    : t.labelInfo[labelKey as keyof typeof t.labelInfo];
   if (!info) return null;
 
   return (
@@ -120,7 +131,11 @@ export default function DashboardLayout() {
 
       {/* Label info sidebar (left panel) */}
       {activeLabel && (
-        <LabelInfoPanel labelKey={activeLabel} onClose={() => setActiveLabel(null)} />
+        <LabelInfoPanel
+          labelKey={activeLabel}
+          labels={model?.labels ?? []}
+          onClose={() => setActiveLabel(null)}
+        />
       )}
 
       {/* Route-specific UI overlays */}

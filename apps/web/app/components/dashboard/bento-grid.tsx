@@ -17,9 +17,8 @@ export { defaultBentoLayout } from "~/store/settings";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export interface BentoGridProps {
+export interface BentoGridProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
-  className?: string;
 }
 
 export interface BentoItemProps {
@@ -76,7 +75,7 @@ const DragContext = createContext<DragCtx>({
 
 // ─── BentoGrid ────────────────────────────────────────────────────────────────
 
-export function BentoGrid({ children, className }: BentoGridProps) {
+export function BentoGrid({ children, className, ...rest }: BentoGridProps) {
   const [drag, setDrag] = useState<DragState | null>(null);
   const [dropResult, setDropResult] = useState<DropResult>(null);
   const ghostRef = useRef<HTMLElement | null>(null);
@@ -218,7 +217,7 @@ export function BentoGrid({ children, className }: BentoGridProps) {
 
   return (
     <DragContext.Provider value={dragCtxValue}>
-      <div className={cn("relative h-full w-full", className)}>
+      <div className={cn("relative h-full w-full", className)} {...rest}>
         {/*
          * Full-screen overlay — rendered only while dragging.
          * z-[9998]: above the grid (z-10) but below the ghost (z-[9999]).

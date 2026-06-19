@@ -1,3 +1,5 @@
+import { useOutletContext } from "react-router";
+
 import {
   GraphButtonBlock,
   GraphButtonBlockDetail,
@@ -7,9 +9,11 @@ import { getNestedLocaleValue, getWidgetTitle, useLocale } from "~/locales";
 
 import { DynamicIcon } from "./dynamic-icon";
 import type { StatData, WidgetConfig } from "./types";
+import type { DashboardOutletContext } from "~/routes/dashboard-layout";
 
 export function StatCard({ widget, data }: { widget: WidgetConfig; data: StatData }) {
   const t = useLocale();
+  const { activeLabel } = useOutletContext<DashboardOutletContext>();
   const title = getWidgetTitle(t, widget.metricKey);
   const footer = data.footerKey ? getNestedLocaleValue(t, data.footerKey) : undefined;
   const unit = getNestedLocaleValue(t, data.unit) ?? data.unit;
@@ -36,6 +40,7 @@ export function StatCard({ widget, data }: { widget: WidgetConfig; data: StatDat
     <ExpandableModal
       className="flex min-h-0 flex-1 flex-col"
       trigger={<GraphButtonBlock {...props} className="flex-1" />}
+      disabled={activeLabel !== null}
     >
       <GraphButtonBlockDetail {...props} />
     </ExpandableModal>

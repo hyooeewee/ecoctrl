@@ -210,6 +210,7 @@ export default function Home() {
             "transition-all duration-300 ease-in-out",
             isImmersive && "opacity-0 pointer-events-none",
           )}
+          inert={isImmersive}
         >
           <DashboardWidgets data={loaderData?.dashboard ?? null} />
         </BentoGrid>

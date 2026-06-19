@@ -8,6 +8,7 @@ interface ExpandableModalProps {
   children: React.ReactNode;
   contentClassName?: string;
   className?: string;
+  disabled?: boolean;
 }
 
 export function ExpandableModal({
@@ -15,20 +16,23 @@ export function ExpandableModal({
   children,
   contentClassName,
   className,
+  disabled = false,
 }: ExpandableModalProps) {
   const [open, setOpen] = React.useState(false);
 
   return (
     <>
       <div
-        onClick={() => setOpen(true)}
+        onClick={() => !disabled && setOpen(true)}
         className={cn(
           "cursor-pointer transition-transform duration-150 ease-out active:scale-[0.98]",
+          disabled && "pointer-events-none",
           className,
         )}
-        role="button"
-        tabIndex={0}
+        role={disabled ? undefined : "button"}
+        tabIndex={disabled ? -1 : 0}
         onKeyDown={(e) => {
+          if (disabled) return;
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             setOpen(true);
