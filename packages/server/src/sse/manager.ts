@@ -54,7 +54,7 @@ export class SSEManager {
     const data = {
       type: event.type,
       payload: event.payload,
-      _timestamp: event.timestamp,
+      timestamp: event.timestamp,
     };
     lines.push(`data: ${JSON.stringify(data)}`);
     lines.push("");

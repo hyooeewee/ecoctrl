@@ -1,22 +1,22 @@
 import { create } from "zustand";
 
 interface WidgetDataState {
-  /** Map of widgetId -> live data received via SSE */
+  /** Map of metricKey -> live data received via SSE */
   dataMap: Record<string, Record<string, unknown>>;
-  setWidgetData: (widgetId: string, data: Record<string, unknown>) => void;
-  removeWidgetData: (widgetId: string) => void;
+  setWidgetData: (metricKey: string, data: Record<string, unknown>) => void;
+  removeWidgetData: (metricKey: string) => void;
   clearAll: () => void;
 }
 
 export const useWidgetDataStore = create<WidgetDataState>((set) => ({
   dataMap: {},
-  setWidgetData: (widgetId, data) =>
+  setWidgetData: (metricKey, data) =>
     set((state) => ({
-      dataMap: { ...state.dataMap, [widgetId]: data },
+      dataMap: { ...state.dataMap, [metricKey]: data },
     })),
-  removeWidgetData: (widgetId) =>
+  removeWidgetData: (metricKey) =>
     set((state) => {
-      const { [widgetId]: _, ...rest } = state.dataMap;
+      const { [metricKey]: _, ...rest } = state.dataMap;
       return { dataMap: rest };
     }),
   clearAll: () => set({ dataMap: {} }),

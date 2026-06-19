@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useMemo, useId } from "react";
 import {
   Area,
   AreaChart,
@@ -10,43 +10,14 @@ import {
   LineChart,
   Pie,
   PieChart,
-  Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 
 import { cn } from "~/lib/utils";
 import { useLocale } from "~/locales";
-
-// ─── Measure hook ─────────────────
-
-function useMeasureSize(
-  fallbackW = 700,
-  fallbackH = 148,
-): [React.RefObject<HTMLDivElement | null>, number, number] {
-  const ref = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(fallbackW);
-  const [height, setHeight] = useState(fallbackH);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    if (rect.width > 0) setWidth(rect.width);
-    if (rect.height > 0) setHeight(rect.height);
-
-    const ro = new ResizeObserver(([entry]) => {
-      const w = entry.contentRect.width;
-      const h = entry.contentRect.height;
-      if (w > 0) setWidth(w);
-      if (h > 0) setHeight(h);
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  return [ref, width, height];
-}
+import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip } from "@ecoctrl/ui/chart";
+import type { ChartConfig } from "@ecoctrl/ui/chart";
 
 // ─── Custom tooltips ──────────────────────────────────────────────────────────
 
@@ -80,13 +51,13 @@ function PieCustomTooltip({
   payload,
 }: {
   active?: boolean;
-  payload?: { name: string; value: number }[];
+  payload?: { payload: { label: string; value: number } }[];
 }) {
   if (!active || !payload?.length) return null;
-  const entry = payload[0];
+  const entry = payload[0].payload;
   return (
     <div className="rounded border border-white/10 bg-panel-dark/95 px-2 py-1.5 text-[10px] shadow-xl backdrop-blur">
-      <span className="font-medium text-foreground">{entry.name}</span>
+      <span className="font-medium text-foreground">{entry.label}</span>
       <span className="ml-2 tabular-nums text-muted-foreground">{entry.value}%</span>
     </div>
   );
@@ -115,28 +86,30 @@ export function EnergyTrendChart({
   chartType = "area",
 }: EnergyTrendChartProps) {
   const t = useLocale();
-  const [ref, width, height] = useMeasureSize(700, 148);
   const color = "var(--color-chart-1)";
+  const baseId = useId().replace(/:/g, "");
+  const gradId = `trend-grad-${chartType}-${baseId}`;
 
-  const chartData = data.map((d, i) => ({ ...d, t: i }));
+  const chartData = useMemo(() => data.map((d, i) => ({ ...d, t: i })), [data]);
+
+  const chartConfig = useMemo(
+    () => ({
+      value: { label: title, color },
+    }),
+    [title, color],
+  );
 
   return (
     <div className={cn("flex h-full flex-col gap-2 p-3", className)}>
       <div className="flex items-center gap-1.5">
-        <span style={{ color: "var(--color-chart-1)" }}>{icon}</span>
+        <span style={{ color }}>{icon}</span>
         <p className="text-[11px] font-semibold tracking-widest text-muted-foreground">{title}</p>
       </div>
-      <div ref={ref} className="min-h-0 w-full flex-1 overflow-hidden">
+      <ChartContainer config={chartConfig} className="min-h-0 flex-1">
         {chartType === "area" && (
-          <AreaChart
-            width={width}
-            height={height}
-            data={chartData}
-            margin={{ top: 4, right: 4, bottom: 0, left: -20 }}
-            style={{ outline: "none" }}
-          >
+          <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
             <defs>
-              <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor={color} stopOpacity={0.25} />
                 <stop offset="95%" stopColor={color} stopOpacity={0} />
               </linearGradient>
@@ -155,7 +128,7 @@ export function EnergyTrendChart({
               axisLine={false}
               tickFormatter={(v) => `${v}`}
             />
-            <Tooltip
+            <ChartTooltip
               content={<TrendTooltip timeUnit={t.charts.trendTimeUnit} />}
               cursor={{ stroke: "oklch(1 0 0 / 10%)", strokeWidth: 1 }}
             />
@@ -163,7 +136,7 @@ export function EnergyTrendChart({
               type="monotone"
               dataKey="value"
               stroke={color}
-              fill="url(#trendGrad)"
+              fill={`url(#${gradId})`}
               strokeWidth={1.5}
               dot={false}
               activeDot={{ r: 3, fill: color }}
@@ -173,13 +146,7 @@ export function EnergyTrendChart({
         )}
 
         {chartType === "line" && (
-          <LineChart
-            width={width}
-            height={height}
-            data={chartData}
-            margin={{ top: 4, right: 4, bottom: 0, left: -20 }}
-            style={{ outline: "none" }}
-          >
+          <LineChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="oklch(1 0 0 / 6%)" />
             <XAxis
               dataKey="label"
@@ -194,7 +161,7 @@ export function EnergyTrendChart({
               axisLine={false}
               tickFormatter={(v) => `${v}`}
             />
-            <Tooltip
+            <ChartTooltip
               content={<TrendTooltip timeUnit={t.charts.trendTimeUnit} />}
               cursor={{ stroke: "oklch(1 0 0 / 10%)", strokeWidth: 1 }}
             />
@@ -212,11 +179,8 @@ export function EnergyTrendChart({
 
         {chartType === "bar" && (
           <BarChart
-            width={width}
-            height={height}
             data={chartData}
             margin={{ top: 4, right: 4, bottom: 0, left: -20 }}
-            style={{ outline: "none" }}
             barSize={12}
           >
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="oklch(1 0 0 / 6%)" />
@@ -233,14 +197,14 @@ export function EnergyTrendChart({
               axisLine={false}
               tickFormatter={(v) => `${v}`}
             />
-            <Tooltip
+            <ChartTooltip
               content={<TrendTooltip timeUnit={t.charts.trendTimeUnit} />}
               cursor={{ fill: "oklch(1 0 0 / 5%)" }}
             />
             <Bar dataKey="value" fill={color} radius={[2, 2, 0, 0]} isAnimationActive={false} />
           </BarChart>
         )}
-      </div>
+      </ChartContainer>
     </div>
   );
 }
@@ -261,7 +225,18 @@ interface EnergyBreakdownChartProps {
 }
 
 export function EnergyBreakdownChart({ className, data, title, icon }: EnergyBreakdownChartProps) {
-  const [ref, width] = useMeasureSize(200, 148);
+  const chartData = useMemo(
+    () => data.map((item, index) => ({ ...item, key: `item-${index}` })),
+    [data],
+  );
+
+  const chartConfig = useMemo(() => {
+    const config: ChartConfig = {};
+    for (const item of chartData) {
+      config[item.key] = { label: item.label, color: item.color };
+    }
+    return config;
+  }, [chartData]);
 
   return (
     <div className={cn("flex h-full flex-col gap-2 p-3", className)}>
@@ -270,44 +245,30 @@ export function EnergyBreakdownChart({ className, data, title, icon }: EnergyBre
         <p className="text-[11px] font-semibold tracking-widest text-muted-foreground">{title}</p>
       </div>
 
-      <div className="flex min-h-0 flex-1 items-center gap-4">
-        <div ref={ref} className="h-full flex-1 overflow-hidden">
-          <PieChart width={width} height={width} style={{ outline: "none" }}>
-            <Pie
-              data={data}
-              dataKey="value"
-              nameKey="label"
-              cx="50%"
-              cy="50%"
-              innerRadius="50%"
-              outerRadius="78%"
-              strokeWidth={0}
-              isAnimationActive={false}
-            >
-              {data.map((entry) => (
-                <Cell key={entry.label} fill={entry.color} />
-              ))}
-            </Pie>
-            <Tooltip content={<PieCustomTooltip />} />
-          </PieChart>
-        </div>
-
-        {/* Legend */}
-        <div className="flex flex-col gap-1.5">
-          {data.map((entry) => (
-            <div key={entry.label} className="flex items-center gap-1.5">
-              <span
-                className="size-2 shrink-0 rounded-sm"
-                style={{ backgroundColor: entry.color }}
-              />
-              <span className="text-[10px] text-muted-foreground">{entry.label}</span>
-              <span className="ml-auto text-[10px] font-semibold tabular-nums text-foreground">
-                {entry.value}%
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+      <ChartContainer config={chartConfig} className="aspect-square min-h-0 flex-1">
+        <PieChart>
+          <Pie
+            data={chartData}
+            dataKey="value"
+            nameKey="key"
+            cx="50%"
+            cy="50%"
+            innerRadius="50%"
+            outerRadius="78%"
+            strokeWidth={0}
+            isAnimationActive={false}
+          >
+            {chartData.map((entry) => (
+              <Cell key={entry.key} fill={`var(--color-${entry.key})`} />
+            ))}
+          </Pie>
+          <Tooltip content={<PieCustomTooltip />} />
+          <ChartLegend
+            content={<ChartLegendContent nameKey="key" />}
+            className="-translate-y-2 flex-wrap gap-2 *:basis-1/4 *:justify-center"
+          />
+        </PieChart>
+      </ChartContainer>
     </div>
   );
 }
