@@ -248,6 +248,78 @@ export function JsonEditor({
   );
 
   // ========================================
+  // Shared fullscreen dialog
+  // ========================================
+  const renderDialog = () => (
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <DialogContent
+        showCloseButton={false}
+        className={cn(
+          "flex flex-col p-0",
+          dialogMaximized
+            ? "h-screen w-screen max-w-none rounded-none sm:max-w-none"
+            : "h-[90vh] w-[95vw] max-w-6xl sm:max-w-6xl",
+        )}
+      >
+        <div className="flex shrink-0 items-center justify-between border-b px-4 py-3">
+          <span className="text-sm font-medium">{title}</span>
+          <div className="flex items-center gap-0.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              title={dialogMaximized ? "退出全屏" : "最大化"}
+              onClick={() => setDialogMaximized((v) => !v)}
+            >
+              {dialogMaximized ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              title="关闭"
+              onClick={() => setDialogOpen(false)}
+            >
+              <X size={14} />
+            </Button>
+          </div>
+        </div>
+        <div className="min-h-0 flex-1 px-4 py-3">
+          <Editor
+            height="100%"
+            language="json"
+            value={dialogText}
+            onChange={(v) => {
+              setDialogText(v ?? "");
+              setLocalError(null);
+            }}
+            onMount={(editor) => {
+              editorRef.current = editor;
+            }}
+            options={editorOptions}
+          />
+        </div>
+        {error && <p className="px-4 text-xs text-rose-500">{error}</p>}
+        <DialogFooter className="border-t px-4 py-3">
+          {!readOnly && (
+            <Button variant="outline" size="sm" onClick={() => setDialogOpen(false)}>
+              取消
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={handleFormat}>
+            格式化
+          </Button>
+          {!readOnly && (
+            <Button size="sm" onClick={handleConfirmDialog}>
+              确认
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
+  // ========================================
   // Inline textarea mode (node config)
   // ========================================
   if (mode === "inline" && editor === "textarea") {
@@ -308,72 +380,7 @@ export function JsonEditor({
           {error && <p className="mt-1 text-xs text-rose-500">{error}</p>}
         </div>
 
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent
-            showCloseButton={false}
-            className={cn(
-              "flex flex-col p-0",
-              dialogMaximized
-                ? "h-screen w-screen max-w-none rounded-none sm:max-w-none"
-                : "h-[90vh] w-[95vw] max-w-6xl sm:max-w-6xl",
-            )}
-          >
-            <div className="flex shrink-0 items-center justify-between border-b px-4 py-3">
-              <span className="text-sm font-medium">{title}</span>
-              <div className="flex items-center gap-0.5">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  title={dialogMaximized ? "退出全屏" : "最大化"}
-                  onClick={() => setDialogMaximized((v) => !v)}
-                >
-                  {dialogMaximized ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  title="关闭"
-                  onClick={() => setDialogOpen(false)}
-                >
-                  <X size={14} />
-                </Button>
-              </div>
-            </div>
-            <div className="min-h-0 flex-1 px-4 py-3">
-              <Editor
-                height="100%"
-                language="json"
-                value={dialogText}
-                onChange={(v) => {
-                  setDialogText(v ?? "");
-                  setLocalError(null);
-                }}
-                onMount={(editor) => {
-                  editorRef.current = editor;
-                }}
-                options={editorOptions}
-              />
-            </div>
-            {error && <p className="px-4 text-xs text-rose-500">{error}</p>}
-            <DialogFooter className="border-t px-4 py-3">
-              {!readOnly && (
-                <Button variant="outline" size="sm" onClick={() => setDialogOpen(false)}>
-                  取消
-                </Button>
-              )}
-              <Button variant="outline" size="sm" onClick={handleFormat}>
-                格式化
-              </Button>
-              {!readOnly && (
-                <Button size="sm" onClick={handleConfirmDialog}>
-                  确认
-                </Button>
-              )}
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {renderDialog()}
       </>
     );
   }
@@ -383,68 +390,71 @@ export function JsonEditor({
   // ========================================
   if (mode === "inline" && editor === "monaco") {
     return (
-      <div className={cn("relative flex flex-col max-h-[85vh]", className)}>
-        {showHeader && (
-          <div className="flex shrink-0 items-center justify-between border-b px-4 py-3">
-            <span className="text-sm font-medium">{title}</span>
-            <div className="flex items-center gap-0.5">{renderHeaderButtons()}</div>
+      <>
+        <div className={cn("relative flex flex-col max-h-[85vh]", className)}>
+          {showHeader && (
+            <div className="flex shrink-0 items-center justify-between border-b px-4 py-3">
+              <span className="text-sm font-medium">{title}</span>
+              <div className="flex items-center gap-0.5">{renderHeaderButtons()}</div>
+            </div>
+          )}
+          {!showHeader && showFullscreen && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-1.5 top-1.5 z-10 h-6 w-6"
+              title="全屏编辑"
+              onClick={handleOpenDialog}
+            >
+              <Maximize2 size={13} />
+            </Button>
+          )}
+          {description && (
+            <div className="shrink-0 px-4 pt-3 pb-0">
+              <p className="text-xs text-muted-foreground">{description}</p>
+            </div>
+          )}
+          {error && (
+            <div className="shrink-0 px-4 pt-2 pb-0">
+              <p className="text-xs text-rose-500">{error}</p>
+            </div>
+          )}
+          <div className="min-h-0 flex-1 px-4 py-3">
+            <div className="h-full w-full" style={{ height }}>
+              <Editor
+                height="100%"
+                language="json"
+                value={text}
+                onChange={(v) => {
+                  setText(v ?? "");
+                  setLocalError(null);
+                  onChange(v ?? "");
+                }}
+                onMount={(editor) => {
+                  editorRef.current = editor;
+                }}
+                options={editorOptions}
+              />
+            </div>
           </div>
-        )}
-        {!showHeader && showFullscreen && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute right-1.5 top-1.5 z-10 h-6 w-6"
-            title="全屏编辑"
-            onClick={handleOpenDialog}
-          >
-            <Maximize2 size={13} />
-          </Button>
-        )}
-        {description && (
-          <div className="shrink-0 px-4 pt-3 pb-0">
-            <p className="text-xs text-muted-foreground">{description}</p>
-          </div>
-        )}
-        {error && (
-          <div className="shrink-0 px-4 pt-2 pb-0">
-            <p className="text-xs text-rose-500">{error}</p>
-          </div>
-        )}
-        <div className="min-h-0 flex-1 px-4 py-3">
-          <div className="h-full w-full" style={{ height }}>
-            <Editor
-              height="100%"
-              language="json"
-              value={text}
-              onChange={(v) => {
-                setText(v ?? "");
-                setLocalError(null);
-                onChange(v ?? "");
-              }}
-              onMount={(editor) => {
-                editorRef.current = editor;
-              }}
-              options={editorOptions}
-            />
-          </div>
+          {(footerActions || onCancel || onConfirm) && (
+            <div className="flex shrink-0 justify-end gap-2 border-t px-4 py-3">
+              {footerActions}
+              {onCancel && (
+                <Button variant="outline" size="sm" className="h-8" onClick={onCancel}>
+                  取消
+                </Button>
+              )}
+              {onConfirm && (
+                <Button size="sm" className="h-8" onClick={onConfirm}>
+                  确认
+                </Button>
+              )}
+            </div>
+          )}
         </div>
-        {(footerActions || onCancel || onConfirm) && (
-          <div className="flex shrink-0 justify-end gap-2 border-t px-4 py-3">
-            {footerActions}
-            {onCancel && (
-              <Button variant="outline" size="sm" className="h-8" onClick={onCancel}>
-                取消
-              </Button>
-            )}
-            {onConfirm && (
-              <Button size="sm" className="h-8" onClick={onConfirm}>
-                确认
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
+        {renderDialog()}
+      </>
     );
   }
 
