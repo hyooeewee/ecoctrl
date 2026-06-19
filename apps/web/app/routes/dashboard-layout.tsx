@@ -1,15 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Outlet, useLoaderData, useLocation } from "react-router";
-import { X } from "lucide-react";
 
 import { BuildingView, type BuildingViewRef } from "~/components/dashboard/building-view";
+import { LightingSheet } from "~/components/dashboard/lighting-sheet";
 import { LoadingOverlay } from "~/components/dashboard/loading-overlay";
 import { fetchPublicModel } from "~/lib/model-api";
-import type { DashboardModelConfig, DashboardModelLabel } from "@ecoctrl/shared";
+import type { DashboardModelConfig } from "@ecoctrl/shared";
 import { useSettingsStore } from "~/store/settings";
-import { useLocale } from "~/locales";
-
-import type { Route } from "./+types/dashboard-layout";
 
 // ========================================
 // Types
@@ -27,51 +24,6 @@ export interface DashboardOutletContext {
 // ========================================
 
 const SIDEBAR_W = 320;
-
-// ========================================
-// Label info sidebar
-// ========================================
-
-function LabelInfoPanel({
-  labelKey,
-  labels,
-  onClose,
-}: {
-  labelKey: string;
-  labels: DashboardModelLabel[];
-  onClose: () => void;
-}) {
-  const t = useLocale();
-  const modelLabel = labels.find((l) => l.key === labelKey);
-  const info = modelLabel
-    ? { title: modelLabel.name, description: modelLabel.description ?? "" }
-    : t.labelInfo[labelKey as keyof typeof t.labelInfo];
-  if (!info) return null;
-
-  return (
-    <div
-      className="absolute top-0 bottom-0 left-0 z-30 flex flex-col border-r border-white/10 bg-black/80 backdrop-blur-md transition-transform duration-300 ease-out pointer-events-auto"
-      style={{ width: SIDEBAR_W }}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-        <h2 className="text-sm font-semibold text-foreground">{info.title}</h2>
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-foreground/60 hover:text-foreground flex size-7 items-center justify-center rounded-md transition-colors hover:bg-white/10"
-        >
-          <X size={16} />
-        </button>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
-        <p className="text-muted-foreground text-xs leading-relaxed">{info.description}</p>
-      </div>
-    </div>
-  );
-}
 
 // ========================================
 // Loader
@@ -129,13 +81,9 @@ export default function DashboardLayout() {
         modelConfig={model ?? undefined}
       />
 
-      {/* Label info sidebar (left panel) */}
+      {/* Lighting control sheet (left panel) */}
       {activeLabel && (
-        <LabelInfoPanel
-          labelKey={activeLabel}
-          labels={model?.labels ?? []}
-          onClose={() => setActiveLabel(null)}
-        />
+        <LightingSheet activeLabel={activeLabel} onClose={() => setActiveLabel(null)} />
       )}
 
       {/* Route-specific UI overlays */}

@@ -196,6 +196,16 @@ export const enUS = {
     activeSuffix: "Active",
   },
 
+  // ── Lighting Control Sheet ────────────────────────────────────────────────
+  lighting: {
+    title: "Area Lighting",
+    selectRegion: "Select region",
+    allOn: "All On",
+    allOff: "All Off",
+    empty: "No group data",
+    error: "Operation failed",
+  },
+
   // ── Label Info Panel ───────────────────────────────────────────────────────
   labelInfo: {
     office1: {
