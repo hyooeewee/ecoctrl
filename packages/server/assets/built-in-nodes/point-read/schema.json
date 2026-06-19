@@ -1,12 +1,41 @@
 {
   "type": "object",
   "title": "Point Read",
-  "description": "Read the current value of an IoT point. Output is available to downstream nodes via {{nodeId.value}}.",
+  "description": "Read current or historical values of one or more IoT points.",
   "properties": {
+    "mode": {
+      "type": "string",
+      "title": "读取模式",
+      "enum": ["current", "history"],
+      "default": "current",
+      "description": "current: 读取当前值；history: 读取历史数据"
+    },
     "pointName": {
       "type": "string",
-      "title": "Point Name",
-      "description": "The IoT point to read"
+      "title": "点位名称",
+      "description": "单个点位名；也支持逗号分隔的多个点位（current 模式）"
+    },
+    "pointNames": {
+      "type": "array",
+      "title": "点位列表",
+      "description": "current 模式下批量读取的点位名数组",
+      "items": { "type": "string" }
+    },
+    "beginTime": {
+      "type": "string",
+      "title": "开始时间",
+      "description": "history 模式必填，例如 2024-01-01 00:00:00"
+    },
+    "endTime": {
+      "type": "string",
+      "title": "结束时间",
+      "description": "history 模式必填，例如 2024-01-01 23:59:59"
+    },
+    "interval": {
+      "type": "number",
+      "title": "时间间隔（秒）",
+      "description": "history 模式可选",
+      "default": 0
     },
     "retry": {
       "type": "number",
@@ -14,20 +43,31 @@
       "default": 0
     }
   },
-  "required": ["pointName"],
   "outputs": {
     "type": "object",
     "properties": {
       "value": {
-        "description": "The current value of the point"
+        "description": "第一个点位的当前值"
       },
       "pointName": {
         "type": "string",
-        "description": "The name of the point that was read"
+        "description": "第一个点位的名称"
+      },
+      "points": {
+        "type": "object",
+        "description": "current 模式下所有点位 code -> value 的字典"
       },
       "values": {
         "type": "object",
-        "description": "Map of all read point values"
+        "description": "IoT 接口原始返回"
+      },
+      "history": {
+        "type": "array",
+        "description": "history 模式下的历史数据数组"
+      },
+      "mode": {
+        "type": "string",
+        "description": "本次读取模式"
       }
     }
   }
