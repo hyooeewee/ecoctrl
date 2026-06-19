@@ -227,9 +227,9 @@ export default function Home() {
           type="button"
           onClick={() => {
             if (!fullscreen) {
-              buildingRef.current?.ensureCloseUp(15);
+              buildingRef.current?.enterImmersive();
             } else {
-              buildingRef.current?.resetToDefaultRadius();
+              buildingRef.current?.exitImmersive();
             }
             setFullscreen((v) => !v);
           }}
