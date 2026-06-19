@@ -10,6 +10,7 @@ export interface PluginManifest {
   color?: string;
   author?: string;
   minEngineVersion?: string;
+  aliases?: string[];
 }
 
 export interface PluginDefinition {

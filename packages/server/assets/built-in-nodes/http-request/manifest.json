@@ -1,11 +1,12 @@
 {
-  "id": "http_request",
+  "id": "http-request",
   "name": "HTTP 请求",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "category": "action",
   "entry": "backend.js",
   "schema": "schema.json",
   "description": "发送 HTTP 请求",
   "icon": "icon.svg",
-  "color": "#3b82f6"
+  "color": "#3b82f6",
+  "aliases": ["http_request"]
 }

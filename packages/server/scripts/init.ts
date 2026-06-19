@@ -28,7 +28,8 @@ interface InitModule {
   value: string;
   label: string;
   forceable: boolean;
-  run: (force: boolean) => Promise<void>;
+  prunable: boolean;
+  run: (force: boolean, prune: boolean) => Promise<void>;
 }
 
 // ─── CLI parsing ──────────────────────────────────────────────────
@@ -37,6 +38,12 @@ const args = process.argv.slice(2);
 const filterArg = args.find((a) => a.startsWith("--filter="));
 const filteredModules = filterArg ? filterArg.slice(9).split(",") : null;
 const force = args.includes("--force") || args.includes("-f");
+const prune = args.includes("--prune");
+
+if (force && prune) {
+  console.error("[init] --force and --prune are mutually exclusive");
+  process.exit(1);
+}
 
 // ─── Helper functions ─────────────────────────────────────────────
 
@@ -62,7 +69,7 @@ async function resolveAssetDir(scriptDir: string, subdir: string): Promise<strin
 
 // ─── Init functions ───────────────────────────────────────────────
 
-async function initMigrate(_force: boolean) {
+async function initMigrate(_force: boolean, _prune: boolean) {
   console.log("[init] ensuring database exists...");
   await ensureDatabase();
   console.log("[init] running migrations...");
@@ -70,7 +77,7 @@ async function initMigrate(_force: boolean) {
   console.log("[init] migrations done");
 }
 
-async function initS3Buckets(_force: boolean) {
+async function initS3Buckets(_force: boolean, _prune: boolean) {
   if (process.env.STORAGE_PROVIDER !== "minio") {
     console.log("[init] storage provider is not minio, skipping S3 bucket init");
     return;
@@ -80,10 +87,24 @@ async function initS3Buckets(_force: boolean) {
   console.log("[init] ensured S3 buckets");
 }
 
-async function initBuiltInNodes(force = false) {
+async function initBuiltInNodes(force = false, prune = false) {
   const baseDir = await resolveAssetDir(__dirname, "built-in-nodes");
 
   const storage = getPluginStorage();
+
+  if (prune) {
+    const keys = await storage.list("");
+    if (keys.length > 0) {
+      console.log(`[init] prune: removing ${keys.length} plugin storage object(s)...`);
+      for (const key of keys) {
+        console.log(`[init] prune: deleting ${key}`);
+        await storage.delete(key);
+      }
+    } else {
+      console.log("[init] prune: plugin storage is already empty");
+    }
+  }
+
   const entries = await fs.readdir(baseDir, { withFileTypes: true });
   const pluginDirs = entries.filter((e) => e.isDirectory());
 
@@ -98,6 +119,20 @@ async function initBuiltInNodes(force = false) {
 
     const manifestRaw = await fs.readFile(manifestPath, "utf-8");
     const manifest = JSON.parse(manifestRaw) as PluginManifest;
+
+    if (dir.name !== manifest.id) {
+      console.warn(
+        `[init] built-in node folder "${dir.name}" does not match manifest.id "${manifest.id}", skipping`,
+      );
+      continue;
+    }
+
+    if (manifest.aliases && manifest.aliases.length > 0) {
+      console.log(
+        `[init] built-in node ${manifest.id}@${manifest.version} provides aliases: ${manifest.aliases.join(", ")}`,
+      );
+    }
+
     const buildKey = (filename: string) => `${manifest.id}/${manifest.version}/${filename}`;
 
     const exists = await storage.exists(buildKey("manifest.json"));
@@ -135,9 +170,22 @@ async function initBuiltInNodes(force = false) {
   }
 }
 
-async function initBuiltInPets(force = false) {
+async function initBuiltInPets(force = false, prune = false) {
   const builtInDir = await resolveAssetDir(__dirname, "built-in-pets");
   const storage = getPetStorage();
+
+  if (prune) {
+    const keys = await storage.list("");
+    if (keys.length > 0) {
+      console.log(`[init] prune: removing ${keys.length} pet storage object(s)...`);
+      for (const key of keys) {
+        console.log(`[init] prune: deleting ${key}`);
+        await storage.delete(key);
+      }
+    } else {
+      console.log("[init] prune: pet storage is already empty");
+    }
+  }
 
   try {
     const entries = await fs.readdir(builtInDir, { withFileTypes: true });
@@ -188,7 +236,7 @@ async function initBuiltInPets(force = false) {
   }
 }
 
-async function initUsers(force = false) {
+async function initUsers(force = false, _prune = false) {
   const existing = await db
     .select()
     .from(schema.users)
@@ -229,10 +277,13 @@ async function initUsers(force = false) {
   }
 }
 
-async function initPlatformConfig(force = false) {
+async function initPlatformConfig(force = false, prune = false) {
   const existing = await db.select().from(schema.platformConfigs).limit(1);
 
-  if (existing.length > 0 && !force) {
+  if (prune) {
+    await db.delete(schema.platformConfigs);
+    console.log("[init] prune: cleared platform_configs");
+  } else if (existing.length > 0 && !force) {
     console.log("[init] platform_configs already seeded, skipping");
     return;
   }
@@ -269,9 +320,12 @@ async function initPlatformConfig(force = false) {
   }
 }
 
-async function initDashboardWidgets(force = false) {
+async function initDashboardWidgets(force = false, prune = false) {
   const existing = await db.select({ value: count() }).from(schema.dashboardWidgets);
-  if (existing[0].value > 0 && !force) {
+  if (prune) {
+    await db.delete(schema.dashboardWidgets);
+    console.log("[init] prune: cleared dashboard widgets");
+  } else if (existing[0].value > 0 && !force) {
     console.log("[init] dashboard widgets already seeded, skipping");
     return;
   }
@@ -535,7 +589,7 @@ async function initDashboardWidgets(force = false) {
     },
   ];
 
-  if (existing[0].value > 0 && force) {
+  if (existing[0].value > 0 && force && !prune) {
     await db.delete(schema.dashboardWidgets);
     console.log("[init] cleared existing dashboard widgets (force mode)");
   }
@@ -547,21 +601,47 @@ async function initDashboardWidgets(force = false) {
 // ─── Module registry ──────────────────────────────────────────────
 
 const MODULES: InitModule[] = [
-  { value: "migrate", label: "数据库迁移 (migrate)", forceable: false, run: initMigrate },
-  { value: "buckets", label: "S3 存储桶 (buckets)", forceable: false, run: initS3Buckets },
+  {
+    value: "migrate",
+    label: "数据库迁移 (migrate)",
+    forceable: false,
+    prunable: false,
+    run: initMigrate,
+  },
+  {
+    value: "buckets",
+    label: "S3 存储桶 (buckets)",
+    forceable: false,
+    prunable: false,
+    run: initS3Buckets,
+  },
   {
     value: "nodes",
     label: "内置工作流节点 (nodes)",
     forceable: true,
+    prunable: true,
     run: initBuiltInNodes,
   },
-  { value: "pets", label: "内置宠物 (pets)", forceable: true, run: initBuiltInPets },
-  { value: "users", label: "默认管理员 (users)", forceable: true, run: initUsers },
-  { value: "config", label: "平台配置 (config)", forceable: true, run: initPlatformConfig },
+  {
+    value: "pets",
+    label: "内置宠物 (pets)",
+    forceable: true,
+    prunable: true,
+    run: initBuiltInPets,
+  },
+  { value: "users", label: "默认管理员 (users)", forceable: true, prunable: false, run: initUsers },
+  {
+    value: "config",
+    label: "平台配置 (config)",
+    forceable: true,
+    prunable: true,
+    run: initPlatformConfig,
+  },
   {
     value: "widgets",
     label: "Dashboard 组件 (widgets)",
     forceable: true,
+    prunable: true,
     run: initDashboardWidgets,
   },
 ];
@@ -573,6 +653,9 @@ async function main() {
 
   if (force) {
     console.log("[init] --force flag set, will overwrite existing data where applicable");
+  }
+  if (prune) {
+    console.log("[init] --prune flag set, will clear existing data before seeding");
   }
 
   // Select modules
@@ -602,6 +685,17 @@ async function main() {
     selected = MODULES.map((m) => m.value);
   }
 
+  if (prune) {
+    const unprunable = selected
+      .map((s) => MODULES.find((m) => m.value === s)!)
+      .filter((m) => !m.prunable)
+      .map((m) => m.value);
+    if (unprunable.length > 0) {
+      console.error(`[init] --prune is not supported for modules: ${unprunable.join(", ")}`);
+      process.exit(1);
+    }
+  }
+
   console.log(`[init] selected modules: ${selected.join(", ")}`);
 
   // Execute in order
@@ -609,7 +703,8 @@ async function main() {
     if (!selected.includes(mod.value)) continue;
     try {
       const shouldForce = force && mod.forceable;
-      await mod.run(shouldForce);
+      const shouldPrune = prune && mod.prunable;
+      await mod.run(shouldForce, shouldPrune);
     } catch (err) {
       console.error(`[init] failed at module "${mod.value}":`, err);
       process.exit(1);

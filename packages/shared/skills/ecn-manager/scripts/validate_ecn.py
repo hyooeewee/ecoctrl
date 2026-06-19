@@ -17,6 +17,16 @@ import sys
 import zipfile
 from pathlib import Path
 
+ID_RE = re.compile(r"^[a-z0-9-]+$")
+
+
+def validate_id(value: str, label: str = "id") -> str | None:
+    if not value:
+        return f"{label} is required"
+    if not ID_RE.match(value):
+        return f"{label} '{value}' must be kebab-case (lowercase letters, numbers, hyphens only)"
+    return None
+
 
 def compute_content_hash(files: list[tuple[str, bytes]]) -> str:
     """Compute SHA-256 hash over all files (sorted by name, then content)."""
@@ -41,8 +51,27 @@ def validate_manifest(manifest: dict) -> list[str]:
         nid = manifest["id"]
         if not isinstance(nid, str):
             errors.append("'id' must be a string")
-        elif not re.match(r"^[a-z0-9_-]+$", nid):
-            errors.append(f"'id' '{nid}' must match ^[a-z0-9_-]+")
+        else:
+            err = validate_id(nid)
+            if err:
+                errors.append(err)
+
+    if "aliases" in manifest:
+        aliases = manifest["aliases"]
+        if not isinstance(aliases, list):
+            errors.append("'aliases' must be an array")
+        else:
+            seen = set()
+            for alias in aliases:
+                err = validate_id(alias, "alias")
+                if err:
+                    errors.append(err)
+                elif alias == manifest.get("id"):
+                    errors.append(f"alias '{alias}' must not be the plugin's own id")
+                elif alias in seen:
+                    errors.append(f"duplicate alias '{alias}'")
+                else:
+                    seen.add(alias)
 
     if "name" in manifest:
         if not isinstance(manifest["name"], str) or not manifest["name"].strip():

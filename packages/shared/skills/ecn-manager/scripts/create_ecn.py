@@ -45,6 +45,7 @@ JSON schema for --json:
 
 import hashlib
 import json
+import re
 import sys
 import zipfile
 from pathlib import Path
@@ -52,6 +53,36 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 SKILL_DIR = SCRIPT_DIR.parent
 ICONS_PATH = SKILL_DIR / "assets" / "icons" / "icons.json"
+
+# ========================================
+# Naming validation
+# ========================================
+ID_RE = re.compile(r"^[a-z0-9-]+$")
+
+
+def validate_id(value: str, label: str = "id") -> None:
+    """Ensure an id/alias follows the kebab-case convention."""
+    if not value:
+        raise ValueError(f"{label} is required")
+    if not ID_RE.match(value):
+        raise ValueError(
+            f"{label} '{value}' must be kebab-case: lowercase letters, numbers, and hyphens only"
+        )
+
+
+def validate_aliases(aliases: list | None) -> None:
+    """Ensure aliases are valid kebab-case ids and do not duplicate."""
+    if not aliases:
+        return
+    if not isinstance(aliases, list):
+        raise ValueError("aliases must be an array")
+    seen = set()
+    for alias in aliases:
+        validate_id(alias, "alias")
+        if alias in seen:
+            raise ValueError(f"duplicate alias '{alias}'")
+        seen.add(alias)
+
 
 # ========================================
 # Icon library
@@ -120,6 +151,10 @@ def build_manifest(data: dict) -> dict:
     for key in ("description", "author", "color", "icon"):
         if data.get(key):
             manifest[key] = data[key]
+
+    aliases = data.get("aliases")
+    if aliases:
+        manifest["aliases"] = aliases
 
     return manifest
 
@@ -369,6 +404,20 @@ def create_ecn_interactive(output_dir: Path, do_package: bool) -> Path:
         "icon": prompt("[Optional] Icon name (or 'list' to see options)", "box"),
     }
 
+    try:
+        validate_id(data["id"])
+    except ValueError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
+    aliases_str = prompt("[Optional] Aliases (comma-separated kebab-case, for renamed nodes)", "")
+    data["aliases"] = [a.strip() for a in aliases_str.split(",") if a.strip()]
+    try:
+        validate_aliases(data["aliases"])
+    except ValueError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
     if data["icon"] == "list":
         print(f"\n   Available icons: {', '.join(available_icons)}")
         data["icon"] = prompt("Icon name", "box")
@@ -439,6 +488,13 @@ def create_ecn_interactive(output_dir: Path, do_package: bool) -> Path:
 # Non-interactive mode (AI / CI)
 # ========================================
 def create_ecn_from_json(output_dir: Path, json_data: dict, do_package: bool) -> Path:
+    try:
+        validate_id(json_data["id"])
+        validate_aliases(json_data.get("aliases"))
+    except ValueError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
     fields = json_data.get("fields", [])
     outputs = json_data.get("outputs", [])
 

@@ -1,11 +1,12 @@
 {
-  "id": "point_read",
+  "id": "point-read",
   "name": "点位读取",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "category": "action",
   "entry": "backend.js",
   "schema": "schema.json",
   "description": "通过 IoT 网关读取点位值",
   "icon": "icon.svg",
-  "color": "#10b981"
+  "color": "#10b981",
+  "aliases": ["point_read"]
 }

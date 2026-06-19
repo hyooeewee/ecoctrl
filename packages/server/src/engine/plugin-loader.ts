@@ -2,19 +2,37 @@ import { createHash } from "crypto";
 import { z } from "zod";
 import type { PluginManifest } from "./plugin-types";
 
-const manifestSchema = z.object({
-  id: z.string().regex(/^[a-z0-9_-]+$/),
-  name: z.string().min(1),
-  version: z.string().regex(/^\d+\.\d+\.\d+$/),
-  category: z.enum(["trigger", "action", "condition"]),
-  description: z.string().optional(),
-  entry: z.string().default("backend.js"),
-  schema: z.string().default("schema.json"),
-  icon: z.string().optional(),
-  color: z.string().optional(),
-  author: z.string().optional(),
-  minEngineVersion: z.string().optional(),
-});
+const idRegex = /^[a-z0-9_-]+$/;
+
+const manifestSchema = z
+  .object({
+    id: z.string().regex(idRegex),
+    name: z.string().min(1),
+    version: z.string().regex(/^\d+\.\d+\.\d+$/),
+    category: z.enum(["trigger", "action", "condition"]),
+    description: z.string().optional(),
+    entry: z.string().default("backend.js"),
+    schema: z.string().default("schema.json"),
+    icon: z.string().optional(),
+    color: z.string().optional(),
+    author: z.string().optional(),
+    minEngineVersion: z.string().optional(),
+    aliases: z
+      .array(z.string().regex(idRegex))
+      .refine((items) => new Set(items).size === items.length, {
+        message: "aliases must not contain duplicates",
+      })
+      .optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.aliases?.includes(data.id)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "aliases must not include the plugin's own id",
+        path: ["aliases"],
+      });
+    }
+  });
 
 export function computeContentHash(files: Map<string, string>): string {
   const sorted = Array.from(files.entries()).sort(([a], [b]) => a.localeCompare(b));

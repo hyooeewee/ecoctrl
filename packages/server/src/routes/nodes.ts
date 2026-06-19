@@ -75,12 +75,13 @@ export default async function nodeRoutes(
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-      const versions = registry.getVersions(id);
-      if (versions.length === 0) {
+      const canonicalId = registry.resolveId(id);
+      if (!canonicalId) {
         return reply.status(404).send({ error: "Plugin not found" });
       }
+      const versions = registry.getVersions(canonicalId);
       return reply.send({
-        id,
+        id: canonicalId,
         versions: versions.map((v) => ({
           version: v.version,
           name: v.manifest.name,
@@ -217,19 +218,25 @@ export default async function nodeRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id, version } = request.params as { id: string; version: string };
       try {
-        // Check workflow references before uninstalling
+        const plugin = registry.get(id, version);
+        if (!plugin) {
+          return reply.status(404).send({ error: "Plugin version not found" });
+        }
+
+        // Check workflow references before uninstalling (including aliases)
+        const referencedIds = [plugin.id, ...(plugin.manifest.aliases ?? [])];
         const allWorkflows = await db.select().from(workflows);
         const refs = allWorkflows.filter((wf) => {
           const dsl = (wf.publishedDsl ?? wf.dsl) as { nodes?: Array<{ type: string }> } | null;
-          return dsl?.nodes?.some((n) => n.type === id);
+          return dsl?.nodes?.some((n) => referencedIds.includes(n.type));
         });
         if (refs.length > 0) {
           return reply.status(409).send({
-            error: `Plugin ${id} is referenced by ${refs.length} workflow(s). Remove references before uninstalling.`,
+            error: `Plugin ${plugin.id} is referenced by ${refs.length} workflow(s). Remove references before uninstalling.`,
           });
         }
 
-        await registry.uninstall(id, version);
+        await registry.uninstall(plugin.id, version);
         return reply.status(204).send();
       } catch (err) {
         return reply.status(400).send({ error: (err as Error).message });

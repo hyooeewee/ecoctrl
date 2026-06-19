@@ -55,12 +55,13 @@ Do NOT use generic defaults. Derive every value from the stated purpose:
 
 | Field           | Rule                                                                                                                                                                                                                          |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`            | kebab-case, derived from purpose keywords                                                                                                                                                                                     |
+| `id`            | **kebab-case only**: lowercase letters, numbers, hyphens. No underscores. Must match `^[a-z0-9-]+$`. The output folder name must equal the `id`.                                                                              |
 | `name`          | human-readable, derived from purpose                                                                                                                                                                                          |
 | `color`         | Pick a semantic color based on category/purpose: trigger=`#f59e0b` (amber), action=`#3b82f6` (blue), condition=`#22c55e` (green). Override if the domain has a stronger association (e.g. energy=`#22c55e`, alert=`#ef4444`). |
 | `description`   | One sentence summarizing what the node does                                                                                                                                                                                   |
 | `config fields` | Infer the minimal useful fields from the purpose. A sensor reader needs `endpoint` + `interval`; a threshold alert needs `threshold` + `comparison`.                                                                          |
-| `version`       | Always `1.0.0`                                                                                                                                                                                                                |
+| `version`       | `1.0.0` for new nodes. Bump at least the minor version when renaming.                                                                                                                                                         |
+| `aliases`       | Optional array of previous `id`s. Use only when renaming an existing node. Each alias must be kebab-case and must not duplicate the current `id`.                                                                             |
 | `icon`          | Pick an icon NAME from the icon library (see below). Do NOT generate SVG strings.                                                                                                                                             |
 | `author`        | Empty (omitted from manifest)                                                                                                                                                                                                 |
 
@@ -205,6 +206,35 @@ The user installs the `.ecn` through the Admin UI:
 
 - Go to Workflow Editor → Node Library → Upload
 - Or use the API: `POST /api/nodes/install` with the `.ecn` file
+
+## Renaming an Existing Node
+
+Renaming a node is a breaking change for workflows that reference the old `id`. Use aliases to keep old workflows running:
+
+1. **Create the new node** (do not rename the old folder in place):
+   - New folder name = new `id`.
+   - Both must be kebab-case and identical.
+   - Bump the version (e.g. `1.0.0` → `2.0.0`).
+
+2. **Add the old `id` to `aliases`** in the new `manifest.json`:
+
+   ```json
+   {
+     "id": "sse-send",
+     "version": "2.0.0",
+     "aliases": ["sse_send"]
+   }
+   ```
+
+3. **Keep the old node folder** for one release cycle, then remove it after migrating or confirming no workflow references the old id.
+
+4. **Re-seed built-in nodes** with `--prune` only in development:
+
+   ```bash
+   pnpm db:init -- --filter=nodes --prune
+   ```
+
+   In production, do not use `--prune` blindly because it deletes custom user-uploaded nodes. Delete only the specific old `id/version` prefix from S3 when safe.
 
 ## Reference Files
 

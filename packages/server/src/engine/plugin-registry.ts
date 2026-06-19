@@ -36,6 +36,7 @@ function buildKey(id: string, version: string, filename: string): string {
 
 export class PluginRegistry {
   private plugins = new Map<string, Map<string, PluginDefinition>>(); // id -> version -> definition
+  private aliases = new Map<string, string>(); // alias -> canonical id
   private storage: StorageAdapter;
   private lock = new AsyncLock();
 
@@ -45,6 +46,7 @@ export class PluginRegistry {
 
   async loadAll(): Promise<void> {
     this.plugins.clear();
+    this.aliases.clear();
     try {
       // Guard against slow/unavailable storage (e.g. network-hung MinIO)
       const keys = await Promise.race([
@@ -81,8 +83,28 @@ export class PluginRegistry {
           await this.loadPlugin(id, version, files);
         }
       }
+
+      this.buildAliasIndex();
     } catch (err) {
       logger.warn(`Plugin registry load skipped: ${(err as Error).message}`);
+    }
+  }
+
+  private buildAliasIndex(): void {
+    this.aliases.clear();
+    for (const [id, versions] of this.plugins) {
+      for (const [version, def] of versions) {
+        for (const alias of def.manifest.aliases ?? []) {
+          const existing = this.aliases.get(alias);
+          if (existing) {
+            logger.warn(
+              `Alias '${alias}' is claimed by both ${existing} and ${id}@${version}; keeping ${existing}`,
+            );
+          } else {
+            this.aliases.set(alias, id);
+          }
+        }
+      }
     }
   }
 
@@ -144,6 +166,10 @@ export class PluginRegistry {
   }
 
   get(id: string, version?: string): PluginDefinition | null {
+    return this.getById(id, version) ?? this.resolveAlias(id, version);
+  }
+
+  private getById(id: string, version?: string): PluginDefinition | null {
     const versions = this.plugins.get(id);
     if (!versions) return null;
     if (version) {
@@ -152,6 +178,23 @@ export class PluginRegistry {
     // Return latest version (semver sort)
     const sorted = Array.from(versions.keys()).sort(compareSemver);
     return versions.get(sorted[sorted.length - 1]!) ?? null;
+  }
+
+  private resolveAlias(id: string, version?: string): PluginDefinition | null {
+    const canonicalId = this.aliases.get(id);
+    if (!canonicalId) return null;
+    return this.getById(canonicalId, version);
+  }
+
+  /** Return the canonical id for a given id or alias. */
+  resolveId(id: string): string | null {
+    if (this.plugins.has(id)) return id;
+    return this.aliases.get(id) ?? null;
+  }
+
+  /** Return all aliases known by the registry. */
+  getAliases(): Map<string, string> {
+    return new Map(this.aliases);
   }
 
   getAll(): PluginDefinition[] {
@@ -173,10 +216,40 @@ export class PluginRegistry {
     }));
   }
 
+  private checkAliasConflicts(manifest: PluginManifest): string[] {
+    const errors: string[] = [];
+
+    // A plugin id must not shadow an existing alias
+    const existingAliasTarget = this.aliases.get(manifest.id);
+    if (existingAliasTarget && existingAliasTarget !== manifest.id) {
+      errors.push(`id '${manifest.id}' is already used as an alias for '${existingAliasTarget}'`);
+    }
+
+    for (const alias of manifest.aliases ?? []) {
+      // Alias must not match an existing plugin id
+      if (this.plugins.has(alias)) {
+        errors.push(`alias '${alias}' conflicts with existing plugin id`);
+      }
+      // Alias must not match another alias pointing elsewhere
+      const existingTarget = this.aliases.get(alias);
+      if (existingTarget && existingTarget !== manifest.id) {
+        errors.push(`alias '${alias}' is already claimed by '${existingTarget}'`);
+      }
+    }
+
+    return errors;
+  }
+
   async install(zipBuffer: Buffer): Promise<PluginDefinition> {
     return this.lock.acquire("registry", async () => {
       const { files, comment } = await extractPluginFromZip(zipBuffer);
       const { manifest, backendCode, schema, iconSvg } = await validatePluginPackage(files);
+
+      // Alias conflict checks
+      const aliasErrors = this.checkAliasConflicts(manifest);
+      if (aliasErrors.length > 0) {
+        throw new Error(`Alias conflicts detected: ${aliasErrors.join("; ")}`);
+      }
 
       // Idempotency: return existing if already installed
       const existing = this.plugins.get(manifest.id)?.get(manifest.version);
@@ -228,6 +301,8 @@ export class PluginRegistry {
         this.plugins.set(manifest.id, versions);
       }
       versions.set(manifest.version, def);
+
+      this.buildAliasIndex();
 
       return def;
     });
@@ -286,6 +361,8 @@ export class PluginRegistry {
       if (versions.size === 0) {
         this.plugins.delete(id);
       }
+
+      this.buildAliasIndex();
 
       // Remove from storage
       const filesToDelete = [

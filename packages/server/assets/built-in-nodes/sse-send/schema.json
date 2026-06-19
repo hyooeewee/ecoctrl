@@ -12,7 +12,7 @@
     "payload": {
       "type": "string",
       "title": "事件内容 (JSON)",
-      "description": "JSON 格式的事件负载，支持 {{表达式}}。示例：{\"metric_key\": \"{{point_read.value}}\", \"data\": {}}",
+      "description": "JSON 格式的事件负载，支持 {{表达式}}。示例：{\"metric_key\": \"{{point-read.value}}\", \"data\": {}}",
       "default": "{}",
       "format": "textarea"
     },
