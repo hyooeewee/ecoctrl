@@ -20,6 +20,36 @@ const lightingConfig: Record<string, Record<string, LightingGroupConfig>> = {
     G5: { label: "南序厅中门厅", opened: false },
     G6: { label: "南序厅东门厅", opened: false },
   },
+  西序厅: {
+    G1: { label: "入口雨棚", opened: true },
+    G2: { label: "西序厅主照明", opened: false },
+    G3: { label: "西侧走廊", opened: true },
+    G4: { label: "西序厅 VIP 区", opened: false },
+  },
+  东序厅: {
+    G1: { label: "入口雨棚", opened: true },
+    G2: { label: "东序厅主照明", opened: true },
+    G3: { label: "东侧走廊", opened: false },
+    G4: { label: "东序厅展示区", opened: true },
+  },
+  北序厅: {
+    G1: { label: "入口雨棚", opened: false },
+    G2: { label: "北序厅主照明", opened: false },
+    G3: { label: "北侧走廊", opened: false },
+    G4: { label: "北序厅服务区", opened: true },
+  },
+  多功能厅1号: {
+    G1: { label: "舞台主灯", opened: true },
+    G2: { label: "观众席照明", opened: false },
+    G3: { label: "侧光", opened: true },
+    G4: { label: "顶光", opened: false },
+  },
+  多功能厅2号: {
+    G1: { label: "舞台主灯", opened: false },
+    G2: { label: "观众席照明", opened: false },
+    G3: { label: "侧光", opened: false },
+    G4: { label: "顶光", opened: false },
+  },
 };
 
 // ========================================
@@ -67,7 +97,7 @@ export default async function lightingRoutes(fastify: FastifyInstance) {
       schema: {
         tags: ["Lighting"],
         summary: "List available lighting regions",
-        security: [{ bearerAuth: [] }],
+        security: [],
         response: {
           200: z.object({ regions: z.array(z.string()) }),
           ...errorResponse,
@@ -85,7 +115,7 @@ export default async function lightingRoutes(fastify: FastifyInstance) {
       schema: {
         tags: ["Lighting"],
         summary: "Get lighting groups for a region",
-        security: [{ bearerAuth: [] }],
+        security: [],
         params: z.object({ region: z.string() }),
         response: {
           200: z.object({

@@ -77,6 +77,9 @@ export default async function apiRoutes(fastify: FastifyInstance) {
     // Model file endpoints are public (loaded by BabylonJS without auth headers)
     if (/^\/api\/(?:models\/[^/]+|dashboard-model)\/file\/?$/.test(pathname)) return;
     if (publicPaths.some((p) => request.url.startsWith(p))) return;
+    // Allow routes that explicitly declare public access via schema.security: []
+    const routeSchema = request.routeOptions.schema as { security?: unknown[] } | undefined;
+    if (routeSchema?.security?.length === 0) return;
     try {
       await request.jwtVerify();
     } catch {
