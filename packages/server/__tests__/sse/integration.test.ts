@@ -56,7 +56,7 @@ describe("SSE integration", () => {
     const written = write.mock.calls[0][0] as string;
     const lines = written.split("\n");
 
-    expect(lines).toContain("event: alert");
+    expect(lines.some((l) => l.startsWith('data: {"type":"alert"'))).toBe(true);
     expect(lines.some((l) => l.startsWith("data: "))).toBe(true);
     expect(written).toMatch(/data: .*"msg":"hello"/);
     expect(written).toMatch(/\n\n$/);

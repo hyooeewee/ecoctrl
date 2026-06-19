@@ -57,7 +57,7 @@ describe("PluginRegistry", () => {
     expect(plugin.manifest.name).toBe("Test Action");
 
     // Verify storage
-    const manifestKey = "plugins/test-action/1.0.0/manifest.json";
+    const manifestKey = "test-action/1.0.0/manifest.json";
     const exists = await storage.exists(manifestKey);
     expect(exists).toBe(true);
   });
@@ -116,6 +116,35 @@ describe("PluginRegistry", () => {
     expect(specific?.version).toBe("1.0.0");
   });
 
+  it("falls back to the latest version when an exact version is missing", async () => {
+    const AdmZip = (await import("adm-zip")).default;
+
+    const zip = new AdmZip();
+    zip.addFile(
+      "manifest.json",
+      Buffer.from(
+        JSON.stringify({
+          id: "fallback-version",
+          name: "Fallback Version",
+          version: "2.0.0",
+          category: "action",
+          entry: "backend.js",
+          schema: "schema.json",
+        }),
+      ),
+    );
+    zip.addFile("backend.js", Buffer.from("module.exports = async () => {}"));
+    zip.addFile(
+      "schema.json",
+      Buffer.from(JSON.stringify({ type: "object", properties: { x: { type: "string" } } })),
+    );
+    await registry.install(zip.toBuffer());
+
+    const resolved = registry.resolveForExecution("fallback-version", "1.0.0");
+    expect(resolved).not.toBeNull();
+    expect(resolved?.version).toBe("2.0.0");
+  });
+
   it("uninstalls a plugin version", async () => {
     const AdmZip = (await import("adm-zip")).default;
     const zip = new AdmZip();
@@ -145,7 +174,7 @@ describe("PluginRegistry", () => {
     expect(registry.get("to-uninstall")).toBeNull();
 
     // Verify storage cleanup
-    const manifestKey = "plugins/to-uninstall/1.0.0/manifest.json";
+    const manifestKey = "to-uninstall/1.0.0/manifest.json";
     const exists = await storage.exists(manifestKey);
     expect(exists).toBe(false);
   });
@@ -155,7 +184,7 @@ describe("PluginRegistry", () => {
     const pluginId = "disk-plugin";
     const version = "1.0.0";
     await storage.put(
-      `plugins/${pluginId}/${version}/manifest.json`,
+      `${pluginId}/${version}/manifest.json`,
       Buffer.from(
         JSON.stringify({
           id: pluginId,
@@ -168,11 +197,11 @@ describe("PluginRegistry", () => {
       ),
     );
     await storage.put(
-      `plugins/${pluginId}/${version}/backend.js`,
+      `${pluginId}/${version}/backend.js`,
       Buffer.from("module.exports = async () => {}"),
     );
     await storage.put(
-      `plugins/${pluginId}/${version}/schema.json`,
+      `${pluginId}/${version}/schema.json`,
       Buffer.from(JSON.stringify({ type: "object", properties: { x: { type: "string" } } })),
     );
 

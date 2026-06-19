@@ -67,7 +67,7 @@ describe("SSEManager", () => {
     });
 
     const written = write.mock.calls[0][0] as string;
-    expect(written).toContain("event: alert");
+    expect(written).toContain('data: {"type":"alert"');
     expect(written).toContain('"msg":"hello"');
     expect(written).toContain("data:");
     expect(written).toContain("\n\n");

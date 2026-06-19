@@ -169,6 +169,26 @@ export class PluginRegistry {
     return this.getById(id, version) ?? this.resolveAlias(id, version);
   }
 
+  /**
+   * Resolve a plugin for execution. If an exact version is requested but not
+   * installed, fall back to the latest available version and log a warning.
+   */
+  resolveForExecution(id: string, version?: string): PluginDefinition | null {
+    if (!version) {
+      return this.get(id);
+    }
+    const exact = this.get(id, version);
+    if (exact) return exact;
+
+    const fallback = this.get(id);
+    if (fallback) {
+      logger.warn(
+        `Plugin '${id}' version '${version}' not found; falling back to latest '${fallback.version}' for execution`,
+      );
+    }
+    return fallback;
+  }
+
   private getById(id: string, version?: string): PluginDefinition | null {
     const versions = this.plugins.get(id);
     if (!versions) return null;
