@@ -262,7 +262,7 @@ export function EnergyBreakdownChart({ className, data, title, icon }: EnergyBre
               <Cell key={entry.key} fill={`var(--color-${entry.key})`} />
             ))}
           </Pie>
-          <Tooltip content={<PieCustomTooltip />} />
+          <ChartTooltip content={<PieCustomTooltip />} />
           <ChartLegend
             content={<ChartLegendContent nameKey="key" />}
             className="-translate-y-2 flex-wrap gap-2 *:basis-1/4 *:justify-center"
