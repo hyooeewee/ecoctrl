@@ -16,8 +16,13 @@ export function useSse() {
   const setStatus = useSseStore((s) => s.setStatus);
   const setError = useSseStore((s) => s.setError);
   const status = useSseStore((s) => s.status);
+  const statusRef = useRef(status);
   const handlersRef = useRef<Set<SseMessageHandler>>(new Set());
   const clientRef = useRef<SSEClient | null>(null);
+
+  // Keep a mutable ref in sync with the latest status so event handlers
+  // can check connection state without re-subscribing on every change.
+  statusRef.current = status;
 
   const connect = useCallback(() => {
     if (clientRef.current) return;
@@ -84,8 +89,34 @@ export function useSse() {
 
   useEffect(() => {
     connect();
+
+    // When the tab returns to the foreground or the network recovers,
+    // force a reconnect if the SSE connection is not currently healthy.
+    // EventSource may silently stall while the tab is hidden, so a fresh
+    // connection is more reliable than waiting for the heartbeat timeout.
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && statusRef.current !== "connected") {
+        clientRef.current?.dispose();
+        clientRef.current = null;
+        connect();
+      }
+    };
+
+    const handleOnline = () => {
+      if (statusRef.current !== "connected") {
+        clientRef.current?.dispose();
+        clientRef.current = null;
+        connect();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("online", handleOnline);
+
     return () => {
       disconnect();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("online", handleOnline);
     };
   }, [connect, disconnect]);
 
