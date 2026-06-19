@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Badge } from "@ecoctrl/ui/badge";
 import { Button } from "@ecoctrl/ui/button";
+import { JsonEditor } from "@/components/workflow-editor/JsonEditor";
 import {
   CheckCircle2,
   XCircle,
@@ -14,8 +15,7 @@ import {
   ArrowLeft,
   Copy,
   Check,
-  Braces,
-  List,
+  FileJson,
 } from "lucide-react";
 
 // ========================================
@@ -116,15 +116,18 @@ function JsonBlock({ data, title }: { data: unknown; title?: string }) {
   const json = JSON.stringify(data, null, 2);
   return (
     <div className="mt-2">
-      {title && (
-        <div className="flex items-center justify-between mb-1">
-          <p className="text-[10px] font-medium text-muted-foreground">{title}</p>
-          <CopyButton text={json} />
-        </div>
-      )}
-      <pre className="font-mono text-[10px] bg-muted p-2.5 rounded overflow-auto max-h-64">
-        <code>{json}</code>
-      </pre>
+      <JsonEditor
+        value={json}
+        onChange={() => {}}
+        title={title ?? "JSON"}
+        mode="inline"
+        editor="monaco"
+        readOnly
+        showFormat
+        showFullscreen
+        showCopy
+        height={160}
+      />
     </div>
   );
 }
@@ -238,15 +241,16 @@ export default function LogViewer({
               {new Date(createdAt).toLocaleString("zh-CN")}
             </span>
           )}
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            title={viewMode === "card" ? "切换到 JSON 视图" : "切换到卡片视图"}
-            onClick={() => setViewMode((v) => (v === "card" ? "json" : "card"))}
-          >
-            {viewMode === "card" ? <Braces size={14} /> : <List size={14} />}
-          </Button>
-          {viewMode === "json" && <CopyButton text={JSON.stringify(allData, null, 2)} />}
+          {viewMode === "card" && (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              title="切换到 JSON 视图"
+              onClick={() => setViewMode("json")}
+            >
+              <FileJson size={14} />
+            </Button>
+          )}
         </div>
       </div>
 
@@ -271,21 +275,46 @@ export default function LogViewer({
           </div>
         )}
         {!loading && !loadError && viewMode === "json" && (
-          <pre className="font-mono text-[10px] bg-muted p-5 rounded overflow-auto h-full">
-            <code>{JSON.stringify(allData, null, 2)}</code>
-          </pre>
+          <div className="h-full">
+            <JsonEditor
+              value={JSON.stringify(allData, null, 2)}
+              onChange={() => {}}
+              title="完整日志"
+              mode="fullscreen"
+              editor="monaco"
+              readOnly
+              showFormat
+              showCopy
+              headerActions={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  title="切换到卡片视图"
+                  onClick={() => setViewMode("card")}
+                >
+                  <FileJson size={14} />
+                </Button>
+              }
+            />
+          </div>
         )}
         {!loading && !loadError && viewMode === "card" && (
           <>
             {triggerData && (
               <div className="px-5 py-3 border-b">
-                <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-[11px] font-medium text-muted-foreground">触发数据</p>
-                  <CopyButton text={JSON.stringify(triggerData, null, 2)} />
-                </div>
-                <pre className="font-mono text-[10px] bg-muted p-2.5 rounded overflow-auto max-h-48">
-                  <code>{JSON.stringify(triggerData, null, 2)}</code>
-                </pre>
+                <JsonEditor
+                  value={JSON.stringify(triggerData, null, 2)}
+                  onChange={() => {}}
+                  title="触发数据"
+                  mode="inline"
+                  editor="monaco"
+                  readOnly
+                  showFormat
+                  showFullscreen
+                  showCopy
+                  height={160}
+                />
               </div>
             )}
 
@@ -303,11 +332,18 @@ export default function LogViewer({
 
             {result && Object.keys(result).length > 0 && (
               <div className="px-5 py-3 border-t">
-                <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-[11px] font-medium text-muted-foreground">执行结果</p>
-                  <CopyButton text={JSON.stringify(result, null, 2)} />
-                </div>
-                <JsonBlock data={result} />
+                <JsonEditor
+                  value={JSON.stringify(result, null, 2)}
+                  onChange={() => {}}
+                  title="执行结果"
+                  mode="inline"
+                  editor="monaco"
+                  readOnly
+                  showFormat
+                  showFullscreen
+                  showCopy
+                  height={160}
+                />
               </div>
             )}
           </>

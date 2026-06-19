@@ -1,6 +1,7 @@
 import { X, Trash2, AlertTriangle, Play, Copy, Check, LayoutTemplate } from "lucide-react";
 import { useState, useCallback, useRef } from "react";
 import { ExpressionRefHelper, type UpstreamNodeInfo } from "./NodeConfigPanel";
+import { JsonEditor } from "./JsonEditor";
 import { Button } from "@ecoctrl/ui/button";
 import { Input } from "@ecoctrl/ui/input";
 import { Label } from "@ecoctrl/ui/label";
@@ -525,9 +526,18 @@ export function WorkflowNodeConfig({
                         </div>
                       )}
                       {log.output && Object.keys(log.output).length > 0 && (
-                        <pre className="font-mono text-[10px] bg-muted p-2 rounded overflow-auto max-h-48">
-                          <code>{JSON.stringify(log.output, null, 2)}</code>
-                        </pre>
+                        <JsonEditor
+                          value={JSON.stringify(log.output, null, 2)}
+                          onChange={() => {}}
+                          title="输出"
+                          mode="inline"
+                          editor="monaco"
+                          readOnly
+                          showFormat
+                          showFullscreen
+                          showCopy
+                          height={160}
+                        />
                       )}
                     </div>
                   ))

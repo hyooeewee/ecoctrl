@@ -5,7 +5,7 @@ import {
   EyeOff,
   Maximize2,
   Minimize2,
-  Braces,
+  FileJson,
   Scroll,
   AlignLeft,
   Upload,
@@ -14,8 +14,8 @@ import { Button } from "@ecoctrl/ui/button";
 import { Input } from "@ecoctrl/ui/input";
 import { Switch } from "@ecoctrl/ui/switch";
 import { useState, useRef } from "react";
-import { Editor } from "@monaco-editor/react";
 import type { EnvVar } from "./types";
+import { JsonEditor } from "./JsonEditor";
 
 // ========================================
 // Import helpers
@@ -241,9 +241,6 @@ export function VariableEditor({
   const [itemsJson, setItemsJson] = useState("");
   const [jsonError, setJsonError] = useState("");
   const [jsonShowSecrets, setJsonShowSecrets] = useState(false);
-  const editorRef = useRef<
-    Parameters<NonNullable<React.ComponentProps<typeof Editor>["onMount"]>>[0] | null
-  >(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const syncFormToJson = () => {
@@ -321,7 +318,13 @@ export function VariableEditor({
   };
 
   const handleFormat = () => {
-    editorRef.current?.getAction("editor.action.formatDocument")?.run();
+    try {
+      const parsed = JSON.parse(itemsJson || "[]");
+      setItemsJson(JSON.stringify(parsed, null, 2));
+      setJsonError("");
+    } catch (e) {
+      setJsonError(e instanceof Error ? e.message : "JSON 格式错误");
+    }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -397,16 +400,6 @@ export function VariableEditor({
     }
   };
 
-  const editorOptions: React.ComponentProps<typeof Editor>["options"] = {
-    minimap: { enabled: false },
-    fontSize: 13,
-    lineNumbers: "on",
-    scrollBeyondLastLine: false,
-    automaticLayout: true,
-    tabSize: 2,
-    formatOnPaste: true,
-  };
-
   if (fullscreen) {
     return (
       <div className="flex flex-col flex-1 min-h-0">
@@ -450,21 +443,19 @@ export function VariableEditor({
 
         {/* Content */}
         <div className="min-h-0 flex-1 flex flex-col px-4 py-3">
-          <div className="flex-1 min-h-0">
-            <Editor
-              height="100%"
-              language="json"
-              value={getDisplayJson()}
-              onChange={(v) => {
-                setItemsJson(v ?? "");
-                setJsonError("");
-              }}
-              onMount={(editor) => {
-                editorRef.current = editor;
-              }}
-              options={{ ...editorOptions, readOnly: false }}
-            />
-          </div>
+          <JsonEditor
+            value={getDisplayJson()}
+            onChange={(v) => {
+              setItemsJson(v);
+              setJsonError("");
+            }}
+            title={title}
+            mode="fullscreen"
+            editor="monaco"
+            showHeader={false}
+            showFormat={false}
+            readOnly={!jsonShowSecrets}
+          />
         </div>
 
         {/* Footer */}
@@ -509,7 +500,7 @@ export function VariableEditor({
             title={editorMode === "form" ? "切换到 JSON 视图" : "切换到表单视图"}
             onClick={toggleMode}
           >
-            {editorMode === "form" ? <Braces size={14} /> : <Scroll size={14} />}
+            {editorMode === "form" ? <FileJson size={14} /> : <Scroll size={14} />}
           </Button>
           {editorMode === "json" && (
             <Button
@@ -589,18 +580,18 @@ export function VariableEditor({
           </div>
         ) : (
           <div className="h-[320px]">
-            <Editor
-              height="100%"
-              language="json"
+            <JsonEditor
               value={getDisplayJson()}
               onChange={(v) => {
-                setItemsJson(v ?? "");
+                setItemsJson(v);
                 setJsonError("");
               }}
-              onMount={(editor) => {
-                editorRef.current = editor;
-              }}
-              options={{ ...editorOptions, readOnly: false }}
+              title={title}
+              mode="inline"
+              editor="monaco"
+              showHeader={false}
+              showFormat={false}
+              readOnly={!jsonShowSecrets}
             />
           </div>
         )}

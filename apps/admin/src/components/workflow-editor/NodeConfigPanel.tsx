@@ -9,6 +9,7 @@ import { Textarea } from "@ecoctrl/ui/textarea";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@ecoctrl/ui/hover-card";
 import type { NodeDefinition } from "@/api/nodes";
 import type { EnvVar } from "./types";
+import { JsonEditor } from "./JsonEditor";
 
 // ========================================
 // JSON Schema Form Types
@@ -747,6 +748,32 @@ function SchemaField({
           envVars={envVars}
           multiline
           rows={4}
+        />
+      </div>
+    );
+  }
+
+  // Object / Array: JSON editor with fullscreen support
+  if (prop.type === "object" || prop.type === "array") {
+    const stringified = JSON.stringify(value ?? (prop.type === "array" ? [] : {}), null, 2);
+    return (
+      <div className="space-y-1.5">
+        <FieldLabel label={label} required={required} inputId={inputId} />
+        <FieldDescription text={description} />
+        <JsonEditor
+          value={stringified}
+          onChange={(v) => {
+            try {
+              onChange(JSON.parse(v));
+            } catch {
+              // keep invalid text as string? node config expects object/array
+            }
+          }}
+          title={`编辑 ${label}`}
+          mode="inline"
+          editor="textarea"
+          showFormat
+          showFullscreen
         />
       </div>
     );

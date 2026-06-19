@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from "react";
 import { Maximize2 } from "lucide-react";
 import { Badge } from "@ecoctrl/ui/badge";
 import { ScrollArea } from "@ecoctrl/ui/scroll-area";
+import { JsonEditor } from "./JsonEditor";
 
 interface TestNodeLog {
   nodeId: string;
@@ -149,9 +150,19 @@ export function WorkflowTestPanel({
                     <div className="mt-1 text-rose-600 dark:text-rose-400">{log.error}</div>
                   )}
                   {log.output && (
-                    <pre className="mt-1 max-h-20 overflow-auto rounded bg-zinc-100 p-1.5 text-[10px] dark:bg-zinc-800">
-                      {JSON.stringify(log.output, null, 2)}
-                    </pre>
+                    <div className="mt-1">
+                      <JsonEditor
+                        value={JSON.stringify(log.output, null, 2)}
+                        onChange={() => {}}
+                        mode="inline"
+                        editor="monaco"
+                        readOnly
+                        showFormat
+                        showFullscreen
+                        showHeader={false}
+                        height={80}
+                      />
+                    </div>
                   )}
                 </div>
               </div>
