@@ -21,7 +21,7 @@ catalog:
   clsx: ^2.1.1
   jsep: ^1.4.0
   jsdom: ^26.1.0
-  lucide-react: ^0.546.0
+  lucide-react: ^1.21.0
   pg-boss: ^12.18.2
   react: ^19.2.5
   react-dom: ^19.2.5
