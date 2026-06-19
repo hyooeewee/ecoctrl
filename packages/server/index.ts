@@ -25,6 +25,7 @@ import rateLimitPlugin from "@/plugins/rateLimit";
 import apiRoutes from "@/routes";
 import { initQueue, stopQueue } from "@/queue/pgboss";
 import { startWorker } from "@/queue/worker";
+import { scheduleEngine } from "@/engine/scheduler";
 import { triggerEngine } from "@/engine/trigger";
 import { syncSmtpFromEnv } from "@/repositories/platformConfig";
 import { env } from "@/lib/env";
@@ -242,6 +243,7 @@ try {
 
 const shutdown = async (signal: string) => {
   fastify.log.info(`Received ${signal}, shutting down gracefully...`);
+  scheduleEngine.stop();
   await notifyListener.stop();
   await stopQueue();
   await fastify.close();

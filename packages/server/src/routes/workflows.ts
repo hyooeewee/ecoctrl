@@ -136,6 +136,7 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
       }
 
       const id = await createWorkflow(payload.userId, { ...body, dsl });
+      await triggerEngine.syncSchedules();
       return reply.status(201).send({ id });
     },
   );
@@ -239,6 +240,7 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
         }
       }
 
+      await triggerEngine.syncSchedules();
       return reply.send({ success: true });
     },
   );
@@ -263,6 +265,7 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
       }
 
       await deleteWorkflow(id);
+      await triggerEngine.syncSchedules();
       return reply.status(204).send();
     },
   );

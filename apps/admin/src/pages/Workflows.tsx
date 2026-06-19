@@ -35,15 +35,13 @@ import { workflowsApi } from "@/api/workflows";
 import type { WorkflowListItem } from "@/components/workflow-editor/types";
 
 const TRIGGER_LABELS: Record<string, string> = {
-  state_change: "状态变更",
-  schedule: "定时调度",
+  schedule: "定时触发",
   manual: "手动触发",
   webhook: "Webhook",
   event: "事件",
 };
 
 const TRIGGER_VARIANTS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  state_change: "default",
   schedule: "secondary",
   manual: "outline",
   webhook: "destructive",
@@ -168,8 +166,9 @@ export default function Workflows() {
     setTriggerLoadingId(workflow.id);
     try {
       await workflowsApi.trigger(workflow.id);
-    } catch {
-      // silently fail
+    } catch (err) {
+      console.error("[Workflows] manual trigger failed", err);
+      toast.error("触发失败，请检查工作流是否已发布");
     } finally {
       setTriggerLoadingId(null);
     }
@@ -240,7 +239,6 @@ export default function Workflows() {
     const slug = `wf-${Date.now()}`;
     const dsl = {
       version: "1.0" as const,
-      trigger: { type: "manual" as const, config: {} },
       nodes: [
         { id: "start", type: "start" as const, name: "开始", config: {} },
         { id: "end", type: "end" as const, name: "结束", config: {} },
@@ -251,8 +249,9 @@ export default function Workflows() {
       const { id } = await workflowsApi.create({ slug, name: slug, enabled: true, dsl });
       setCanvasWorkflowId(id);
       setAppActiveTab("workflowCanvas");
-    } catch {
-      // silently fail
+    } catch (err) {
+      console.error("[Workflows] create workflow failed", err);
+      toast.error("创建工作流失败");
     }
   }, [setCanvasWorkflowId, setAppActiveTab]);
 

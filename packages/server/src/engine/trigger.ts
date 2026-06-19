@@ -2,13 +2,15 @@ import { eq, and } from "drizzle-orm";
 import { db } from "@/config/database";
 import { workflows, workflowExecutions } from "@/schemas/workflows";
 import { findWorkflowById } from "@/repositories/workflows";
-import { getBoss, publishExecution, scheduleWorkflow } from "@/queue/pgboss";
+import { getBoss, publishExecution } from "@/queue/pgboss";
 import { evaluateBoolean } from "./expr";
 import { buildVars } from "./template";
 import { splitEnvVars, mergeServerEnv } from "./env-utils";
 import type { ExecutionContext, WorkflowDSL, WorkflowNode, TriggerMode } from "./types";
 import { PluginRegistry } from "./plugin-registry";
 import { getPluginStorage } from "@/storage";
+
+import { scheduleEngine } from "./scheduler";
 
 const pluginStorage = getPluginStorage();
 const pluginRegistry = new PluginRegistry(pluginStorage);
@@ -122,7 +124,9 @@ export const triggerEngine = {
     }
   },
 
-  // Manual: called from API
+  // Manual: called from API. Prefers a manual trigger node, but falls back to
+  // any trigger node so the run/debug button works for schedule/webhook/event
+  // workflows as well.
   async emitManual(
     workflowId: string,
     userId: string,
@@ -138,16 +142,20 @@ export const triggerEngine = {
     }
 
     const dsl = workflow.publishedDsl as WorkflowDSL;
-    const manualTriggers = getTriggerNodes(dsl).filter((t) => t.mode === "manual");
-    if (manualTriggers.length === 0) {
-      throw new Error("Workflow has no manual trigger node");
+    const triggerNodes = getTriggerNodes(dsl);
+    if (triggerNodes.length === 0) {
+      throw new Error("Workflow has no trigger node");
     }
 
-    const entry = startNodeId
-      ? manualTriggers.find((t) => t.node.id === startNodeId)
-      : manualTriggers[0];
-    if (!entry) {
-      throw new Error(`Manual trigger node '${startNodeId}' not found`);
+    let entry: { node: WorkflowNode; mode: TriggerMode } | undefined;
+    if (startNodeId) {
+      entry = triggerNodes.find((t) => t.node.id === startNodeId);
+      if (!entry) {
+        throw new Error(`Trigger node '${startNodeId}' not found`);
+      }
+    } else {
+      const manualTriggers = triggerNodes.filter((t) => t.mode === "manual");
+      entry = manualTriggers.length > 0 ? manualTriggers[0] : triggerNodes[0];
     }
 
     return createExecutionAndPublish(workflowId, userId, entry.node.id, {
@@ -212,49 +220,39 @@ export const triggerEngine = {
     });
   },
 
-  // Schedule management: register/unregister cron schedules
+  // Schedule management: keep in-process timers in sync with enabled workflows.
+  // pg-boss only supports minute-level scheduling, so schedule trigger nodes use
+  // a lightweight cron-parser based engine that supports second-level crons.
   async syncSchedules(): Promise<void> {
+    // Unschedule any legacy pg-boss schedule entries. The custom scheduler owns
+    // schedule triggers now.
     const boss = getBoss();
     const scheduled = await boss.getSchedules();
-    const scheduledNames = new Set<string>(scheduled.map((s: { name: string }) => s.name));
+    for (const s of scheduled) {
+      if (s.name.startsWith("workflow.schedule.")) {
+        await boss.unschedule(s.name);
+      }
+    }
 
     const rows = await db
       .select()
       .from(workflows)
       .where(and(eq(workflows.enabled, true), eq(workflows.isLatest, true)));
 
-    const activeScheduleNames = new Set<string>();
-
-    for (const workflow of rows) {
+    const scheduleWorkflows = rows.map((workflow) => {
       const dsl = (workflow.publishedDsl ?? workflow.dsl) as WorkflowDSL;
-      const scheduleTriggers = getTriggerNodes(dsl).filter((t) => t.mode === "schedule");
+      const scheduleNodes = getTriggerNodes(dsl)
+        .filter((t) => t.mode === "schedule")
+        .map((t) => t.node);
+      return { id: workflow.id, userId: workflow.userId, dsl, scheduleNodes };
+    });
 
-      for (const { node } of scheduleTriggers) {
-        const config = node.config as { cron?: string; timezone?: string } | undefined;
-        if (!config?.cron) continue;
-
-        const scheduleName = `workflow.schedule.${workflow.id}.${node.id}`;
-        activeScheduleNames.add(scheduleName);
-
-        if (!scheduledNames.has(scheduleName)) {
-          await scheduleWorkflow(
-            workflow.id,
-            node.id,
-            config.cron,
-            config.timezone ?? "Asia/Shanghai",
-          );
-        }
-      }
-    }
-
-    // Unschedule schedules that are no longer active
-    for (const scheduledName of scheduledNames) {
-      if (
-        !activeScheduleNames.has(scheduledName) &&
-        scheduledName.startsWith("workflow.schedule.")
-      ) {
-        await boss.unschedule(scheduledName);
-      }
-    }
+    scheduleEngine.sync(
+      (entry) =>
+        createExecutionAndPublish(entry.workflowId, entry.userId, entry.nodeId, {
+          source: "schedule",
+        }),
+      scheduleWorkflows,
+    );
   },
 };
