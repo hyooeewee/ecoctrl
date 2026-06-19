@@ -29,6 +29,7 @@ import nodeRoutes from "@/routes/nodes";
 import petRoutes from "@/routes/pets";
 import eventsRoutes from "@/routes/events";
 import notificationRoutes from "@/routes/notifications";
+import webtalkRoutes from "@/routes/webtalk";
 import { PluginRegistry } from "@/engine/plugin-registry";
 import { getPluginStorage } from "@/storage";
 
@@ -40,6 +41,12 @@ export default async function apiRoutes(fastify: FastifyInstance) {
 
   // Decorate fastify instance so routes can access registry
   fastify.decorate("pluginRegistry", registry);
+
+  // Accept any Content-Type for the webtalk proxy (form-urlencoded, multipart, etc.)
+  // so Fastify doesn't reject upstream login POSTs with 415.
+  fastify.addContentTypeParser("*", { parseAs: "buffer" }, (_ct, body, done) => {
+    done(null, body);
+  });
 
   fastify.addHook("onRequest", async (request: FastifyRequest, reply: FastifyReply) => {
     const publicPaths = [
@@ -61,6 +68,7 @@ export default async function apiRoutes(fastify: FastifyInstance) {
       "/api/webhook",
       "/api/ai/chat",
       "/api/pets",
+      "/api/webtalk",
     ];
     // SSE stream (GET /api/events) uses query token auth, not Bearer header
     const pathname = request.url.split("?")[0];
@@ -185,5 +193,6 @@ export default async function apiRoutes(fastify: FastifyInstance) {
   await fastify.register(petRoutes, { prefix: "/pets" });
   await fastify.register(eventsRoutes, { prefix: "/events" });
   await fastify.register(notificationRoutes, { prefix: "/notifications" });
+  await fastify.register(webtalkRoutes, { prefix: "/webtalk" });
   await registerWebhookRoute(fastify);
 }
