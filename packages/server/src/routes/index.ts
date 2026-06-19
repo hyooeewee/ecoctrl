@@ -28,6 +28,7 @@ import aiRoutes from "@/routes/ai";
 import nodeRoutes from "@/routes/nodes";
 import petRoutes from "@/routes/pets";
 import eventsRoutes from "@/routes/events";
+import notificationRoutes from "@/routes/notifications";
 import { PluginRegistry } from "@/engine/plugin-registry";
 import { getPluginStorage } from "@/storage";
 
@@ -183,5 +184,6 @@ export default async function apiRoutes(fastify: FastifyInstance) {
   await fastify.register(nodeRoutes, { prefix: "/nodes", registry });
   await fastify.register(petRoutes, { prefix: "/pets" });
   await fastify.register(eventsRoutes, { prefix: "/events" });
+  await fastify.register(notificationRoutes, { prefix: "/notifications" });
   await registerWebhookRoute(fastify);
 }

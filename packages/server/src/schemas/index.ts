@@ -13,6 +13,8 @@ export * from "./carbonFactors";
 export * from "./carbonFactorNodes";
 export * from "./models";
 export * from "./objects";
+export * from "./points";
+export * from "./notifications";
 export * from "./dashboardModel";
 export * from "./platformConfig";
 export * from "./dashboardWidgets";

@@ -22,6 +22,9 @@ import { useAvatar } from "@/hooks/useAvatar";
 import { applyDarkMode } from "@/lib/darkMode";
 import type { Theme } from "@/lib/darkMode";
 import { useAppStore } from "@/store/appStore";
+import { useSseStore } from "@/store/sseStore";
+import { notificationsApi } from "@/api/notifications";
+import { NotificationSheet } from "@/components/NotificationSheet";
 import { getBreadcrumbPath, getSiblings, findNode } from "./navConfig";
 
 interface HeaderProps {
@@ -56,6 +59,8 @@ export default function Header({
   const [theme, setTheme] = useState<Theme>(themeProp ?? "system");
   const avatarSrc = useAvatar(user?.id, user?.avatarUrl, avatarVersion);
   const setPreferenceOverride = useAppStore((state) => state.setPreferenceOverride);
+  const notificationUnread = useSseStore((s) => s.unread["notification"] ?? 0);
+  const setNotificationUnread = useSseStore((s) => s.setUnread);
 
   // Read each sub-tab state individually so selectors return stable primitives
   // and avoid triggering a zustand infinite-re-render loop.
@@ -135,13 +140,23 @@ export default function Header({
     };
     fetchUser();
 
+    const fetchUnread = async () => {
+      try {
+        const { count } = await notificationsApi.unreadCount();
+        setNotificationUnread("notification", count);
+      } catch (err) {
+        console.error("[Header] failed to fetch unread count:", err);
+      }
+    };
+    fetchUnread();
+
     const onAvatarUpdated = () => {
       setAvatarVersion((v) => v + 1);
       fetchUser();
     };
     window.addEventListener("avatar:updated", onAvatarUpdated);
     return () => window.removeEventListener("avatar:updated", onAvatarUpdated);
-  }, []);
+  }, [setNotificationUnread]);
 
   const currentTitle = currentNode?.label ?? "管理总览";
 
@@ -287,14 +302,23 @@ export default function Header({
         </Button>
 
         {/* Notification */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-muted-foreground hover:text-foreground relative h-8 w-8"
-        >
-          <Bell size={18} />
-          <span className="bg-destructive border-card absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full border-2" />
-        </Button>
+        <NotificationSheet
+          trigger={
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-foreground relative h-8 w-8"
+            >
+              <Bell size={18} />
+              {notificationUnread > 0 && (
+                <span className="bg-destructive border-card text-card absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full border-2 px-1 text-[9px] font-bold">
+                  {notificationUnread > 99 ? "99+" : notificationUnread}
+                </span>
+              )}
+            </Button>
+          }
+          onCountChange={(count) => setNotificationUnread("notification", count)}
+        />
 
         {/* User */}
         <DropdownMenu>
