@@ -731,7 +731,6 @@ function frameCameraToVisibleModels(
 // ========================================
 
 interface VisibilityConfig {
-  targetModelFileId?: string;
   targets: string[];
   action: "show" | "hide" | "toggle";
   duration?: number;
@@ -744,11 +743,12 @@ async function executeVisibility(
 ) {
   const config = op.config as VisibilityConfig;
   const keywords = (config.targets ?? []).map((k) => k.toLowerCase()).filter(Boolean);
-  const hasTargetModel = Boolean(config.targetModelFileId);
+  const targetModelFileId = op.targetModelFileId;
+  const hasTargetModel = Boolean(targetModelFileId);
 
   loadedModels.forEach(({ meshes, modelUrl }, id) => {
     if (signal?.aborted) return;
-    if (hasTargetModel && id !== config.targetModelFileId) return;
+    if (hasTargetModel && id !== targetModelFileId) return;
 
     const modelBasename = modelUrl.split("/").pop()?.toLowerCase() ?? "";
     meshes.forEach((mesh) => {
@@ -786,6 +786,26 @@ async function executeVisibility(
       mesh.isVisible = next;
     });
   });
+
+  // Hold the visibility state for the configured duration so the preview
+  // is actually visible to the user. Without this, the snapshot is restored
+  // in the same frame and the hide/show effect is imperceptible.
+  const durationMs = Math.max(0, (config.duration ?? 0.3) * 1000);
+  if (durationMs > 0) {
+    await new Promise<void>((resolve, reject) => {
+      if (signal?.aborted) {
+        reject(new Error("aborted"));
+        return;
+      }
+      const timeout = setTimeout(resolve, durationMs);
+      if (!signal) return;
+      const onAbort = () => {
+        clearTimeout(timeout);
+        reject(new Error("aborted"));
+      };
+      signal.addEventListener("abort", onAbort, { once: true });
+    });
+  }
 }
 
 // ========================================
