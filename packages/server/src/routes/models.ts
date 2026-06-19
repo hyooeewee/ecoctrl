@@ -14,6 +14,8 @@ import {
 } from "@/repositories/models";
 import { findObjectByCodeAndModelId, createObject } from "@/repositories/objects";
 import { createPoint, findPointByObjectTypeNo } from "@/repositories/points";
+import { createNotification } from "@/repositories/notifications";
+import { emitEvent } from "@/lib/notifyTrigger";
 import { errors } from "@/lib/schemas";
 import { parseJsonPoints, parseCsvPoints, parseXlsxPoints } from "@/lib/parsers";
 import { getLogger } from "@/lib/logger";
@@ -385,6 +387,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
               name: string;
               pointType: string;
               pointNo: string;
+              description?: string;
               region?: string;
               system?: string;
               props: { key: string; name: string; unit?: string }[];
@@ -467,7 +470,7 @@ export default async function modelRoutes(fastify: FastifyInstance) {
               type: p.pointType,
               code: p.pointNo,
               name: p.name,
-              description: null,
+              description: p.description ?? null,
               region: p.region ?? null,
               system: p.system ?? null,
               props: p.props,
@@ -484,6 +487,28 @@ export default async function modelRoutes(fastify: FastifyInstance) {
           skippedPoints,
           devices: deviceNames,
         };
+
+        // Fire-and-forget: create a notification and broadcast via SSE. Failures
+        // here should not fail the import response.
+        createNotification({
+          title: "点位导入完成",
+          message: `成功导入 ${response.createdPoints} 个点位，跳过 ${response.skippedPoints} 个已存在点位。`,
+        })
+          .then((notification) => {
+            emitEvent("notification", {
+              id: notification.id,
+              title: notification.title,
+              message: notification.message,
+              read: notification.read,
+              createdAt: notification.createdAt?.toISOString() ?? null,
+            });
+          })
+          .catch((notifyErr) => {
+            logger.error(
+              { err: notifyErr instanceof Error ? notifyErr.message : String(notifyErr) },
+              "Failed to emit import notification",
+            );
+          });
 
         logger.info({ response }, "Import points completed");
         return reply.send(response);

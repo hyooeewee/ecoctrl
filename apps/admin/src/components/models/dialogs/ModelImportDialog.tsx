@@ -62,25 +62,29 @@ export function ModelImportDialog({ open, onOpenChange, onSuccess }: ModelImport
     clearErrors("root");
   }, [setValue, clearErrors]);
 
-  const onSubmit = async (data: { file: File | null }) => {
+  const onSubmit = (data: { file: File | null }) => {
     if (!data.file) return;
-    try {
-      const result = await modelsApi.importPoints(data.file);
-      onOpenChange(false);
-      reset({ file: null });
-      onSuccess();
-      toast.success(
-        `导入成功：创建 ${result.createdModels} 个模型，` +
-          `创建 ${result.createdObjects} 个对象，` +
-          `创建 ${result.createdPoints} 个点位，` +
-          `跳过 ${result.skippedPoints} 个已存在点位。`,
-      );
-    } catch (err) {
-      setError("root", {
-        type: "api",
-        message: err instanceof Error ? err.message : "导入失败，请重试",
+
+    // Close the modal immediately so the UI is not blocked while the server
+    // parses and imports the file in the background.
+    onOpenChange(false);
+    reset({ file: null });
+    toast.info("导入任务已提交，请稍后刷新查看结果。");
+
+    modelsApi
+      .importPoints(data.file)
+      .then((result) => {
+        toast.success(
+          `导入完成：创建 ${result.createdModels} 个模型，` +
+            `创建 ${result.createdObjects} 个对象，` +
+            `创建 ${result.createdPoints} 个点位，` +
+            `跳过 ${result.skippedPoints} 个已存在点位。`,
+        );
+        onSuccess();
+      })
+      .catch((err) => {
+        toast.error(err instanceof Error ? err.message : "导入失败，请重试");
       });
-    }
   };
 
   return (

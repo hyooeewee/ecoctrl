@@ -11,6 +11,7 @@ interface SseState {
   setStatus: (status: SseConnectionStatus) => void;
   setError: (error: string | null) => void;
   setLastEventId: (id: string | null) => void;
+  setUnread: (type: string, count: number) => void;
   incrementUnread: (type: string) => void;
   clearUnread: (type: string) => void;
   reset: () => void;
@@ -25,6 +26,10 @@ export const useSseStore = create<SseState>((set) => ({
   setStatus: (status) => set({ status }),
   setError: (error) => set({ lastError: error }),
   setLastEventId: (id) => set({ lastEventId: id }),
+  setUnread: (type, count) =>
+    set((state) => ({
+      unread: { ...state.unread, [type]: count },
+    })),
   incrementUnread: (type) =>
     set((state) => ({
       unread: { ...state.unread, [type]: (state.unread[type] ?? 0) + 1 },

@@ -5,6 +5,7 @@ export interface PointItem {
   name: string;
   pointType: string;
   pointNo: string;
+  description?: string;
   region?: string;
   system?: string;
   props: { key: string; name: string; unit?: string }[];
@@ -179,7 +180,8 @@ function parseWebtalkCsvPoints(lines: string[], headers: string[]): ParseResult 
     const variableType = getAny(values, ["变量类型", "varType"]).trim();
     const dataType = getAny(values, ["数据类型", "dataType"]).trim();
 
-    const name = remark || [button, group, location].filter(Boolean).join("-") || address;
+    const name = address;
+    const description = remark || undefined;
 
     const props: { key: string; name: string }[] = [];
     if (variableType) props.push({ key: "variableType", name: "变量类型" });
@@ -196,6 +198,7 @@ function parseWebtalkCsvPoints(lines: string[], headers: string[]): ParseResult 
       name,
       pointType: parsed.pointType,
       pointNo: parsed.pointNo,
+      description,
       region: region || undefined,
       system: system || undefined,
       props,
@@ -461,7 +464,8 @@ function parseWebtalkXlsxPoints(
     const variableType = get(idxVarType);
     const dataType = get(idxDataType);
 
-    const name = remark || [button, group, location].filter(Boolean).join("-") || address;
+    const name = address;
+    const description = remark || undefined;
 
     const props: { key: string; name: string }[] = [];
     if (variableType) props.push({ key: "variableType", name: "变量类型" });
@@ -478,6 +482,7 @@ function parseWebtalkXlsxPoints(
       name,
       pointType: parsed.pointType,
       pointNo: parsed.pointNo,
+      description,
       region: region || undefined,
       system: system || undefined,
       props,
