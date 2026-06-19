@@ -347,6 +347,32 @@ export default function Models() {
         filterFn: "includesString",
       },
       {
+        accessorKey: "region",
+        header: ({ column }) => (
+          <DataTableColumnHeader
+            column={column}
+            title="分区"
+            enableFiltering
+            filterPlaceholder="筛选分区..."
+          />
+        ),
+        cell: ({ row }) => row.getValue("region") || "-",
+        filterFn: "includesString",
+      },
+      {
+        accessorKey: "system",
+        header: ({ column }) => (
+          <DataTableColumnHeader
+            column={column}
+            title="系统"
+            enableFiltering
+            filterPlaceholder="筛选系统..."
+          />
+        ),
+        cell: ({ row }) => row.getValue("system") || "-",
+        filterFn: "includesString",
+      },
+      {
         accessorKey: "propCount",
         header: ({ column }) => <DataTableColumnHeader column={column} title="属性数量" />,
       },

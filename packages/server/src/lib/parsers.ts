@@ -5,6 +5,8 @@ export interface PointItem {
   name: string;
   pointType: string;
   pointNo: string;
+  region?: string;
+  system?: string;
   props: { key: string; name: string; unit?: string }[];
 }
 
@@ -36,6 +38,27 @@ function buildProp(
 function extractDeviceTypeFromName(name: string): string | null {
   const match = name.match(/^([A-Z])_/);
   return match ? match[1] : null;
+}
+
+/**
+ * Parse a WebTalk address like "C_5001_BV_0002" or "C_5930-5_AV_0000".
+ * Returns null if the format is not recognized.
+ */
+function parseWebtalkAddress(address: string): {
+  deviceType: string;
+  deviceCode: string;
+  pointType: string;
+  pointNo: string;
+} | null {
+  const trimmed = address.trim();
+  if (!trimmed) return null;
+  const parts = trimmed.split("_");
+  if (parts.length < 4) return null;
+  const [deviceType, deviceCode, pointType, pointNoRaw] = parts;
+  if (!deviceType || !deviceCode || !pointType || !pointNoRaw) return null;
+  // Some addresses have an extra trailing segment; take the last 4-digit block.
+  const pointNo = pad4(pointNoRaw);
+  return { deviceType, deviceCode, pointType, pointNo };
 }
 
 export function parseJsonPoints(buffer: Buffer): ParseResult {
@@ -90,6 +113,110 @@ export function parseCsvPoints(buffer: Buffer): ParseResult {
   }
 
   const headers = parseCsvLine(lines[0]);
+
+  // New CSV format: contains WebTalk address column.
+  const hasWebtalkAddr = headers.indexOf("webtalk地址") >= 0 || headers.indexOf("webtalkAddr") >= 0;
+  if (hasWebtalkAddr) {
+    return parseWebtalkCsvPoints(lines, headers);
+  }
+
+  return parseLegacyCsvPoints(lines, headers);
+}
+
+/**
+ * Parse the new 点位分组.csv format where each row has a WebTalk address.
+ *
+ * Mapping:
+ * - model code  = first segment of webtalk地址 (e.g. "C")
+ * - object code = second segment of webtalk地址 (e.g. "5001" or "5930-5")
+ * - point type  = third segment of webtalk地址 (e.g. "BV" / "AV")
+ * - point code  = fourth segment of webtalk地址 (e.g. "0002")
+ * - region      = 区域
+ * - system      = 来源
+ */
+function parseWebtalkCsvPoints(lines: string[], headers: string[]): ParseResult {
+  const get = (row: string[], h: string) => row[headers.indexOf(h)] ?? "";
+  const getAny = (row: string[], candidates: string[]) => {
+    for (const c of candidates) {
+      const idx = headers.indexOf(c);
+      if (idx >= 0 && row[idx]) return row[idx];
+    }
+    return "";
+  };
+
+  const idxWebtalk = headers.indexOf("webtalk地址");
+  const webtalkIdx = idxWebtalk >= 0 ? idxWebtalk : headers.indexOf("webtalkAddr");
+
+  const firstRow = parseCsvLine(lines[1]);
+  const firstAddress = firstRow[webtalkIdx] ?? "";
+  const parsedFirst = parseWebtalkAddress(firstAddress);
+  if (!parsedFirst) {
+    throw new Error(
+      `无法从 webtalk地址 提取设备类型。第一行地址："${firstAddress}"，期望格式如 "C_5001_BV_0002"。`,
+    );
+  }
+
+  const deviceType = parsedFirst.deviceType;
+  const deviceMap = new Map<string, PointItem[]>();
+
+  for (let i = 1; i < lines.length; i++) {
+    const values = parseCsvLine(lines[i]);
+    const address = values[webtalkIdx] ?? "";
+    const parsed = parseWebtalkAddress(address);
+    if (!parsed) {
+      throw new Error(`第 ${i + 1} 行的 webtalk地址 格式不正确："${address}"`);
+    }
+
+    const region = get(values, "区域").trim();
+    const system = get(values, "来源").trim();
+    const remark = get(values, "备注").trim();
+    const location = get(values, "位置").trim();
+    const button = get(values, "按钮").trim();
+    const group = get(values, "分组").trim();
+    const registerRaw = get(values, "寄存器地址(原始)").trim();
+    const registerNum = get(values, "寄存器地址(数字)").trim();
+    const registerCount = get(values, "寄存器数量").trim();
+    const variableType = getAny(values, ["变量类型", "varType"]).trim();
+    const dataType = getAny(values, ["数据类型", "dataType"]).trim();
+
+    const name = remark || [button, group, location].filter(Boolean).join("-") || address;
+
+    const props: { key: string; name: string }[] = [];
+    if (variableType) props.push({ key: "variableType", name: "变量类型" });
+    if (dataType) props.push({ key: "dataType", name: "数据类型" });
+    if (registerRaw) props.push({ key: "registerRaw", name: "寄存器地址(原始)" });
+    if (registerNum) props.push({ key: "registerNum", name: "寄存器地址(数字)" });
+    if (registerCount) props.push({ key: "registerCount", name: "寄存器数量" });
+    if (location) props.push({ key: "location", name: "位置" });
+    if (button) props.push({ key: "button", name: "按钮" });
+    if (group) props.push({ key: "group", name: "分组" });
+
+    const point: PointItem = {
+      id: "",
+      name,
+      pointType: parsed.pointType,
+      pointNo: parsed.pointNo,
+      region: region || undefined,
+      system: system || undefined,
+      props,
+    };
+
+    const deviceCode = parsed.deviceCode;
+    if (!deviceMap.has(deviceCode)) {
+      deviceMap.set(deviceCode, []);
+    }
+    deviceMap.get(deviceCode)!.push(point);
+  }
+
+  const devices: ParsedDevice[] = [];
+  for (const [deviceName, points] of deviceMap) {
+    devices.push({ deviceName, points });
+  }
+
+  return { deviceType, devices };
+}
+
+function parseLegacyCsvPoints(lines: string[], headers: string[]): ParseResult {
   const idxName =
     headers.indexOf("点位名") >= 0 ? headers.indexOf("点位名") : headers.indexOf("name");
 
@@ -180,6 +307,31 @@ const HEADER_CANDIDATES = [
   "描述",
   "description",
   "desc",
+  "区域",
+  "region",
+  "按钮",
+  "button",
+  "分组",
+  "group",
+  "位置",
+  "location",
+  "变量类型",
+  "varType",
+  "寄存器地址(原始)",
+  "registerRaw",
+  "寄存器地址(数字)",
+  "registerNum",
+  "寄存器数量",
+  "registerCount",
+  "数据类型",
+  "dataType",
+  "webtalk地址",
+  "webtalkAddr",
+  "备注",
+  "remark",
+  "来源",
+  "source",
+  "system",
 ];
 
 /**
@@ -225,6 +377,132 @@ export function parseXlsxPoints(buffer: Buffer): ParseResult {
   // Auto-detect header row instead of assuming rows[0]
   const { headerIdx, headerRow } = findHeaderRow(rows);
 
+  const getHeaderIndex = (candidates: string[]) => {
+    for (const c of candidates) {
+      const idx = headerRow.findIndex((h) => h === c || h.startsWith(c));
+      if (idx >= 0) return idx;
+    }
+    return -1;
+  };
+
+  const idxWebtalk = getHeaderIndex(["webtalk地址", "webtalkAddr"]);
+  if (idxWebtalk >= 0) {
+    return parseWebtalkXlsxPoints(rows, headerIdx, headerRow, idxWebtalk);
+  }
+
+  return parseLegacyXlsxPoints(rows, headerIdx, headerRow);
+}
+
+function parseWebtalkXlsxPoints(
+  rows: (string | number | undefined)[][],
+  headerIdx: number,
+  headerRow: string[],
+  idxWebtalk: number,
+): ParseResult {
+  const getHeaderIndex = (candidates: string[]) => {
+    for (const c of candidates) {
+      const idx = headerRow.findIndex((h) => h === c || h.startsWith(c));
+      if (idx >= 0) return idx;
+    }
+    return -1;
+  };
+
+  const idxRegion = getHeaderIndex(["区域", "region"]);
+  const idxSystem = getHeaderIndex(["来源", "source", "system"]);
+  const idxRemark = getHeaderIndex(["备注", "remark"]);
+  const idxLocation = getHeaderIndex(["位置", "location"]);
+  const idxButton = getHeaderIndex(["按钮", "button"]);
+  const idxGroup = getHeaderIndex(["分组", "group"]);
+  const idxRegisterRaw = getHeaderIndex(["寄存器地址(原始)", "registerRaw"]);
+  const idxRegisterNum = getHeaderIndex(["寄存器地址(数字)", "registerNum"]);
+  const idxRegisterCount = getHeaderIndex(["寄存器数量", "registerCount"]);
+  const idxVarType = getHeaderIndex(["变量类型", "varType"]);
+  const idxDataType = getHeaderIndex(["数据类型", "dataType"]);
+
+  const firstDataIdx = headerIdx + 1;
+  if (firstDataIdx >= rows.length) {
+    throw new Error("XLSX file has a header row but no data rows");
+  }
+
+  const firstAddress = String(rows[firstDataIdx][idxWebtalk] ?? "").trim();
+  const parsedFirst = parseWebtalkAddress(firstAddress);
+  if (!parsedFirst) {
+    throw new Error(
+      `无法从 webtalk地址 提取设备类型。第一行地址："${firstAddress}"，期望格式如 "C_5001_BV_0002"。`,
+    );
+  }
+
+  const deviceType = parsedFirst.deviceType;
+  const deviceMap = new Map<string, PointItem[]>();
+
+  for (let i = firstDataIdx; i < rows.length; i++) {
+    const row = rows[i];
+    if (row.every((cell) => cell === undefined || String(cell).trim() === "")) {
+      continue;
+    }
+
+    const address = String(row[idxWebtalk] ?? "").trim();
+    const parsed = parseWebtalkAddress(address);
+    if (!parsed) {
+      throw new Error(`第 ${i + 1} 行的 webtalk地址 格式不正确："${address}"`);
+    }
+
+    const get = (idx: number) => (idx >= 0 ? String(row[idx] ?? "").trim() : "");
+
+    const region = get(idxRegion);
+    const system = get(idxSystem);
+    const remark = get(idxRemark);
+    const location = get(idxLocation);
+    const button = get(idxButton);
+    const group = get(idxGroup);
+    const registerRaw = get(idxRegisterRaw);
+    const registerNum = get(idxRegisterNum);
+    const registerCount = get(idxRegisterCount);
+    const variableType = get(idxVarType);
+    const dataType = get(idxDataType);
+
+    const name = remark || [button, group, location].filter(Boolean).join("-") || address;
+
+    const props: { key: string; name: string }[] = [];
+    if (variableType) props.push({ key: "variableType", name: "变量类型" });
+    if (dataType) props.push({ key: "dataType", name: "数据类型" });
+    if (registerRaw) props.push({ key: "registerRaw", name: "寄存器地址(原始)" });
+    if (registerNum) props.push({ key: "registerNum", name: "寄存器地址(数字)" });
+    if (registerCount) props.push({ key: "registerCount", name: "寄存器数量" });
+    if (location) props.push({ key: "location", name: "位置" });
+    if (button) props.push({ key: "button", name: "按钮" });
+    if (group) props.push({ key: "group", name: "分组" });
+
+    const point: PointItem = {
+      id: "",
+      name,
+      pointType: parsed.pointType,
+      pointNo: parsed.pointNo,
+      region: region || undefined,
+      system: system || undefined,
+      props,
+    };
+
+    const deviceCode = parsed.deviceCode;
+    if (!deviceMap.has(deviceCode)) {
+      deviceMap.set(deviceCode, []);
+    }
+    deviceMap.get(deviceCode)!.push(point);
+  }
+
+  const devices: ParsedDevice[] = [];
+  for (const [deviceName, points] of deviceMap) {
+    devices.push({ deviceName, points });
+  }
+
+  return { deviceType, devices };
+}
+
+function parseLegacyXlsxPoints(
+  rows: (string | number | undefined)[][],
+  headerIdx: number,
+  headerRow: string[],
+): ParseResult {
   const getHeaderIndex = (candidates: string[]) => {
     for (const c of candidates) {
       const idx = headerRow.findIndex((h) => h === c || h.startsWith(c));

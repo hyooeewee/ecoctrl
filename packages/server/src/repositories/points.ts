@@ -13,6 +13,8 @@ export async function findManyPoints(): Promise<Point[]> {
     code: r.code,
     name: r.name,
     description: r.description,
+    region: r.region,
+    system: r.system,
     props: r.props ?? [],
     values: r.values ?? {},
   }));
@@ -28,6 +30,8 @@ export async function findPointsByObjectId(objectId: string): Promise<Point[]> {
     code: r.code,
     name: r.name,
     description: r.description,
+    region: r.region,
+    system: r.system,
     props: r.props ?? [],
     values: r.values ?? {},
   }));
@@ -43,6 +47,8 @@ export async function findPointsByModelId(modelId: string): Promise<Point[]> {
     code: r.code,
     name: r.name,
     description: r.description,
+    region: r.region,
+    system: r.system,
     props: r.props ?? [],
     values: r.values ?? {},
   }));
@@ -60,6 +66,8 @@ export async function findPointById(id: string): Promise<Point | null> {
     code: r.code,
     name: r.name,
     description: r.description,
+    region: r.region,
+    system: r.system,
     props: r.props ?? [],
     values: r.values ?? {},
   };
@@ -85,6 +93,8 @@ export async function findPointByObjectTypeNo(
     code: r.code,
     name: r.name,
     description: r.description,
+    region: r.region,
+    system: r.system,
     props: r.props ?? [],
     values: r.values ?? {},
   };
@@ -100,6 +110,8 @@ export async function createPoint(data: Omit<Point, "id">): Promise<Point> {
       code: data.code,
       name: data.name,
       description: data.description,
+      region: data.region,
+      system: data.system,
       props: data.props,
       values: data.values,
     })
@@ -113,6 +125,8 @@ export async function createPoint(data: Omit<Point, "id">): Promise<Point> {
     code: r.code,
     name: r.name,
     description: r.description,
+    region: r.region,
+    system: r.system,
     props: r.props ?? [],
     values: r.values ?? {},
   };
@@ -138,6 +152,8 @@ export async function createManyPoints(dataList: Omit<Point, "id">[]): Promise<P
     code: r.code,
     name: r.name,
     description: r.description,
+    region: r.region,
+    system: r.system,
     props: r.props ?? [],
     values: r.values ?? {},
   }));
@@ -150,6 +166,8 @@ export async function updatePoint(
   const updateData: Record<string, unknown> = {};
   if (data.name !== undefined) updateData.name = data.name;
   if (data.description !== undefined) updateData.description = data.description;
+  if (data.region !== undefined) updateData.region = data.region;
+  if (data.system !== undefined) updateData.system = data.system;
   if (data.props !== undefined) updateData.props = data.props;
   if (data.values !== undefined) updateData.values = data.values;
 
@@ -164,6 +182,8 @@ export async function updatePoint(
     code: r.code,
     name: r.name,
     description: r.description,
+    region: r.region,
+    system: r.system,
     props: r.props ?? [],
     values: r.values ?? {},
   };
@@ -181,6 +201,8 @@ export async function deletePoint(id: string): Promise<Point | null> {
     code: r.code,
     name: r.name,
     description: r.description,
+    region: r.region,
+    system: r.system,
     props: r.props ?? [],
     values: r.values ?? {},
   };
@@ -214,6 +236,8 @@ export async function findPointByName(
     code: r.code,
     name: r.name,
     description: r.description,
+    region: r.region,
+    system: r.system,
     props: r.props ?? [],
     values: r.values ?? {},
   };
@@ -248,6 +272,8 @@ export async function upsertPoint(
     modelId: data.modelId,
     name: data.name,
     description: data.description,
+    region: data.region,
+    system: data.system,
     props: data.props ?? [],
     values: data.values ?? {},
   });

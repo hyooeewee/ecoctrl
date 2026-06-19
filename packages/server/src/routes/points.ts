@@ -88,6 +88,8 @@ export default async function pointRoutes(fastify: FastifyInstance) {
           code: string;
           name: string | null;
           description: string | null;
+          region: string | null;
+          system: string | null;
           props: { key: string; name: string; unit?: string }[];
           values: Record<string, string>;
         },
