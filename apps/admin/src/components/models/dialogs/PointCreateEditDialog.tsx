@@ -36,6 +36,8 @@ function createPointSchema(allPoints: Point[]) {
       code: z.string().min(1, "请输入编码"),
       name: z.string().optional(),
       description: z.string().optional(),
+      region: z.string().optional(),
+      system: z.string().optional(),
     })
     .superRefine((data, ctx) => {
       const duplicate = allPoints.find(
@@ -59,6 +61,8 @@ const editPointSchema = z.object({
   type: z.string().min(1, "请输入点位类型"),
   name: z.string().optional(),
   description: z.string().optional(),
+  region: z.string().optional(),
+  system: z.string().optional(),
 });
 
 type PointCreateFormData = z.infer<ReturnType<typeof createPointSchema>>;
@@ -108,7 +112,7 @@ export function PointCreateEditDialog({
   } = useForm<PointCreateFormData | PointEditFormData>({
     resolver: zodResolver((isEditing ? editPointSchema : createSchema) as any),
     defaultValues: isEditing
-      ? { code: "", type: "", name: "", description: "" }
+      ? { code: "", type: "", name: "", description: "", region: "", system: "" }
       : {
           modelId: "",
           objectId: "",
@@ -116,6 +120,8 @@ export function PointCreateEditDialog({
           code: "",
           name: "",
           description: "",
+          region: "",
+          system: "",
         },
   });
 
@@ -139,6 +145,8 @@ export function PointCreateEditDialog({
           type: editingPoint.type ?? "",
           name: editingPoint.name ?? "",
           description: editingPoint.description ?? "",
+          region: editingPoint.region ?? "",
+          system: editingPoint.system ?? "",
         });
       } else {
         reset({
@@ -148,6 +156,8 @@ export function PointCreateEditDialog({
           code: "",
           name: "",
           description: "",
+          region: "",
+          system: "",
         });
       }
       clearErrors();
@@ -163,6 +173,8 @@ export function PointCreateEditDialog({
           type: editData.type.trim(),
           name: editData.name?.trim() || null,
           description: editData.description?.trim() || null,
+          region: editData.region?.trim() || null,
+          system: editData.system?.trim() || null,
         });
       } else {
         const createData = data as PointCreateFormData;
@@ -173,6 +185,8 @@ export function PointCreateEditDialog({
           name: createData.name?.trim() || null,
           type: createData.type.trim(),
           description: createData.description?.trim() || null,
+          region: createData.region?.trim() || null,
+          system: createData.system?.trim() || null,
           props: [],
           values: {},
         });
@@ -386,6 +400,38 @@ export function PointCreateEditDialog({
                   placeholder="请输入描述（可选）"
                   className="h-10"
                   {...register("description")}
+                />
+              </div>
+
+              {/* Region Input */}
+              <div>
+                <label
+                  htmlFor="point-region"
+                  className="text-sm font-medium text-foreground mb-1.5 block"
+                >
+                  分区
+                </label>
+                <Input
+                  id="point-region"
+                  placeholder="请输入分区（可选）"
+                  className="h-10"
+                  {...register("region")}
+                />
+              </div>
+
+              {/* System Input */}
+              <div>
+                <label
+                  htmlFor="point-system"
+                  className="text-sm font-medium text-foreground mb-1.5 block"
+                >
+                  系统
+                </label>
+                <Input
+                  id="point-system"
+                  placeholder="请输入系统（可选）"
+                  className="h-10"
+                  {...register("system")}
                 />
               </div>
             </div>

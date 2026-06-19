@@ -14,6 +14,8 @@ export const PointSchema = z.object({
   code: z.string(),
   name: z.string().nullable(),
   description: z.string().nullable(),
+  region: z.string().nullable(),
+  system: z.string().nullable(),
   props: z.array(PointPropSchema).default([]),
   values: z.record(z.string(), z.string()).default({}),
 });

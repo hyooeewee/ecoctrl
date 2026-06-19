@@ -385,6 +385,8 @@ export default async function modelRoutes(fastify: FastifyInstance) {
               name: string;
               pointType: string;
               pointNo: string;
+              region?: string;
+              system?: string;
               props: { key: string; name: string; unit?: string }[];
             }[];
           }[];
@@ -466,6 +468,8 @@ export default async function modelRoutes(fastify: FastifyInstance) {
               code: p.pointNo,
               name: p.name,
               description: null,
+              region: p.region ?? null,
+              system: p.system ?? null,
               props: p.props,
               values: {} as Record<string, string>,
             });

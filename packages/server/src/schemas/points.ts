@@ -22,6 +22,8 @@ export const points = pgTable(
     code: varchar("code", { length: 10 }).notNull(),
     name: varchar("name", { length: 255 }),
     description: varchar("description", { length: 500 }),
+    region: varchar("region", { length: 100 }),
+    system: varchar("system", { length: 100 }),
     props: jsonb("props").$type<PointProp[]>().default([]),
     values: jsonb("values").$type<Record<string, string>>().default({}),
   },
