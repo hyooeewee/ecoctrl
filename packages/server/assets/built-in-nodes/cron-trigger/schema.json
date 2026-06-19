@@ -11,6 +11,7 @@
     "timezone": {
       "type": "string",
       "title": "Timezone",
+      "default": "Asia/Shanghai",
       "description": "IANA timezone identifier (e.g. Asia/Shanghai)"
     }
   },
