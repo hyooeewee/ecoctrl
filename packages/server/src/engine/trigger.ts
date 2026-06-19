@@ -271,7 +271,7 @@ export const triggerEngine = {
       const dsl = (workflow.publishedDsl ?? workflow.dsl) as {
         trigger?: { type: string; config?: Record<string, unknown> };
       };
-      if (dsl.trigger?.type !== "schedule" && dsl.trigger?.type !== "cron-trigger") continue;
+      if (dsl.trigger?.type !== "schedule") continue;
 
       const config = dsl.trigger.config as { cron?: string; timezone?: string } | undefined;
       if (!config?.cron) continue;

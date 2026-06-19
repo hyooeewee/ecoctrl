@@ -21,7 +21,7 @@ import { validateDsl } from "@/engine/validator";
 import { executeWorkflow } from "@/engine/executor";
 import { resolveUpstreamOutputs } from "@/engine/upstream-resolver";
 import { splitEnvVars, mergeServerEnv } from "@/engine/env-utils";
-import type { WorkflowDSL } from "@/engine/types";
+import type { WorkflowDSL, WorkflowTrigger } from "@/engine/types";
 
 async function getUserRole(userId: string): Promise<string> {
   const rows = await db
@@ -93,6 +93,24 @@ const workflowBodySchema = z.object({
   }),
 });
 
+type RequestTrigger = z.infer<typeof workflowBodySchema>["dsl"]["trigger"];
+
+// Plugin trigger nodes (e.g. cron-trigger) are aliases for internal trigger types.
+// Normalize them before storage so the engine only deals with canonical types.
+function normalizeTrigger(trigger: RequestTrigger): WorkflowTrigger {
+  if (trigger.type === "cron-trigger") {
+    const config = trigger.config as { cron?: string; timezone?: string };
+    return {
+      type: "schedule",
+      config: {
+        cron: config.cron ?? "",
+        timezone: config.timezone ?? "Asia/Shanghai",
+      },
+    };
+  }
+  return trigger as WorkflowTrigger;
+}
+
 export default async function workflowRoutes(fastify: FastifyInstance) {
   // List workflows
   fastify.get(
@@ -133,6 +151,8 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
       const body = request.body as z.infer<typeof workflowBodySchema>;
 
       const dsl = body.dsl as unknown as WorkflowDSL;
+      dsl.trigger = normalizeTrigger(dsl.trigger);
+
       const validationErrors = validateDsl(dsl);
       if (validationErrors.length > 0) {
         return reply.status(400).send({ error: "Invalid workflow DSL", details: validationErrors });
@@ -194,6 +214,7 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
 
       if (body.dsl) {
         const dsl = body.dsl as unknown as WorkflowDSL;
+        dsl.trigger = normalizeTrigger(dsl.trigger);
         const isPublishing = body.enabled === true;
 
         // Publishing requires strict validation; saving is lenient
