@@ -276,6 +276,7 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
       meshKeywords: [],
       operations: [],
       order: labels.length,
+      groups: [],
     };
 
     set({
@@ -306,6 +307,7 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
       meshKeywords: [],
       operations: [],
       order: labels.length,
+      groups: [],
     };
     set({ labels: [...labels, newLabel], selectedLabelId: newLabel.id, isDirty: true });
   },
@@ -332,6 +334,7 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
               ...(config.position !== undefined && { position: config.position }),
               ...(config.position === undefined && { position: undefined }),
               meshKeywords: config.meshKeywords ?? [],
+              groups: config.groups ?? [],
             }
           : l,
       ),

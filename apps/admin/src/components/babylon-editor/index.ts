@@ -18,7 +18,7 @@ export { default as LabelTree } from "./LabelTree";
 export type { LabelTreeNode } from "./LabelTree";
 
 export { default as LabelConfigForm } from "./LabelConfigForm";
-export type { LabelConfig } from "./LabelConfigForm";
+export type { LabelConfig, LabelGroup } from "./LabelConfigForm";
 
 export { default as OperationConfig } from "./OperationConfig";
 export type { LabelOperation } from "@ecoctrl/shared";

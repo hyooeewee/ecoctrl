@@ -28,6 +28,8 @@ import {
 import { Vector3 } from "@babylonjs/core";
 import { useModelEditorStore } from "@/store/modelEditorStore";
 import { useAppStore } from "@/store/appStore";
+import { pointsApi } from "@/api/points";
+import type { Point } from "@ecoctrl/shared";
 
 // ========================================
 // Component
@@ -39,6 +41,7 @@ export default function DashboardModel() {
   const previewAbortRef = useRef<AbortController | null>(null);
 
   const [previewing, setPreviewing] = useState(false);
+  const [availablePoints, setAvailablePoints] = useState<Point[]>([]);
 
   const setActiveTab = useAppStore((state) => state.setActiveTab);
 
@@ -163,6 +166,21 @@ export default function DashboardModel() {
   useEffect(() => {
     fetchConfig();
   }, [fetchConfig]);
+
+  useEffect(() => {
+    let cancelled = false;
+    pointsApi
+      .list()
+      .then((points) => {
+        if (!cancelled) setAvailablePoints(points);
+      })
+      .catch((err) => {
+        console.error("[DashboardModel] failed to load points:", err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useMeshPicking({
     scene: sceneRef.current?.scene ?? null,
@@ -501,10 +519,12 @@ export default function DashboardModel() {
                                   parentId: selectedLabel.parentId ?? null,
                                   position: selectedLabel.position,
                                   meshKeywords: selectedLabel.meshKeywords,
+                                  groups: selectedLabel.groups,
                                 }}
                                 parentOptions={labels
                                   .filter((l) => l.id !== selectedLabel.id)
                                   .map((l) => ({ id: l.id, name: l.name }))}
+                                availablePoints={availablePoints}
                                 onChange={updateLabelConfig}
                                 onPickPosition={() => startPlacingLabel(selectedLabel.id)}
                               />

@@ -2,7 +2,7 @@
 // Label Configuration Form
 // ========================================
 
-import React from "react";
+import React, { useMemo, useState } from "react";
 import {
   Input,
   Label,
@@ -12,12 +12,23 @@ import {
   SelectTrigger,
   SelectValue,
   Button,
+  Badge,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
 } from "@ecoctrl/ui";
-import { MapPin } from "lucide-react";
+import { MapPin, Plus, Trash2, X } from "lucide-react";
+import type { Point } from "@ecoctrl/shared";
 
 // ========================================
 // Types
 // ========================================
+
+export interface LabelGroup {
+  id: string;
+  name: string;
+  pointIds: string[];
+}
 
 export interface LabelConfig {
   id: string;
@@ -27,14 +38,247 @@ export interface LabelConfig {
   parentId: string | null;
   position?: { x: number; y: number; z: number };
   meshKeywords?: string[];
+  groups?: LabelGroup[];
 }
 
 interface LabelConfigFormProps {
   config: LabelConfig;
   parentOptions: { id: string; name: string }[];
+  availablePoints?: Point[];
   onChange: (config: LabelConfig) => void;
   onPickPosition?: () => void;
   disabled?: boolean;
+}
+
+// ========================================
+// Point Multi-Select
+// ========================================
+
+interface PointMultiSelectProps {
+  values: string[];
+  onChange: (values: string[]) => void;
+  options: string[];
+  disabled?: boolean;
+  placeholder?: string;
+}
+
+function PointMultiSelect({
+  values,
+  onChange,
+  options,
+  disabled,
+  placeholder = "输入点位名称",
+}: PointMultiSelectProps) {
+  const [inputValue, setInputValue] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const addValues = (raw: string) => {
+    const newItems = raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .filter((s) => !values.includes(s));
+    if (newItems.length > 0) {
+      onChange([...values, ...newItems]);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addValues(inputValue);
+      setInputValue("");
+      setOpen(false);
+    } else if (e.key === ",") {
+      e.preventDefault();
+      addValues(inputValue + ",");
+      setInputValue("");
+    }
+  };
+
+  const filteredOptions = useMemo(() => {
+    const term = inputValue.trim().toLowerCase();
+    return options.filter((o) => !values.includes(o) && (!term || o.toLowerCase().includes(term)));
+  }, [inputValue, options, values]);
+
+  const handleSelect = (name: string) => {
+    if (!values.includes(name)) {
+      onChange([...values, name]);
+    }
+    setInputValue("");
+    setOpen(false);
+  };
+
+  const handleRemove = (name: string) => {
+    onChange(values.filter((v) => v !== name));
+  };
+
+  return (
+    <div className="grid gap-1.5">
+      {values.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {values.map((v) => (
+            <Badge
+              key={v}
+              variant="secondary"
+              className="flex h-5 items-center gap-1 pr-1 text-[10px] font-normal"
+            >
+              <span className="max-w-[120px] truncate">{v}</span>
+              <button
+                type="button"
+                onClick={() => handleRemove(v)}
+                disabled={disabled}
+                className="flex items-center justify-center rounded-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
+                aria-label={`移除 ${v}`}
+              >
+                <X size={10} />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Input
+            value={inputValue}
+            onChange={(e) => {
+              setInputValue(e.target.value);
+              if (!open) setOpen(true);
+            }}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            disabled={disabled}
+            className="h-7 text-xs"
+          />
+        </PopoverTrigger>
+        <PopoverContent
+          align="start"
+          className="w-[--radix-popover-trigger-width] p-1"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          {filteredOptions.length === 0 ? (
+            <div className="px-2 py-1.5 text-xs text-muted-foreground">无匹配点位</div>
+          ) : (
+            <div className="max-h-40 overflow-y-auto">
+              {filteredOptions.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => handleSelect(name)}
+                  className="w-full rounded-sm px-2 py-1 text-left text-xs hover:bg-accent hover:text-accent-foreground"
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          )}
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+// ========================================
+// Label Groups Editor
+// ========================================
+
+interface LabelGroupsEditorProps {
+  groups: LabelGroup[];
+  availablePoints: Point[];
+  onChange: (groups: LabelGroup[]) => void;
+  disabled?: boolean;
+}
+
+function LabelGroupsEditor({
+  groups,
+  availablePoints,
+  onChange,
+  disabled,
+}: LabelGroupsEditorProps) {
+  const pointNames = useMemo(
+    () => [...new Set(availablePoints.map((p) => p.name).filter((n): n is string => !!n))],
+    [availablePoints],
+  );
+
+  const addGroup = () => {
+    const nextId =
+      groups.length > 0 ? Math.max(...groups.map((g) => parseInt(g.id, 10) || 0)) + 1 : 1;
+    onChange([
+      ...groups,
+      {
+        id: String(nextId),
+        name: `G${nextId}`,
+        pointIds: [],
+      },
+    ]);
+  };
+
+  const updateGroup = (id: string, updates: Partial<LabelGroup>) => {
+    onChange(groups.map((g) => (g.id === id ? { ...g, ...updates } : g)));
+  };
+
+  const deleteGroup = (id: string) => {
+    onChange(groups.filter((g) => g.id !== id));
+  };
+
+  return (
+    <div className="grid gap-2">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs">点位分组</Label>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-7 gap-1 text-xs"
+          onClick={addGroup}
+          disabled={disabled}
+        >
+          <Plus size={12} />
+          添加分组
+        </Button>
+      </div>
+
+      {groups.length === 0 && (
+        <div className="rounded-md border border-dashed border-border bg-muted/20 px-2 py-3 text-center text-xs text-muted-foreground">
+          暂无分组，点击上方按钮添加
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {groups.map((group) => (
+          <div key={group.id} className="rounded-md border bg-muted/30 p-2 space-y-2">
+            <div className="flex items-center gap-2">
+              <Input
+                value={group.name}
+                onChange={(e) => updateGroup(group.id, { name: e.target.value })}
+                placeholder="分组名称"
+                disabled={disabled}
+                className="h-7 flex-1 text-xs"
+              />
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                onClick={() => deleteGroup(group.id)}
+                disabled={disabled}
+                aria-label="删除分组"
+              >
+                <Trash2 size={12} />
+              </Button>
+            </div>
+            <PointMultiSelect
+              values={group.pointIds}
+              onChange={(pointIds) => updateGroup(group.id, { pointIds })}
+              options={pointNames}
+              disabled={disabled}
+              placeholder="输入点位名称，回车或英文逗号分隔"
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 // ========================================
@@ -44,6 +288,7 @@ interface LabelConfigFormProps {
 export default function LabelConfigForm({
   config,
   parentOptions,
+  availablePoints = [],
   onChange,
   onPickPosition,
   disabled,
@@ -233,6 +478,14 @@ export default function LabelConfigForm({
           />
         </div>
       )}
+
+      {/* Point Groups */}
+      <LabelGroupsEditor
+        groups={config.groups ?? []}
+        availablePoints={availablePoints}
+        onChange={(groups) => updateField("groups", groups)}
+        disabled={disabled}
+      />
     </div>
   );
 }

@@ -70,6 +70,16 @@ export const LabelOperationSchema = z.discriminatedUnion("type", [
 export type LabelOperation = z.infer<typeof LabelOperationSchema>;
 
 // ========================================
+// Label Group Schema
+// ========================================
+export const LabelGroupSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  pointIds: z.array(z.string()).default([]),
+});
+export type LabelGroup = z.infer<typeof LabelGroupSchema>;
+
+// ========================================
 // Label Schema (Tags with optional 3D position)
 // ========================================
 
@@ -83,6 +93,7 @@ export const DashboardModelLabelSchema = z.object({
   meshKeywords: z.array(z.string()).default([]),
   operations: z.array(LabelOperationSchema),
   order: z.number(),
+  groups: z.array(LabelGroupSchema).default([]),
 });
 export type DashboardModelLabel = z.infer<typeof DashboardModelLabelSchema>;
 
