@@ -28,9 +28,10 @@ export interface ChartPoint {
 }
 
 export interface ChartData {
-  chartType: "area" | "line" | "bar" | "donut";
+  chartType?: "area" | "line" | "bar" | "donut";
+  total?: number;
   points?: ChartPoint[];
-  items?: { label: string; value: number; color: string }[];
+  items?: { label: string; value: number; color?: string }[];
 }
 
 export interface ListData {

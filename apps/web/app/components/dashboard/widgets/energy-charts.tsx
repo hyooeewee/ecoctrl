@@ -6,6 +6,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  Label,
   Line,
   LineChart,
   Pie,
@@ -16,7 +17,13 @@ import {
 
 import { cn } from "~/lib/utils";
 import { useLocale } from "~/locales";
-import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip } from "@ecoctrl/ui/chart";
+import {
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@ecoctrl/ui/chart";
 import type { ChartConfig } from "@ecoctrl/ui/chart";
 
 // ─── Custom tooltips ──────────────────────────────────────────────────────────
@@ -42,23 +49,6 @@ function TrendTooltip({
       <span className="ml-2 font-semibold tabular-nums text-foreground">
         {payload[0].value} kWh
       </span>
-    </div>
-  );
-}
-
-function PieCustomTooltip({
-  active,
-  payload,
-}: {
-  active?: boolean;
-  payload?: { payload: { label: string; value: number } }[];
-}) {
-  if (!active || !payload?.length) return null;
-  const entry = payload[0].payload;
-  return (
-    <div className="rounded border border-white/10 bg-panel-dark/95 px-2 py-1.5 text-[10px] shadow-xl backdrop-blur">
-      <span className="font-medium text-foreground">{entry.label}</span>
-      <span className="ml-2 tabular-nums text-muted-foreground">{entry.value}%</span>
     </div>
   );
 }
@@ -211,20 +201,45 @@ export function EnergyTrendChart({
 
 // ─── Energy Breakdown Pie ─────────────────────────────────────────────────────
 
+const CATEGORY_COLORS = [
+  "var(--color-chart-1)",
+  "var(--color-chart-2)",
+  "var(--color-chart-3)",
+  "var(--color-chart-4)",
+  "var(--color-chart-5)",
+  "var(--color-chart-6)",
+  "var(--color-chart-7)",
+  "var(--color-chart-8)",
+  "var(--color-chart-9)",
+  "var(--color-chart-10)",
+];
+
 interface BreakdownItem {
   label: string;
   value: number;
-  color: string;
+  color?: string;
 }
 
 interface EnergyBreakdownChartProps {
   className?: string;
   data: BreakdownItem[];
+  total?: number;
   title: string;
   icon: React.ReactNode;
 }
 
-export function EnergyBreakdownChart({ className, data, title, icon }: EnergyBreakdownChartProps) {
+export function EnergyBreakdownChart({
+  className,
+  data,
+  total,
+  title,
+  icon,
+}: EnergyBreakdownChartProps) {
+  const totalValue = useMemo(
+    () => total ?? data.reduce((sum, item) => sum + item.value, 0),
+    [total, data],
+  );
+
   const chartData = useMemo(
     () => data.map((item, index) => ({ ...item, key: `item-${index}` })),
     [data],
@@ -232,8 +247,12 @@ export function EnergyBreakdownChart({ className, data, title, icon }: EnergyBre
 
   const chartConfig = useMemo(() => {
     const config: ChartConfig = {};
-    for (const item of chartData) {
-      config[item.key] = { label: item.label, color: item.color };
+    for (let i = 0; i < chartData.length; i++) {
+      const item = chartData[i];
+      config[item.key] = {
+        label: item.label,
+        color: item.color ?? CATEGORY_COLORS[i % CATEGORY_COLORS.length],
+      };
     }
     return config;
   }, [chartData]);
@@ -247,6 +266,7 @@ export function EnergyBreakdownChart({ className, data, title, icon }: EnergyBre
 
       <ChartContainer config={chartConfig} className="aspect-square min-h-0 flex-1">
         <PieChart>
+          <ChartTooltip content={<ChartTooltipContent hideLabel />} />
           <Pie
             data={chartData}
             dataKey="value"
@@ -261,8 +281,37 @@ export function EnergyBreakdownChart({ className, data, title, icon }: EnergyBre
             {chartData.map((entry) => (
               <Cell key={entry.key} fill={`var(--color-${entry.key})`} />
             ))}
+            <Label
+              content={({ viewBox }) => {
+                if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                  return (
+                    <text
+                      x={viewBox.cx}
+                      y={viewBox.cy}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                    >
+                      <tspan
+                        x={viewBox.cx}
+                        y={viewBox.cy}
+                        className="fill-foreground text-[11px] font-bold"
+                      >
+                        {totalValue.toLocaleString()}
+                      </tspan>
+                      <tspan
+                        x={viewBox.cx}
+                        y={(viewBox.cy || 0) + 12}
+                        className="fill-muted-foreground text-[8px]"
+                      >
+                        kWh
+                      </tspan>
+                    </text>
+                  );
+                }
+                return null;
+              }}
+            />
           </Pie>
-          <Tooltip content={<PieCustomTooltip />} />
           <ChartLegend
             content={<ChartLegendContent nameKey="key" />}
             className="-translate-y-2 flex-wrap gap-2 *:basis-1/4 *:justify-center"

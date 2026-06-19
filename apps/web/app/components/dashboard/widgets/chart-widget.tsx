@@ -13,26 +13,30 @@ export function ChartWidget({ widget, data }: ChartWidgetProps) {
   const t = useLocale();
   const title = getWidgetTitle(t, widget.metricKey);
 
-  if (data.chartType === "area" || data.chartType === "line" || data.chartType === "bar") {
-    return (
-      <EnergyTrendChart
-        data={data.points ?? []}
-        title={title}
-        icon={<DynamicIcon name={widget.icon} size={14} />}
-        chartType={data.chartType}
-      />
-    );
+  if (Array.isArray(data.points) && data.points.length > 0) {
+    const trendType = data.chartType ?? "area";
+    if (trendType === "area" || trendType === "line" || trendType === "bar") {
+      return (
+        <EnergyTrendChart
+          data={data.points}
+          title={title}
+          icon={<DynamicIcon name={widget.icon} size={14} />}
+          chartType={trendType}
+        />
+      );
+    }
   }
 
-  if (data.chartType === "donut") {
+  if (Array.isArray(data.items) && data.items.length > 0) {
     /* oxlint-disable-next-line no-map-spread */
-    const items = (data.items ?? []).map((item) => ({
+    const items = data.items.map((item) => ({
       ...item,
       label: getNestedLocaleValue(t, item.label) ?? item.label,
     }));
     return (
       <EnergyBreakdownChart
         data={items}
+        total={data.total}
         title={title}
         icon={<DynamicIcon name={widget.icon} size={14} />}
       />
