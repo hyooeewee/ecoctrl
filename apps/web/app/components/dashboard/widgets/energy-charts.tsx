@@ -195,16 +195,16 @@ export function EnergyTrendChart({
 // ─── Energy Breakdown Pie ─────────────────────────────────────────────────────
 
 const CATEGORY_COLORS = [
-  "#3b82f6", // blue-500
-  "#60a5fa", // blue-400
-  "#93c5fd", // blue-300
-  "#2563eb", // blue-600
-  "#1d4ed8", // blue-700
-  "#22d3ee", // cyan-400
-  "#34d399", // emerald-400
-  "#a78bfa", // violet-400
-  "#f472b6", // pink-400
-  "#fbbf24", // amber-400
+  "var(--color-chart-1)",
+  "var(--color-chart-2)",
+  "var(--color-chart-3)",
+  "var(--color-chart-4)",
+  "var(--color-chart-5)",
+  "var(--color-chart-6)",
+  "var(--color-chart-7)",
+  "var(--color-chart-8)",
+  "var(--color-chart-9)",
+  "var(--color-chart-10)",
 ];
 
 interface BreakdownItem {
