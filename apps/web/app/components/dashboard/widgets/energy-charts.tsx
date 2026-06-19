@@ -17,6 +17,8 @@ import {
 
 import { cn } from "~/lib/utils";
 import { useLocale } from "~/locales";
+import { ChartContainer, ChartLegend, ChartLegendContent } from "@ecoctrl/ui/chart";
+import type { ChartConfig } from "@ecoctrl/ui/chart";
 
 // ─── Measure hook ─────────────────
 
@@ -80,13 +82,13 @@ function PieCustomTooltip({
   payload,
 }: {
   active?: boolean;
-  payload?: { name: string; value: number }[];
+  payload?: { payload: { label: string; value: number } }[];
 }) {
   if (!active || !payload?.length) return null;
-  const entry = payload[0];
+  const entry = payload[0].payload;
   return (
     <div className="rounded border border-white/10 bg-panel-dark/95 px-2 py-1.5 text-[10px] shadow-xl backdrop-blur">
-      <span className="font-medium text-foreground">{entry.name}</span>
+      <span className="font-medium text-foreground">{entry.label}</span>
       <span className="ml-2 tabular-nums text-muted-foreground">{entry.value}%</span>
     </div>
   );
@@ -261,7 +263,18 @@ interface EnergyBreakdownChartProps {
 }
 
 export function EnergyBreakdownChart({ className, data, title, icon }: EnergyBreakdownChartProps) {
-  const [ref, width] = useMeasureSize(200, 148);
+  const chartData = useMemo(
+    () => data.map((item, index) => ({ ...item, key: `item-${index}` })),
+    [data],
+  );
+
+  const chartConfig = useMemo(() => {
+    const config: ChartConfig = {};
+    for (const item of chartData) {
+      config[item.key] = { label: item.label, color: item.color };
+    }
+    return config;
+  }, [chartData]);
 
   return (
     <div className={cn("flex h-full flex-col gap-2 p-3", className)}>
@@ -270,44 +283,30 @@ export function EnergyBreakdownChart({ className, data, title, icon }: EnergyBre
         <p className="text-[11px] font-semibold tracking-widest text-muted-foreground">{title}</p>
       </div>
 
-      <div className="flex min-h-0 flex-1 items-center gap-4">
-        <div ref={ref} className="h-full flex-1 overflow-hidden">
-          <PieChart width={width} height={width} style={{ outline: "none" }}>
-            <Pie
-              data={data}
-              dataKey="value"
-              nameKey="label"
-              cx="50%"
-              cy="50%"
-              innerRadius="50%"
-              outerRadius="78%"
-              strokeWidth={0}
-              isAnimationActive={false}
-            >
-              {data.map((entry) => (
-                <Cell key={entry.label} fill={entry.color} />
-              ))}
-            </Pie>
-            <Tooltip content={<PieCustomTooltip />} />
-          </PieChart>
-        </div>
-
-        {/* Legend */}
-        <div className="flex flex-col gap-1.5">
-          {data.map((entry) => (
-            <div key={entry.label} className="flex items-center gap-1.5">
-              <span
-                className="size-2 shrink-0 rounded-sm"
-                style={{ backgroundColor: entry.color }}
-              />
-              <span className="text-[10px] text-muted-foreground">{entry.label}</span>
-              <span className="ml-auto text-[10px] font-semibold tabular-nums text-foreground">
-                {entry.value}%
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+      <ChartContainer config={chartConfig} className="aspect-square min-h-0 flex-1">
+        <PieChart>
+          <Pie
+            data={chartData}
+            dataKey="value"
+            nameKey="key"
+            cx="50%"
+            cy="50%"
+            innerRadius="50%"
+            outerRadius="78%"
+            strokeWidth={0}
+            isAnimationActive={false}
+          >
+            {chartData.map((entry) => (
+              <Cell key={entry.key} fill={`var(--color-${entry.key})`} />
+            ))}
+          </Pie>
+          <Tooltip content={<PieCustomTooltip />} />
+          <ChartLegend
+            content={<ChartLegendContent nameKey="key" />}
+            className="-translate-y-2 flex-wrap gap-2 *:basis-1/4 *:justify-center"
+          />
+        </PieChart>
+      </ChartContainer>
     </div>
   );
 }

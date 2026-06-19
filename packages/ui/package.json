@@ -30,6 +30,10 @@
       "types": "./src/components/ui/card.tsx",
       "import": "./src/components/ui/card.tsx"
     },
+    "./chart": {
+      "types": "./src/components/ui/chart.tsx",
+      "import": "./src/components/ui/chart.tsx"
+    },
     "./checkbox": {
       "types": "./src/components/ui/checkbox.tsx",
       "import": "./src/components/ui/checkbox.tsx"
@@ -168,6 +172,7 @@
     "lucide-react": "catalog:",
     "next-themes": "^0.4.6",
     "react-hook-form": "catalog:",
+    "recharts": "3.8.0",
     "shadcn": "catalog:",
     "sonner": "catalog:",
     "tailwind-merge": "catalog:",
