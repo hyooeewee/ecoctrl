@@ -93,7 +93,7 @@ export function NotificationSheet({ trigger, onCountChange }: NotificationSheetP
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger render={trigger} />
       <SheetContent className="flex w-full flex-col sm:max-w-md p-0">
-        <SheetHeader className="px-4 py-4 border-b">
+        <SheetHeader className="px-4 py-4 border-b pr-14">
           <div className="flex items-center justify-between">
             <SheetTitle className="flex items-center gap-2 text-base">
               <Bell size={18} />
