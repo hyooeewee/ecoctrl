@@ -3,7 +3,7 @@ import {
   GraphButtonBlockDetail,
 } from "~/components/dashboard/graph-button-block";
 import { ExpandableModal } from "~/components/expandable-modal";
-import { getWidgetTitle, useLocale } from "~/locales";
+import { getNestedLocaleValue, getWidgetTitle, useLocale } from "~/locales";
 
 import { DynamicIcon } from "./dynamic-icon";
 import type { StatData, WidgetConfig } from "./types";

@@ -1,5 +1,5 @@
 {
-  "id": "sse-send",
+  "id": "sse_send",
   "name": "SSE 推送",
   "version": "1.0.0",
   "category": "action",
