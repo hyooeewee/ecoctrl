@@ -1,4 +1,10 @@
-export type TriggerType = "state_change" | "schedule" | "manual" | "webhook" | "event";
+export type TriggerType =
+  | "state_change"
+  | "schedule"
+  | "manual"
+  | "webhook"
+  | "event"
+  | "cron-trigger";
 
 export interface StateChangeTriggerConfig {
   watch: string[];
@@ -6,6 +12,11 @@ export interface StateChangeTriggerConfig {
 }
 
 export interface ScheduleTriggerConfig {
+  cron: string;
+  timezone: string;
+}
+
+export interface CronTriggerConfig {
   cron: string;
   timezone: string;
 }
@@ -27,6 +38,7 @@ export interface EventTriggerConfig {
 export type TriggerConfig =
   | StateChangeTriggerConfig
   | ScheduleTriggerConfig
+  | CronTriggerConfig
   | ManualTriggerConfig
   | WebhookTriggerConfig
   | EventTriggerConfig;

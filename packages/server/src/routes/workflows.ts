@@ -40,7 +40,7 @@ const workflowBodySchema = z.object({
   dsl: z.object({
     version: z.literal("1.0"),
     trigger: z.object({
-      type: z.enum(["state_change", "schedule", "manual", "webhook", "event"]),
+      type: z.enum(["state_change", "schedule", "manual", "webhook", "event", "cron-trigger"]),
       config: z.record(z.string(), z.unknown()),
     }),
     nodes: z.array(

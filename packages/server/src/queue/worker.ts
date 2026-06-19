@@ -66,7 +66,7 @@ async function processJob(job: Job<ExecutionJobData>): Promise<void> {
       {
         version: "1.0",
         trigger: dsl.trigger as {
-          type: "state_change" | "schedule" | "manual" | "webhook" | "event";
+          type: "state_change" | "schedule" | "manual" | "webhook" | "event" | "cron-trigger";
           config: Record<string, unknown>;
         },
         nodes: dsl.nodes as Parameters<typeof executeWorkflow>[0]["nodes"],

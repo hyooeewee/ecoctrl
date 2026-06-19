@@ -712,10 +712,12 @@ export function useWorkflowCanvas({ workflowId, onBack, onDirtyChange }: UseWork
     if (!trimmed) return;
 
     const newTrigger = dsl?.trigger
-      ? {
-          ...dsl.trigger,
-          config: { ...dsl.trigger.config, tags: editTags },
-        }
+      ? dsl.trigger.type === "manual"
+        ? {
+            ...dsl.trigger,
+            config: { ...dsl.trigger.config, tags: editTags },
+          }
+        : { ...dsl.trigger }
       : { type: "manual" as const, config: { tags: editTags } };
 
     if (workflowId && dsl) {

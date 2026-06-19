@@ -1,4 +1,10 @@
-export type TriggerType = "state_change" | "schedule" | "manual" | "webhook" | "event";
+export type TriggerType =
+  | "state_change"
+  | "schedule"
+  | "manual"
+  | "webhook"
+  | "event"
+  | "cron-trigger";
 
 export interface WorkflowTrigger {
   type: TriggerType;
