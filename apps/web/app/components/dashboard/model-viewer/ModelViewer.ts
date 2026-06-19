@@ -35,8 +35,8 @@ export interface ModelViewerRef {
   zoomIn: () => void;
   zoomOut: () => void;
   resetCamera: () => void;
-  ensureCloseUp: (minRadius: number) => void;
-  resetToDefaultRadius: () => void;
+  enterImmersive: () => void;
+  exitImmersive: () => void;
   focusOnLabel: (key: string) => void;
   setClipping: (enabled: boolean) => void;
   executeTagActions: (labelKey: string) => Promise<void>;
@@ -65,6 +65,10 @@ export class ModelViewer implements ModelViewerRef {
 
   // Post-load camera target for resetCamera
   private postLoadTarget: Vector3 | null = null;
+
+  // Radius that frames the loaded model; used as the baseline for
+  // reset / fullscreen instead of the user-supplied default.
+  private fittedCameraRadius: number | null = null;
 
   // Label anchors (computed after model load)
   private labelAnchors: LabelAnchor[] = [];
@@ -452,6 +456,7 @@ export class ModelViewer implements ModelViewerRef {
       const radius = Math.max(size.x, size.y, size.z) * 1.5;
       this.camera.setTarget(target);
       this.postLoadTarget = target.clone();
+      this.fittedCameraRadius = radius;
       this.camera.radius = radius;
       this.camera.lowerRadiusLimit = radius * 0.1;
       this.camera.upperRadiusLimit = radius * 5;
@@ -561,8 +566,9 @@ export class ModelViewer implements ModelViewerRef {
   resetCamera(): void {
     this.camera.alpha = INITIAL_ALPHA;
     this.camera.beta = INITIAL_BETA;
-    this.camera.radius = this.defaultCameraRadius;
-    this.camera.target = this.postLoadTarget?.clone() ?? INITIAL_TARGET.clone();
+    this.camera.radius = this.fittedCameraRadius ?? this.defaultCameraRadius;
+    // Use setTarget to match the load path and avoid a one-frame target mismatch.
+    this.camera.setTarget(this.postLoadTarget ?? INITIAL_TARGET);
 
     // Reset viewport
     this.camera.viewport = new Viewport(0, 0, 1, 1);
@@ -573,14 +579,14 @@ export class ModelViewer implements ModelViewerRef {
     this.scene.clipPlane = null;
   }
 
-  ensureCloseUp(minRadius: number): void {
-    if (this.camera.radius >= minRadius) {
-      this.camera.radius = minRadius * 0.9;
-    }
+  enterImmersive(): void {
+    const base = this.fittedCameraRadius ?? this.defaultCameraRadius;
+    // 0.75 keeps the model inside the viewport; 0.5 was too close and clipped it.
+    this.camera.radius = Math.max(base * 0.75, this.camera.lowerRadiusLimit ?? 8);
   }
 
-  resetToDefaultRadius(): void {
-    this.camera.radius = this.defaultCameraRadius;
+  exitImmersive(): void {
+    this.camera.radius = this.fittedCameraRadius ?? this.defaultCameraRadius;
   }
 
   focusOnLabel(key: string): void {
@@ -679,7 +685,11 @@ export class ModelViewer implements ModelViewerRef {
 
   setDefaultCameraRadius(radius: number): void {
     this.defaultCameraRadius = radius;
-    this.camera.radius = radius;
+    // Only apply immediately before the model has been fitted; afterwards
+    // reset/immersive actions should use the fitted baseline.
+    if (this.fittedCameraRadius === null) {
+      this.camera.radius = radius;
+    }
   }
 
   // ========================================
