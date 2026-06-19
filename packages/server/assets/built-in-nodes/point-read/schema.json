@@ -10,15 +10,10 @@
       "default": "current",
       "description": "current: 读取当前值；history: 读取历史数据"
     },
-    "pointName": {
-      "type": "string",
-      "title": "点位名称",
-      "description": "单个点位名；也支持逗号分隔的多个点位（current 模式）"
-    },
     "pointNames": {
       "type": "array",
       "title": "点位列表",
-      "description": "current 模式下批量读取的点位名数组",
+      "description": "要读取的点位名数组；单个点位也写成数组",
       "items": { "type": "string" }
     },
     "beginTime": {
@@ -31,44 +26,21 @@
       "title": "结束时间",
       "description": "history 模式必填，例如 2024-01-01 23:59:59"
     },
-    "interval": {
-      "type": "number",
-      "title": "时间间隔（秒）",
-      "description": "history 模式可选",
-      "default": 0
-    },
     "retry": {
       "type": "number",
       "title": "重试次数",
       "default": 0
+    },
+    "outputs": {
+      "type": "object",
+      "title": "输出字段映射",
+      "description": "自定义输出字段，key 为输出名。value 可以是点号路径（如 ResultPointObjArr[0].value），也可以是表达式模板（如 {{raw[\"ResultPointObjArr\"][0][\"data\"][0][\"value\"] + ...}}）。未配置时保持默认输出。",
+      "additionalProperties": { "type": "string" }
     }
   },
+  "required": ["pointNames"],
   "outputs": {
     "type": "object",
-    "properties": {
-      "value": {
-        "description": "第一个点位的当前值"
-      },
-      "pointName": {
-        "type": "string",
-        "description": "第一个点位的名称"
-      },
-      "points": {
-        "type": "object",
-        "description": "current 模式下所有点位 code -> value 的字典"
-      },
-      "values": {
-        "type": "object",
-        "description": "IoT 接口原始返回"
-      },
-      "history": {
-        "type": "array",
-        "description": "history 模式下的历史数据数组"
-      },
-      "mode": {
-        "type": "string",
-        "description": "本次读取模式"
-      }
-    }
+    "description": "默认输出包含 raw（API 原始返回）、mode、retry，以及当前模式解析出的 value/pointName/points 或 history。若配置了自定义 outputs，则会追加自定义字段。"
   }
 }
