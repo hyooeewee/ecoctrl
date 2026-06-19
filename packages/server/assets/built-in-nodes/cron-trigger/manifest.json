@@ -3,6 +3,7 @@
   "name": "Cron Trigger",
   "version": "1.0.0",
   "category": "trigger",
+  "triggerMode": "schedule",
   "entry": "backend.js",
   "schema": "schema.json",
   "description": "Trigger workflow execution on a cron schedule",

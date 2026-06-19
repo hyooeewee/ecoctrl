@@ -223,8 +223,9 @@ await notifyListener.start("sse_events", (event) => {
 });
 fastify.log.info("PostgreSQL NOTIFY listener started on channel 'sse_events'");
 
-// Initialize pg-boss queue, sync schedule triggers, and start job worker
+// Initialize pg-boss queue, load trigger plugins, sync schedule triggers, and start job worker
 await initQueue();
+await triggerEngine.loadPlugins();
 await triggerEngine.syncSchedules();
 await startWorker();
 

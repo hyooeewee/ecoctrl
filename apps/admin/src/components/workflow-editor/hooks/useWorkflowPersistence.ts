@@ -56,7 +56,7 @@ export function useWorkflowPersistence(options: UseWorkflowPersistenceOptions) {
 
       try {
         const newDsl: WorkflowDSL = {
-          ...reactFlowToDSL(nodes, edges, dsl.trigger),
+          ...reactFlowToDSL(nodes, edges),
           envVars,
           settings,
         };
@@ -97,7 +97,7 @@ export function useWorkflowPersistence(options: UseWorkflowPersistenceOptions) {
     setPublishing(true);
     try {
       const newDsl: WorkflowDSL = {
-        ...reactFlowToDSL(nodes, edges, dsl.trigger),
+        ...reactFlowToDSL(nodes, edges),
         envVars,
         settings,
       };

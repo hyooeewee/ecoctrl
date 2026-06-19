@@ -3,6 +3,7 @@
   "name": "开始",
   "version": "1.0.0",
   "category": "trigger",
+  "triggerMode": "manual",
   "entry": "backend.js",
   "schema": "schema.json",
   "description": "流程入口节点",

@@ -171,7 +171,6 @@ export async function resolveUpstreamOutputs(
 
     const testDsl: WorkflowDSL = {
       version: "1.0",
-      trigger: { type: "manual", config: {} },
       nodes: [startNode, node, endNode],
       edges: [
         { id: `e-start-${node.id}`, source: "start", target: node.id },

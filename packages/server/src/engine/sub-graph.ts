@@ -45,7 +45,6 @@ export async function executeSubGraph(
 
   const dsl = {
     version: "1.0" as const,
-    trigger: { type: "manual" as const, config: {} },
     nodes,
     edges,
   };

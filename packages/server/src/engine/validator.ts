@@ -42,7 +42,11 @@ function detectCycle(
   return false;
 }
 
-export function validateDsl(dsl: WorkflowDSL, strict = false): ValidationError[] {
+export function validateDsl(
+  dsl: WorkflowDSL,
+  strict = false,
+  triggerNodeTypes: Set<string> = new Set(["start"]),
+): ValidationError[] {
   const errors: ValidationError[] = [];
   const { nodes, edges } = dsl;
 
@@ -71,14 +75,13 @@ export function validateDsl(dsl: WorkflowDSL, strict = false): ValidationError[]
     }
   }
 
-  // 3. Exactly one start node
-  const startNodes = nodes.filter((n) => n.type === "start");
-  if (startNodes.length === 0) {
-    errors.push({ field: "nodes", message: "Workflow must have exactly one 'start' node" });
-  } else if (startNodes.length > 1) {
+  // 3. At least one entry trigger node
+  const entryNodes = nodes.filter((n) => triggerNodeTypes.has(n.type));
+  if (entryNodes.length === 0) {
+    const list = Array.from(triggerNodeTypes).join(", ");
     errors.push({
       field: "nodes",
-      message: `Workflow has ${startNodes.length} 'start' nodes, expected 1`,
+      message: `Workflow must have at least one entry trigger node (${list})`,
     });
   }
 
@@ -93,8 +96,9 @@ export function validateDsl(dsl: WorkflowDSL, strict = false): ValidationError[]
   }
 
   // 5. Connectivity (strict only)
+  const entryNodeIds = new Set(entryNodes.map((n) => n.id));
   for (const node of nodes) {
-    if (node.type !== "start" && !hasEdgeTo(node.id, edges)) {
+    if (!entryNodeIds.has(node.id) && !hasEdgeTo(node.id, edges)) {
       errors.push({
         field: `nodes.${node.id}`,
         message: `Node '${node.name}' has no incoming edges`,
@@ -155,7 +159,6 @@ export function validateDsl(dsl: WorkflowDSL, strict = false): ValidationError[]
       const bodyErrors = validateDsl(
         {
           version: "1.0",
-          trigger: dsl.trigger,
           nodes: body.nodes,
           edges: body.edges,
         },
@@ -186,7 +189,7 @@ export function validateDsl(dsl: WorkflowDSL, strict = false): ValidationError[]
     }
   }
 
-  // 9. Parallel node branch validation (strict only)
+  // 9. Parallel node branch validation (recursive, strict only)
   for (const node of nodes.filter((n) => n.type === "parallel")) {
     const branches = node.config.branches as
       | Array<{ nodes?: WorkflowNode[]; edges?: WorkflowEdge[] }>
@@ -198,7 +201,6 @@ export function validateDsl(dsl: WorkflowDSL, strict = false): ValidationError[]
           const branchErrors = validateDsl(
             {
               version: "1.0",
-              trigger: dsl.trigger,
               nodes: branch.nodes,
               edges: branch.edges,
             },
@@ -216,20 +218,23 @@ export function validateDsl(dsl: WorkflowDSL, strict = false): ValidationError[]
   }
 
   // 10. Cycle detection (strict only)
-  if (startNodes.length === 1) {
+  if (entryNodes.length > 0) {
     const visited = new Set<string>();
-    const recStack = new Set<string>();
-    if (detectCycle(startNodes[0]!.id, edges, visited, recStack)) {
-      errors.push({
-        field: "edges",
-        message: "Workflow contains a cycle (loops must use 'loop' node with embedded body)",
-      });
+    for (const entry of entryNodes) {
+      const recStack = new Set<string>();
+      if (detectCycle(entry.id, edges, visited, recStack)) {
+        errors.push({
+          field: "edges",
+          message: "Workflow contains a cycle (loops must use 'loop' node with embedded body)",
+        });
+        break;
+      }
     }
   }
 
   return errors;
 }
 
-export function isValidDsl(dsl: WorkflowDSL): boolean {
-  return validateDsl(dsl).length === 0;
+export function isValidDsl(dsl: WorkflowDSL, triggerNodeTypes?: Set<string>): boolean {
+  return validateDsl(dsl, false, triggerNodeTypes).length === 0;
 }

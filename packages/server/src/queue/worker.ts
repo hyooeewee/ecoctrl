@@ -11,6 +11,7 @@ import { getLogger } from "@/lib/logger";
 import { env } from "@/lib/env";
 import { publishWorkflowExecution, publishWorkflowNodeStatus } from "@/lib/eventPublisher";
 import type { ExecutionJobData } from "./pgboss";
+import type { WorkflowDSL } from "@/engine/types";
 
 const logger = getLogger("queue");
 
@@ -34,7 +35,9 @@ function getEnvVars(): Record<string, string> {
 }
 
 async function processJob(job: Job<ExecutionJobData>): Promise<void> {
-  const { executionId, workflowId, triggerData } = job.data;
+  const { executionId, workflowId, triggerData, startNodeId } = job.data;
+
+  let result: Awaited<ReturnType<typeof executeWorkflow>> | undefined;
 
   // Mark as running
   await db
@@ -50,29 +53,14 @@ async function processJob(job: Job<ExecutionJobData>): Promise<void> {
       throw new Error(`Workflow not found: ${workflowId}`);
     }
 
-    const dsl = (workflow.publishedDsl ?? workflow.dsl) as {
-      nodes: unknown[];
-      edges: unknown[];
-      trigger: unknown;
-      envVars?: Array<{ key: string; value: unknown; type: string }>;
-    };
+    const dsl = (workflow.publishedDsl ?? workflow.dsl) as WorkflowDSL;
 
-    const { env: workflowEnv, secrets } = splitEnvVars(dsl as Parameters<typeof splitEnvVars>[0]);
+    const { env: workflowEnv, secrets } = splitEnvVars(dsl);
     const mergedEnv = mergeServerEnv(getEnvVars(), workflowEnv);
 
     const startTime = Date.now();
-    let result: Awaited<ReturnType<typeof executeWorkflow>> | undefined;
     result = await executeWorkflow(
-      {
-        version: "1.0",
-        trigger: dsl.trigger as {
-          type: "state_change" | "schedule" | "manual" | "webhook" | "event";
-          config: Record<string, unknown>;
-        },
-        nodes: dsl.nodes as Parameters<typeof executeWorkflow>[0]["nodes"],
-        edges: dsl.edges as Parameters<typeof executeWorkflow>[0]["edges"],
-        envVars: (dsl as Parameters<typeof splitEnvVars>[0]).envVars,
-      },
+      dsl,
       triggerData,
       mergedEnv,
       secrets,
@@ -96,6 +84,7 @@ async function processJob(job: Job<ExecutionJobData>): Promise<void> {
           );
         },
       },
+      startNodeId,
     );
 
     const durationMs = Date.now() - startTime;

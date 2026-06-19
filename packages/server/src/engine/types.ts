@@ -1,9 +1,4 @@
-export type TriggerType = "state_change" | "schedule" | "manual" | "webhook" | "event";
-
-export interface StateChangeTriggerConfig {
-  watch: string[];
-  condition?: string;
-}
+export type TriggerMode = "manual" | "schedule" | "webhook" | "event";
 
 export interface ScheduleTriggerConfig {
   cron: string;
@@ -25,16 +20,10 @@ export interface EventTriggerConfig {
 }
 
 export type TriggerConfig =
-  | StateChangeTriggerConfig
   | ScheduleTriggerConfig
   | ManualTriggerConfig
   | WebhookTriggerConfig
   | EventTriggerConfig;
-
-export interface WorkflowTrigger {
-  type: TriggerType;
-  config: TriggerConfig;
-}
 
 export type NodeType = string;
 
@@ -72,7 +61,6 @@ export interface WorkflowSettings {
 
 export interface WorkflowDSL {
   version: "1.0";
-  trigger: WorkflowTrigger;
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
   envVars?: Array<{

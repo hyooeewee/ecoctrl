@@ -2,11 +2,16 @@ import { eq, and } from "drizzle-orm";
 import { db } from "@/config/database";
 import { workflows, workflowExecutions } from "@/schemas/workflows";
 import { findWorkflowById } from "@/repositories/workflows";
-import { getBoss, publishExecution, scheduleWorkflow, unscheduleWorkflow } from "@/queue/pgboss";
+import { getBoss, publishExecution, scheduleWorkflow } from "@/queue/pgboss";
 import { evaluateBoolean } from "./expr";
 import { buildVars } from "./template";
 import { splitEnvVars, mergeServerEnv } from "./env-utils";
-import type { ExecutionContext, WorkflowDSL } from "./types";
+import type { ExecutionContext, WorkflowDSL, WorkflowNode, TriggerMode } from "./types";
+import { PluginRegistry } from "./plugin-registry";
+import { getPluginStorage } from "@/storage";
+
+const pluginStorage = getPluginStorage();
+const pluginRegistry = new PluginRegistry(pluginStorage);
 
 function getEnvVars(): Record<string, string> {
   const allowed = [
@@ -27,9 +32,22 @@ function getEnvVars(): Record<string, string> {
   return env;
 }
 
+function getTriggerNodes(dsl: WorkflowDSL): Array<{ node: WorkflowNode; mode: TriggerMode }> {
+  const result: Array<{ node: WorkflowNode; mode: TriggerMode }> = [];
+  for (const node of dsl.nodes) {
+    const def = pluginRegistry.get(node.type);
+    if (!def || def.manifest.category !== "trigger") continue;
+    const mode = (def.manifest as { triggerMode?: TriggerMode }).triggerMode;
+    if (!mode) continue;
+    result.push({ node, mode });
+  }
+  return result;
+}
+
 async function createExecutionAndPublish(
   workflowId: string,
   userId: string,
+  startNodeId: string,
   triggerData: Record<string, unknown>,
 ): Promise<string> {
   const [execution] = await db
@@ -46,95 +64,38 @@ async function createExecutionAndPublish(
     executionId: execution.id,
     workflowId,
     userId,
+    startNodeId,
     triggerData,
   });
 
   return execution.id;
 }
 
+function evaluateTriggerCondition(
+  dsl: WorkflowDSL,
+  triggerData: Record<string, unknown>,
+  condition?: string,
+): boolean {
+  if (!condition) return true;
+  const { env: workflowEnv, secrets } = splitEnvVars(dsl);
+  const ctx: ExecutionContext = {
+    triggerData,
+    variables: new Map(),
+    nodeOutputs: new Map(),
+    env: mergeServerEnv(getEnvVars(), workflowEnv),
+    secrets,
+  };
+  const vars = buildVars(ctx);
+  try {
+    return evaluateBoolean(condition, vars);
+  } catch {
+    return false;
+  }
+}
+
 export const triggerEngine = {
-  // State change: called from object repository after update
-  async emitStateChange(
-    objectUuid: string,
-    pointId: string,
-    key: string,
-    oldValue: string,
-    newValue: string,
-  ): Promise<void> {
-    const rows = await db
-      .select()
-      .from(workflows)
-      .where(and(eq(workflows.enabled, true), eq(workflows.isLatest, true)));
-
-    for (const workflow of rows) {
-      const dsl = (workflow.publishedDsl ?? workflow.dsl) as {
-        trigger?: { type: string; config?: Record<string, unknown> };
-        envVars?: WorkflowDSL["envVars"];
-      };
-      if (dsl.trigger?.type !== "state_change") continue;
-
-      const config = dsl.trigger.config as { watch?: string[]; condition?: string } | undefined;
-      if (!config?.watch) continue;
-
-      // Check if any watch path matches this change
-      const watchPaths = config.watch;
-      const matched = watchPaths.some((path) => {
-        // Match patterns like:
-        // - objects.*.points.temperature.value
-        // - objects.{uuid}.points.{pointId}.values.{key}
-        const parts = path.split(".");
-        if (parts.length < 2) return false;
-        if (parts[0] !== "objects") return false;
-
-        // Check object uuid wildcard
-        if (parts[1] !== "*" && parts[1] !== objectUuid) return false;
-
-        // Check point path: points.{pointId}.values.{key}
-        if (parts.length >= 5) {
-          if (parts[2] === "points" || parts[2] === "values") {
-            const pathPointId = parts[3];
-            const pathKey = parts[4];
-            if (pathPointId && pathPointId !== "*" && pathPointId !== pointId) return false;
-            if (pathKey && pathKey !== "*" && pathKey !== key) return false;
-            return true;
-          }
-        }
-
-        return false;
-      });
-
-      if (!matched) continue;
-
-      const triggerData: Record<string, unknown> = {
-        objectUuid,
-        pointId,
-        key,
-        oldValue,
-        newValue,
-        source: "state_change",
-      };
-
-      // Evaluate condition if present
-      if (config.condition) {
-        const { env: workflowEnv, secrets } = splitEnvVars(dsl as WorkflowDSL);
-        const ctx: ExecutionContext = {
-          triggerData,
-          variables: new Map(),
-          nodeOutputs: new Map(),
-          env: mergeServerEnv(getEnvVars(), workflowEnv),
-          secrets,
-        };
-        const vars = buildVars(ctx);
-        try {
-          const passes = evaluateBoolean(config.condition, vars);
-          if (!passes) continue;
-        } catch {
-          continue;
-        }
-      }
-
-      await createExecutionAndPublish(workflow.id, workflow.userId, triggerData);
-    }
+  async loadPlugins(): Promise<void> {
+    await pluginRegistry.loadAll();
   },
 
   // Event: called from business code
@@ -145,36 +106,19 @@ export const triggerEngine = {
       .where(and(eq(workflows.enabled, true), eq(workflows.isLatest, true)));
 
     for (const workflow of rows) {
-      const dsl = (workflow.publishedDsl ?? workflow.dsl) as {
-        trigger?: { type: string; config?: Record<string, unknown> };
-        envVars?: WorkflowDSL["envVars"];
-      };
-      if (dsl.trigger?.type !== "event") continue;
+      const dsl = (workflow.publishedDsl ?? workflow.dsl) as WorkflowDSL;
+      const triggers = getTriggerNodes(dsl).filter((t) => t.mode === "event");
+      if (triggers.length === 0) continue;
 
-      const config = dsl.trigger.config as { event?: string; condition?: string } | undefined;
-      if (config?.event !== eventName) continue;
+      for (const { node } of triggers) {
+        const config = node.config as { event?: string; condition?: string } | undefined;
+        if (config?.event !== eventName) continue;
 
-      const triggerData = { ...payload, event: eventName, source: "event" };
+        const triggerData = { ...payload, event: eventName, source: "event" };
+        if (!evaluateTriggerCondition(dsl, triggerData, config.condition)) continue;
 
-      if (config.condition) {
-        const { env: workflowEnv, secrets } = splitEnvVars(dsl as WorkflowDSL);
-        const ctx: ExecutionContext = {
-          triggerData,
-          variables: new Map(),
-          nodeOutputs: new Map(),
-          env: mergeServerEnv(getEnvVars(), workflowEnv),
-          secrets,
-        };
-        const vars = buildVars(ctx);
-        try {
-          const passes = evaluateBoolean(config.condition, vars);
-          if (!passes) continue;
-        } catch {
-          continue;
-        }
+        await createExecutionAndPublish(workflow.id, workflow.userId, node.id, triggerData);
       }
-
-      await createExecutionAndPublish(workflow.id, workflow.userId, triggerData);
     }
   },
 
@@ -183,6 +127,7 @@ export const triggerEngine = {
     workflowId: string,
     userId: string,
     payload: Record<string, unknown>,
+    startNodeId?: string,
   ): Promise<string> {
     const workflow = await findWorkflowById(workflowId);
     if (!workflow) {
@@ -191,7 +136,24 @@ export const triggerEngine = {
     if (!workflow.publishedDsl) {
       throw new Error("Workflow has not been published. Please publish before triggering.");
     }
-    return createExecutionAndPublish(workflowId, userId, { ...payload, source: "manual" });
+
+    const dsl = workflow.publishedDsl as WorkflowDSL;
+    const manualTriggers = getTriggerNodes(dsl).filter((t) => t.mode === "manual");
+    if (manualTriggers.length === 0) {
+      throw new Error("Workflow has no manual trigger node");
+    }
+
+    const entry = startNodeId
+      ? manualTriggers.find((t) => t.node.id === startNodeId)
+      : manualTriggers[0];
+    if (!entry) {
+      throw new Error(`Manual trigger node '${startNodeId}' not found`);
+    }
+
+    return createExecutionAndPublish(workflowId, userId, entry.node.id, {
+      ...payload,
+      source: "manual",
+    });
   },
 
   // Webhook: called from public route
@@ -213,14 +175,15 @@ export const triggerEngine = {
     }
 
     const workflow = rows[0]!;
-    const dsl = (workflow.publishedDsl ?? workflow.dsl) as {
-      trigger?: { type: string; config?: Record<string, unknown> };
-    };
-    if (dsl.trigger?.type !== "webhook") {
-      throw new Error("Workflow is not a webhook trigger");
+    const dsl = (workflow.publishedDsl ?? workflow.dsl) as WorkflowDSL;
+    const webhookTriggers = getTriggerNodes(dsl).filter((t) => t.mode === "webhook");
+    if (webhookTriggers.length === 0) {
+      throw new Error("Workflow has no webhook trigger node");
     }
 
-    const config = dsl.trigger.config as { secret?: string; allowedIps?: string[] } | undefined;
+    // For now, use the first webhook trigger node if there are multiple
+    const { node } = webhookTriggers[0]!;
+    const config = node.config as { secret?: string; allowedIps?: string[] } | undefined;
 
     // Validate allowed IPs
     if (config?.allowedIps && config.allowedIps.length > 0) {
@@ -236,14 +199,13 @@ export const triggerEngine = {
         .createHmac("sha256", config.secret)
         .update(JSON.stringify(payload))
         .digest("hex");
-      // Support "sha256=<hex>" or just "<hex>" format
       const actual = signature.replace(/^sha256=/, "");
       if (!crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(actual))) {
         throw new Error("Invalid webhook signature");
       }
     }
 
-    return createExecutionAndPublish(workflow.id, workflow.userId, {
+    return createExecutionAndPublish(workflow.id, workflow.userId, node.id, {
       ...payload,
       source: "webhook",
       clientIp,
@@ -253,40 +215,45 @@ export const triggerEngine = {
   // Schedule management: register/unregister cron schedules
   async syncSchedules(): Promise<void> {
     const boss = getBoss();
-    // Get all schedules
     const scheduled = await boss.getSchedules();
-    const scheduledIds = new Set(
-      scheduled.map((s: { name: string }) => s.name.replace(/^workflow:schedule:/, "")),
-    );
+    const scheduledNames = new Set<string>(scheduled.map((s: { name: string }) => s.name));
 
-    // Get all enabled schedule workflows
     const rows = await db
       .select()
       .from(workflows)
       .where(and(eq(workflows.enabled, true), eq(workflows.isLatest, true)));
 
-    const activeScheduleIds = new Set<string>();
+    const activeScheduleNames = new Set<string>();
 
     for (const workflow of rows) {
-      const dsl = (workflow.publishedDsl ?? workflow.dsl) as {
-        trigger?: { type: string; config?: Record<string, unknown> };
-      };
-      if (dsl.trigger?.type !== "schedule") continue;
+      const dsl = (workflow.publishedDsl ?? workflow.dsl) as WorkflowDSL;
+      const scheduleTriggers = getTriggerNodes(dsl).filter((t) => t.mode === "schedule");
 
-      const config = dsl.trigger.config as { cron?: string; timezone?: string } | undefined;
-      if (!config?.cron) continue;
+      for (const { node } of scheduleTriggers) {
+        const config = node.config as { cron?: string; timezone?: string } | undefined;
+        if (!config?.cron) continue;
 
-      activeScheduleIds.add(workflow.id);
+        const scheduleName = `workflow.schedule.${workflow.id}.${node.id}`;
+        activeScheduleNames.add(scheduleName);
 
-      if (!scheduledIds.has(workflow.id)) {
-        await scheduleWorkflow(workflow.id, config.cron, config.timezone ?? "Asia/Shanghai");
+        if (!scheduledNames.has(scheduleName)) {
+          await scheduleWorkflow(
+            workflow.id,
+            node.id,
+            config.cron,
+            config.timezone ?? "Asia/Shanghai",
+          );
+        }
       }
     }
 
-    // Unschedule workflows that are no longer active
-    for (const scheduledId of scheduledIds as Set<string>) {
-      if (!activeScheduleIds.has(scheduledId)) {
-        await unscheduleWorkflow(scheduledId);
+    // Unschedule schedules that are no longer active
+    for (const scheduledName of scheduledNames) {
+      if (
+        !activeScheduleNames.has(scheduledName) &&
+        scheduledName.startsWith("workflow.schedule.")
+      ) {
+        await boss.unschedule(scheduledName);
       }
     }
   },

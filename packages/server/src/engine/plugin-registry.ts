@@ -227,6 +227,20 @@ export class PluginRegistry {
     return result;
   }
 
+  /** Return all node ids (and aliases) whose manifest category is "trigger". */
+  getTriggerNodeIds(): string[] {
+    const ids = new Set<string>();
+    for (const def of this.getAll()) {
+      if (def.manifest.category === "trigger") {
+        ids.add(def.manifest.id);
+        for (const alias of def.manifest.aliases ?? []) {
+          ids.add(alias);
+        }
+      }
+    }
+    return Array.from(ids);
+  }
+
   getVersions(id: string): Array<{ version: string; manifest: PluginManifest }> {
     const versions = this.plugins.get(id);
     if (!versions) return [];

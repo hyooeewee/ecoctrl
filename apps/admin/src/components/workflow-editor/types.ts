@@ -1,12 +1,3 @@
-export type TriggerType = "state_change" | "schedule" | "manual" | "webhook" | "event";
-
-export interface WorkflowTrigger {
-  type: TriggerType;
-  config: Record<string, unknown>;
-}
-
-export type NodeType = string;
-
 export interface WorkflowNode {
   id: string;
   type: string;
@@ -48,7 +39,6 @@ export interface WorkflowSettings {
 
 export interface WorkflowDSL {
   version: "1.0";
-  trigger: WorkflowTrigger;
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
   envVars?: EnvVar[];

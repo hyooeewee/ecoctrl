@@ -1,5 +1,5 @@
 import type { Node, Edge } from "@xyflow/react";
-import type { WorkflowDSL, WorkflowTrigger, WorkflowNode } from "./types";
+import type { WorkflowDSL, WorkflowNode } from "./types";
 
 export function dslToReactFlow(dsl: WorkflowDSL): { nodes: Node[]; edges: Edge[] } {
   return {
@@ -32,14 +32,9 @@ export function getDefaultSettings(): NonNullable<WorkflowDSL["settings"]> {
   };
 }
 
-export function reactFlowToDSL(
-  nodes: Node[],
-  edges: Edge[],
-  trigger: WorkflowTrigger,
-): WorkflowDSL {
+export function reactFlowToDSL(nodes: Node[], edges: Edge[]): WorkflowDSL {
   return {
     version: "1.0",
-    trigger,
     nodes: nodes.map((n) => ({
       id: n.id,
       type: n.type as string,

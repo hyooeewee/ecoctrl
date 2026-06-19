@@ -188,6 +188,7 @@ export async function executeWorkflow(
   executionId = "unknown",
   prePopulatedOutputs?: Map<string, Record<string, unknown>>,
   callbacks: ExecutionCallbacks = {},
+  startNodeId?: string,
 ): Promise<ExecutionResult> {
   const ctx: ExecutionContext = {
     triggerData,
@@ -206,11 +207,18 @@ export async function executeWorkflow(
     executionId,
   };
 
-  const startNode = dsl.nodes.find((n) => n.type === "start");
+  let startNode: WorkflowNode | undefined;
+  if (startNodeId) {
+    startNode = dsl.nodes.find((n) => n.id === startNodeId);
+  } else {
+    const triggerNodeTypes = registry?.getTriggerNodeIds() ?? ["start"];
+    startNode = dsl.nodes.find((n) => triggerNodeTypes.includes(n.type));
+  }
+
   if (!startNode) {
     return {
       status: "failed",
-      error: "Workflow has no 'start' node",
+      error: "Workflow has no entry trigger node",
       nodeLogs: [],
       dryRun,
     };

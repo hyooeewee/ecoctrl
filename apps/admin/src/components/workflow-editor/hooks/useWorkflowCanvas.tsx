@@ -700,32 +700,22 @@ export function useWorkflowCanvas({ workflowId, onBack, onDirtyChange }: UseWork
   // Edit dialog handlers
   const handleOpenEditDialog = useCallback(() => {
     setEditTitle(workflow?.name ?? workflowName);
-    const tags = (dsl?.trigger?.config?.tags as string[]) ?? [];
-    setEditTags(Array.isArray(tags) ? tags : []);
+    setEditTags([]);
     setEditDescription(workflow?.description ?? "");
     setTagInput("");
     setShowEditDialog(true);
-  }, [workflow, workflowName, dsl]);
+  }, [workflow, workflowName]);
 
   const handleSaveWorkflowInfo = useCallback(async () => {
     const trimmed = editTitle.trim();
     if (!trimmed) return;
-
-    const newTrigger = dsl?.trigger
-      ? dsl.trigger.type === "manual"
-        ? {
-            ...dsl.trigger,
-            config: { ...dsl.trigger.config, tags: editTags },
-          }
-        : { ...dsl.trigger }
-      : { type: "manual" as const, config: { tags: editTags } };
 
     if (workflowId && dsl) {
       try {
         await workflowsApi.update(workflowId, {
           name: trimmed,
           description: editDescription.trim() || undefined,
-          dsl: { ...dsl, trigger: newTrigger },
+          dsl,
         });
       } catch {
         // silently fail
@@ -735,7 +725,6 @@ export function useWorkflowCanvas({ workflowId, onBack, onDirtyChange }: UseWork
     setWorkflow((prev) =>
       prev ? { ...prev, name: trimmed, description: editDescription.trim() || null } : prev,
     );
-    setDsl((prev) => (prev ? { ...prev, trigger: newTrigger } : prev));
     setIsDirty(true);
     setShowEditDialog(false);
   }, [editTitle, editTags, editDescription, workflowId, dsl]);
@@ -781,7 +770,6 @@ export function useWorkflowCanvas({ workflowId, onBack, onDirtyChange }: UseWork
     if (!workflowId) {
       const defaultDsl: WorkflowDSL = {
         version: "1.0",
-        trigger: { type: "manual", config: {} },
         nodes: [
           { id: "start", type: "start", name: "开始", config: {} },
           { id: "end", type: "end", name: "结束", config: {} },

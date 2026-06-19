@@ -21,7 +21,7 @@ import { validateDsl } from "@/engine/validator";
 import { executeWorkflow } from "@/engine/executor";
 import { resolveUpstreamOutputs } from "@/engine/upstream-resolver";
 import { splitEnvVars, mergeServerEnv } from "@/engine/env-utils";
-import type { WorkflowDSL, WorkflowTrigger } from "@/engine/types";
+import type { WorkflowDSL } from "@/engine/types";
 
 async function getUserRole(userId: string): Promise<string> {
   const rows = await db
@@ -39,10 +39,6 @@ const workflowBodySchema = z.object({
   enabled: z.boolean().optional(),
   dsl: z.object({
     version: z.literal("1.0"),
-    trigger: z.object({
-      type: z.enum(["state_change", "schedule", "manual", "webhook", "event", "cron-trigger"]),
-      config: z.record(z.string(), z.unknown()),
-    }),
     nodes: z.array(
       z.object({
         id: z.string(),
@@ -93,24 +89,6 @@ const workflowBodySchema = z.object({
   }),
 });
 
-type RequestTrigger = z.infer<typeof workflowBodySchema>["dsl"]["trigger"];
-
-// Plugin trigger nodes (e.g. cron-trigger) are aliases for internal trigger types.
-// Normalize them before storage so the engine only deals with canonical types.
-function normalizeTrigger(trigger: RequestTrigger): WorkflowTrigger {
-  if (trigger.type === "cron-trigger") {
-    const config = trigger.config as { cron?: string; timezone?: string };
-    return {
-      type: "schedule",
-      config: {
-        cron: config.cron ?? "",
-        timezone: config.timezone ?? "Asia/Shanghai",
-      },
-    };
-  }
-  return trigger as WorkflowTrigger;
-}
-
 export default async function workflowRoutes(fastify: FastifyInstance) {
   // List workflows
   fastify.get(
@@ -151,9 +129,8 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
       const body = request.body as z.infer<typeof workflowBodySchema>;
 
       const dsl = body.dsl as unknown as WorkflowDSL;
-      dsl.trigger = normalizeTrigger(dsl.trigger);
-
-      const validationErrors = validateDsl(dsl);
+      const triggerNodeTypes = new Set<string>((fastify as any).pluginRegistry.getTriggerNodeIds());
+      const validationErrors = validateDsl(dsl, false, triggerNodeTypes);
       if (validationErrors.length > 0) {
         return reply.status(400).send({ error: "Invalid workflow DSL", details: validationErrors });
       }
@@ -214,11 +191,13 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
 
       if (body.dsl) {
         const dsl = body.dsl as unknown as WorkflowDSL;
-        dsl.trigger = normalizeTrigger(dsl.trigger);
+        const triggerNodeTypes = new Set<string>(
+          (fastify as any).pluginRegistry.getTriggerNodeIds(),
+        );
         const isPublishing = body.enabled === true;
 
         // Publishing requires strict validation; saving is lenient
-        const validationErrors = validateDsl(dsl, isPublishing);
+        const validationErrors = validateDsl(dsl, isPublishing, triggerNodeTypes);
         if (validationErrors.length > 0) {
           return reply.status(400).send({
             error: isPublishing ? "Cannot publish workflow with errors" : "Invalid workflow DSL",
@@ -247,7 +226,10 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
       if (body.enabled === true && !body.dsl) {
         const current = await findWorkflowById(id);
         if (current?.dsl) {
-          const strictErrors = validateDsl(current.dsl, true);
+          const triggerNodeTypes = new Set<string>(
+            (fastify as any).pluginRegistry.getTriggerNodeIds(),
+          );
+          const strictErrors = validateDsl(current.dsl, true, triggerNodeTypes);
           if (strictErrors.length > 0) {
             return reply
               .status(400)
@@ -389,7 +371,6 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
 
           dsl = {
             version: "1.0",
-            trigger: { type: "manual", config: {} },
             nodes: [startNode, targetNode, endNode],
             edges: [
               { id: `e-start-${targetNode.id}`, source: "start", target: targetNode.id },

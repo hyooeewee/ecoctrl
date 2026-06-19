@@ -12,6 +12,7 @@ export interface ExecutionJobData {
   executionId: string;
   workflowId: string;
   userId: string;
+  startNodeId?: string;
   triggerData: Record<string, unknown>;
 }
 
@@ -57,16 +58,31 @@ export async function publishExecution(data: ExecutionJobData): Promise<string> 
 
 export async function scheduleWorkflow(
   workflowId: string,
+  startNodeId: string,
   cron: string,
   timezone: string,
 ): Promise<void> {
   const b = getBoss();
-  await b.schedule(`workflow.schedule.${workflowId}`, cron, { workflowId }, { tz: timezone });
+  await b.schedule(
+    `workflow.schedule.${workflowId}.${startNodeId}`,
+    cron,
+    { workflowId, startNodeId },
+    { tz: timezone },
+  );
 }
 
-export async function unscheduleWorkflow(workflowId: string): Promise<void> {
+export async function unscheduleWorkflow(workflowId: string, startNodeId?: string): Promise<void> {
   const b = getBoss();
-  await b.unschedule(`workflow.schedule.${workflowId}`);
+  if (startNodeId) {
+    await b.unschedule(`workflow.schedule.${workflowId}.${startNodeId}`);
+    return;
+  }
+  const schedules = await b.getSchedules();
+  for (const schedule of schedules) {
+    if (schedule.name.startsWith(`workflow.schedule.${workflowId}.`)) {
+      await b.unschedule(schedule.name);
+    }
+  }
 }
 
 export async function stopQueue(): Promise<void> {
