@@ -69,14 +69,14 @@ export default function Home() {
     (msg: SSEMessage) => {
       console.log("[SSE] received:", msg.type, msg.payload);
       if (msg.type === "widget_update") {
-        const { widgetId, data } = msg.payload as {
-          widgetId: string;
+        const { metricKey, data } = msg.payload as {
+          metricKey: string;
           data: Record<string, unknown>;
         };
-        setWidgetData(widgetId, data);
+        setWidgetData(metricKey, data);
       } else if (msg.type === "widget_delete") {
-        const { widgetId } = msg.payload as { widgetId: string };
-        removeWidgetData(widgetId);
+        const { metricKey } = msg.payload as { metricKey: string };
+        removeWidgetData(metricKey);
       }
     },
     [setWidgetData, removeWidgetData],

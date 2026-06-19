@@ -1,7 +1,7 @@
 export interface SSEMessage<T = unknown> {
   type: string;
   payload: T;
-  _timestamp: string;
+  timestamp: string;
 }
 
 export interface SSEClientOptions {
@@ -72,8 +72,8 @@ export class SSEClient {
       try {
         const parsed = JSON.parse(e.data) as SSEMessage;
         this.options.onMessage?.(parsed);
-      } catch {
-        // Ignore malformed messages
+      } catch (err) {
+        console.error("[SSE] failed to parse message", e.data, err);
       }
     };
 

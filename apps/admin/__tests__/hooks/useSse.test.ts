@@ -78,7 +78,7 @@ describe("useSse", () => {
     mockCallbacks?.onMessage?.({
       type: "alert",
       payload: { severity: "info" },
-      _timestamp: "2024-01-01T00:00:00Z",
+      timestamp: "2024-01-01T00:00:00Z",
     });
 
     expect(handler).toHaveBeenCalledWith({

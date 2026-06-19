@@ -6,16 +6,16 @@ import type { WidgetUpdatePayload } from "@/sse/types";
  * All connected SSE clients will receive this update.
  */
 export async function emitWidgetUpdate(
-  widgetId: string,
+  metricKey: string,
   type: WidgetUpdatePayload["type"],
   data: Record<string, unknown>,
 ): Promise<void> {
-  await emitEvent("widget_update", { widgetId, type, data });
+  await emitEvent("widget_update", { metricKey, type, data });
 }
 
 /**
  * Emit a widget deletion event.
  */
-export async function emitWidgetDelete(widgetId: string): Promise<void> {
-  await emitEvent("widget_delete", { widgetId });
+export async function emitWidgetDelete(metricKey: string): Promise<void> {
+  await emitEvent("widget_delete", { metricKey });
 }

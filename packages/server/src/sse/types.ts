@@ -14,7 +14,14 @@ export interface SSEConnection {
   connectedAt: number;
 }
 
-export type SSEEventType = "alert" | "device_update" | "workflow_status" | "notification" | "ping";
+export type SSEEventType =
+  | "alert"
+  | "device_update"
+  | "workflow_status"
+  | "notification"
+  | "ping"
+  | "widget_update"
+  | "widget_delete";
 
 export interface AlertPayload {
   severity: "info" | "warning" | "error";
@@ -36,14 +43,14 @@ export interface WorkflowStatusPayload {
 }
 
 export interface WidgetUpdatePayload {
-  widgetId: string;
+  metricKey: string;
   type: "stat" | "chart" | "list" | "weather";
   data: Record<string, unknown>;
 }
 
 export interface WidgetEventMap {
   widget_update: WidgetUpdatePayload;
-  widget_delete: { widgetId: string };
+  widget_delete: { metricKey: string };
 }
 
 // ========================================

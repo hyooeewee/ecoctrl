@@ -58,7 +58,7 @@ export function useSse() {
         const sseMsg: SseMessage = {
           type: msg.type,
           payload: msg.payload as Record<string, unknown>,
-          timestamp: msg._timestamp,
+          timestamp: msg.timestamp,
         };
         handlersRef.current.forEach((h) => {
           try {
