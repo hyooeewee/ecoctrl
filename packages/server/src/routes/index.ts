@@ -30,6 +30,7 @@ import petRoutes from "@/routes/pets";
 import eventsRoutes from "@/routes/events";
 import notificationRoutes from "@/routes/notifications";
 import webtalkRoutes from "@/routes/webtalk";
+import lightingRoutes from "@/routes/lighting";
 import { PluginRegistry } from "@/engine/plugin-registry";
 import { getPluginStorage } from "@/storage";
 
@@ -194,5 +195,6 @@ export default async function apiRoutes(fastify: FastifyInstance) {
   await fastify.register(eventsRoutes, { prefix: "/events" });
   await fastify.register(notificationRoutes, { prefix: "/notifications" });
   await fastify.register(webtalkRoutes, { prefix: "/webtalk" });
+  await fastify.register(lightingRoutes, { prefix: "/control/lighting" });
   await registerWebhookRoute(fastify);
 }
