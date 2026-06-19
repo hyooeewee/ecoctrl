@@ -11,6 +11,7 @@
 // origin, and cookies work normally.
 
 import type { FastifyInstance } from "fastify";
+import { Readable } from "node:stream";
 import { env } from "@/lib/env";
 
 const UPSTREAM = env.BASE_URL?.replace(/\/+$/, "") || "";
@@ -91,20 +92,43 @@ export default async function webtalkRoutes(fastify: FastifyInstance) {
 
       reply.status(upstreamRes.status);
 
-      const body = await upstreamRes.arrayBuffer();
-      const payload = Buffer.from(body);
-
-      // Strip <script> tags from loginA.php responses. The upstream login page
-      // includes a popup script that is unnecessary inside the sandboxed iframe
-      // (and would interfere with the meta-refresh redirect).
+      // loginA.php needs its <script> tags stripped, so buffer + rewrite it.
+      // The login page is small, so buffering is fine here.
       if (wildcard.includes("loginA.php")) {
+        const payload = Buffer.from(await upstreamRes.arrayBuffer());
         const html = payload.toString("utf8").replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
         reply.header("content-type", "text/html; charset=UTF-8");
         reply.header("content-length", Buffer.byteLength(html));
         return reply.send(html);
       }
 
-      return reply.send(payload);
+      // com_index.php renders the upstream's own top nav bar (title + user
+      // avatar) via JS. We embed it inside the admin shell, which already has
+      // its own header, so hide the duplicate nav and reclaim its 55px offset.
+      if (wildcard.includes("com_index.php")) {
+        const source = Buffer.from(await upstreamRes.arrayBuffer()).toString("utf8");
+        const style =
+          "<style>#id_sNav{display:none !important;}" +
+          "#id_sMainContainer{top:0 !important;}" +
+          "aside.sidebar-menu{padding-top:0 !important;}</style>";
+        // Inject before </head> if present, otherwise prepend to the document.
+        const html = /<\/head>/i.test(source)
+          ? source.replace(/<\/head>/i, `${style}</head>`)
+          : style + source;
+        reply.header("content-type", "text/html; charset=UTF-8");
+        reply.header("content-length", Buffer.byteLength(html));
+        return reply.send(html);
+      }
+
+      // Stream everything else (images, JS, CSS) straight through without
+      // buffering — large assets like floor-plan base maps would otherwise
+      // block on a full in-memory read before any byte reaches the client.
+      if (upstreamRes.body) {
+        return reply.send(
+          Readable.fromWeb(upstreamRes.body as Parameters<typeof Readable.fromWeb>[0]),
+        );
+      }
+      return reply.send();
     } catch (err) {
       request.log.error({ err, upstreamUrl }, "webtalk proxy request failed");
       return reply.status(502).send({ error: "Upstream unreachable" });
