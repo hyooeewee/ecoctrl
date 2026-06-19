@@ -17,6 +17,28 @@ export interface WorkflowListItem {
   updatedAt: Date | null;
 }
 
+// Derive trigger metadata from trigger-category nodes after the top-level
+// `trigger` object was removed from the DSL.
+function deriveTriggerMetadata(dsl: unknown): { triggerType: string; tags: string[] } {
+  const nodes =
+    (dsl as { nodes?: Array<{ type: string; config?: Record<string, unknown> }> }).nodes ?? [];
+  const nodeTypes = new Set(nodes.map((n) => n.type));
+
+  let triggerType = "manual";
+  if (nodeTypes.has("cron-trigger")) {
+    triggerType = "schedule";
+  } else if (nodeTypes.has("webhook-trigger")) {
+    triggerType = "webhook";
+  } else if (nodeTypes.has("event-trigger")) {
+    triggerType = "event";
+  }
+
+  const startNode = nodes.find((n) => n.type === "start");
+  const tags = (startNode?.config as { tags?: string[] } | undefined)?.tags ?? [];
+
+  return { triggerType, tags };
+}
+
 export interface WorkflowDetail {
   id: string;
   userId: string;
@@ -62,12 +84,15 @@ export async function findManyWorkflows(
     .limit(pageSize)
     .offset((page - 1) * pageSize);
 
-  const items = rows.map((r) => ({
-    ...r,
-    triggerType: (r.dsl as { trigger?: { type: string } }).trigger?.type ?? "manual",
-    tags: (r.dsl as { trigger?: { config?: { tags?: string[] } } }).trigger?.config?.tags ?? [],
-    hasPublishedVersion: r.publishedDsl !== null,
-  }));
+  const items = rows.map((r) => {
+    const meta = deriveTriggerMetadata(r.dsl);
+    return {
+      ...r,
+      triggerType: meta.triggerType,
+      tags: meta.tags,
+      hasPublishedVersion: r.publishedDsl !== null,
+    };
+  });
 
   return { items, total };
 }
