@@ -2,9 +2,15 @@
 // Label Configuration Form
 // ========================================
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { JsonEditor } from "@/components/workflow-editor/JsonEditor";
+import { cn } from "@/lib/utils";
 import {
   Input,
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
   Label,
   Select,
   SelectContent,
@@ -16,8 +22,10 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  Dialog,
+  DialogContent,
 } from "@ecoctrl/ui";
-import { MapPin, Plus, Trash2, X } from "lucide-react";
+import { FileCodeCorner, GripVertical, MapPin, Plus, Trash2, X } from "lucide-react";
 import type { Point } from "@ecoctrl/shared";
 
 // ========================================
@@ -138,19 +146,22 @@ function PointMultiSelect({
         </div>
       )}
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Input
-            value={inputValue}
-            onChange={(e) => {
-              setInputValue(e.target.value);
-              if (!open) setOpen(true);
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            disabled={disabled}
-            className="h-7 text-xs"
-          />
-        </PopoverTrigger>
+        <PopoverTrigger
+          nativeButton={false}
+          render={
+            <Input
+              value={inputValue}
+              onChange={(e) => {
+                setInputValue(e.target.value);
+                if (!open) setOpen(true);
+              }}
+              onKeyDown={handleKeyDown}
+              placeholder={placeholder}
+              disabled={disabled}
+              className="h-7 text-xs"
+            />
+          }
+        />
         <PopoverContent
           align="start"
           className="min-w-0 max-w-[260px] p-1"
@@ -180,6 +191,76 @@ function PointMultiSelect({
 }
 
 // ========================================
+// JSON Edit Dialog for Groups
+// ========================================
+
+interface JsonEditDialogProps {
+  groups: LabelGroup[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: (groups: LabelGroup[]) => void;
+}
+
+function JsonEditDialog({ groups, open, onOpenChange, onConfirm }: JsonEditDialogProps) {
+  const [text, setText] = useState(() => JSON.stringify(groups, null, 2));
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setText(JSON.stringify(groups, null, 2));
+    setError(null);
+  }, [groups, open]);
+
+  const handleChange = (value: string) => {
+    setText(value);
+    setError(null);
+  };
+
+  const handleConfirm = () => {
+    try {
+      const parsed = JSON.parse(text || "[]");
+      if (!Array.isArray(parsed)) {
+        throw new Error("分组数据必须是数组");
+      }
+      for (const item of parsed) {
+        if (
+          typeof item?.id !== "string" ||
+          typeof item?.name !== "string" ||
+          !Array.isArray(item?.pointIds)
+        ) {
+          throw new Error("每个分组必须包含 id、name 和 pointIds 数组");
+        }
+      }
+      onConfirm(parsed as LabelGroup[]);
+      onOpenChange(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "JSON 格式错误");
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent showCloseButton={false} className="sm:max-w-2xl overflow-hidden p-0">
+        <JsonEditor
+          value={text}
+          onChange={handleChange}
+          title="编辑分组 JSON"
+          mode="inline"
+          editor="monaco"
+          showHeader
+          showFullscreen={false}
+          height="320px"
+          showFormat
+          showCopy
+          error={error}
+          onCancel={() => onOpenChange(false)}
+          onConfirm={handleConfirm}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ========================================
 // Label Groups Editor
 // ========================================
 
@@ -196,48 +277,112 @@ function LabelGroupsEditor({
   onChange,
   disabled,
 }: LabelGroupsEditorProps) {
+  const [jsonDialogOpen, setJsonDialogOpen] = useState(false);
   const pointNames = useMemo(
     () => [...new Set(availablePoints.map((p) => p.name).filter((n): n is string => !!n))],
     [availablePoints],
   );
 
+  const parseGroupSuffix = (name: string, id: string) => {
+    const prefix = `G${id}_`;
+    return name.startsWith(prefix) ? name.slice(prefix.length) : name;
+  };
+
+  const buildGroupName = (suffix: string, id: string) => `G${id}_${suffix}`;
+
+  const normalizeOrder = (reordered: LabelGroup[]) =>
+    reordered.map((g, i) => {
+      const newId = String(i + 1);
+      const suffix = parseGroupSuffix(g.name, g.id);
+      return { ...g, id: newId, name: buildGroupName(suffix, newId) };
+    });
+
   const addGroup = () => {
-    const nextId =
-      groups.length > 0 ? Math.max(...groups.map((g) => parseInt(g.id, 10) || 0)) + 1 : 1;
-    onChange([
-      ...groups,
-      {
-        id: String(nextId),
-        name: `G${nextId}`,
-        pointIds: [],
-      },
-    ]);
+    const nextId = String(groups.length + 1);
+    onChange([...groups, { id: nextId, name: `G${nextId}_`, pointIds: [] }]);
   };
 
   const updateGroup = (id: string, updates: Partial<LabelGroup>) => {
     onChange(groups.map((g) => (g.id === id ? { ...g, ...updates } : g)));
   };
 
+  const updateGroupName = (id: string, suffix: string) => {
+    onChange(groups.map((g) => (g.id === id ? { ...g, name: buildGroupName(suffix, g.id) } : g)));
+  };
+
   const deleteGroup = (id: string) => {
-    onChange(groups.filter((g) => g.id !== id));
+    onChange(normalizeOrder(groups.filter((g) => g.id !== id)));
+  };
+
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+
+  const handleDragStart = (id: string) => {
+    setDraggedId(id);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, id: string) => {
+    e.preventDefault();
+    setDragOverId(id);
+  };
+
+  const handleDrop = (targetId: string) => {
+    if (!draggedId || draggedId === targetId) return;
+    const fromIndex = groups.findIndex((g) => g.id === draggedId);
+    const toIndex = groups.findIndex((g) => g.id === targetId);
+    if (fromIndex === -1 || toIndex === -1) return;
+
+    const reordered = [...groups];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved);
+
+    onChange(normalizeOrder(reordered));
+    setDraggedId(null);
+    setDragOverId(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedId(null);
+    setDragOverId(null);
   };
 
   return (
     <div className="grid gap-2">
       <div className="flex items-center justify-between">
         <Label className="text-xs">点位分组</Label>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="h-7 gap-1 text-xs"
-          onClick={addGroup}
-          disabled={disabled}
-        >
-          <Plus size={12} />
-          添加分组
-        </Button>
+        <div className="flex items-center gap-1.5">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-7 w-7 px-0"
+            onClick={() => setJsonDialogOpen(true)}
+            disabled={disabled}
+            title="编辑分组 JSON"
+            aria-label="编辑分组 JSON"
+          >
+            <FileCodeCorner size={14} />
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-7 gap-1 text-xs"
+            onClick={addGroup}
+            disabled={disabled}
+          >
+            <Plus size={12} />
+            添加分组
+          </Button>
+        </div>
       </div>
+
+      <JsonEditDialog
+        groups={groups}
+        open={jsonDialogOpen}
+        onOpenChange={setJsonDialogOpen}
+        onConfirm={onChange}
+      />
 
       {groups.length === 0 && (
         <div className="rounded-md border border-dashed border-border bg-muted/20 px-2 py-3 text-center text-xs text-muted-foreground">
@@ -246,16 +391,42 @@ function LabelGroupsEditor({
       )}
 
       <div className="space-y-2">
-        {groups.map((group) => (
-          <div key={group.id} className="rounded-md border bg-muted/30 p-2 space-y-2">
+        {groups.map((group, index) => (
+          <div
+            key={group.id}
+            draggable={!disabled}
+            onDragStart={() => handleDragStart(group.id)}
+            onDragOver={(e) => handleDragOver(e, group.id)}
+            onDrop={() => handleDrop(group.id)}
+            onDragEnd={handleDragEnd}
+            className={cn(
+              "rounded-md border bg-muted/30 p-2 space-y-2 transition-colors",
+              dragOverId === group.id && "border-primary/50 bg-primary/5",
+              draggedId === group.id && "opacity-50",
+            )}
+          >
             <div className="flex items-center gap-2">
-              <Input
-                value={group.name}
-                onChange={(e) => updateGroup(group.id, { name: e.target.value })}
-                placeholder="分组名称"
-                disabled={disabled}
-                className="h-7 flex-1 text-xs"
-              />
+              <span
+                className={cn(
+                  "flex shrink-0 cursor-grab items-center justify-center text-muted-foreground",
+                  disabled && "cursor-not-allowed opacity-50",
+                )}
+                title="拖动排序"
+              >
+                <GripVertical size={14} />
+              </span>
+              <InputGroup className="h-7 flex-1" data-disabled={disabled ? "true" : undefined}>
+                <InputGroupAddon>
+                  <InputGroupText className="text-xs">G{index + 1}_</InputGroupText>
+                </InputGroupAddon>
+                <InputGroupInput
+                  value={parseGroupSuffix(group.name, group.id)}
+                  onChange={(e) => updateGroupName(group.id, e.target.value)}
+                  placeholder="名称"
+                  disabled={disabled}
+                  className="text-xs"
+                />
+              </InputGroup>
               <Button
                 type="button"
                 size="icon"
