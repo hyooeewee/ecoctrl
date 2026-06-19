@@ -96,9 +96,6 @@ export class ModelViewer implements ModelViewerRef {
     wheel: (e: Event) => void;
   } | null = null;
 
-  // Unified scale factor computed from first critical model.
-  private unifiedScale: number | null = null;
-
   constructor(options: ViewerOptions) {
     this.canvas = options.canvas;
     this.onLoad = options.onLoad;
@@ -253,7 +250,7 @@ export class ModelViewer implements ModelViewerRef {
    * 1. Critical models load first (parallel), blocking.
    * 2. Fire onCriticalLoaded when critical models are done.
    * 3. Background models load in parallel, non-blocking.
-   * 4. Unified scale is computed from the first critical model and applied to all.
+   * 4. Camera is framed to the combined bounding box of all loaded groups.
    */
   async load(config: ModelLoadConfig): Promise<void> {
     const { groups, fallbackUrl = FALLBACK_URL, globalLabels } = config;
@@ -300,7 +297,7 @@ export class ModelViewer implements ModelViewerRef {
     }
 
     // If no critical models at all, load the first entry as fallback
-    // so we still have a reference for unified scale and camera positioning.
+    // so we still have a reference for camera framing.
     let firstModelLoaded = criticalLoaded.length > 0;
     if (!firstModelLoaded && entries.length > 0) {
       const firstEntry = entries[0];
@@ -313,14 +310,8 @@ export class ModelViewer implements ModelViewerRef {
       }
     }
 
-    // Compute and apply unified scale once the first model is available.
+    // Finalize scene state once the first model is available.
     if (firstModelLoaded) {
-      this.computeUnifiedScale();
-      for (const group of this.groups) {
-        if (group.rootNode) {
-          this.applyUnifiedScale(group.rootNode);
-        }
-      }
       this.freezeStaticMeshes();
       this.setupPostLoadState();
       this.computeLabelAnchors();
@@ -389,59 +380,6 @@ export class ModelViewer implements ModelViewerRef {
     // Match admin: parent the returned modelRoot under groupParent.
     // loadGltf already parents __root__ and orphan meshes under modelRoot.
     result.modelRoot.parent = groupParent;
-    const meshes = result.meshes;
-
-    // Compute bounds BEFORE mesh merge — MergeMeshes disposes source meshes,
-    // and their bounding info becomes invalid afterwards.
-    // loadGltf parents only gltfRoot under groupParent; the remaining meshes may
-    // still sit under the original __root__ TransformNode, so we must union both
-    // sets to get the true bounds of the entire model.
-    this.scene.updateTransformMatrix(true);
-
-    let min = new Vector3(Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE);
-    let max = new Vector3(-Number.MAX_VALUE, -Number.MAX_VALUE, -Number.MAX_VALUE);
-
-    const seenIds = new Set<number>();
-    const allMeshes: AbstractMesh[] = [...meshes, ...groupParent.getChildMeshes()];
-    for (const mesh of allMeshes) {
-      if (seenIds.has(mesh.uniqueId)) continue;
-      seenIds.add(mesh.uniqueId);
-      if (!mesh.getBoundingInfo) continue;
-      const bi = mesh.getBoundingInfo();
-      if (!bi) continue;
-      const bmin = bi.boundingBox.minimumWorld;
-      const bmax = bi.boundingBox.maximumWorld;
-      min = Vector3.Minimize(min, bmin);
-      max = Vector3.Maximize(max, bmax);
-    }
-
-    const size = max.subtract(min);
-    const center = min.add(size.scale(0.5));
-    const maxSize = Math.max(size.x, size.y, size.z);
-    const localScale = maxSize > 0 ? 10 / maxSize : 1;
-
-    // Store bounds / scale on the groupParent BEFORE merge so they survive disposal.
-    (groupParent as any).__localScale = localScale;
-    (groupParent as any).__boundsMin = min.clone();
-    (groupParent as any).__boundsCenter = center.clone();
-
-    // Skip mesh merging for now — with 8000+ meshes per model MergeMeshes
-    // can silently fail or produce invalid bounds, causing the model to
-    // appear huge. We rely on groupParent scaling + critical-only loading
-    // to keep performance acceptable.
-    // TODO: re-enable mesh merging after verifying it works with these models.
-
-    // NOTE: Do NOT freeze world matrices here — applyUnifiedScale runs later
-    // in loadMultiModel and changes groupParent.scaling. Freezing before that
-    // locks the world matrices at scale=1, making the model appear huge.
-
-    console.log(
-      `[ModelViewer] Bounding box for "${groupId}": meshCount=${meshes.length}, ` +
-        `min=(${min.x.toFixed(2)}, ${min.y.toFixed(2)}, ${min.z.toFixed(2)}), ` +
-        `max=(${max.x.toFixed(2)}, ${max.y.toFixed(2)}, ${max.z.toFixed(2)}), center=(${center.x.toFixed(2)}, ${center.y.toFixed(2)}, ${center.z.toFixed(2)}), ` +
-        `size=(${size.x.toFixed(2)}, ${size.y.toFixed(2)}, ${size.z.toFixed(2)}), localScale=${localScale.toFixed(4)}`,
-    );
-
     // Placeholder group entry (will be replaced by tryLoadGroup with full data).
     this.groups.push({
       id: groupId,
@@ -453,53 +391,6 @@ export class ModelViewer implements ModelViewerRef {
     this.scene.stopAllAnimations();
 
     return groupParent;
-  }
-
-  /**
-   * Compute unified scale from the first critical model's bounding box.
-   */
-  private computeUnifiedScale(): void {
-    for (const group of this.groups) {
-      if (group.rootNode && (group.rootNode as any).__localScale) {
-        this.unifiedScale = (group.rootNode as any).__localScale;
-        break;
-      }
-    }
-    // If no scale computed, use default.
-    if (this.unifiedScale === null) {
-      this.unifiedScale = 1;
-    }
-  }
-
-  /**
-   * Apply unified scale to a group's root node.
-   */
-  private applyUnifiedScale(groupParent: TransformNode): void {
-    const min = (groupParent as any).__boundsMin as Vector3 | undefined;
-    const center = (groupParent as any).__boundsCenter as Vector3 | undefined;
-
-    if (!this.unifiedScale || !min || !center) {
-      console.warn(
-        `[ModelViewer] applyUnifiedScale skipped: unifiedScale=${this.unifiedScale}, min=${min}, center=${center}`,
-      );
-      return;
-    }
-
-    // Set scaling directly so every model shares the same world-space scale.
-    // unifiedScale comes from the first loaded model's localScale (10/maxSize).
-    groupParent.scaling = new Vector3(this.unifiedScale, this.unifiedScale, this.unifiedScale);
-
-    // Reposition so the model base sits at y=0 and is centered on xz.
-    // Position must be multiplied by the same scale because BabylonJS applies
-    // scaling before translation: worldPos = parentPos + scale * localPos.
-    groupParent.position.x = -center.x * this.unifiedScale;
-    groupParent.position.y = -min.y * this.unifiedScale;
-    groupParent.position.z = -center.z * this.unifiedScale;
-
-    console.log(
-      `[ModelViewer] applyUnifiedScale: unifiedScale=${this.unifiedScale.toFixed(4)}, ` +
-        `groupParent.pos=(${groupParent.position.x.toFixed(2)}, ${groupParent.position.y.toFixed(2)}, ${groupParent.position.z.toFixed(2)})`,
-    );
   }
 
   /**
@@ -554,11 +445,17 @@ export class ModelViewer implements ModelViewerRef {
 
     if (combinedMin && combinedMax) {
       const size = combinedMax.subtract(combinedMin);
-      // Aim camera at the coordinate origin so the axes/grid stay centered
-      // on screen regardless of model position.
-      const target = Vector3.Zero();
+      const center = combinedMin.add(size.scale(0.5));
+      // Frame the camera on the model's actual center, preserving the original
+      // world-space coordinates so label positions match the admin preview.
+      const target = center;
+      const radius = Math.max(size.x, size.y, size.z) * 1.5;
       this.camera.setTarget(target);
       this.postLoadTarget = target.clone();
+      this.camera.radius = radius;
+      this.camera.lowerRadiusLimit = radius * 0.1;
+      this.camera.upperRadiusLimit = radius * 5;
+      this.camera.maxZ = radius * 10;
 
       console.log(
         `[ModelViewer] setupPostLoadState: combinedMin=(${combinedMin.x.toFixed(2)}, ${combinedMin.y.toFixed(2)}, ${combinedMin.z.toFixed(2)}), ` +
