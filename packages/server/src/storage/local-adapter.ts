@@ -76,7 +76,7 @@ export class LocalAdapter implements StorageAdapter {
     if (!fs.existsSync(prefixPath)) return [];
 
     const entries = await readdir(prefixPath, { recursive: true });
-    return entries.map((e) => `${prefix}/${e}`.replace(/\/+/g, "/"));
+    return entries.map((e) => (prefix ? `${prefix}/${e}` : e));
   }
 
   async stat(key: string): Promise<ObjectStat> {

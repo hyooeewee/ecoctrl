@@ -47,10 +47,6 @@ function createLogEntry(node: WorkflowNode, status: NodeLogEntry["status"]): Nod
   };
 }
 
-async function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 async function executeNode(
   node: WorkflowNode,
   state: InternalExecutionState,
@@ -69,7 +65,8 @@ async function executeNode(
       throw new Error(`Plugin registry not available for node type: ${node.type}`);
     }
 
-    const plugin = registry.get(node.type);
+    const version = node.config.__version as string | undefined;
+    const plugin = registry.resolveForExecution(node.type, version);
     if (!plugin) {
       throw new Error(`Plugin node type '${node.type}' not found`);
     }

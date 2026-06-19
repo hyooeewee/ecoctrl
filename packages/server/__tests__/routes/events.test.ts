@@ -33,7 +33,7 @@ describe("POST /token (SSE)", () => {
   });
 
   it("should return a short-lived SSE token for authenticated user", async () => {
-    const accessToken = fastify.jwt.sign({ id: "user-123", username: "test" });
+    const accessToken = fastify.jwt.sign({ userId: "user-123", username: "test" });
     const res = await fastify.inject({
       method: "POST",
       url: "/events/token",
