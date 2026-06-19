@@ -153,7 +153,7 @@ function PointMultiSelect({
         </PopoverTrigger>
         <PopoverContent
           align="start"
-          className="w-[--radix-popover-trigger-width] p-1"
+          className="min-w-0 max-w-[260px] p-1"
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
           {filteredOptions.length === 0 ? (
@@ -165,7 +165,8 @@ function PointMultiSelect({
                   key={name}
                   type="button"
                   onClick={() => handleSelect(name)}
-                  className="w-full rounded-sm px-2 py-1 text-left text-xs hover:bg-accent hover:text-accent-foreground"
+                  className="block w-full truncate rounded-sm px-2 py-1 text-left text-xs hover:bg-accent hover:text-accent-foreground"
+                  title={name}
                 >
                   {name}
                 </button>
