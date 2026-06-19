@@ -3,6 +3,45 @@ import { evaluateExpression } from "./expr";
 
 const TEMPLATE_REGEX = /\{\{([^}]+)\}\}/g;
 
+/**
+ * Parse a path segment that may include bracket indices, e.g.:
+ * - `points` -> { prop: "points", indices: [] }
+ * - `arr[0]` -> { prop: "arr", indices: ["0"] }
+ * - `points['C_5003_AV_0335']` -> { prop: "points", indices: ["'C_5003_AV_0335'"] }
+ */
+function parseSegment(segment: string): { prop: string; indices: string[] } {
+  const match = segment.match(/^([^[]+)((?:\[[^\]]+\])+)$/);
+  if (!match) return { prop: segment, indices: [] };
+  const prop = match[1]!;
+  const indices = Array.from(match[2].matchAll(/\[([^\]]+)\]/g)).map((m) => m[1]!);
+  return { prop, indices };
+}
+
+function applyIndex(value: unknown, index: string): unknown {
+  if (value == null) return undefined;
+  const trimmed = index.trim();
+  const quoted =
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"));
+  if (quoted) {
+    return (value as Record<string, unknown>)[trimmed.slice(1, -1)];
+  }
+  const n = Number(trimmed);
+  if (!Number.isNaN(n) && Array.isArray(value)) {
+    return value[n];
+  }
+  return (value as Record<string, unknown>)[trimmed];
+}
+
+function applyIndices(value: unknown, indices: string[]): unknown {
+  let result = value;
+  for (const index of indices) {
+    result = applyIndex(result, index);
+    if (result == null) return undefined;
+  }
+  return result;
+}
+
 function getValueFromPath(path: string, ctx: ExecutionContext): unknown {
   // var.VAR_NAME (workflow variables)
   if (path.startsWith("var.")) {
@@ -58,28 +97,17 @@ function getValueFromPath(path: string, ctx: ExecutionContext): unknown {
   const parts = path.split(".");
   if (parts.length >= 2) {
     const nodeId = parts[0];
-    const outputKey = parts[1];
     const outputs = ctx.nodeOutputs.get(nodeId);
     if (outputs) {
+      const { prop: outputKey, indices } = parseSegment(parts[1]!);
       let value: unknown = outputs[outputKey];
+      value = applyIndices(value, indices);
       // Deep path: nodeId.outputKey.subKey or nodeId.outputKey.arr[0].subKey
       for (let i = 2; i < parts.length; i++) {
         if (value == null) return "";
-        const segment = parts[i]!;
-        // Support array index syntax: arr[0], arr[1], etc.
-        const arrayMatch = segment.match(/^(.+)\[(\d+)\]$/);
-        if (arrayMatch) {
-          const propName = arrayMatch[1]!;
-          const index = parseInt(arrayMatch[2]!, 10);
-          value = (value as Record<string, unknown>)[propName];
-          if (Array.isArray(value)) {
-            value = value[index];
-          } else {
-            return "";
-          }
-        } else {
-          value = (value as Record<string, unknown>)[segment];
-        }
+        const { prop, indices: restIndices } = parseSegment(parts[i]!);
+        value = (value as Record<string, unknown>)[prop];
+        value = applyIndices(value, restIndices);
       }
       return value ?? "";
     }

@@ -14,8 +14,8 @@ module.exports = async function execute(ctx, api) {
       try {
         payload = JSON.parse(raw);
       } catch (err) {
-        api.log.warn(`[sse-send] payload is not valid JSON, sending as message: ${err.message}`);
-        payload = { message: raw };
+        api.log.error(`[sse-send] payload resolved to invalid JSON: ${raw}`);
+        throw new Error(`SSE payload is not valid JSON after template resolution: ${err.message}`);
       }
     }
   }
