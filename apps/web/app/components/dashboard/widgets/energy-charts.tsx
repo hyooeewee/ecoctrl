@@ -6,7 +6,6 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  Label,
   Line,
   LineChart,
   Pie,
@@ -17,13 +16,7 @@ import {
 
 import { cn } from "~/lib/utils";
 import { useLocale } from "~/locales";
-import {
-  ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@ecoctrl/ui/chart";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@ecoctrl/ui/chart";
 import type { ChartConfig } from "@ecoctrl/ui/chart";
 
 // ─── Custom tooltips ──────────────────────────────────────────────────────────
@@ -202,16 +195,16 @@ export function EnergyTrendChart({
 // ─── Energy Breakdown Pie ─────────────────────────────────────────────────────
 
 const CATEGORY_COLORS = [
-  "var(--color-chart-1)",
-  "var(--color-chart-2)",
-  "var(--color-chart-3)",
-  "var(--color-chart-4)",
-  "var(--color-chart-5)",
-  "var(--color-chart-6)",
-  "var(--color-chart-7)",
-  "var(--color-chart-8)",
-  "var(--color-chart-9)",
-  "var(--color-chart-10)",
+  "#3b82f6", // blue-500
+  "#60a5fa", // blue-400
+  "#93c5fd", // blue-300
+  "#2563eb", // blue-600
+  "#1d4ed8", // blue-700
+  "#22d3ee", // cyan-400
+  "#34d399", // emerald-400
+  "#a78bfa", // violet-400
+  "#f472b6", // pink-400
+  "#fbbf24", // amber-400
 ];
 
 interface BreakdownItem {
@@ -264,60 +257,58 @@ export function EnergyBreakdownChart({
         <p className="text-[11px] font-semibold tracking-widest text-muted-foreground">{title}</p>
       </div>
 
-      <ChartContainer config={chartConfig} className="aspect-square min-h-0 flex-1">
-        <PieChart>
-          <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-          <Pie
-            data={chartData}
-            dataKey="value"
-            nameKey="key"
-            cx="50%"
-            cy="50%"
-            innerRadius="50%"
-            outerRadius="78%"
-            strokeWidth={0}
-            isAnimationActive={false}
-          >
-            {chartData.map((entry) => (
-              <Cell key={entry.key} fill={`var(--color-${entry.key})`} />
-            ))}
-            <Label
-              content={({ viewBox }) => {
-                if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                  return (
-                    <text
-                      x={viewBox.cx}
-                      y={viewBox.cy}
-                      textAnchor="middle"
-                      dominantBaseline="middle"
-                    >
-                      <tspan
-                        x={viewBox.cx}
-                        y={viewBox.cy}
-                        className="fill-foreground text-[11px] font-bold"
-                      >
-                        {totalValue.toLocaleString()}
-                      </tspan>
-                      <tspan
-                        x={viewBox.cx}
-                        y={(viewBox.cy || 0) + 12}
-                        className="fill-muted-foreground text-[8px]"
-                      >
-                        kWh
-                      </tspan>
-                    </text>
-                  );
-                }
-                return null;
-              }}
-            />
-          </Pie>
-          <ChartLegend
-            content={<ChartLegendContent nameKey="key" />}
-            className="-translate-y-2 flex-wrap gap-2 *:basis-1/4 *:justify-center"
-          />
-        </PieChart>
-      </ChartContainer>
+      <div className="flex min-h-0 flex-1 items-center gap-3">
+        {/* Donut chart with centered total */}
+        <div className="relative h-full max-h-full aspect-square">
+          <ChartContainer config={chartConfig} className="h-full w-full">
+            <PieChart>
+              <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+              <Pie
+                data={chartData}
+                dataKey="value"
+                nameKey="key"
+                cx="50%"
+                cy="50%"
+                innerRadius="55%"
+                outerRadius="85%"
+                strokeWidth={0}
+                isAnimationActive={false}
+              >
+                {chartData.map((entry) => (
+                  <Cell key={entry.key} fill={`var(--color-${entry.key})`} />
+                ))}
+              </Pie>
+            </PieChart>
+          </ChartContainer>
+
+          {/* Center total — absolutely positioned over the donut hole */}
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-[11px] font-bold tabular-nums text-foreground">
+              {totalValue.toLocaleString()}
+            </span>
+            <span className="text-[8px] text-muted-foreground">kWh</span>
+          </div>
+        </div>
+
+        {/* Vertical legend — stays inside the widget and scrolls if needed */}
+        <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto text-[10px]">
+          {chartData.map((item, index) => {
+            const color = item.color ?? CATEGORY_COLORS[index % CATEGORY_COLORS.length];
+            return (
+              <div key={item.key} className="flex items-center gap-1.5 py-1">
+                <div
+                  className="h-2 w-2 shrink-0 rounded-[2px]"
+                  style={{ backgroundColor: color }}
+                />
+                <span className="truncate text-muted-foreground">{item.label}</span>
+                <span className="ml-auto shrink-0 tabular-nums font-medium text-foreground">
+                  {item.value.toLocaleString()}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
