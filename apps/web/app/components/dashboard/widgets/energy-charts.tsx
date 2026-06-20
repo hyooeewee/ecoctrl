@@ -228,14 +228,27 @@ export function EnergyBreakdownChart({
   title,
   icon,
 }: EnergyBreakdownChartProps) {
+  const MAX_LEGEND_ITEMS = 6;
+
   const totalValue = useMemo(
     () => total ?? data.reduce((sum, item) => sum + item.value, 0),
     [total, data],
   );
 
+  // Split data into top items and "其他" (Other) bucket
+  const displayData = useMemo(() => {
+    if (data.length <= MAX_LEGEND_ITEMS) {
+      return data;
+    }
+    const top = data.slice(0, MAX_LEGEND_ITEMS);
+    const rest = data.slice(MAX_LEGEND_ITEMS);
+    const otherValue = rest.reduce((sum, item) => sum + item.value, 0);
+    return [...top, { label: "其他", value: otherValue }];
+  }, [data]);
+
   const chartData = useMemo(
-    () => data.map((item, index) => ({ ...item, key: `item-${index}` })),
-    [data],
+    () => displayData.map((item, index) => ({ ...item, key: `item-${index}` })),
+    [displayData],
   );
 
   const chartConfig = useMemo(() => {
