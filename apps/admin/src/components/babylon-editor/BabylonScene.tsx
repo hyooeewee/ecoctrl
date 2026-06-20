@@ -56,6 +56,7 @@ export interface BabylonSceneRef {
   zoomOut: () => void;
   resetView: () => void;
   executeOperations: (actions: LabelAction[], signal?: AbortSignal) => Promise<void>;
+  getMeshNames: () => string[];
 }
 
 // ========================================
@@ -134,6 +135,22 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
           cameraRef.current,
           axesRef.current,
         );
+      },
+      getMeshNames() {
+        const names = new Set<string>();
+        loadedModelsRef.current.forEach(({ meshes }) => {
+          for (const mesh of meshes) {
+            if (mesh.name && !mesh.name.startsWith("__")) {
+              names.add(mesh.name);
+            }
+            // Also include original mesh names from merge metadata
+            const originalNames: string[] = mesh.metadata?.originalMeshNames ?? [];
+            for (const n of originalNames) {
+              if (n && !n.startsWith("__")) names.add(n);
+            }
+          }
+        });
+        return [...names].sort();
       },
       async executeOperations(actions: LabelAction[], signal?: AbortSignal) {
         const camera = cameraRef.current;

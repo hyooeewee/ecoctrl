@@ -24,6 +24,7 @@ import type { LabelAction } from "@ecoctrl/shared";
 interface ActionStepsConfigProps {
   actions: LabelAction[];
   availableLabels?: { id: string; name: string }[];
+  availableMeshes?: string[];
   onChange: (actions: LabelAction[]) => void;
   disabled?: boolean;
 }
@@ -35,6 +36,7 @@ interface ActionStepsConfigProps {
 export default function ActionStepsConfig({
   actions,
   availableLabels = [],
+  availableMeshes = [],
   onChange,
   disabled,
 }: ActionStepsConfigProps) {
@@ -148,6 +150,7 @@ export default function ActionStepsConfig({
             {action.type === "visibility" && (
               <VisibilityConfig
                 config={action.config}
+                availableMeshes={availableMeshes}
                 onChange={(k, v) => updateStepConfig(index, k, v)}
                 disabled={disabled}
               />
@@ -162,6 +165,7 @@ export default function ActionStepsConfig({
             {action.type === "highlight" && (
               <HighlightConfig
                 config={action.config}
+                availableMeshes={availableMeshes}
                 onChange={(k, v) => updateStepConfig(index, k, v)}
                 disabled={disabled}
               />
@@ -169,6 +173,7 @@ export default function ActionStepsConfig({
             {action.type === "explode" && (
               <ExplodeConfig
                 config={action.config}
+                availableMeshes={availableMeshes}
                 onChange={(k, v) => updateStepConfig(index, k, v)}
                 disabled={disabled}
               />
@@ -176,6 +181,7 @@ export default function ActionStepsConfig({
             {action.type === "material" && (
               <MaterialConfig
                 config={action.config}
+                availableMeshes={availableMeshes}
                 onChange={(k, v) => updateStepConfig(index, k, v)}
                 disabled={disabled}
               />
@@ -545,35 +551,87 @@ function ClippingConfig({
 
 function VisibilityConfig({
   config,
+  availableMeshes = [],
   onChange,
   disabled,
 }: {
   config: Record<string, unknown>;
+  availableMeshes?: string[];
   onChange: (key: string, value: unknown) => void;
   disabled?: boolean;
 }) {
   const targets = (config.targets as string[]) ?? [];
 
+  const addTarget = (name: string) => {
+    if (!targets.includes(name)) {
+      onChange("targets", [...targets, name]);
+    }
+  };
+
+  const removeTarget = (name: string) => {
+    onChange(
+      "targets",
+      targets.filter((t) => t !== name),
+    );
+  };
+
   return (
     <>
       <div className="grid gap-2">
-        <Label className="text-xs">Mesh 关键词</Label>
-        <Input
-          value={targets.join(", ")}
-          onChange={(e) => {
-            const keywords = e.target.value
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean);
-            onChange("targets", keywords);
-          }}
-          placeholder="用逗号分隔"
-          disabled={disabled}
-          className="h-8 text-sm"
-        />
+        <Label className="text-xs">目标对象</Label>
+        <div className="flex flex-wrap gap-1">
+          {targets.map((name) => (
+            <Badge key={name} variant="secondary" className="gap-1 pr-1">
+              {name}
+              <button
+                type="button"
+                className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20"
+                onClick={() => removeTarget(name)}
+                disabled={disabled}
+              >
+                <X size={10} />
+              </button>
+            </Badge>
+          ))}
+        </div>
+        {availableMeshes.length > 0 ? (
+          <Select
+            onValueChange={(v) => {
+              if (typeof v === "string") addTarget(v);
+            }}
+            disabled={disabled}
+          >
+            <SelectTrigger className="h-8 text-sm">
+              <SelectValue placeholder="选择 Mesh..." />
+            </SelectTrigger>
+            <SelectContent>
+              {availableMeshes
+                .filter((name) => !targets.includes(name))
+                .map((name) => (
+                  <SelectItem key={name} value={name}>
+                    {name}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <Input
+            value={targets.join(", ")}
+            onChange={(e) => {
+              const keywords = e.target.value
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean);
+              onChange("targets", keywords);
+            }}
+            placeholder="用逗号分隔 Mesh 名称"
+            disabled={disabled}
+            className="h-8 text-sm"
+          />
+        )}
         {((config.action as string) === "hide" || (config.action as string) === "toggle") &&
           targets.length === 0 && (
-            <p className="text-xs text-destructive">⚠️ 必须指定目标 Mesh，否则将影响所有对象</p>
+            <p className="text-xs text-destructive">⚠️ 必须指定目标对象，否则将影响所有 Mesh</p>
           )}
       </div>
 
@@ -688,33 +746,84 @@ function PostProcessConfig({
 
 function HighlightConfig({
   config,
+  availableMeshes = [],
   onChange,
   disabled,
 }: {
   config: Record<string, unknown>;
+  availableMeshes?: string[];
   onChange: (key: string, value: unknown) => void;
   disabled?: boolean;
 }) {
   const targets = (config.targets as string[]) ?? [];
   const color = (config.color as { r: number; g: number; b: number }) ?? { r: 1, g: 1, b: 0 };
 
+  const addTarget = (name: string) => {
+    if (!targets.includes(name)) onChange("targets", [...targets, name]);
+  };
+  const removeTarget = (name: string) => {
+    onChange(
+      "targets",
+      targets.filter((t) => t !== name),
+    );
+  };
+
   return (
     <>
       <div className="grid gap-2">
-        <Label className="text-xs">目标 Mesh 关键词</Label>
-        <Input
-          value={targets.join(", ")}
-          onChange={(e) => {
-            const keywords = e.target.value
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean);
-            onChange("targets", keywords);
-          }}
-          placeholder="用逗号分隔，留空则全部高亮"
-          disabled={disabled}
-          className="h-8 text-sm"
-        />
+        <Label className="text-xs">目标对象（留空则全部高亮）</Label>
+        <div className="flex flex-wrap gap-1">
+          {targets.map((name) => (
+            <Badge key={name} variant="secondary" className="gap-1 pr-1">
+              {name}
+              <button
+                type="button"
+                className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20"
+                onClick={() => removeTarget(name)}
+                disabled={disabled}
+              >
+                <X size={10} />
+              </button>
+            </Badge>
+          ))}
+        </div>
+        {availableMeshes.length > 0 ? (
+          <Select
+            onValueChange={(v) => {
+              if (typeof v === "string") addTarget(v);
+            }}
+            disabled={disabled}
+          >
+            <SelectTrigger className="h-8 text-sm">
+              <SelectValue placeholder="选择 Mesh..." />
+            </SelectTrigger>
+            <SelectContent>
+              {availableMeshes
+                .filter((n) => !targets.includes(n))
+                .map((n) => (
+                  <SelectItem key={n} value={n}>
+                    {n}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <Input
+            value={targets.join(", ")}
+            onChange={(e) =>
+              onChange(
+                "targets",
+                e.target.value
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter(Boolean),
+              )
+            }
+            placeholder="用逗号分隔 Mesh 名称"
+            disabled={disabled}
+            className="h-8 text-sm"
+          />
+        )}
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div className="grid gap-2">
@@ -800,15 +909,27 @@ function HighlightConfig({
 
 function ExplodeConfig({
   config,
+  availableMeshes = [],
   onChange,
   disabled,
 }: {
   config: Record<string, unknown>;
+  availableMeshes?: string[];
   onChange: (key: string, value: unknown) => void;
   disabled?: boolean;
 }) {
   const axis = (config.axis as { x: number; y: number; z: number }) ?? { x: 0, y: 1, z: 0 };
   const targets = (config.targets as string[]) ?? [];
+
+  const addTarget = (name: string) => {
+    if (!targets.includes(name)) onChange("targets", [...targets, name]);
+  };
+  const removeTarget = (name: string) => {
+    onChange(
+      "targets",
+      targets.filter((t) => t !== name),
+    );
+  };
 
   return (
     <>
@@ -875,20 +996,59 @@ function ExplodeConfig({
         </div>
       </div>
       <div className="grid gap-2">
-        <Label className="text-xs">目标 Mesh 关键词 (可选)</Label>
-        <Input
-          value={targets.join(", ")}
-          onChange={(e) => {
-            const keywords = e.target.value
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean);
-            onChange("targets", keywords);
-          }}
-          placeholder="用逗号分隔，留空则全部"
-          disabled={disabled}
-          className="h-8 text-sm"
-        />
+        <Label className="text-xs">目标对象（可选，留空则全部）</Label>
+        <div className="flex flex-wrap gap-1">
+          {targets.map((name) => (
+            <Badge key={name} variant="secondary" className="gap-1 pr-1">
+              {name}
+              <button
+                type="button"
+                className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20"
+                onClick={() => removeTarget(name)}
+                disabled={disabled}
+              >
+                <X size={10} />
+              </button>
+            </Badge>
+          ))}
+        </div>
+        {availableMeshes.length > 0 ? (
+          <Select
+            onValueChange={(v) => {
+              if (typeof v === "string") addTarget(v);
+            }}
+            disabled={disabled}
+          >
+            <SelectTrigger className="h-8 text-sm">
+              <SelectValue placeholder="选择 Mesh..." />
+            </SelectTrigger>
+            <SelectContent>
+              {availableMeshes
+                .filter((n) => !targets.includes(n))
+                .map((n) => (
+                  <SelectItem key={n} value={n}>
+                    {n}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <Input
+            value={targets.join(", ")}
+            onChange={(e) =>
+              onChange(
+                "targets",
+                e.target.value
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter(Boolean),
+              )
+            }
+            placeholder="用逗号分隔 Mesh 名称"
+            disabled={disabled}
+            className="h-8 text-sm"
+          />
+        )}
       </div>
     </>
   );
@@ -900,32 +1060,83 @@ function ExplodeConfig({
 
 function MaterialConfig({
   config,
+  availableMeshes = [],
   onChange,
   disabled,
 }: {
   config: Record<string, unknown>;
+  availableMeshes?: string[];
   onChange: (key: string, value: unknown) => void;
   disabled?: boolean;
 }) {
   const targets = (config.targets as string[]) ?? [];
 
+  const addTarget = (name: string) => {
+    if (!targets.includes(name)) onChange("targets", [...targets, name]);
+  };
+  const removeTarget = (name: string) => {
+    onChange(
+      "targets",
+      targets.filter((t) => t !== name),
+    );
+  };
+
   return (
     <>
       <div className="grid gap-2">
-        <Label className="text-xs">目标 Mesh 关键词</Label>
-        <Input
-          value={targets.join(", ")}
-          onChange={(e) => {
-            const keywords = e.target.value
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean);
-            onChange("targets", keywords);
-          }}
-          placeholder="用逗号分隔"
-          disabled={disabled}
-          className="h-8 text-sm"
-        />
+        <Label className="text-xs">目标对象</Label>
+        <div className="flex flex-wrap gap-1">
+          {targets.map((name) => (
+            <Badge key={name} variant="secondary" className="gap-1 pr-1">
+              {name}
+              <button
+                type="button"
+                className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20"
+                onClick={() => removeTarget(name)}
+                disabled={disabled}
+              >
+                <X size={10} />
+              </button>
+            </Badge>
+          ))}
+        </div>
+        {availableMeshes.length > 0 ? (
+          <Select
+            onValueChange={(v) => {
+              if (typeof v === "string") addTarget(v);
+            }}
+            disabled={disabled}
+          >
+            <SelectTrigger className="h-8 text-sm">
+              <SelectValue placeholder="选择 Mesh..." />
+            </SelectTrigger>
+            <SelectContent>
+              {availableMeshes
+                .filter((n) => !targets.includes(n))
+                .map((n) => (
+                  <SelectItem key={n} value={n}>
+                    {n}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <Input
+            value={targets.join(", ")}
+            onChange={(e) =>
+              onChange(
+                "targets",
+                e.target.value
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter(Boolean),
+              )
+            }
+            placeholder="用逗号分隔 Mesh 名称"
+            disabled={disabled}
+            className="h-8 text-sm"
+          />
+        )}
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div className="grid gap-2">
