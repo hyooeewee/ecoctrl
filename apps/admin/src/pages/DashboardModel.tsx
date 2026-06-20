@@ -592,7 +592,7 @@ function ModelFileRow({
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDrop={onDrop}
-      className="group flex items-center gap-1.5 rounded-md border bg-muted/30 px-2 py-1.5 transition-colors hover:bg-muted/50"
+      className="group relative flex items-center gap-1.5 rounded-md border bg-muted/30 px-2 py-1.5 transition-colors hover:bg-muted/50"
     >
       {/* Drag handle */}
       <span className="flex shrink-0 cursor-grab items-center justify-center text-muted-foreground active:cursor-grabbing">
@@ -605,50 +605,53 @@ function ModelFileRow({
       {/* File name */}
       <span className="min-w-0 flex-1 truncate text-xs">{fileName}</span>
 
-      {/* Role input */}
-      <input
-        value={file.role ?? ""}
-        onChange={(e) => onRoleChange(e.target.value)}
-        placeholder="role"
-        className="h-5 w-16 shrink-0 rounded border bg-background px-1 text-[10px] outline-none placeholder:text-muted-foreground/50"
-        title="语义角色（用于标签绑定）"
-      />
-
       {/* Extension badge */}
       <Badge variant="secondary" className="shrink-0 text-[10px]">
         {ext}
       </Badge>
 
-      {/* Priority dropdown */}
-      <select
-        value={file.priority ?? "background"}
-        onChange={(e) => onPriorityChange(e.target.value as "critical" | "background")}
-        className="h-5 shrink-0 rounded border bg-background px-1 text-[10px] outline-none"
-        title="加载优先级"
-      >
-        <option value="critical">优先</option>
-        <option value="background">后台</option>
-      </select>
+      {/* Controls — hidden by default, visible on hover */}
+      <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+        {/* Role input */}
+        <input
+          value={file.role ?? ""}
+          onChange={(e) => onRoleChange(e.target.value)}
+          placeholder="role"
+          className="h-5 w-16 rounded border bg-background px-1 text-[10px] outline-none placeholder:text-muted-foreground/50"
+          title="语义角色（用于标签绑定）"
+        />
 
-      {/* Visibility toggle */}
-      <button
-        type="button"
-        onClick={onToggleVisible}
-        className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-muted"
-        title={isVisible ? "隐藏模型" : "显示模型"}
-      >
-        {isVisible ? <Eye size={14} /> : <EyeOff size={14} className="opacity-40" />}
-      </button>
+        {/* Priority dropdown */}
+        <select
+          value={file.priority ?? "background"}
+          onChange={(e) => onPriorityChange(e.target.value as "critical" | "background")}
+          className="h-5 rounded border bg-background px-1 text-[10px] outline-none"
+          title="加载优先级"
+        >
+          <option value="critical">优先</option>
+          <option value="background">后台</option>
+        </select>
 
-      {/* Delete */}
-      <button
-        type="button"
-        className="shrink-0 rounded p-0.5 text-muted-foreground opacity-0 hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
-        onClick={onDelete}
-        title="删除"
-      >
-        <Trash2 size={12} />
-      </button>
+        {/* Visibility toggle */}
+        <button
+          type="button"
+          onClick={onToggleVisible}
+          className="rounded p-0.5 text-muted-foreground hover:bg-muted"
+          title={isVisible ? "隐藏模型" : "显示模型"}
+        >
+          {isVisible ? <Eye size={14} /> : <EyeOff size={14} className="opacity-40" />}
+        </button>
+
+        {/* Delete */}
+        <button
+          type="button"
+          className="rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+          onClick={onDelete}
+          title="删除"
+        >
+          <Trash2 size={12} />
+        </button>
+      </div>
 
       {/* Loading progress */}
       {isLoading && (
