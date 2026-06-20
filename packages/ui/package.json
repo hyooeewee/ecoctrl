@@ -62,6 +62,10 @@
       "types": "./src/components/ui/field.tsx",
       "import": "./src/components/ui/field.tsx"
     },
+    "./file-upload": {
+      "types": "./src/components/ui/file-upload.tsx",
+      "import": "./src/components/ui/file-upload.tsx"
+    },
     "./hover-card": {
       "types": "./src/components/ui/hover-card.tsx",
       "import": "./src/components/ui/hover-card.tsx"
@@ -171,6 +175,7 @@
     "cmdk": "^1.1.1",
     "lucide-react": "catalog:",
     "next-themes": "^0.4.6",
+    "radix-ui": "^1.6.0",
     "react-hook-form": "catalog:",
     "recharts": "3.8.0",
     "shadcn": "catalog:",
