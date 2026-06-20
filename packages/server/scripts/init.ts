@@ -553,10 +553,13 @@ async function initDashboardWidgets(force = false, prune = false) {
       dataType: "list" as const,
       dataJson: {
         items: [
-          { icon: "Wind", label: "devices.airConditioning", value: 6, status: "critical" },
-          { icon: "Zap", label: "devices.lighting", value: 30, status: "warn" },
-          { icon: "Elevator", label: "devices.elevators", value: 10, status: "ok" },
-          { icon: "Server", label: "devices.servers", value: 24, status: "ok" },
+          { icon: "Lightbulb", label: "智能照明", value: 54, status: "ok" },
+          { icon: "Thermometer", label: "空调面板", value: 39, status: "ok" },
+          { icon: "Wind", label: "空调设备AHU", value: 3, status: "ok" },
+          { icon: "Fan", label: "新风PAU", value: 4, status: "ok" },
+          { icon: "Snowflake", label: "风冷热泵", value: 12, status: "ok" },
+          { icon: "Droplets", label: "智能水表", value: 1, status: "ok" },
+          { icon: "Server", label: "服务器", value: 2, status: "ok" },
         ],
       },
       sortOrder: 10,
