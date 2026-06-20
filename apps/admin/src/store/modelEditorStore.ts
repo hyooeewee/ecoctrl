@@ -47,7 +47,6 @@ interface ModelEditorState {
   toggleFileVisible: (id: string) => void;
   deleteFile: (id: string) => Promise<void>;
   updateFilePriority: (id: string, priority: "critical" | "background") => Promise<void>;
-  updateFileRole: (id: string, role: string) => Promise<void>;
   reorderFiles: (fromIndex: number, toIndex: number) => Promise<void>;
   setModelProgress: (id: string, progress: number) => void;
 
@@ -188,22 +187,6 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
       toast.success("优先级已更新");
     } catch (err) {
       console.error("Priority update failed:", err);
-      toast.error("更新失败");
-    }
-  },
-
-  updateFileRole: async (id: string, role: string) => {
-    const { config } = get();
-    if (!config) return;
-    const newFiles =
-      config.modelFiles?.map((f) => (f.id === id ? { ...f, role: role || undefined } : f)) ?? [];
-    try {
-      await dashboardModelApi.update({ modelFiles: newFiles });
-      set((state) => ({
-        config: state.config ? { ...state.config, modelFiles: newFiles } : null,
-      }));
-    } catch (err) {
-      console.error("Role update failed:", err);
       toast.error("更新失败");
     }
   },

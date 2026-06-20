@@ -559,13 +559,14 @@ export class ModelViewer implements ModelViewerRef {
       collectMeshes(group.rootNode);
     }
 
-    // Build set of loaded model roles for label filtering.
-    const loadedRoles = new Set(this.groups.map((g) => g.role).filter(Boolean));
+    // Build set of loaded model file IDs for label filtering.
+    const loadedModelIds = new Set(this.groups.map((g) => g.id));
 
-    // Filter labels by modelBindings: empty = global, otherwise match loaded roles.
+    // Filter labels by modelBindings: empty = scene label (always visible),
+    // otherwise show only when ALL bound models are loaded and visible.
     const filteredLabels = this.v2Labels.filter((l) => {
       if (!l.modelBindings || l.modelBindings.length === 0) return true;
-      return l.modelBindings.some((role) => loadedRoles.has(role));
+      return l.modelBindings.every((id) => loadedModelIds.has(id));
     });
 
     // Rebuild labelDefs from filtered labels.

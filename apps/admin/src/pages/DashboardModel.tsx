@@ -13,6 +13,7 @@ import {
   GripVertical,
   Eye,
   EyeOff,
+  Info,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { Button } from "@ecoctrl/ui";
@@ -77,7 +78,6 @@ export default function DashboardModel() {
     toggleFileVisible,
     deleteFile,
     updateFilePriority,
-    updateFileRole,
     reorderFiles,
     setModelProgress,
     uploadFiles,
@@ -127,11 +127,24 @@ export default function DashboardModel() {
     [existingFiles, visibleFileIds],
   );
 
+  // Visible model IDs for label filtering
+  const visibleModelIds = useMemo(
+    () => existingFiles.filter((f) => visibleFileIds.has(f.id)).map((f) => f.id),
+    [existingFiles, visibleFileIds],
+  );
+
   const labelTreeData: LabelTreeNode[] = useMemo(() => {
     const map = new Map<string, LabelTreeNode>();
     const roots: LabelTreeNode[] = [];
 
-    labels.forEach((l) => {
+    // Filter: scene labels (no bindings) always show;
+    // bound labels only show when ALL bound models are visible.
+    const visibleLabels = labels.filter((l) => {
+      if (!l.modelBindings || l.modelBindings.length === 0) return true;
+      return l.modelBindings.every((id) => visibleModelIds.includes(id));
+    });
+
+    visibleLabels.forEach((l) => {
       map.set(l.meta.id, {
         id: l.meta.id,
         name: l.meta.name,
@@ -141,7 +154,7 @@ export default function DashboardModel() {
     });
 
     map.forEach((node, id) => {
-      const label = labels.find((l) => l.meta.id === id);
+      const label = visibleLabels.find((l) => l.meta.id === id);
       const parentId = label?.tree.parentId;
       if (parentId && map.has(parentId)) {
         map.get(parentId)!.children.push(node);
@@ -151,12 +164,18 @@ export default function DashboardModel() {
     });
 
     return roots;
-  }, [labels]);
+  }, [labels, visibleModelIds]);
 
   const labelMarkers: LabelMarkerData[] = useMemo(
     () =>
       labels
-        .filter((l) => l.anchor.position !== undefined)
+        .filter((l) => {
+          if (l.anchor.position === undefined) return false;
+          // Filter by model bindings: scene labels always show,
+          // bound labels only when ALL bound models are visible.
+          if (!l.modelBindings || l.modelBindings.length === 0) return true;
+          return l.modelBindings.every((id) => visibleModelIds.includes(id));
+        })
         .map((l) => ({
           id: l.meta.id,
           name: l.meta.name,
@@ -164,7 +183,7 @@ export default function DashboardModel() {
           isSelected: l.meta.id === selectedLabelId,
           hasChildren: labels.some((child) => child.tree.parentId === l.meta.id),
         })),
-    [labels, selectedLabelId],
+    [labels, selectedLabelId, visibleModelIds],
   );
 
   // Effects
@@ -405,7 +424,6 @@ export default function DashboardModel() {
                                     index={index}
                                     totalCount={existingFiles.length}
                                     onToggleVisible={() => toggleFileVisible(file.id)}
-                                    onRoleChange={(role) => updateFileRole(file.id, role)}
                                     onPriorityChange={(p) => updateFilePriority(file.id, p)}
                                     onDelete={() => deleteFile(file.id)}
                                     onDragStart={(e) => {
@@ -453,9 +471,11 @@ export default function DashboardModel() {
                                   .filter((l) => l.meta.id !== selectedLabel.meta.id)
                                   .map((l) => ({ id: l.meta.id, name: l.meta.name }))}
                                 availablePoints={availablePoints}
-                                availableRoles={existingFiles
-                                  .map((f) => f.role)
-                                  .filter((r): r is string => !!r)}
+                                availableModelFiles={existingFiles.map((f) => ({
+                                  id: f.id,
+                                  name: f.name,
+                                  fileKey: f.fileKey,
+                                }))}
                                 onChange={updateLabelConfig}
                                 onPickPosition={() => startPlacingLabel(selectedLabel.meta.id)}
                               />
@@ -563,7 +583,6 @@ interface ModelFileRowProps {
   index: number;
   totalCount: number;
   onToggleVisible: () => void;
-  onRoleChange: (role: string) => void;
   onPriorityChange: (priority: "critical" | "background") => void;
   onDelete: () => void;
   onDragStart: (e: React.DragEvent) => void;
@@ -579,7 +598,6 @@ function ModelFileRow({
   isLoading,
   progress,
   onToggleVisible,
-  onRoleChange,
   onPriorityChange,
   onDelete,
   onDragStart,
@@ -605,22 +623,8 @@ function ModelFileRow({
       {/* File name */}
       <span className="min-w-0 flex-1 truncate text-xs">{fileName}</span>
 
-      {/* Extension badge */}
-      <Badge variant="secondary" className="shrink-0 text-[10px]">
-        {ext}
-      </Badge>
-
       {/* Controls — hidden by default, visible on hover */}
       <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-        {/* Role input */}
-        <input
-          value={file.role ?? ""}
-          onChange={(e) => onRoleChange(e.target.value)}
-          placeholder="role"
-          className="h-5 w-16 rounded border bg-background px-1 text-[10px] outline-none placeholder:text-muted-foreground/50"
-          title="语义角色（用于标签绑定）"
-        />
-
         {/* Priority dropdown */}
         <select
           value={file.priority ?? "background"}
@@ -641,6 +645,17 @@ function ModelFileRow({
         >
           {isVisible ? <Eye size={14} /> : <EyeOff size={14} className="opacity-40" />}
         </button>
+
+        {/* File details tooltip */}
+        <span className="relative">
+          <Info size={14} className="text-muted-foreground" />
+          <span className="pointer-events-none absolute bottom-full right-0 z-50 mb-1 hidden w-48 rounded-md border bg-popover p-2 text-xs text-popover-foreground shadow-md group-hover:block">
+            <div className="font-medium">{fileName}</div>
+            <div className="mt-1 text-muted-foreground">
+              格式: {ext} · 优先级: {file.priority === "critical" ? "优先加载" : "后台加载"}
+            </div>
+          </span>
+        </span>
 
         {/* Delete */}
         <button

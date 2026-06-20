@@ -42,7 +42,7 @@ interface LabelConfigFormProps {
   label: Label;
   parentOptions: { id: string; name: string }[];
   availablePoints?: { name?: string | null }[];
-  availableRoles?: string[];
+  availableModelFiles?: { id: string; name?: string; fileKey: string }[];
   onChange: (label: Label) => void;
   onPickPosition?: () => void;
   disabled?: boolean;
@@ -543,7 +543,7 @@ export default function LabelConfigForm({
   label,
   parentOptions,
   availablePoints = [],
-  availableRoles = [],
+  availableModelFiles = [],
   onChange,
   onPickPosition,
   disabled,
@@ -831,21 +831,22 @@ export default function LabelConfigForm({
       {/* ====== 模型绑定 ====== */}
       <TabsContent value="bindings" className="mt-3 grid gap-3">
         <div className="grid gap-2">
-          <Label className="text-xs">关联模型角色</Label>
+          <Label className="text-xs">关联模型</Label>
           <p className="text-[10px] text-muted-foreground">
-            选择此标签关联的模型角色。不选 = 全局标签（所有模型显示）。
+            选择此标签关联的模型文件。不选 = 场景标签（始终显示）。
           </p>
-          {availableRoles.length === 0 ? (
+          {availableModelFiles.length === 0 ? (
             <div className="rounded-md border border-dashed border-border bg-muted/20 px-2 py-3 text-center text-xs text-muted-foreground">
-              暂无模型角色，请先在模型列表中设置 role
+              暂无模型文件，请先上传
             </div>
           ) : (
             <div className="flex flex-wrap gap-2">
-              {availableRoles.map((role) => {
-                const isChecked = label.modelBindings.includes(role);
+              {availableModelFiles.map((mf) => {
+                const isChecked = label.modelBindings.includes(mf.id);
+                const displayName = mf.name || mf.fileKey.split("/").pop() || mf.id;
                 return (
                   <label
-                    key={role}
+                    key={mf.id}
                     className="flex items-center gap-1.5 rounded-md border bg-muted/30 px-2.5 py-1.5 text-xs cursor-pointer hover:bg-muted/50 transition-colors"
                   >
                     <input
@@ -853,14 +854,14 @@ export default function LabelConfigForm({
                       checked={isChecked}
                       onChange={() => {
                         const next = isChecked
-                          ? label.modelBindings.filter((r) => r !== role)
-                          : [...label.modelBindings, role];
+                          ? label.modelBindings.filter((id) => id !== mf.id)
+                          : [...label.modelBindings, mf.id];
                         onChange({ ...label, modelBindings: next });
                       }}
                       disabled={disabled}
                       className="h-3 w-3"
                     />
-                    {role}
+                    {displayName}
                   </label>
                 );
               })}
