@@ -197,6 +197,36 @@ const LABEL_TO_ACTION_TYPE = Object.fromEntries(
   Object.entries(ACTION_TYPE_LABELS).map(([type, label]) => [label, type]),
 ) as Record<string, LabelAction["type"]>;
 
+const EASING_OPTIONS: Record<string, string> = {
+  linear: "线性",
+  easeIn: "缓入",
+  easeOut: "缓出",
+  easeInOut: "缓入缓出",
+};
+const EASING_LABEL_TO_VALUE = Object.fromEntries(
+  Object.entries(EASING_OPTIONS).map(([v, label]) => [label, v]),
+);
+
+const VISIBILITY_ACTION_OPTIONS: Record<string, string> = {
+  show: "显示",
+  hide: "隐藏",
+  toggle: "切换",
+};
+const VISIBILITY_LABEL_TO_VALUE = Object.fromEntries(
+  Object.entries(VISIBILITY_ACTION_OPTIONS).map(([v, label]) => [label, v]),
+);
+
+const POSTPROCESS_EFFECT_OPTIONS: Record<string, string> = {
+  exposure: "曝光",
+  tone: "色调",
+  bloom: "泛光",
+  vignette: "暗角",
+  depthOfField: "景深",
+};
+const POSTPROCESS_LABEL_TO_VALUE = Object.fromEntries(
+  Object.entries(POSTPROCESS_EFFECT_OPTIONS).map(([v, label]) => [label, v]),
+);
+
 // ========================================
 // Camera Config
 // ========================================
@@ -303,18 +333,22 @@ function CameraConfig({
         <div className="grid gap-2">
           <Label className="text-xs">缓动</Label>
           <Select
-            value={(config.easing as string) ?? "easeInOut"}
-            onValueChange={(v) => v && onChange("easing", v)}
+            value={EASING_OPTIONS[(config.easing as string) ?? "easeInOut"] ?? "缓入缓出"}
+            onValueChange={(v) => {
+              const key = EASING_LABEL_TO_VALUE[v];
+              if (key) onChange("easing", key);
+            }}
             disabled={disabled}
           >
             <SelectTrigger className="h-8 text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="linear">线性</SelectItem>
-              <SelectItem value="easeIn">缓入</SelectItem>
-              <SelectItem value="easeOut">缓出</SelectItem>
-              <SelectItem value="easeInOut">缓入缓出</SelectItem>
+              {Object.entries(EASING_OPTIONS).map(([key, label]) => (
+                <SelectItem key={key} value={label}>
+                  {label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -513,17 +547,22 @@ function VisibilityConfig({
         <div className="grid gap-2">
           <Label className="text-xs">动作</Label>
           <Select
-            value={(config.action as string) ?? "show"}
-            onValueChange={(v) => v && onChange("action", v)}
+            value={VISIBILITY_ACTION_OPTIONS[(config.action as string) ?? "show"] ?? "显示"}
+            onValueChange={(v) => {
+              const key = VISIBILITY_LABEL_TO_VALUE[v];
+              if (key) onChange("action", key);
+            }}
             disabled={disabled}
           >
             <SelectTrigger className="h-8 text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="show">显示</SelectItem>
-              <SelectItem value="hide">隐藏</SelectItem>
-              <SelectItem value="toggle">切换</SelectItem>
+              {Object.entries(VISIBILITY_ACTION_OPTIONS).map(([key, label]) => (
+                <SelectItem key={key} value={label}>
+                  {label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -561,19 +600,22 @@ function PostProcessConfig({
       <div className="grid gap-2">
         <Label className="text-xs">效果类型</Label>
         <Select
-          value={(config.effect as string) ?? "exposure"}
-          onValueChange={(v) => v && onChange("effect", v)}
+          value={POSTPROCESS_EFFECT_OPTIONS[(config.effect as string) ?? "exposure"] ?? "曝光"}
+          onValueChange={(v) => {
+            const key = POSTPROCESS_LABEL_TO_VALUE[v];
+            if (key) onChange("effect", key);
+          }}
           disabled={disabled}
         >
           <SelectTrigger className="h-8 text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="exposure">曝光</SelectItem>
-            <SelectItem value="tone">色调</SelectItem>
-            <SelectItem value="bloom">泛光</SelectItem>
-            <SelectItem value="vignette">暗角</SelectItem>
-            <SelectItem value="depthOfField">景深</SelectItem>
+            {Object.entries(POSTPROCESS_EFFECT_OPTIONS).map(([key, label]) => (
+              <SelectItem key={key} value={label}>
+                {label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
