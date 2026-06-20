@@ -92,7 +92,7 @@ export default function Home() {
           labelId: string;
           groups: Array<{ id: string; name: string; status: "off" | "half" | "on" }>;
         };
-        useLightingStore.getState().setStatus(labelId, groups);
+        useLightingStore.getState().mergeGroups(labelId, groups);
       }
     },
     [setWidgetData, clearWidgetData],

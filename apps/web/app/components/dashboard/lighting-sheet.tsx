@@ -34,7 +34,7 @@ export function LightingSheet({ activeLabel, labels, onClose }: LightingSheetPro
   const [loading, setLoading] = useState(false);
 
   const entries = useLightingStore((s) => s.entries);
-  const setStatus = useLightingStore((s) => s.setStatus);
+  const initGroups = useLightingStore((s) => s.initGroups);
 
   // Labels that have groups
   const labelsWithGroups = useMemo(
@@ -63,7 +63,7 @@ export function LightingSheet({ activeLabel, labels, onClose }: LightingSheetPro
       .then((res) => {
         if (cancelled) return;
         if (res.ok && res.data) {
-          setStatus(labelId, res.data.groups);
+          initGroups(labelId, res.data.groups);
         } else {
           console.error("[LightingSheet] fetch status failed:", res.error);
         }
@@ -96,7 +96,7 @@ export function LightingSheet({ activeLabel, labels, onClose }: LightingSheetPro
       }
       // Revert on error — re-fetch from server
       fetchLightingStatus(labelId).then((r) => {
-        if (r.ok && r.data) setStatus(labelId, r.data.groups);
+        if (r.ok && r.data) initGroups(labelId, r.data.groups);
       });
       return;
     }
@@ -124,13 +124,13 @@ export function LightingSheet({ activeLabel, labels, onClose }: LightingSheetPro
       }
       // Revert
       fetchLightingStatus(labelId).then((r) => {
-        if (r.ok && r.data) setStatus(labelId, r.data.groups);
+        if (r.ok && r.data) initGroups(labelId, r.data.groups);
       });
       return;
     }
 
     if (res.data) {
-      setStatus(labelId, res.data.groups);
+      initGroups(labelId, res.data.groups);
     }
   };
 
