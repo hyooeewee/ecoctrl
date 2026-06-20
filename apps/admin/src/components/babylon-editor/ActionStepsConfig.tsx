@@ -15,18 +15,16 @@ import {
 } from "@ecoctrl/ui";
 import { X, ChevronUp, ChevronDown } from "lucide-react";
 import AppButton from "@/components/AppButton";
-import type { LabelOperation } from "@ecoctrl/shared";
-import type { ModelFileEntry } from "@ecoctrl/shared";
+import type { LabelAction } from "@ecoctrl/shared";
 
 // ========================================
 // Types
 // ========================================
 
 interface ActionStepsConfigProps {
-  operations: LabelOperation[];
-  modelFiles: ModelFileEntry[];
+  actions: LabelAction[];
   availableLabels?: { id: string; name: string }[];
-  onChange: (operations: LabelOperation[]) => void;
+  onChange: (actions: LabelAction[]) => void;
   disabled?: boolean;
 }
 
@@ -35,166 +33,137 @@ interface ActionStepsConfigProps {
 // ========================================
 
 export default function ActionStepsConfig({
-  operations,
-  modelFiles,
+  actions,
   availableLabels = [],
   onChange,
   disabled,
 }: ActionStepsConfigProps) {
-  const updateStep = (index: number, patch: Partial<LabelOperation>) => {
-    const next = operations.map((op, i) =>
-      i === index ? ({ ...op, ...patch } as LabelOperation) : op,
-    );
+  const updateStep = (index: number, patch: Partial<LabelAction>) => {
+    const next = actions.map((a, i) => (i === index ? { ...a, ...patch } : a));
     onChange(next);
   };
 
   const updateStepConfig = (index: number, key: string, value: unknown) => {
-    const op = operations[index];
-    if (!op) return;
-    const nextConfig = { ...(op.config as Record<string, unknown>), [key]: value };
-    updateStep(index, { config: nextConfig } as Partial<LabelOperation>);
+    const action = actions[index];
+    if (!action) return;
+    const nextConfig = { ...(action.config as Record<string, unknown>), [key]: value };
+    updateStep(index, { config: nextConfig });
   };
 
   const removeStep = (index: number) => {
-    onChange(operations.filter((_, i) => i !== index));
+    onChange(actions.filter((_, i) => i !== index));
   };
 
   const moveStep = (index: number, direction: "up" | "down") => {
     const swapIndex = direction === "up" ? index - 1 : index + 1;
-    if (swapIndex < 0 || swapIndex >= operations.length) return;
-    const next = [...operations];
+    if (swapIndex < 0 || swapIndex >= actions.length) return;
+    const next = [...actions];
     [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
     onChange(next);
   };
 
-  const addStep = (type: LabelOperation["type"]) => {
-    onChange([
-      ...operations,
-      { type, targetModelFileId: undefined, config: getDefaultConfig(type) } as LabelOperation,
-    ]);
+  const addStep = (type: LabelAction["type"]) => {
+    const id = `action_${type}_${Date.now()}`;
+    onChange([...actions, { id, label: "", type, config: getDefaultConfig(type) }]);
   };
 
   return (
     <div className="grid gap-4">
-      {operations.length === 0 && (
+      {actions.length === 0 && (
         <div className="rounded-md border border-dashed border-border bg-muted/20 py-6 text-center text-xs text-muted-foreground">
           暂无动作，点击下方按钮添加
         </div>
       )}
 
-      {operations.map((op, index) => {
-        const targetModelFileId = (op.targetModelFileId as string | undefined) ?? undefined;
-        const targetLabel =
-          targetModelFileId === undefined
-            ? "整个场景"
-            : modelFiles.find((f) => f.id === targetModelFileId)?.name ||
-              modelFiles
-                .find((f) => f.id === targetModelFileId)
-                ?.fileKey.split("/")
-                .pop() ||
-              targetModelFileId;
-        return (
-          <div key={`${op.type}-${index}`} className="rounded-md border bg-muted/30 p-3">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="text-[10px]">
-                  步骤 {index + 1}
-                </Badge>
-                <span className="text-sm font-medium">{OPERATION_LABELS[op.type]}</span>
-              </div>
-              <div className="flex items-center gap-0.5">
-                <AppButton
-                  level="ghost"
-                  size="icon-xs"
-                  onClick={() => moveStep(index, "up")}
-                  disabled={disabled || index === 0}
-                >
-                  <ChevronUp size={14} />
-                </AppButton>
-                <AppButton
-                  level="ghost"
-                  size="icon-xs"
-                  onClick={() => moveStep(index, "down")}
-                  disabled={disabled || index === operations.length - 1}
-                >
-                  <ChevronDown size={14} />
-                </AppButton>
-                <AppButton
-                  level="danger"
-                  size="icon-xs"
-                  onClick={() => removeStep(index)}
-                  disabled={disabled}
-                >
-                  <X size={14} />
-                </AppButton>
-              </div>
+      {actions.map((action, index) => (
+        <div key={action.id} className="rounded-md border bg-muted/30 p-3">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="text-[10px]">
+                步骤 {index + 1}
+              </Badge>
+              <span className="text-sm font-medium">{ACTION_TYPE_LABELS[action.type]}</span>
+              {action.label && (
+                <span className="text-xs text-muted-foreground">— {action.label}</span>
+              )}
             </div>
-
-            <div className="grid gap-3">
-              {/* Target model file */}
-              <div className="grid gap-2">
-                <Label className="text-xs">目标模型文件</Label>
-                <Select
-                  value={targetModelFileId ?? "__scene__"}
-                  onValueChange={(v) => {
-                    const nextId: string | undefined =
-                      v === "__scene__" || v == null ? undefined : v;
-                    updateStep(index, { targetModelFileId: nextId } as Partial<LabelOperation>);
-                  }}
-                  disabled={disabled}
-                >
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue>{targetLabel}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__scene__">整个场景</SelectItem>
-                    {modelFiles.map((file) => (
-                      <SelectItem key={file.id} value={file.id}>
-                        {file.name || file.fileKey.split("/").pop() || file.id}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Type-specific config */}
-              {op.type === "camera" && (
-                <CameraConfig
-                  config={op.config}
-                  onChange={(k, v) => updateStepConfig(index, k, v)}
-                  disabled={disabled}
-                />
-              )}
-              {op.type === "clipping" && (
-                <ClippingConfig
-                  config={op.config}
-                  availableLabels={availableLabels}
-                  onChange={(k, v) => updateStepConfig(index, k, v)}
-                  disabled={disabled}
-                />
-              )}
-              {op.type === "visibility" && (
-                <VisibilityConfig
-                  config={op.config}
-                  onChange={(k, v) => updateStepConfig(index, k, v)}
-                  disabled={disabled}
-                />
-              )}
-              {op.type === "postprocess" && (
-                <PostProcessConfig
-                  config={op.config}
-                  onChange={(k, v) => updateStepConfig(index, k, v)}
-                  disabled={disabled}
-                />
-              )}
+            <div className="flex items-center gap-0.5">
+              <AppButton
+                level="ghost"
+                size="icon-xs"
+                onClick={() => moveStep(index, "up")}
+                disabled={disabled || index === 0}
+              >
+                <ChevronUp size={14} />
+              </AppButton>
+              <AppButton
+                level="ghost"
+                size="icon-xs"
+                onClick={() => moveStep(index, "down")}
+                disabled={disabled || index === actions.length - 1}
+              >
+                <ChevronDown size={14} />
+              </AppButton>
+              <AppButton
+                level="danger"
+                size="icon-xs"
+                onClick={() => removeStep(index)}
+                disabled={disabled}
+              >
+                <X size={14} />
+              </AppButton>
             </div>
           </div>
-        );
-      })}
+
+          {/* Action label */}
+          <div className="grid gap-2 mb-3">
+            <Label className="text-xs">动作描述</Label>
+            <Input
+              value={action.label ?? ""}
+              onChange={(e) => updateStep(index, { label: e.target.value })}
+              placeholder="如: 飞入南序厅"
+              disabled={disabled}
+              className="h-8 text-sm"
+            />
+          </div>
+
+          <div className="grid gap-3">
+            {action.type === "camera" && (
+              <CameraConfig
+                config={action.config}
+                onChange={(k, v) => updateStepConfig(index, k, v)}
+                disabled={disabled}
+              />
+            )}
+            {action.type === "clipping" && (
+              <ClippingConfig
+                config={action.config}
+                availableLabels={availableLabels}
+                onChange={(k, v) => updateStepConfig(index, k, v)}
+                disabled={disabled}
+              />
+            )}
+            {action.type === "visibility" && (
+              <VisibilityConfig
+                config={action.config}
+                onChange={(k, v) => updateStepConfig(index, k, v)}
+                disabled={disabled}
+              />
+            )}
+            {action.type === "postprocess" && (
+              <PostProcessConfig
+                config={action.config}
+                onChange={(k, v) => updateStepConfig(index, k, v)}
+                disabled={disabled}
+              />
+            )}
+          </div>
+        </div>
+      ))}
 
       {/* Add step */}
       <div className="flex items-center gap-2">
-        <Select onValueChange={(v) => addStep(v as LabelOperation["type"])} disabled={disabled}>
+        <Select onValueChange={(v) => addStep(v as LabelAction["type"])} disabled={disabled}>
           <SelectTrigger className="h-9 flex-1 text-sm">
             <SelectValue placeholder="添加动作步骤..." />
           </SelectTrigger>
@@ -214,7 +183,7 @@ export default function ActionStepsConfig({
 // Labels
 // ========================================
 
-const OPERATION_LABELS: Record<LabelOperation["type"], string> = {
+const ACTION_TYPE_LABELS: Record<LabelAction["type"], string> = {
   camera: "摄像机动画",
   clipping: "剖切效果",
   visibility: "可见性控制",
@@ -226,20 +195,6 @@ const EASING_LABELS: Record<string, string> = {
   easeIn: "缓入",
   easeOut: "缓出",
   easeInOut: "缓入缓出",
-};
-
-const ACTION_LABELS: Record<string, string> = {
-  show: "显示",
-  hide: "隐藏",
-  toggle: "切换",
-};
-
-const EFFECT_LABELS: Record<string, string> = {
-  exposure: "曝光",
-  tone: "色调",
-  bloom: "泛光",
-  vignette: "暗角",
-  depthOfField: "景深",
 };
 
 // ========================================
@@ -513,7 +468,7 @@ function ClippingConfig({
               .filter((l) => !revealIds.includes(l.id))
               .map((l) => (
                 <SelectItem key={l.id} value={l.id}>
-                  {l.name || l.id}
+                  {l.name}
                 </SelectItem>
               ))}
           </SelectContent>
@@ -566,9 +521,7 @@ function VisibilityConfig({
             disabled={disabled}
           >
             <SelectTrigger className="h-8 text-sm">
-              <SelectValue>
-                {ACTION_LABELS[(config.action as string) ?? "show"] ?? (config.action as string)}
-              </SelectValue>
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="show">显示</SelectItem>
@@ -616,9 +569,7 @@ function PostProcessConfig({
           disabled={disabled}
         >
           <SelectTrigger className="h-8 text-sm">
-            <SelectValue>
-              {EFFECT_LABELS[(config.effect as string) ?? "exposure"] ?? (config.effect as string)}
-            </SelectValue>
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="exposure">曝光</SelectItem>
@@ -662,7 +613,7 @@ function PostProcessConfig({
 // Helpers
 // ========================================
 
-function getDefaultConfig(type: LabelOperation["type"]): Record<string, unknown> {
+function getDefaultConfig(type: LabelAction["type"]): Record<string, unknown> {
   switch (type) {
     case "camera":
       return {

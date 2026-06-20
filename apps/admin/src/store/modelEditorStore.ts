@@ -4,8 +4,7 @@
 
 import { create } from "zustand";
 import { toast } from "sonner";
-import type { DashboardModelConfig, DashboardModelLabel } from "@ecoctrl/shared";
-import type { LabelConfig, LabelOperation } from "@/components/babylon-editor";
+import type { DashboardModelConfig, DashboardModelLabel, LabelAction } from "@ecoctrl/shared";
 import { dashboardModelApi } from "@/api/dashboardModel";
 import { clearModelCache } from "@ecoctrl/shared/model-cache";
 import { Vector3 } from "@babylonjs/core";
@@ -63,9 +62,9 @@ interface ModelEditorState {
   selectLabel: (id: string | null) => void;
   addLabel: (parentId?: string) => void;
   deleteLabel: (id: string) => void;
-  updateLabelConfig: (config: LabelConfig) => void;
+  updateLabelConfig: (label: Label) => void;
   updateLabelPosition: (id: string, position: { x: number; y: number; z: number }) => void;
-  updateLabelOperations: (operations: LabelOperation[]) => void;
+  updateLabelActions: (actions: LabelAction[]) => void;
   startPlacingLabel: (id: string) => void;
   stopPlacingLabel: () => void;
   markDirty: () => void;
@@ -257,7 +256,9 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
 
     if (placingLabelId) {
       set({
-        labels: labels.map((l) => (l.id === placingLabelId ? { ...l, position: rounded } : l)),
+        labels: labels.map((l) =>
+          l.meta.id === placingLabelId ? { ...l, anchor: { ...l.anchor, position: rounded } } : l,
+        ),
         placingLabelId: null,
         editorMode: "placeLabel",
         isDirty: true,
@@ -266,22 +267,19 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
       return;
     }
 
+    const id = `label_${Date.now()}`;
     const newLabel: Label = {
-      id: `label_${Date.now()}`,
-      key: `label_${labels.length + 1}`,
-      name: `标签 ${labels.length + 1}`,
-      description: "",
-      parentId: null,
-      position: rounded,
-      meshKeywords: [],
-      operations: [],
-      order: labels.length,
+      meta: { id, name: `标签 ${labels.length + 1}` },
+      anchor: { position: rounded, meshKeywords: [] },
+      tree: { parentId: null, order: labels.length },
       groups: [],
+      actions: [],
+      modelBindings: [],
     };
 
     set({
       labels: [...labels, newLabel],
-      selectedLabelId: newLabel.id,
+      selectedLabelId: id,
       editorMode: "select",
       isDirty: true,
     });
@@ -297,60 +295,46 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
 
   addLabel: (parentId) => {
     const { labels } = get();
+    const id = `label_${Date.now()}`;
     const newLabel: Label = {
-      id: `label_${Date.now()}`,
-      key: `label_${labels.length + 1}`,
-      name: `标签 ${labels.length + 1}`,
-      description: "",
-      parentId: parentId ?? null,
-      position: { x: 0, y: 1, z: 0 },
-      meshKeywords: [],
-      operations: [],
-      order: labels.length,
+      meta: { id, name: `标签 ${labels.length + 1}` },
+      anchor: { position: { x: 0, y: 1, z: 0 }, meshKeywords: [] },
+      tree: { parentId: parentId ?? null, order: labels.length },
       groups: [],
+      actions: [],
+      modelBindings: [],
     };
-    set({ labels: [...labels, newLabel], selectedLabelId: newLabel.id, isDirty: true });
+    set({ labels: [...labels, newLabel], selectedLabelId: id, isDirty: true });
   },
 
   deleteLabel: (id) => {
     set((state) => ({
-      labels: state.labels.filter((l) => l.id !== id),
+      labels: state.labels.filter((l) => l.meta.id !== id),
       selectedLabelId: state.selectedLabelId === id ? null : state.selectedLabelId,
       isDirty: true,
     }));
     toast.success("标签已删除");
   },
 
-  updateLabelConfig: (config) =>
+  updateLabelConfig: (label) =>
     set((state) => ({
-      labels: state.labels.map((l) =>
-        l.id === config.id
-          ? {
-              ...l,
-              key: config.key,
-              name: config.name,
-              description: config.description,
-              parentId: config.parentId,
-              ...(config.position !== undefined && { position: config.position }),
-              ...(config.position === undefined && { position: undefined }),
-              meshKeywords: config.meshKeywords ?? [],
-              groups: config.groups ?? [],
-            }
-          : l,
-      ),
+      labels: state.labels.map((l) => (l.meta.id === label.meta.id ? label : l)),
       isDirty: true,
     })),
 
   updateLabelPosition: (id, position) =>
     set((state) => ({
       labels: state.labels.map((l) =>
-        l.id === id
+        l.meta.id === id
           ? {
               ...l,
-              position: {
-                x: parseFloat(position.x.toFixed(3)),
-                y: parseFloat(position.y.toFixed(3)),
-                z: parseFloat(position.z.toFixed(3)),
+              anchor: {
+                ...l.anchor,
+                position: {
+                  x: parseFloat(position.x.toFixed(3)),
+                  y: parseFloat(position.y.toFixed(3)),
+                  z: parseFloat(position.z.toFixed(3)),
+                },
               },
             }
           : l,
@@ -358,12 +342,12 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
       isDirty: true,
     })),
 
-  updateLabelOperations: (operations) =>
+  updateLabelActions: (actions) =>
     set((state) => {
       const { selectedLabelId } = state;
       if (!selectedLabelId) return state;
       return {
-        labels: state.labels.map((l) => (l.id === selectedLabelId ? { ...l, operations } : l)),
+        labels: state.labels.map((l) => (l.meta.id === selectedLabelId ? { ...l, actions } : l)),
         isDirty: true,
       };
     }),

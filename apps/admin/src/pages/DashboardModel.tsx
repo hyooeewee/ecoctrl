@@ -80,7 +80,7 @@ export default function DashboardModel() {
     addLabel,
     deleteLabel,
     updateLabelConfig,
-    updateLabelOperations,
+    updateLabelActions,
     updateLabelPosition,
     startPlacingLabel,
     setEditorMode,
@@ -106,7 +106,7 @@ export default function DashboardModel() {
   }, [config]);
 
   const selectedLabel = useMemo(
-    () => labels.find((l) => l.id === selectedLabelId) ?? null,
+    () => labels.find((l) => l.meta.id === selectedLabelId) ?? null,
     [labels, selectedLabelId],
   );
 
@@ -126,19 +126,19 @@ export default function DashboardModel() {
     const roots: LabelTreeNode[] = [];
 
     labels.forEach((l) => {
-      map.set(l.id, {
-        id: l.id,
-        key: l.key,
-        name: l.name,
-        parentId: l.parentId ?? undefined,
+      map.set(l.meta.id, {
+        id: l.meta.id,
+        name: l.meta.name,
         children: [],
-        operationCount: l.operations.length,
+        actionCount: l.actions.length,
       });
     });
 
-    map.forEach((node) => {
-      if (node.parentId && map.has(node.parentId)) {
-        map.get(node.parentId)!.children.push(node);
+    map.forEach((node, id) => {
+      const label = labels.find((l) => l.meta.id === id);
+      const parentId = label?.tree.parentId;
+      if (parentId && map.has(parentId)) {
+        map.get(parentId)!.children.push(node);
       } else {
         roots.push(node);
       }
@@ -150,14 +150,13 @@ export default function DashboardModel() {
   const labelMarkers: LabelMarkerData[] = useMemo(
     () =>
       labels
-        .filter((l) => l.position !== undefined)
+        .filter((l) => l.anchor.position !== undefined)
         .map((l) => ({
-          id: l.id,
-          key: l.key,
-          name: l.name,
-          position: new Vector3(l.position!.x, l.position!.y, l.position!.z),
-          isSelected: l.id === selectedLabelId,
-          hasChildren: labels.some((child) => child.parentId === l.id),
+          id: l.meta.id,
+          name: l.meta.name,
+          position: new Vector3(l.anchor.position!.x, l.anchor.position!.y, l.anchor.position!.z),
+          isSelected: l.meta.id === selectedLabelId,
+          hasChildren: labels.some((child) => child.tree.parentId === l.meta.id),
         })),
     [labels, selectedLabelId],
   );
@@ -224,7 +223,7 @@ export default function DashboardModel() {
       previewAbortRef.current?.abort();
       return;
     }
-    if (!selectedLabel || selectedLabel.operations.length === 0) return;
+    if (!selectedLabel || selectedLabel.actions.length === 0) return;
 
     const controller = new AbortController();
     previewAbortRef.current = controller;
@@ -234,7 +233,7 @@ export default function DashboardModel() {
 
     const startTime = performance.now();
     try {
-      await sceneRef.current?.executeOperations(selectedLabel.operations, controller.signal);
+      await sceneRef.current?.executeOperations(selectedLabel.actions, controller.signal);
     } catch (err) {
       if (err instanceof Error && err.message !== "aborted") {
         console.error("[DashboardModel] preview operations failed:", err);
@@ -511,22 +510,13 @@ export default function DashboardModel() {
                             <h3 className="mb-3 text-sm font-semibold">标签配置</h3>
                             <div className="max-h-[300px] overflow-auto">
                               <LabelConfigForm
-                                config={{
-                                  id: selectedLabel.id,
-                                  key: selectedLabel.key,
-                                  name: selectedLabel.name,
-                                  description: selectedLabel.description,
-                                  parentId: selectedLabel.parentId ?? null,
-                                  position: selectedLabel.position,
-                                  meshKeywords: selectedLabel.meshKeywords,
-                                  groups: selectedLabel.groups,
-                                }}
+                                label={selectedLabel}
                                 parentOptions={labels
-                                  .filter((l) => l.id !== selectedLabel.id)
-                                  .map((l) => ({ id: l.id, name: l.name }))}
+                                  .filter((l) => l.meta.id !== selectedLabel.meta.id)
+                                  .map((l) => ({ id: l.meta.id, name: l.meta.name }))}
                                 availablePoints={availablePoints}
                                 onChange={updateLabelConfig}
-                                onPickPosition={() => startPlacingLabel(selectedLabel.id)}
+                                onPickPosition={() => startPlacingLabel(selectedLabel.meta.id)}
                               />
                             </div>
                           </div>
@@ -548,24 +538,23 @@ export default function DashboardModel() {
                           <>
                             <div className="flex items-center justify-between">
                               <h3 className="text-sm font-semibold">
-                                {selectedLabel.name || selectedLabel.key} 的动作
+                                {selectedLabel.meta.name} 的动作
                               </h3>
                               <Button
                                 size="sm"
                                 variant={previewing ? "secondary" : "outline"}
                                 onClick={handlePreview}
-                                disabled={!selectedLabel || selectedLabel.operations.length === 0}
+                                disabled={!selectedLabel || selectedLabel.actions.length === 0}
                               >
                                 {previewing ? "取消执行" : "预览执行"}
                               </Button>
                             </div>
                             <ActionStepsConfig
-                              operations={selectedLabel.operations}
-                              modelFiles={existingFiles}
+                              actions={selectedLabel.actions}
                               availableLabels={labels
-                                .filter((l) => l.id !== selectedLabelId)
-                                .map((l) => ({ id: l.id, name: l.name }))}
-                              onChange={updateLabelOperations}
+                                .filter((l) => l.meta.id !== selectedLabelId)
+                                .map((l) => ({ id: l.meta.id, name: l.meta.name }))}
+                              onChange={updateLabelActions}
                             />
                           </>
                         ) : (

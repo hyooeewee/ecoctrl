@@ -1,8 +1,8 @@
 // ========================================
-// Label Configuration Form
+// Label Configuration Form v2
 // ========================================
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { JsonEditor } from "@/components/workflow-editor/JsonEditor";
 import { cn } from "@/lib/utils";
 import {
@@ -24,36 +24,25 @@ import {
   PopoverTrigger,
   Dialog,
   DialogContent,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
 } from "@ecoctrl/ui";
 import { FileCodeCorner, GripVertical, MapPin, Plus, Trash2, X } from "lucide-react";
-import type { Point } from "@ecoctrl/shared";
+import type { DashboardModelLabel, LabelGroup, LabelAction } from "@ecoctrl/shared";
 
 // ========================================
 // Types
 // ========================================
 
-export interface LabelGroup {
-  id: string;
-  name: string;
-  pointIds: string[];
-}
-
-export interface LabelConfig {
-  id: string;
-  key: string;
-  name: string;
-  description?: string;
-  parentId: string | null;
-  position?: { x: number; y: number; z: number };
-  meshKeywords?: string[];
-  groups?: LabelGroup[];
-}
+type Label = DashboardModelLabel;
 
 interface LabelConfigFormProps {
-  config: LabelConfig;
+  label: Label;
   parentOptions: { id: string; name: string }[];
-  availablePoints?: Point[];
-  onChange: (config: LabelConfig) => void;
+  availablePoints?: { name?: string | null }[];
+  onChange: (label: Label) => void;
   onPickPosition?: () => void;
   disabled?: boolean;
 }
@@ -162,11 +151,7 @@ function PointMultiSelect({
             />
           }
         />
-        <PopoverContent
-          align="start"
-          className="min-w-0 max-w-[260px] p-1"
-          onOpenAutoFocus={(e) => e.preventDefault()}
-        >
+        <PopoverContent align="start" className="min-w-0 max-w-[260px] p-1">
           {filteredOptions.length === 0 ? (
             <div className="px-2 py-1.5 text-xs text-muted-foreground">无匹配点位</div>
           ) : (
@@ -191,46 +176,48 @@ function PointMultiSelect({
 }
 
 // ========================================
-// JSON Edit Dialog for Groups
+// Generic Sub-Object JSON Editor
 // ========================================
 
-interface JsonEditDialogProps {
-  groups: LabelGroup[];
+interface SubObjectJsonEditorProps<T> {
+  data: T[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: (groups: LabelGroup[]) => void;
+  onConfirm: (data: T[]) => void;
+  title: string;
+  validate?: (item: unknown) => item is T;
 }
 
-function JsonEditDialog({ groups, open, onOpenChange, onConfirm }: JsonEditDialogProps) {
-  const [text, setText] = useState(() => JSON.stringify(groups, null, 2));
+function SubObjectJsonEditor<T>({
+  data,
+  open,
+  onOpenChange,
+  onConfirm,
+  title,
+  validate,
+}: SubObjectJsonEditorProps<T>) {
+  const [text, setText] = useState(() => JSON.stringify(data, null, 2));
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setText(JSON.stringify(groups, null, 2));
+    setText(JSON.stringify(data, null, 2));
     setError(null);
-  }, [groups, open]);
-
-  const handleChange = (value: string) => {
-    setText(value);
-    setError(null);
-  };
+  }, [data, open]);
 
   const handleConfirm = () => {
     try {
       const parsed = JSON.parse(text || "[]");
       if (!Array.isArray(parsed)) {
-        throw new Error("分组数据必须是数组");
+        throw new Error("数据必须是数组");
       }
-      for (const item of parsed) {
-        if (
-          typeof item?.id !== "string" ||
-          typeof item?.name !== "string" ||
-          !Array.isArray(item?.pointIds)
-        ) {
-          throw new Error("每个分组必须包含 id、name 和 pointIds 数组");
+      if (validate) {
+        for (const item of parsed) {
+          if (!validate(item)) {
+            throw new Error("数据格式不正确，请检查每个条目");
+          }
         }
       }
-      onConfirm(parsed as LabelGroup[]);
+      onConfirm(parsed as T[]);
       onOpenChange(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "JSON 格式错误");
@@ -242,8 +229,11 @@ function JsonEditDialog({ groups, open, onOpenChange, onConfirm }: JsonEditDialo
       <DialogContent showCloseButton={false} className="sm:max-w-2xl overflow-hidden p-0">
         <JsonEditor
           value={text}
-          onChange={handleChange}
-          title="编辑分组 JSON"
+          onChange={(v) => {
+            setText(v);
+            setError(null);
+          }}
+          title={title}
           mode="inline"
           editor="monaco"
           showHeader
@@ -261,23 +251,24 @@ function JsonEditDialog({ groups, open, onOpenChange, onConfirm }: JsonEditDialo
 }
 
 // ========================================
-// Label Groups Editor
+// Groups Editor (Table View)
 // ========================================
 
-interface LabelGroupsEditorProps {
+interface GroupsEditorProps {
   groups: LabelGroup[];
-  availablePoints: Point[];
+  availablePoints: { name?: string | null }[];
   onChange: (groups: LabelGroup[]) => void;
+  onShowJson: () => void;
   disabled?: boolean;
 }
 
-function LabelGroupsEditor({
+function GroupsEditor({
   groups,
   availablePoints,
   onChange,
+  onShowJson,
   disabled,
-}: LabelGroupsEditorProps) {
-  const [jsonDialogOpen, setJsonDialogOpen] = useState(false);
+}: GroupsEditorProps) {
   const pointNames = useMemo(
     () => [...new Set(availablePoints.map((p) => p.name).filter((n): n is string => !!n))],
     [availablePoints],
@@ -302,12 +293,12 @@ function LabelGroupsEditor({
     onChange([...groups, { id: nextId, name: `G${nextId}_`, pointIds: [] }]);
   };
 
-  const updateGroup = (id: string, updates: Partial<LabelGroup>) => {
-    onChange(groups.map((g) => (g.id === id ? { ...g, ...updates } : g)));
-  };
-
   const updateGroupName = (id: string, suffix: string) => {
     onChange(groups.map((g) => (g.id === id ? { ...g, name: buildGroupName(suffix, g.id) } : g)));
+  };
+
+  const updateGroupPoints = (id: string, pointIds: string[]) => {
+    onChange(groups.map((g) => (g.id === id ? { ...g, pointIds } : g)));
   };
 
   const deleteGroup = (id: string) => {
@@ -317,30 +308,23 @@ function LabelGroupsEditor({
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
 
-  const handleDragStart = (id: string) => {
-    setDraggedId(id);
-  };
-
+  const handleDragStart = (id: string) => setDraggedId(id);
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>, id: string) => {
     e.preventDefault();
     setDragOverId(id);
   };
-
   const handleDrop = (targetId: string) => {
     if (!draggedId || draggedId === targetId) return;
     const fromIndex = groups.findIndex((g) => g.id === draggedId);
     const toIndex = groups.findIndex((g) => g.id === targetId);
     if (fromIndex === -1 || toIndex === -1) return;
-
     const reordered = [...groups];
     const [moved] = reordered.splice(fromIndex, 1);
     reordered.splice(toIndex, 0, moved);
-
     onChange(normalizeOrder(reordered));
     setDraggedId(null);
     setDragOverId(null);
   };
-
   const handleDragEnd = () => {
     setDraggedId(null);
     setDragOverId(null);
@@ -356,10 +340,10 @@ function LabelGroupsEditor({
             size="sm"
             variant="outline"
             className="h-7 w-7 px-0"
-            onClick={() => setJsonDialogOpen(true)}
+            onClick={onShowJson}
             disabled={disabled}
-            title="编辑分组 JSON"
-            aria-label="编辑分组 JSON"
+            title="JSON 编辑"
+            aria-label="JSON 编辑"
           >
             <FileCodeCorner size={14} />
           </Button>
@@ -376,13 +360,6 @@ function LabelGroupsEditor({
           </Button>
         </div>
       </div>
-
-      <JsonEditDialog
-        groups={groups}
-        open={jsonDialogOpen}
-        onOpenChange={setJsonDialogOpen}
-        onConfirm={onChange}
-      />
 
       {groups.length === 0 && (
         <div className="rounded-md border border-dashed border-border bg-muted/20 px-2 py-3 text-center text-xs text-muted-foreground">
@@ -441,7 +418,7 @@ function LabelGroupsEditor({
             </div>
             <PointMultiSelect
               values={group.pointIds}
-              onChange={(pointIds) => updateGroup(group.id, { pointIds })}
+              onChange={(pointIds) => updateGroupPoints(group.id, pointIds)}
               options={pointNames}
               disabled={disabled}
               placeholder="输入点位名称，回车或英文逗号分隔"
@@ -454,210 +431,392 @@ function LabelGroupsEditor({
 }
 
 // ========================================
-// Component
+// Actions Editor (Table View)
+// ========================================
+
+interface ActionsEditorProps {
+  actions: LabelAction[];
+  onChange: (actions: LabelAction[]) => void;
+  onShowJson: () => void;
+  disabled?: boolean;
+}
+
+const ACTION_TYPE_LABELS: Record<string, string> = {
+  camera: "📷 相机飞入",
+  clipping: "✂️ 剖切面",
+  visibility: "👁️ 显隐控制",
+  postprocess: "🎨 后处理",
+};
+
+function ActionsEditor({ actions, onChange, onShowJson, disabled }: ActionsEditorProps) {
+  const addAction = (type: LabelAction["type"]) => {
+    const id = `action_${Date.now()}`;
+    const newAction: LabelAction = { id, label: "", type, config: {} };
+    onChange([...actions, newAction]);
+  };
+
+  const updateAction = (id: string, updates: Partial<LabelAction>) => {
+    onChange(actions.map((a) => (a.id === id ? { ...a, ...updates } : a)));
+  };
+
+  const deleteAction = (id: string) => {
+    onChange(actions.filter((a) => a.id !== id));
+  };
+
+  return (
+    <div className="grid gap-2">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs">点击动作</Label>
+        <div className="flex items-center gap-1.5">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-7 w-7 px-0"
+            onClick={onShowJson}
+            disabled={disabled}
+            title="JSON 编辑"
+            aria-label="JSON 编辑"
+          >
+            <FileCodeCorner size={14} />
+          </Button>
+          <Select value="" onValueChange={(v) => addAction(v as LabelAction["type"])}>
+            <SelectTrigger className="h-7 w-auto text-xs" disabled={disabled}>
+              <SelectValue placeholder="+ 添加动作" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(ACTION_TYPE_LABELS).map(([type, label]) => (
+                <SelectItem key={type} value={type}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {actions.length === 0 && (
+        <div className="rounded-md border border-dashed border-border bg-muted/20 px-2 py-3 text-center text-xs text-muted-foreground">
+          暂无动作，点击上方按钮添加
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {actions.map((action) => (
+          <div key={action.id} className="rounded-md border bg-muted/30 p-2 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground shrink-0">
+                {ACTION_TYPE_LABELS[action.type] ?? action.type}
+              </span>
+              <Input
+                value={action.label ?? ""}
+                onChange={(e) => updateAction(action.id, { label: e.target.value })}
+                placeholder="动作描述"
+                disabled={disabled}
+                className="h-7 flex-1 text-xs"
+              />
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                onClick={() => deleteAction(action.id)}
+                disabled={disabled}
+                aria-label="删除动作"
+              >
+                <Trash2 size={12} />
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ========================================
+// Main Form Component
 // ========================================
 
 export default function LabelConfigForm({
-  config,
+  label,
   parentOptions,
   availablePoints = [],
   onChange,
   onPickPosition,
   disabled,
 }: LabelConfigFormProps) {
-  const updateField = <K extends keyof LabelConfig>(field: K, value: LabelConfig[K]) => {
-    onChange({ ...config, [field]: value });
-  };
+  const [groupsJsonOpen, setGroupsJsonOpen] = useState(false);
+  const [actionsJsonOpen, setActionsJsonOpen] = useState(false);
 
-  const updatePosition = (axis: "x" | "y" | "z", value: string) => {
-    const num = parseFloat(value) || 0;
-    const current = config.position ?? { x: 0, y: 0, z: 0 };
-    onChange({
-      ...config,
-      position: { ...current, [axis]: num },
-    });
-  };
+  const updateMeta = useCallback(
+    (field: "name" | "description", value: string) => {
+      onChange({ ...label, meta: { ...label.meta, [field]: value } });
+    },
+    [label, onChange],
+  );
 
-  const hasPosition = config.position !== undefined;
+  const updateTree = useCallback(
+    (field: "parentId" | "order", value: string | number | null) => {
+      onChange({ ...label, tree: { ...label.tree, [field]: value } });
+    },
+    [label, onChange],
+  );
+
+  const updateAnchor = useCallback(
+    (field: "meshKeywords", value: string[]) => {
+      onChange({ ...label, anchor: { ...label.anchor, [field]: value } });
+    },
+    [label, onChange],
+  );
+
+  const updatePosition = useCallback(
+    (axis: "x" | "y" | "z", value: string) => {
+      const num = parseFloat(value) || 0;
+      const current = label.anchor.position ?? { x: 0, y: 0, z: 0 };
+      onChange({
+        ...label,
+        anchor: { ...label.anchor, position: { ...current, [axis]: num } },
+      });
+    },
+    [label, onChange],
+  );
+
+  const hasPosition = label.anchor.position !== undefined;
 
   const parentLabel =
-    config.parentId === null || config.parentId === "none"
+    label.tree.parentId === null || label.tree.parentId === undefined
       ? "无 (顶级标签)"
-      : (parentOptions.find((o) => o.id === config.parentId)?.name ?? config.parentId);
+      : (parentOptions.find((o) => o.id === label.tree.parentId)?.name ?? label.tree.parentId);
 
   return (
-    <div className="grid gap-4">
-      {/* Key */}
-      <div className="grid gap-2">
-        <Label htmlFor="label-key" className="text-xs">
-          Key *
-        </Label>
-        <Input
-          id="label-key"
-          value={config.key}
-          onChange={(e) => updateField("key", e.target.value)}
-          placeholder="如: transformer_a"
-          disabled={disabled}
-          className="h-8 text-sm"
-        />
-      </div>
+    <Tabs defaultValue="meta" className="w-full">
+      <TabsList className="w-full justify-start h-8 gap-0.5 bg-muted/50 p-0.5">
+        <TabsTrigger value="meta" className="text-xs h-7 px-2">
+          基本信息
+        </TabsTrigger>
+        <TabsTrigger value="anchor" className="text-xs h-7 px-2">
+          3D定位
+        </TabsTrigger>
+        <TabsTrigger value="tree" className="text-xs h-7 px-2">
+          层级
+        </TabsTrigger>
+        <TabsTrigger value="groups" className="text-xs h-7 px-2">
+          点位分组
+          {label.groups.length > 0 && (
+            <Badge variant="secondary" className="ml-1 h-3.5 px-1 text-[9px]">
+              {label.groups.length}
+            </Badge>
+          )}
+        </TabsTrigger>
+        <TabsTrigger value="actions" className="text-xs h-7 px-2">
+          动作
+          {label.actions.length > 0 && (
+            <Badge variant="secondary" className="ml-1 h-3.5 px-1 text-[9px]">
+              {label.actions.length}
+            </Badge>
+          )}
+        </TabsTrigger>
+      </TabsList>
 
-      {/* Name */}
-      <div className="grid gap-2">
-        <Label htmlFor="label-name" className="text-xs">
-          名称
-        </Label>
-        <Input
-          id="label-name"
-          value={config.name}
-          onChange={(e) => updateField("name", e.target.value)}
-          placeholder="如: 变压器A相 / 大厅"
-          disabled={disabled}
-          className="h-8 text-sm"
-        />
-      </div>
-
-      {/* Description */}
-      <div className="grid gap-2">
-        <Label htmlFor="label-desc" className="text-xs">
-          描述
-        </Label>
-        <Input
-          id="label-desc"
-          value={config.description}
-          onChange={(e) => updateField("description", e.target.value)}
-          placeholder="可选描述"
-          disabled={disabled}
-          className="h-8 text-sm"
-        />
-      </div>
-
-      {/* Parent */}
-      <div className="grid gap-2">
-        <Label className="text-xs">父标签</Label>
-        <Select
-          value={config.parentId ?? "none"}
-          onValueChange={(v) => updateField("parentId", v === "none" || v === null ? null : v)}
-          disabled={disabled}
-        >
-          <SelectTrigger className="h-8 text-sm">
-            <SelectValue placeholder="无 (顶级标签)">{parentLabel}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">无 (顶级标签)</SelectItem>
-            {parentOptions.map((opt) => (
-              <SelectItem key={opt.id} value={opt.id}>
-                {opt.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Position */}
-      <div className="grid gap-2">
-        <div className="flex items-center justify-between">
-          <Label className="text-xs">3D 坐标</Label>
-          <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-            <input
-              type="checkbox"
-              checked={hasPosition}
-              onChange={(e) => {
-                if (e.target.checked) {
-                  updateField("position", { x: 0, y: 1, z: 0 });
-                } else {
-                  const next = { ...config };
-                  delete next.position;
-                  onChange(next);
-                }
-              }}
-              disabled={disabled}
-              className="h-3 w-3"
-            />
-            在 3D 场景中显示
-          </label>
+      {/* ====== 基本信息 ====== */}
+      <TabsContent value="meta" className="mt-3 grid gap-3">
+        <div className="grid gap-2">
+          <Label className="text-xs">ID</Label>
+          <Input value={label.meta.id} disabled className="h-8 text-sm bg-muted/50" />
         </div>
-        {hasPosition && (
-          <>
-            {onPickPosition && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="w-full gap-2"
-                onClick={onPickPosition}
-                disabled={disabled}
-              >
-                <MapPin size={14} />
-                在场景中拾取位置
-              </Button>
-            )}
-            <div className="grid grid-cols-3 gap-2">
-              <div>
-                <Label className="text-[10px] text-muted-foreground mb-1 block">X</Label>
-                <Input
-                  type="number"
-                  step="any"
-                  value={config.position!.x}
-                  onChange={(e) => updatePosition("x", e.target.value)}
-                  disabled={disabled}
-                  className="h-8 text-sm"
-                />
-              </div>
-              <div>
-                <Label className="text-[10px] text-muted-foreground mb-1 block">Y</Label>
-                <Input
-                  type="number"
-                  step="any"
-                  value={config.position!.y}
-                  onChange={(e) => updatePosition("y", e.target.value)}
-                  disabled={disabled}
-                  className="h-8 text-sm"
-                />
-              </div>
-              <div>
-                <Label className="text-[10px] text-muted-foreground mb-1 block">Z</Label>
-                <Input
-                  type="number"
-                  step="any"
-                  value={config.position!.z}
-                  onChange={(e) => updatePosition("z", e.target.value)}
-                  disabled={disabled}
-                  className="h-8 text-sm"
-                />
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+        <div className="grid gap-2">
+          <Label htmlFor="label-name" className="text-xs">
+            名称 *
+          </Label>
+          <Input
+            id="label-name"
+            value={label.meta.name}
+            onChange={(e) => updateMeta("name", e.target.value)}
+            placeholder="如: 南序厅"
+            disabled={disabled}
+            className="h-8 text-sm"
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="label-desc" className="text-xs">
+            描述
+          </Label>
+          <Input
+            id="label-desc"
+            value={label.meta.description ?? ""}
+            onChange={(e) => updateMeta("description", e.target.value)}
+            placeholder="可选描述"
+            disabled={disabled}
+            className="h-8 text-sm"
+          />
+        </div>
+      </TabsContent>
 
-      {/* Mesh Keywords */}
-      {hasPosition && (
+      {/* ====== 3D 定位 ====== */}
+      <TabsContent value="anchor" className="mt-3 grid gap-3">
+        <div className="grid gap-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs">3D 坐标</Label>
+            <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={hasPosition}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    onChange({
+                      ...label,
+                      anchor: { ...label.anchor, position: { x: 0, y: 1, z: 0 } },
+                    });
+                  } else {
+                    const { position: _, ...rest } = label.anchor;
+                    onChange({ ...label, anchor: rest });
+                  }
+                }}
+                disabled={disabled}
+                className="h-3 w-3"
+              />
+              在 3D 场景中显示
+            </label>
+          </div>
+          {hasPosition && (
+            <>
+              {onPickPosition && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={onPickPosition}
+                  disabled={disabled}
+                >
+                  <MapPin size={14} />
+                  在场景中拾取位置
+                </Button>
+              )}
+              <div className="grid grid-cols-3 gap-2">
+                {(["x", "y", "z"] as const).map((axis) => (
+                  <div key={axis}>
+                    <Label className="text-[10px] text-muted-foreground mb-1 block">
+                      {axis.toUpperCase()}
+                    </Label>
+                    <Input
+                      type="number"
+                      step="any"
+                      value={label.anchor.position![axis]}
+                      onChange={(e) => updatePosition(axis, e.target.value)}
+                      disabled={disabled}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
         <div className="grid gap-2">
           <Label className="text-xs">Mesh 关键词</Label>
           <Input
-            value={(config.meshKeywords ?? []).join(", ")}
+            value={label.anchor.meshKeywords.join(", ")}
             onChange={(e) => {
               const keywords = e.target.value
                 .split(",")
                 .map((s) => s.trim())
                 .filter(Boolean);
-              updateField("meshKeywords", keywords);
+              updateAnchor("meshKeywords", keywords);
             }}
-            placeholder="用逗号分隔，如: shell, casing"
+            placeholder="用逗号分隔，如: 南序厅天花板, 南序厅地面"
             disabled={disabled}
             className="h-8 text-sm"
           />
         </div>
-      )}
+      </TabsContent>
 
-      {/* Point Groups */}
-      <LabelGroupsEditor
-        groups={config.groups ?? []}
-        availablePoints={availablePoints}
-        onChange={(groups) => updateField("groups", groups)}
-        disabled={disabled}
-      />
-    </div>
+      {/* ====== 层级 ====== */}
+      <TabsContent value="tree" className="mt-3 grid gap-3">
+        <div className="grid gap-2">
+          <Label className="text-xs">父标签</Label>
+          <Select
+            value={label.tree.parentId ?? "none"}
+            onValueChange={(v) => updateTree("parentId", v === "none" ? null : v)}
+            disabled={disabled}
+          >
+            <SelectTrigger className="h-8 text-sm">
+              <SelectValue placeholder="无 (顶级标签)">{parentLabel}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">无 (顶级标签)</SelectItem>
+              {parentOptions
+                .filter((o) => o.id !== label.meta.id)
+                .map((opt) => (
+                  <SelectItem key={opt.id} value={opt.id}>
+                    {opt.name}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid gap-2">
+          <Label className="text-xs">排序</Label>
+          <Input
+            type="number"
+            value={label.tree.order}
+            onChange={(e) => updateTree("order", parseInt(e.target.value) || 0)}
+            disabled={disabled}
+            className="h-8 text-sm"
+          />
+        </div>
+      </TabsContent>
+
+      {/* ====== 点位分组 ====== */}
+      <TabsContent value="groups" className="mt-3">
+        <GroupsEditor
+          groups={label.groups}
+          availablePoints={availablePoints}
+          onChange={(groups) => onChange({ ...label, groups })}
+          onShowJson={() => setGroupsJsonOpen(true)}
+          disabled={disabled}
+        />
+        <SubObjectJsonEditor
+          data={label.groups}
+          open={groupsJsonOpen}
+          onOpenChange={setGroupsJsonOpen}
+          onConfirm={(groups) => onChange({ ...label, groups: groups as LabelGroup[] })}
+          title="编辑点位分组 JSON"
+          validate={(item): item is LabelGroup =>
+            typeof item === "object" &&
+            item !== null &&
+            "id" in item &&
+            "name" in item &&
+            "pointIds" in item
+          }
+        />
+      </TabsContent>
+
+      {/* ====== 动作 ====== */}
+      <TabsContent value="actions" className="mt-3">
+        <ActionsEditor
+          actions={label.actions}
+          onChange={(actions) => onChange({ ...label, actions })}
+          onShowJson={() => setActionsJsonOpen(true)}
+          disabled={disabled}
+        />
+        <SubObjectJsonEditor
+          data={label.actions}
+          open={actionsJsonOpen}
+          onOpenChange={setActionsJsonOpen}
+          onConfirm={(actions) => onChange({ ...label, actions: actions as LabelAction[] })}
+          title="编辑动作 JSON"
+          validate={(item): item is LabelAction =>
+            typeof item === "object" &&
+            item !== null &&
+            "id" in item &&
+            "type" in item &&
+            "config" in item
+          }
+        />
+      </TabsContent>
+    </Tabs>
   );
 }

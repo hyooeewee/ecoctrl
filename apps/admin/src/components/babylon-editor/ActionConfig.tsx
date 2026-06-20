@@ -1,8 +1,8 @@
 // ========================================
-// Operation Configuration Component
+// Action Configuration Component
 // ========================================
 
-import React, { useState } from "react";
+import React from "react";
 import {
   Input,
   Label,
@@ -15,17 +15,16 @@ import {
 } from "@ecoctrl/ui";
 import { Checkbox } from "@ecoctrl/ui/checkbox";
 import { X } from "lucide-react";
-import AppButton from "@/components/AppButton";
-import type { LabelOperation } from "@ecoctrl/shared";
+import type { LabelAction } from "@ecoctrl/shared";
 
 // ========================================
 // Types
 // ========================================
 
-interface OperationConfigProps {
-  operations: LabelOperation[];
+interface ActionConfigProps {
+  actions: LabelAction[];
   availableLabelIds?: string[];
-  onChange: (operations: LabelOperation[]) => void;
+  onChange: (actions: LabelAction[]) => void;
   disabled?: boolean;
 }
 
@@ -33,38 +32,39 @@ interface OperationConfigProps {
 // Component
 // ========================================
 
-export default function OperationConfig({
-  operations,
+export default function ActionConfig({
+  actions,
   availableLabelIds = [],
   onChange,
   disabled,
-}: OperationConfigProps) {
-  const getOp = (type: LabelOperation["type"]): LabelOperation | undefined => {
-    return operations.find((op) => op.type === type);
+}: ActionConfigProps) {
+  const getAction = (type: LabelAction["type"]): LabelAction | undefined => {
+    return actions.find((a) => a.type === type);
   };
 
-  const isEnabled = (type: LabelOperation["type"]): boolean => {
-    return operations.some((op) => op.type === type);
+  const isEnabled = (type: LabelAction["type"]): boolean => {
+    return actions.some((a) => a.type === type);
   };
 
-  const toggleOp = (type: LabelOperation["type"], enabled: boolean) => {
-    const next = operations.filter((op) => op.type !== type);
+  const toggleAction = (type: LabelAction["type"], enabled: boolean) => {
+    const next = actions.filter((a) => a.type !== type);
     if (enabled) {
-      next.push({ type, config: getDefaultConfig(type) } as LabelOperation);
+      const id = `action_${type}_${Date.now()}`;
+      next.push({ id, label: "", type, config: getDefaultConfig(type) });
     }
     onChange(next);
   };
 
-  const updateConfig = (type: LabelOperation["type"], key: string, value: unknown) => {
-    const existing = getOp(type);
+  const updateConfig = (type: LabelAction["type"], key: string, value: unknown) => {
+    const existing = getAction(type);
     if (!existing) return;
 
-    const updated = {
+    const updated: LabelAction = {
       ...existing,
       config: { ...existing.config, [key]: value },
-    } as LabelOperation;
+    };
 
-    const next = operations.filter((op) => op.type !== type);
+    const next = actions.filter((a) => a.type !== type);
     next.push(updated);
     onChange(next);
   };
@@ -73,62 +73,62 @@ export default function OperationConfig({
     <div className="grid gap-4">
       <h4 className="text-xs font-semibold text-muted-foreground">操作指令</h4>
 
-      {/* Camera Operation */}
-      <OperationSection
+      {/* Camera Action */}
+      <ActionSection
         title="📷 摄像机动画"
         enabled={isEnabled("camera")}
-        onToggle={(v) => toggleOp("camera", v)}
+        onToggle={(v) => toggleAction("camera", v)}
         disabled={disabled}
       >
         <CameraConfig
-          config={getOp("camera")?.config ?? getDefaultConfig("camera")}
+          config={getAction("camera")?.config ?? getDefaultConfig("camera")}
           onChange={(k, v) => updateConfig("camera", k, v)}
           disabled={disabled}
         />
-      </OperationSection>
+      </ActionSection>
 
-      {/* Clipping Operation */}
-      <OperationSection
+      {/* Clipping Action */}
+      <ActionSection
         title="✂️ 剖切效果"
         enabled={isEnabled("clipping")}
-        onToggle={(v) => toggleOp("clipping", v)}
+        onToggle={(v) => toggleAction("clipping", v)}
         disabled={disabled}
       >
         <ClippingConfig
-          config={getOp("clipping")?.config ?? getDefaultConfig("clipping")}
+          config={getAction("clipping")?.config ?? getDefaultConfig("clipping")}
           availableLabelIds={availableLabelIds}
           onChange={(k, v) => updateConfig("clipping", k, v)}
           disabled={disabled}
         />
-      </OperationSection>
+      </ActionSection>
 
-      {/* Visibility Operation */}
-      <OperationSection
+      {/* Visibility Action */}
+      <ActionSection
         title="👁️ 可见性控制"
         enabled={isEnabled("visibility")}
-        onToggle={(v) => toggleOp("visibility", v)}
+        onToggle={(v) => toggleAction("visibility", v)}
         disabled={disabled}
       >
         <VisibilityConfig
-          config={getOp("visibility")?.config ?? getDefaultConfig("visibility")}
+          config={getAction("visibility")?.config ?? getDefaultConfig("visibility")}
           onChange={(k, v) => updateConfig("visibility", k, v)}
           disabled={disabled}
         />
-      </OperationSection>
+      </ActionSection>
 
-      {/* PostProcess Operation */}
-      <OperationSection
+      {/* PostProcess Action */}
+      <ActionSection
         title="🎨 后期效果"
         enabled={isEnabled("postprocess")}
-        onToggle={(v) => toggleOp("postprocess", v)}
+        onToggle={(v) => toggleAction("postprocess", v)}
         disabled={disabled}
       >
         <PostProcessConfig
-          config={getOp("postprocess")?.config ?? getDefaultConfig("postprocess")}
+          config={getAction("postprocess")?.config ?? getDefaultConfig("postprocess")}
           onChange={(k, v) => updateConfig("postprocess", k, v)}
           disabled={disabled}
         />
-      </OperationSection>
+      </ActionSection>
     </div>
   );
 }
@@ -137,7 +137,7 @@ export default function OperationConfig({
 // Section Wrapper
 // ========================================
 
-interface OperationSectionProps {
+interface ActionSectionProps {
   title: string;
   enabled: boolean;
   onToggle: (enabled: boolean) => void;
@@ -145,7 +145,7 @@ interface OperationSectionProps {
   children: React.ReactNode;
 }
 
-function OperationSection({ title, enabled, onToggle, disabled, children }: OperationSectionProps) {
+function ActionSection({ title, enabled, onToggle, disabled, children }: ActionSectionProps) {
   return (
     <div className="rounded-md border bg-muted/30 p-3">
       <div className="flex items-center gap-2">
@@ -571,7 +571,7 @@ function PostProcessConfig({
 // Helpers
 // ========================================
 
-function getDefaultConfig(type: LabelOperation["type"]): Record<string, unknown> {
+function getDefaultConfig(type: LabelAction["type"]): Record<string, unknown> {
   switch (type) {
     case "camera":
       return {

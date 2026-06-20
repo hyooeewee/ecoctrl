@@ -14,7 +14,7 @@ import {
   type Scene,
 } from "@babylonjs/core";
 import "@babylonjs/loaders/glTF";
-import type { DashboardModelLabel, LabelOperation } from "@ecoctrl/shared";
+import type { DashboardModelLabel, LabelAction } from "@ecoctrl/shared";
 import { updateClipPlane, setClipTarget, type ClipState } from "./clipping-utils";
 import {
   INITIAL_ALPHA,
@@ -434,6 +434,8 @@ export class ModelViewer implements ModelViewerRef {
       fileKey: url,
       rootNode: groupParent,
       visible: true,
+      priority: "background",
+      order: 0,
     });
 
     this.scene.stopAllAnimations();
@@ -655,38 +657,41 @@ export class ModelViewer implements ModelViewerRef {
   }
 
   focusOnLabel(key: string): void {
-    const label = this.v2Labels.find((l) => l.key === key);
+    const label = this.v2Labels.find((l) => l.meta.id === key);
     if (!label) return;
 
-    for (const op of label.operations) {
-      this.executeOperation(op);
+    for (const action of label.actions) {
+      this.executeAction(action);
     }
   }
 
   /**
-   * Execute all operations bound to a tag/label by key.
+   * Execute all actions bound to a tag/label by key.
    * Used by the large-screen dashboard when a tag pill is clicked.
    */
   async executeTagActions(labelKey: string): Promise<void> {
-    const label = this.v2Labels.find((l) => l.key === labelKey);
+    const label = this.v2Labels.find((l) => l.meta.id === labelKey);
     if (!label) {
       console.warn(`[ModelViewer] tag not found: ${labelKey}`);
       return;
     }
 
-    for (const op of label.operations) {
+    for (const action of label.actions) {
       // TODO: support sequential animation with duration/easing.
-      this.executeOperation(op);
+      this.executeAction(action);
     }
   }
 
   /**
-   * Execute a single label operation.
+   * Execute a single label action.
    */
-  private executeOperation(op: LabelOperation): void {
-    switch (op.type) {
+  private executeAction(action: LabelAction): void {
+    switch (action.type) {
       case "camera": {
-        const cfg = op.config;
+        const cfg = action.config as {
+          target: { x: number; y: number; z: number };
+          distance: number;
+        };
         const target = new Vector3(cfg.target.x, cfg.target.y, cfg.target.z);
         // Compute alpha/beta from target direction, use distance as radius.
         const direction = target.subtract(this.camera.target);
@@ -700,20 +705,17 @@ export class ModelViewer implements ModelViewerRef {
       }
 
       case "clipping": {
-        const cfg = op.config;
+        const cfg = action.config as { planeOffset: number };
         // planeOffset is the Y-height for the clip plane.
         setClipTarget(this.clipState, cfg.planeOffset);
         break;
       }
 
       case "visibility": {
-        const cfg = op.config;
-        const keywords = (cfg.targets ?? []).map((k) => k.toLowerCase()).filter(Boolean);
-        const targetModelFileId = op.targetModelFileId;
-        const hasTargetModel = Boolean(targetModelFileId);
+        const cfg = action.config as { targets?: string[]; action: string };
+        const keywords = (cfg.targets ?? []).map((k: string) => k.toLowerCase()).filter(Boolean);
 
         for (const group of this.groups) {
-          if (hasTargetModel && group.id !== targetModelFileId) continue;
           if (!group.rootNode) continue;
 
           const meshes = group.rootNode.getChildMeshes();
@@ -907,12 +909,16 @@ export class ModelViewer implements ModelViewerRef {
    */
   private toLabelDefs(labels: DashboardModelLabel[]): LabelDef[] {
     return labels
-      .filter((l) => l.position !== undefined)
+      .filter((l) => l.anchor.position !== undefined)
       .map((l) => ({
-        key: l.key,
-        name: l.name,
-        fallbackPosition: new Vector3(l.position!.x, l.position!.y, l.position!.z),
-        meshKeywords: l.meshKeywords,
+        key: l.meta.id,
+        name: l.meta.name,
+        fallbackPosition: new Vector3(
+          l.anchor.position!.x,
+          l.anchor.position!.y,
+          l.anchor.position!.z,
+        ),
+        meshKeywords: l.anchor.meshKeywords,
       }));
   }
 
