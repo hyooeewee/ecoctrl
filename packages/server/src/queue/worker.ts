@@ -156,6 +156,9 @@ export async function startWorker(): Promise<void> {
     retryDelay: 60,
     retryBackoff: true,
   } as ConstructorParameters<typeof PgBoss>[0]);
+  boss.on("error", (err) => {
+    logger.error({ err: err.message }, "[pg-boss:worker] connection error");
+  });
   await boss.start();
 
   await boss.work(
