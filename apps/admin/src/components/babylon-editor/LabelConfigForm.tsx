@@ -235,12 +235,13 @@ function SubObjectJsonEditor<T>({
             setError(null);
           }}
           title={title}
-          mode="fullscreen"
+          mode="inline"
           editor="monaco"
           showHeader
           showFullscreen={false}
           showFormat
           showCopy
+          height="100%"
           error={error}
           onCancel={() => onOpenChange(false)}
           onConfirm={handleConfirm}

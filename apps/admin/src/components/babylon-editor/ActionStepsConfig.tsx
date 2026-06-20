@@ -267,9 +267,10 @@ export default function ActionStepsConfig({
             onCancel={() => setJsonOpen(false)}
             error={jsonError}
             title="编辑动作 JSON"
-            mode="fullscreen"
+            mode="inline"
             editor="monaco"
             showFullscreen={false}
+            height="100%"
           />
         </DialogContent>
       </Dialog>
