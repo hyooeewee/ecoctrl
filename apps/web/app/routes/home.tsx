@@ -12,6 +12,7 @@ import { locale, useLocale } from "~/locales";
 import { useAuthStore } from "~/store/auth";
 import { useSettingsStore, type BentoLayoutItem } from "~/store/settings";
 import { useWidgetDataStore } from "~/store/widgetData";
+import { useLightingStore } from "~/store/lighting";
 import { useSse } from "~/hooks/use-sse";
 import type { SSEMessage } from "~/lib/sse";
 
@@ -86,6 +87,12 @@ export default function Home() {
       } else if (msg.type === "widget_delete") {
         const { metricKey } = msg.payload as { metricKey: string };
         clearWidgetData(metricKey);
+      } else if (msg.type === "lighting_update") {
+        const { labelId, groups } = msg.payload as {
+          labelId: string;
+          groups: Array<{ id: string; name: string; status: "off" | "half" | "on" }>;
+        };
+        useLightingStore.getState().setStatus(labelId, groups);
       }
     },
     [setWidgetData, clearWidgetData],

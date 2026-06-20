@@ -21,7 +21,8 @@ export type SSEEventType =
   | "notification"
   | "ping"
   | "widget_update"
-  | "widget_delete";
+  | "widget_delete"
+  | "lighting_update";
 
 export interface AlertPayload {
   severity: "info" | "warning" | "error";
@@ -51,6 +52,15 @@ export interface WidgetUpdatePayload {
 export interface WidgetEventMap {
   widget_update: WidgetUpdatePayload;
   widget_delete: { metricKey: string };
+}
+
+// ========================================
+// Lighting events
+// ========================================
+
+export interface LightingUpdatePayload {
+  labelId: string;
+  groups: Array<{ id: string; name: string; status: "off" | "half" | "on" }>;
 }
 
 // ========================================

@@ -1,44 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { toast } from "sonner";
-import type { LightingGroup } from "@ecoctrl/shared";
+import type { DashboardModelLabel } from "@ecoctrl/shared";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ecoctrl/ui/select";
 
 import { LightBulb } from "./light-bulb";
 import {
-  batchUpdateLightingGroups,
-  fetchLightingGroups,
-  updateLightingGroup,
+  batchToggleLightingGroups,
+  fetchLightingStatus,
+  toggleLightingGroup,
 } from "~/lib/lighting-api";
 import { cn } from "~/lib/utils";
 import { useLocale } from "~/locales";
-
-// ========================================
-// Label key → region mapping
-// Config side generates region/group data; this maps 3D labels to regions.
-// ========================================
-
-const LABEL_TO_REGION: Record<string, string> = {
-  label_1: "南序厅",
-  label_2: "西序厅",
-  label_3: "东序厅",
-  label_4: "北序厅",
-  label_5: "多功能厅1号",
-  label_6: "多功能厅2号",
-  lobby: "南序厅",
-  office1: "西序厅",
-  meeting: "东序厅",
-  dataCenter: "北序厅",
-  exhibition: "多功能厅1号",
-  office2: "多功能厅2号",
-};
+import { useLightingStore, type LightingGroupState } from "~/store/lighting";
 
 // ========================================
 // Props
 // ========================================
 
 interface LightingSheetProps {
-  activeLabel: string | null;
+  activeLabel: string;
+  labels: DashboardModelLabel[];
   onClose: () => void;
 }
 
@@ -46,41 +28,48 @@ interface LightingSheetProps {
 // Component
 // ========================================
 
-export function LightingSheet({ activeLabel, onClose }: LightingSheetProps) {
+export function LightingSheet({ activeLabel, labels, onClose }: LightingSheetProps) {
   const t = useLocale();
-  const [region, setRegion] = useState("");
-  const [groups, setGroups] = useState<LightingGroup[]>([]);
+  const [selectedId, setSelectedId] = useState(activeLabel);
   const [loading, setLoading] = useState(false);
 
-  const allRegions = useMemo(() => Array.from(new Set(Object.values(LABEL_TO_REGION))), []);
+  const entries = useLightingStore((s) => s.entries);
+  const setStatus = useLightingStore((s) => s.setStatus);
 
-  // Pick region when a 3D label is selected.
-  useEffect(() => {
-    if (activeLabel) {
-      setRegion(LABEL_TO_REGION[activeLabel] ?? allRegions[0] ?? activeLabel);
-    }
-  }, [activeLabel, allRegions]);
+  // Labels that have groups
+  const labelsWithGroups = useMemo(
+    () => labels.filter((l) => l.groups && l.groups.length > 0),
+    [labels],
+  );
 
-  // Load groups whenever the selected region changes.
+  const selectedLabel = labels.find((l) => l.meta.name === selectedId);
+  const labelId = selectedLabel?.meta.id ?? "";
+  const groups: LightingGroupState[] = entries[labelId] ?? [];
+
+  // Sync selection when activeLabel changes
   useEffect(() => {
-    if (!region) return;
+    const match = labels.find((l) => l.meta.id === activeLabel);
+    setSelectedId(match?.meta.name ?? activeLabel);
+  }, [activeLabel, labels]);
+
+  // Fetch status when label selection changes
+  useEffect(() => {
+    if (!labelId) return;
+
     let cancelled = false;
     setLoading(true);
 
-    fetchLightingGroups(region)
+    fetchLightingStatus(labelId)
       .then((res) => {
         if (cancelled) return;
         if (res.ok && res.data) {
-          setGroups(res.data.groups);
+          setStatus(labelId, res.data.groups);
         } else {
-          console.error("[LightingSheet] fetch groups failed:", res.error);
-          toast.error(t.lighting.error);
+          console.error("[LightingSheet] fetch status failed:", res.error);
         }
       })
       .catch((err) => {
-        if (cancelled) return;
-        console.error("[LightingSheet] fetch groups error:", err);
-        toast.error(t.lighting.error);
+        console.error("[LightingSheet] fetch status error:", err);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -89,50 +78,59 @@ export function LightingSheet({ activeLabel, onClose }: LightingSheetProps) {
     return () => {
       cancelled = true;
     };
-  }, [region, t.lighting.error]);
+  }, [labelId, setStatus]);
 
-  const handleToggle = async (key: string) => {
-    const group = groups.find((g) => g.key === key);
-    if (!group) return;
-
-    // Click always toggles between off ↔ on; half is read-only
+  const handleToggle = async (group: LightingGroupState) => {
     const newStatus = group.status === "on" ? "off" : "on";
-    const snapshot = groups.map((g) => ({ ...g }));
-    setGroups((prev) => prev.map((g) => (g.key === key ? { ...g, status: newStatus } : g)));
 
-    const res = await updateLightingGroup(region, key, newStatus);
+    // Optimistic update
+    useLightingStore.getState().updateGroup(labelId, group.id, newStatus);
+
+    const res = await toggleLightingGroup(labelId, group.id, newStatus);
     if (!res.ok) {
-      console.error("[LightingSheet] update group failed:", res.error);
+      console.error("[LightingSheet] toggle failed:", res.error);
       if (res.error === "HTTP 401") {
         toast.warning(t.lighting.authRequired);
       } else {
         toast.error(t.lighting.error);
       }
-      setGroups(snapshot);
+      // Revert on error — re-fetch from server
+      fetchLightingStatus(labelId).then((r) => {
+        if (r.ok && r.data) setStatus(labelId, r.data.groups);
+      });
       return;
     }
+
+    // SSE will also broadcast, but update immediately for responsiveness
     if (res.data) {
-      setGroups((prev) => prev.map((g) => (g.key === key ? res.data!.group : g)));
+      useLightingStore.getState().updateGroup(labelId, res.data.id, res.data.status);
     }
   };
 
   const handleBatch = async (status: "off" | "on") => {
-    const snapshot = groups.map((g) => ({ ...g }));
-    setGroups((prev) => prev.map((g) => ({ ...g, status })));
+    // Optimistic update
+    const current = useLightingStore.getState().entries[labelId] ?? [];
+    for (const g of current) {
+      useLightingStore.getState().updateGroup(labelId, g.id, status);
+    }
 
-    const res = await batchUpdateLightingGroups(region, status);
+    const res = await batchToggleLightingGroups(labelId, status);
     if (!res.ok) {
-      console.error("[LightingSheet] batch update failed:", res.error);
+      console.error("[LightingSheet] batch failed:", res.error);
       if (res.error === "HTTP 401") {
         toast.warning(t.lighting.authRequired);
       } else {
         toast.error(t.lighting.error);
       }
-      setGroups(snapshot);
+      // Revert
+      fetchLightingStatus(labelId).then((r) => {
+        if (r.ok && r.data) setStatus(labelId, r.data.groups);
+      });
       return;
     }
+
     if (res.data) {
-      setGroups(res.data.groups);
+      setStatus(labelId, res.data.groups);
     }
   };
 
@@ -152,14 +150,14 @@ export function LightingSheet({ activeLabel, onClose }: LightingSheetProps) {
         </div>
 
         <div className="mt-2">
-          <Select value={region} onValueChange={setRegion}>
+          <Select value={selectedId} onValueChange={setSelectedId}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder={t.lighting.selectRegion} />
             </SelectTrigger>
             <SelectContent className="dark">
-              {allRegions.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {r}
+              {labelsWithGroups.map((l) => (
+                <SelectItem key={l.meta.id} value={l.meta.name}>
+                  {l.meta.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -181,7 +179,7 @@ export function LightingSheet({ activeLabel, onClose }: LightingSheetProps) {
           <div className="flex-1 overflow-y-auto px-2 py-2">
             {groups.map((group) => (
               <div
-                key={group.key}
+                key={group.id}
                 className="flex items-center justify-between gap-3 border-b border-white/5 px-2 py-3 last:border-b-0"
               >
                 <div className="flex items-center gap-2 overflow-hidden">
@@ -195,11 +193,9 @@ export function LightingSheet({ activeLabel, onClose }: LightingSheetProps) {
                           : "border border-cyber-cyan/40 bg-transparent",
                     )}
                   />
-                  <span className="truncate text-xs font-medium text-foreground">
-                    {`${group.key}_${group.label}`}
-                  </span>
+                  <span className="truncate text-xs font-medium text-foreground">{group.name}</span>
                 </div>
-                <LightBulb status={group.status} onClick={() => handleToggle(group.key)} />
+                <LightBulb status={group.status} onClick={() => handleToggle(group)} />
               </div>
             ))}
           </div>

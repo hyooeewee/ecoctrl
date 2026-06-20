@@ -1,37 +1,38 @@
-import type { LightingGroup, LightingRegionGroups } from "@ecoctrl/shared";
 import { apiGet, apiPost } from "./api";
 
-export interface LightingRegionsResponse {
-  regions: string[];
+// ========================================
+// Types
+// ========================================
+
+export interface LightingGroupStatus {
+  id: string;
+  name: string;
+  status: "off" | "half" | "on";
 }
 
-export interface LightingGroupResponse {
-  group: LightingGroup;
-}
+// ========================================
+// API functions
+// ========================================
 
-export interface LightingBatchResponse {
-  region: string;
-  groups: LightingGroup[];
-}
-
-export async function fetchLightingRegions() {
-  return apiGet<LightingRegionsResponse>("/api/control/lighting/regions");
-}
-
-export async function fetchLightingGroups(region: string) {
-  return apiGet<LightingRegionGroups>(`/api/control/lighting/${encodeURIComponent(region)}/groups`);
-}
-
-export async function updateLightingGroup(region: string, groupKey: string, status: "off" | "on") {
-  return apiPost<LightingGroupResponse>(
-    `/api/control/lighting/${encodeURIComponent(region)}/${encodeURIComponent(groupKey)}`,
-    { status },
+/** GET /api/control/lighting/:labelId/status — query group statuses */
+export async function fetchLightingStatus(labelId: string) {
+  return apiGet<{ groups: LightingGroupStatus[] }>(
+    `/api/control/lighting/${encodeURIComponent(labelId)}/status`,
   );
 }
 
-export async function batchUpdateLightingGroups(region: string, status: "off" | "on") {
-  return apiPost<LightingBatchResponse>(
-    `/api/control/lighting/${encodeURIComponent(region)}/batch`,
+/** POST /api/control/lighting/:labelId/toggle — toggle one group */
+export async function toggleLightingGroup(labelId: string, id: string, status: "off" | "on") {
+  return apiPost<LightingGroupStatus>(
+    `/api/control/lighting/${encodeURIComponent(labelId)}/toggle`,
+    { id, status },
+  );
+}
+
+/** POST /api/control/lighting/:labelId/batch — batch toggle all groups under a label */
+export async function batchToggleLightingGroups(labelId: string, status: "off" | "on") {
+  return apiPost<{ groups: LightingGroupStatus[] }>(
+    `/api/control/lighting/${encodeURIComponent(labelId)}/batch`,
     { status },
   );
 }

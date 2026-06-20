@@ -83,7 +83,11 @@ export default function DashboardLayout() {
 
       {/* Lighting control sheet (left panel) */}
       {activeLabel && (
-        <LightingSheet activeLabel={activeLabel} onClose={() => setActiveLabel(null)} />
+        <LightingSheet
+          activeLabel={activeLabel}
+          labels={model?.labels ?? []}
+          onClose={() => setActiveLabel(null)}
+        />
       )}
 
       {/* Route-specific UI overlays */}
