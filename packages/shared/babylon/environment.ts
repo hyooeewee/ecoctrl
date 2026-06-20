@@ -55,7 +55,9 @@ export interface SandboxEnvironmentOptions {
 /** Load the appropriate texture based on file extension. */
 function loadEnvironmentTexture(url: string, scene: Scene): BaseTexture {
   if (url.endsWith(".hdr")) {
-    return new HDRCubeTexture(url, scene, 256, false, true, false, true);
+    // generateHarmonics=false: skip IBL prefilter to avoid _irradianceTexture null crash in BabylonJS v9.
+    // Skybox and manual lights still work; PBR reflections will be minimal.
+    return new HDRCubeTexture(url, scene, 256, false, false, false, true);
   }
   return CubeTextureCreateFromPrefilteredData(url, scene);
 }
