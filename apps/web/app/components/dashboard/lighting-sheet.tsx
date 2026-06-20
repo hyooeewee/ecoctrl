@@ -103,7 +103,11 @@ export function LightingSheet({ activeLabel, onClose }: LightingSheetProps) {
     const res = await updateLightingGroup(region, key, newStatus);
     if (!res.ok) {
       console.error("[LightingSheet] update group failed:", res.error);
-      toast.error(res.error === "HTTP 401" ? t.lighting.authRequired : t.lighting.error);
+      if (res.error === "HTTP 401") {
+        toast.warning(t.lighting.authRequired);
+      } else {
+        toast.error(t.lighting.error);
+      }
       setGroups(snapshot);
       return;
     }
@@ -119,7 +123,11 @@ export function LightingSheet({ activeLabel, onClose }: LightingSheetProps) {
     const res = await batchUpdateLightingGroups(region, status);
     if (!res.ok) {
       console.error("[LightingSheet] batch update failed:", res.error);
-      toast.error(res.error === "HTTP 401" ? t.lighting.authRequired : t.lighting.error);
+      if (res.error === "HTTP 401") {
+        toast.warning(t.lighting.authRequired);
+      } else {
+        toast.error(t.lighting.error);
+      }
       setGroups(snapshot);
       return;
     }

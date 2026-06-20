@@ -217,6 +217,7 @@ export const enUS = {
     allOff: "All Off",
     empty: "No group data",
     error: "Operation failed",
+    authRequired: "Please log in to control",
   },
 
   // ── Label Info Panel ───────────────────────────────────────────────────────
