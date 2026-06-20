@@ -30,49 +30,82 @@ export const WidgetLayoutSchema = z.object({
 });
 export type WidgetLayout = z.infer<typeof WidgetLayoutSchema>;
 
-// ─── Data Shapes ───────────────────────────────────────────────────────────────
-// 1. Stat card data
-export const StatDataSchema = z.object({
-  value: z.string(),
-  unit: z.string(),
-  delta: z.string().optional(),
-  deltaVariant: z.enum(["up-good", "up-bad", "down-good", "down-bad", "neutral"]),
-  sparkline: z.array(z.number()).optional(),
-  sparklineColor: z.string().optional(),
-  footerKey: z.string().optional(),
-  progressValue: z.number().optional(),
-});
-export type StatData = z.infer<typeof StatDataSchema>;
+// ─── Init Data Shapes (SSE data must match these exactly) ─────────────────────
 
-// 2. Chart data
+/** Stat card initial/live data */
+export const StatInitDataSchema = z.object({
+  value: z.string(),
+  trend: z.string().optional(),
+  sparkline: z.array(z.number()).optional(),
+});
+export type StatInitData = z.infer<typeof StatInitDataSchema>;
+
+/** Chart data point */
 export const ChartPointSchema = z.object({
   label: z.string(),
   value: z.number(),
 });
 export type ChartPoint = z.infer<typeof ChartPointSchema>;
 
-export const ChartDataSchema = z.object({
-  chartType: z.enum(["area", "line", "bar", "donut"]),
-  points: z.array(ChartPointSchema).optional(), // area/line/bar
-  items: z
-    .array(
-      z.object({
-        label: z.string(),
-        value: z.number(),
-        color: z.string(),
-      }),
-    )
-    .optional(), // donut
+/** Donut chart initial/live data */
+export const DonutInitDataSchema = z.object({
+  total: z.number(),
+  items: z.array(
+    z.object({
+      label: z.string(),
+      value: z.number(),
+      color: z.string().optional(),
+    }),
+  ),
 });
-export type ChartData = z.infer<typeof ChartDataSchema>;
+export type DonutInitData = z.infer<typeof DonutInitDataSchema>;
 
-// 3. List data
-export const ListDataSchema = z.object({
-  items: z.array(z.record(z.string(), z.unknown())),
+/** Trend chart (area/line/bar) initial/live data */
+export const TrendInitDataSchema = z.object({
+  points: z.array(ChartPointSchema),
 });
-export type ListData = z.infer<typeof ListDataSchema>;
+export type TrendInitData = z.infer<typeof TrendInitDataSchema>;
 
-// 4. Weather data
+/** Alert list initial/live data */
+export const AlertInitDataSchema = z.object({
+  items: z.array(
+    z.object({
+      icon: z.string(),
+      title: z.string(),
+      subtitle: z.string(),
+      severity: z.enum(["critical", "warning", "info"]),
+      time: z.string(),
+    }),
+  ),
+});
+export type AlertInitData = z.infer<typeof AlertInitDataSchema>;
+
+/** Device list initial/live data */
+export const DeviceInitDataSchema = z.object({
+  items: z.array(
+    z.object({
+      icon: z.string(),
+      label: z.string(),
+      value: z.number(),
+      status: z.enum(["ok", "warn", "critical"]),
+    }),
+  ),
+});
+export type DeviceInitData = z.infer<typeof DeviceInitDataSchema>;
+
+/** AI suggestions initial/live data */
+export const SuggestionInitDataSchema = z.object({
+  items: z.array(
+    z.object({
+      icon: z.string(),
+      text: z.string(),
+      saving: z.string().optional(),
+    }),
+  ),
+});
+export type SuggestionInitData = z.infer<typeof SuggestionInitDataSchema>;
+
+/** Weather initial/live data */
 export const ForecastItemSchema = z.object({
   day: z.string(),
   high: z.number(),
@@ -81,37 +114,66 @@ export const ForecastItemSchema = z.object({
 });
 export type ForecastItem = z.infer<typeof ForecastItemSchema>;
 
-export const WeatherDataSchema = z.object({
+export const WeatherInitDataSchema = z.object({
   location: z.string(),
   currentTemp: z.number(),
   unit: z.enum(["C", "F"]),
   condition: z.string(),
   forecast: z.array(ForecastItemSchema),
 });
-export type WeatherData = z.infer<typeof WeatherDataSchema>;
+export type WeatherInitData = z.infer<typeof WeatherInitDataSchema>;
+
+/** Union of all init data shapes (matches SSE data payloads) */
+export const WidgetInitDataSchema = z.union([
+  StatInitDataSchema,
+  DonutInitDataSchema,
+  TrendInitDataSchema,
+  AlertInitDataSchema,
+  DeviceInitDataSchema,
+  SuggestionInitDataSchema,
+  WeatherInitDataSchema,
+]);
+export type WidgetInitData = z.infer<typeof WidgetInitDataSchema>;
+
+// ─── Widget dataJson (renderConfig flat + initData sub-object) ────────────────
+
+/** dataJson structure: flat config fields + initData */
+export interface WidgetDataJson {
+  /** Chart type for chart widgets (donut, area, line, bar) */
+  chartType?: "donut" | "area" | "line" | "bar";
+  /** Unit label for stat widgets */
+  unit?: string;
+  /** Sparkline line color for stat widgets */
+  sparklineColor?: string;
+  /** Locale key for stat widget footer text */
+  footerKey?: string;
+  /** Whether an increase is "good" or "bad" for stat widgets */
+  trendDirection?: "good" | "bad";
+  /** Initial data — SSE data must match this structure exactly */
+  initData: WidgetInitData;
+}
 
 // ─── Widget Config ─────────────────────────────────────────────────────────────
-export const WidgetDataSchema = z.union([
-  StatDataSchema,
-  ChartDataSchema,
-  ListDataSchema,
-  WeatherDataSchema,
-]);
-export type WidgetData = z.infer<typeof WidgetDataSchema>;
 
-export const WidgetConfigSchema = z.object({
-  id: z.string().uuid(),
-  metricKey: z.string(),
-  icon: z.string(),
-  data: WidgetDataSchema,
-});
-export type WidgetConfig = z.infer<typeof WidgetConfigSchema>;
+export type WidgetDataType = "stat" | "chart" | "list" | "weather";
+
+export interface WidgetConfig {
+  id: string;
+  metricKey: string;
+  icon: string;
+  dataType: WidgetDataType;
+  dataJson: WidgetDataJson;
+  hidden: boolean;
+  layoutX: number;
+  layoutY: number;
+  layoutW: number;
+  layoutH: number;
+}
 
 // ─── Dashboard Data ────────────────────────────────────────────────────────────
-export const DashboardDataSchema = z.object({
-  widgets: z.array(WidgetConfigSchema),
-});
-export type DashboardData = z.infer<typeof DashboardDataSchema>;
+export interface DashboardData {
+  widgets: WidgetConfig[];
+}
 
 // ─── Stats ─────────────────────────────────────────────────────────────────────
 export const DashboardStatItemSchema = z.object({
@@ -136,3 +198,16 @@ export const EnergyChartItemSchema = z.object({
   value: z.number(),
 });
 export type EnergyChartItem = z.infer<typeof EnergyChartItemSchema>;
+
+// ─── SSE Widget Payload ────────────────────────────────────────────────────────
+export interface SSEWidgetPayload {
+  metricKey: string;
+  timestamp: number;
+  data: WidgetInitData;
+}
+
+// ─── Backward compat aliases ───────────────────────────────────────────────────
+/** @deprecated Use StatInitData */
+export type StatData = StatInitData;
+/** @deprecated Use WidgetInitData */
+export type WidgetData = WidgetInitData;

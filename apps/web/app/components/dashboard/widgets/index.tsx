@@ -2,7 +2,7 @@ import { BentoItem } from "~/components/dashboard/bento-grid";
 import type { DashboardData } from "~/lib/dashboard-api";
 import { useWidgetDataStore } from "~/store/widgetData";
 
-import type { WidgetData } from "./types";
+import type { WidgetInitData } from "./types";
 import { WidgetRenderer } from "./widget-renderer";
 
 interface DashboardWidgetsProps {
@@ -11,7 +11,7 @@ interface DashboardWidgetsProps {
 
 export function DashboardWidgets({ data }: DashboardWidgetsProps) {
   const widgets = data?.widgets ?? [];
-  const sseDataMap = useWidgetDataStore((state) => state.dataMap);
+  const entries = useWidgetDataStore((state) => state.entries);
 
   return (
     <>
@@ -19,7 +19,7 @@ export function DashboardWidgets({ data }: DashboardWidgetsProps) {
         <BentoItem key={widget.id} id={widget.id}>
           <WidgetRenderer
             widget={widget}
-            liveData={sseDataMap[widget.metricKey] as unknown as WidgetData | undefined}
+            liveData={entries[widget.metricKey]?.liveData as unknown as WidgetInitData | undefined}
           />
         </BentoItem>
       ))}
@@ -27,4 +27,4 @@ export function DashboardWidgets({ data }: DashboardWidgetsProps) {
   );
 }
 
-export type { DashboardData, WidgetConfig, WidgetData, WidgetLayout } from "./types";
+export type { DashboardData, WidgetConfig, WidgetInitData, WidgetLayout } from "./types";

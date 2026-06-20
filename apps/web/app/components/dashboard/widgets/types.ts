@@ -1,76 +1,44 @@
-// Widget system types — aligned with backend JSON contract
-// Backend controls: id, metricKey, icon, layout, data
-// Frontend controls: rendering based on data shape
+// Widget system types — re-exports from shared package for backward compat.
+// Prefer importing from "@ecoctrl/shared" for new code.
 
-export interface WidgetLayout {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
+export type {
+  WidgetConfig,
+  WidgetDataJson,
+  WidgetDataType,
+  WidgetInitData,
+  DashboardData,
+  StatInitData,
+  DonutInitData,
+  TrendInitData,
+  AlertInitData,
+  DeviceInitData,
+  SuggestionInitData,
+  WeatherInitData,
+  ChartPoint,
+  ForecastItem,
+  WidgetLayout,
+} from "@ecoctrl/shared";
 
-// ─── Data shapes (discriminated by content, not a type field) ─────────────────
+// ─── Legacy aliases (used by existing widget components) ──────────────────────
 
-export interface StatData {
-  value: string;
-  unit: string;
-  delta?: string;
-  deltaVariant: "up-good" | "up-bad" | "down-good" | "down-bad" | "neutral";
-  sparkline?: number[];
-  sparklineColor?: string;
-  footerKey?: string;
-  progressValue?: number;
-}
+import type {
+  WidgetInitData as _WidgetInitData,
+  StatInitData as _StatInitData,
+  DonutInitData as _DonutInitData,
+  TrendInitData as _TrendInitData,
+  AlertInitData as _AlertInitData,
+  DeviceInitData as _DeviceInitData,
+  SuggestionInitData as _SuggestionInitData,
+  WeatherInitData as _WeatherInitData,
+} from "@ecoctrl/shared";
 
-export interface ChartPoint {
-  label: string;
-  value: number;
-}
-
-export interface ChartData {
-  chartType?: "area" | "line" | "bar" | "donut";
-  total?: number;
-  points?: ChartPoint[];
-  items?: { label: string; value: number; color?: string }[];
-}
-
-export interface ListData {
-  items: Record<string, unknown>[];
-}
-
-export interface ForecastItem {
-  day: string;
-  high: number;
-  low: number;
-  condition: string;
-}
-
-export interface WeatherData {
-  location: string;
-  currentTemp: number;
-  unit: string;
-  condition: "sunny" | "cloudy" | "rainy" | "snowy" | "stormy";
-  forecast: ForecastItem[];
-}
-
-export type WidgetData = StatData | ChartData | ListData | WeatherData;
-
-// ─── Widget Config (from backend) ─────────────────────────────────────────────
-
-export interface WidgetConfig {
-  id: string;
-  metricKey: string;
-  icon: string;
-  layoutX: number;
-  layoutY: number;
-  layoutW: number;
-  layoutH: number;
-  hidden: boolean;
-  data: WidgetData;
-}
-
-// ─── Dashboard Data ───────────────────────────────────────────────────────────
-
-export interface DashboardData {
-  widgets: WidgetConfig[];
-}
+/** @deprecated Use StatInitData */
+export type StatData = _StatInitData;
+/** @deprecated Use DonutInitData */
+export type ChartData = _DonutInitData;
+/** @deprecated Use AlertInitData | DeviceInitData | SuggestionInitData */
+export type ListData = { items: Record<string, unknown>[] };
+/** @deprecated Use WeatherInitData */
+export type WeatherData = _WeatherInitData;
+/** @deprecated Use WidgetInitData */
+export type WidgetData = _WidgetInitData;

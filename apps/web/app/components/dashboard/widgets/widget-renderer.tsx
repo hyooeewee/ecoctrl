@@ -1,59 +1,71 @@
-import type { WidgetConfig, WidgetData, ChartData, ListData } from "./types";
+import type { WidgetConfig, WidgetInitData } from "./types";
 import { StatCard } from "./_stat-card";
-import { ChartWidget } from "./chart-widget";
+import { EnergyBreakdownChart, EnergyTrendChart } from "./energy-charts";
+import { DynamicIcon } from "./dynamic-icon";
 import { ListWidget } from "./list-widget";
 import { WeatherWidget } from "./weather-widget";
 
 interface WidgetRendererProps {
   widget: WidgetConfig;
-  liveData?: WidgetData;
+  liveData?: WidgetInitData;
 }
 
-function isChartData(d: WidgetData): boolean {
-  const raw = d as Record<string, unknown>;
-
-  if (Array.isArray(raw.points) && raw.points.length > 0) return true;
-
-  if (Array.isArray(raw.items) && raw.items.length > 0) {
-    const first = raw.items[0] as Record<string, unknown> | undefined;
-    if (!first || typeof first !== "object") return false;
-
-    // Chart items are { label, value [, color] }
-    // Distinguish from list items which carry title/status/text etc.
-    return (
-      typeof first.label === "string" &&
-      typeof first.value === "number" &&
-      !("title" in first) &&
-      !("status" in first) &&
-      !("text" in first)
-    );
-  }
-
-  return false;
-}
-
+/**
+ * Routes widget rendering based on dataType (from DB) + config fields.
+ * Data = liveData (SSE) ?? initData (REST fallback).
+ */
 export function WidgetRenderer({ widget, liveData }: WidgetRendererProps) {
-  const d = liveData ?? widget.data;
+  const { dataType, metricKey, dataJson } = widget;
+  const { initData, ...config } = dataJson;
 
-  if ("location" in d && "currentTemp" in d) {
-    return <WeatherWidget widget={widget} data={d} />;
+  // SSE data覆盖初始数据（shallow merge，结构一致）
+  const data = liveData
+    ? { ...(initData as Record<string, unknown>), ...(liveData as Record<string, unknown>) }
+    : initData;
+
+  switch (dataType) {
+    case "stat":
+      return (
+        <StatCard
+          data={data}
+          unit={config.unit as string}
+          sparklineColor={config.sparklineColor as string}
+          footerKey={config.footerKey as string}
+          trendDirection={config.trendDirection as "good" | "bad"}
+        />
+      );
+
+    case "chart": {
+      const chartData = data as Record<string, unknown>;
+      if (config.chartType === "donut") {
+        return (
+          <EnergyBreakdownChart
+            data={
+              (chartData.items as Array<{ label: string; value: number; color?: string }>) ?? []
+            }
+            total={chartData.total as number}
+          />
+        );
+      }
+      return (
+        <EnergyTrendChart
+          data={(chartData.points as Array<{ label: string; value: number }>) ?? []}
+          chartType={config.chartType as "area" | "line" | "bar"}
+        />
+      );
+    }
+
+    case "list":
+      return <ListWidget widget={widget} data={data as { items: Record<string, unknown>[] }} />;
+
+    case "weather":
+      return <WeatherWidget widget={widget} data={data} />;
+
+    default:
+      return (
+        <div className="flex h-full flex-col items-center justify-center text-xs text-muted-foreground">
+          Unsupported widget
+        </div>
+      );
   }
-
-  if ("value" in d && typeof d.value === "string") {
-    return <StatCard widget={widget} data={d} />;
-  }
-
-  if (isChartData(d)) {
-    return <ChartWidget widget={widget} data={d as ChartData} />;
-  }
-
-  if ("items" in d && Array.isArray(d.items)) {
-    return <ListWidget widget={widget} data={d as ListData} />;
-  }
-
-  return (
-    <div className="flex h-full flex-col items-center justify-center text-xs text-muted-foreground">
-      Unsupported widget
-    </div>
-  );
 }

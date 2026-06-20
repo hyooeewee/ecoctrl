@@ -183,10 +183,14 @@ export async function findDashboardData(userId?: string): Promise<{
   const weatherData = hasWeather ? await fetchWeather() : null;
 
   for (const r of rows) {
-    let data = r.dataJson as WidgetConfig["data"];
+    let dataJson = r.dataJson as WidgetConfig["dataJson"];
 
+    // Weather data from API overrides seed data
     if (r.dataType === "weather" && weatherData) {
-      data = weatherData;
+      dataJson = {
+        ...dataJson,
+        initData: weatherData,
+      } as WidgetConfig["dataJson"];
     }
 
     const override = userOverrides.get(r.id);
@@ -195,7 +199,8 @@ export async function findDashboardData(userId?: string): Promise<{
       id: r.id,
       metricKey: r.metricKey,
       icon: r.icon,
-      data,
+      dataType: r.dataType as WidgetConfig["dataType"],
+      dataJson,
       hidden: override?.hidden ?? r.hidden,
       layoutX: override?.x ?? r.layoutX,
       layoutY: override?.y ?? r.layoutY,

@@ -71,6 +71,6 @@ export async function patchUserSettings(
 export type {
   DashboardData,
   WidgetConfig,
-  WidgetData,
+  WidgetInitData,
   WidgetLayout,
 } from "~/components/dashboard/widgets/types";

@@ -56,8 +56,8 @@ interface ChartPoint {
 interface EnergyTrendChartProps {
   className?: string;
   data: ChartPoint[];
-  title: string;
-  icon: React.ReactNode;
+  title?: string;
+  icon?: React.ReactNode;
   chartType?: "area" | "line" | "bar";
 }
 
@@ -217,8 +217,8 @@ interface EnergyBreakdownChartProps {
   className?: string;
   data: BreakdownItem[];
   total?: number;
-  title: string;
-  icon: React.ReactNode;
+  title?: string;
+  icon?: React.ReactNode;
 }
 
 export function EnergyBreakdownChart({

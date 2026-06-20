@@ -62,24 +62,33 @@ export default function Home() {
 
   // ─── SSE: real-time widget data ───────────────────────────────────────────────
 
+  const initFromDashboard = useWidgetDataStore((s) => s.initFromDashboard);
   const setWidgetData = useWidgetDataStore((s) => s.setWidgetData);
-  const removeWidgetData = useWidgetDataStore((s) => s.removeWidgetData);
+  const clearWidgetData = useWidgetDataStore((s) => s.clearWidgetData);
+
+  // Initialize store from REST response
+  useEffect(() => {
+    if (loaderData?.dashboard?.widgets) {
+      initFromDashboard(loaderData.dashboard.widgets);
+    }
+  }, [loaderData, initFromDashboard]);
 
   const onSseMessage = useCallback(
     (msg: SSEMessage) => {
       console.log("[SSE] received:", msg.type, msg.payload);
       if (msg.type === "widget_update") {
-        const { metricKey, data } = msg.payload as {
+        const { metricKey, timestamp, data } = msg.payload as {
           metricKey: string;
+          timestamp: number;
           data: Record<string, unknown>;
         };
-        setWidgetData(metricKey, data);
+        setWidgetData(metricKey, data, timestamp);
       } else if (msg.type === "widget_delete") {
         const { metricKey } = msg.payload as { metricKey: string };
-        removeWidgetData(metricKey);
+        clearWidgetData(metricKey);
       }
     },
-    [setWidgetData, removeWidgetData],
+    [setWidgetData, clearWidgetData],
   );
 
   const { isConnected, isReconnecting } = useSse({

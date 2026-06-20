@@ -354,6 +354,7 @@ async function seedDashboardWidgets() {
   }
 
   const widgets = [
+    // ── Stat widgets ─────────────────────────────────────────────────────────
     {
       metricKey: "energy-total",
       icon: "Wind",
@@ -364,13 +365,15 @@ async function seedDashboardWidgets() {
       hidden: true,
       dataType: "stat" as const,
       dataJson: {
-        value: "8,456",
         unit: "kWh",
-        delta: "+12%",
-        deltaVariant: "up-bad",
-        sparkline: [280, 310, 295, 340, 380, 420, 395, 440, 410, 460, 480, 500],
         sparklineColor: "var(--color-chart-1)",
         footerKey: "totalEnergyFooter",
+        trendDirection: "bad",
+        initData: {
+          value: "8,456",
+          trend: "+12%",
+          sparkline: [280, 310, 295, 340, 380, 420, 395, 440, 410, 460, 480, 500],
+        },
       },
       sortOrder: 0,
     },
@@ -384,13 +387,15 @@ async function seedDashboardWidgets() {
       hidden: false,
       dataType: "stat" as const,
       dataJson: {
-        value: "5,240",
         unit: "costUnit",
-        delta: "+8%",
-        deltaVariant: "up-bad",
-        sparkline: [180, 210, 195, 240, 280, 310, 290, 330, 350, 370, 385, 400],
         sparklineColor: "var(--color-chart-4)",
         footerKey: "costFooter",
+        trendDirection: "bad",
+        initData: {
+          value: "5,240",
+          trend: "+8%",
+          sparkline: [180, 210, 195, 240, 280, 310, 290, 330, 350, 370, 385, 400],
+        },
       },
       sortOrder: 1,
     },
@@ -404,13 +409,15 @@ async function seedDashboardWidgets() {
       hidden: false,
       dataType: "stat" as const,
       dataJson: {
-        value: "2,340",
         unit: "kg CO₂",
-        delta: "+2%",
-        deltaVariant: "up-bad",
-        sparkline: [280, 320, 290, 350, 310, 270, 340],
         sparklineColor: "var(--color-chart-2)",
         footerKey: "carbonFooter",
+        trendDirection: "bad",
+        initData: {
+          value: "2,340",
+          trend: "+2%",
+          sparkline: [280, 320, 290, 350, 310, 270, 340],
+        },
       },
       sortOrder: 2,
     },
@@ -424,13 +431,15 @@ async function seedDashboardWidgets() {
       hidden: false,
       dataType: "stat" as const,
       dataJson: {
-        value: "98",
         unit: "kWh/m²",
-        delta: "−7%",
-        deltaVariant: "down-good",
-        sparkline: [120, 115, 112, 108, 105, 103, 100, 99, 97, 96, 97, 98],
         sparklineColor: "var(--color-chart-1)",
         footerKey: "intensityFooter",
+        trendDirection: "bad",
+        initData: {
+          value: "98",
+          trend: "−7%",
+          sparkline: [120, 115, 112, 108, 105, 103, 100, 99, 97, 96, 97, 98],
+        },
       },
       sortOrder: 3,
     },
@@ -444,13 +453,14 @@ async function seedDashboardWidgets() {
       hidden: false,
       dataType: "stat" as const,
       dataJson: {
-        value: "60",
         unit: "%",
-        delta: "loadNormal",
-        deltaVariant: "up-good",
-        sparkline: [55, 58, 60, 63, 61, 60, 58, 59, 60, 62, 61, 60],
         sparklineColor: "var(--color-chart-2)",
-        progressValue: 60,
+        trendDirection: "good",
+        initData: {
+          value: "60",
+          trend: "loadNormal",
+          sparkline: [55, 58, 60, 63, 61, 60, 58, 59, 60, 62, 61, 60],
+        },
       },
       sortOrder: 4,
     },
@@ -464,16 +474,18 @@ async function seedDashboardWidgets() {
       hidden: true,
       dataType: "stat" as const,
       dataJson: {
-        value: "85",
         unit: "%",
-        delta: "renewableTarget",
-        deltaVariant: "neutral",
-        sparkline: [78, 80, 81, 80, 82, 84, 83, 85, 84, 86, 85, 85],
         sparklineColor: "var(--color-cyber-green)",
-        progressValue: 85,
+        trendDirection: "good",
+        initData: {
+          value: "85",
+          trend: "renewableTarget",
+          sparkline: [78, 80, 81, 80, 82, 84, 83, 85, 84, 86, 85, 85],
+        },
       },
       sortOrder: 5,
     },
+    // ── Weather widget ───────────────────────────────────────────────────────
     {
       metricKey: "weather",
       icon: "Cloud",
@@ -483,9 +495,23 @@ async function seedDashboardWidgets() {
       layoutH: 2,
       hidden: false,
       dataType: "weather" as const,
-      dataJson: {},
+      dataJson: {
+        initData: {
+          location: "Beijing",
+          currentTemp: 30,
+          unit: "C",
+          condition: "sunny",
+          forecast: [
+            { day: "Mon", high: 33, low: 24, condition: "sunny" },
+            { day: "Tue", high: 34, low: 24, condition: "cloudy" },
+            { day: "Wed", high: 36, low: 26, condition: "sunny" },
+            { day: "Thu", high: 35, low: 27, condition: "sunny" },
+          ],
+        },
+      },
       sortOrder: 6,
     },
+    // ── Chart widgets ────────────────────────────────────────────────────────
     {
       metricKey: "energy-chart",
       icon: "TrendingUp",
@@ -497,15 +523,17 @@ async function seedDashboardWidgets() {
       dataType: "chart" as const,
       dataJson: {
         chartType: "area",
-        points: [
-          { label: "Mon", value: 400 },
-          { label: "Tue", value: 300 },
-          { label: "Wed", value: 500 },
-          { label: "Thu", value: 280 },
-          { label: "Fri", value: 590 },
-          { label: "Sat", value: 320 },
-          { label: "Sun", value: 250 },
-        ],
+        initData: {
+          points: [
+            { label: "Mon", value: 400 },
+            { label: "Tue", value: 300 },
+            { label: "Wed", value: 500 },
+            { label: "Thu", value: 280 },
+            { label: "Fri", value: 590 },
+            { label: "Sat", value: 320 },
+            { label: "Sun", value: 250 },
+          ],
+        },
       },
       sortOrder: 7,
     },
@@ -520,15 +548,24 @@ async function seedDashboardWidgets() {
       dataType: "chart" as const,
       dataJson: {
         chartType: "donut",
-        items: [
-          { label: "hvac", value: 45, color: "var(--color-chart-1)" },
-          { label: "lighting", value: 30, color: "var(--color-chart-3)" },
-          { label: "equipment", value: 15, color: "var(--color-chart-4)" },
-          { label: "other", value: 10, color: "oklch(0.35 0.02 265)" },
-        ],
+        initData: {
+          total: 100149,
+          items: [
+            { label: "照明", value: 5743.3 },
+            { label: "多功能厅照明", value: 665.62 },
+            { label: "应急照明及疏散指示", value: 396.98 },
+            { label: "多功能厅临时用电", value: 4833.6 },
+            { label: "多功能厅音视频", value: 5.54 },
+            { label: "空调", value: 6624.08 },
+            { label: "新风排风", value: 30418.51 },
+            { label: "风冷热泵", value: 414.68 },
+            { label: "电伴热", value: 0 },
+          ],
+        },
       },
       sortOrder: 8,
     },
+    // ── List widgets ─────────────────────────────────────────────────────────
     {
       metricKey: "alerts-list",
       icon: "Bell",
@@ -539,29 +576,31 @@ async function seedDashboardWidgets() {
       hidden: false,
       dataType: "list" as const,
       dataJson: {
-        items: [
-          {
-            icon: "AlertTriangle",
-            title: "能耗异常波动 (超出阈值 20%)",
-            subtitle: "中央空调 A1",
-            severity: "critical",
-            time: "10:15:22",
-          },
-          {
-            icon: "ExclamationCircle",
-            title: "电压不稳定告警",
-            subtitle: "配电柜 B3",
-            severity: "warning",
-            time: "09:45:10",
-          },
-          {
-            icon: "InfoCircle",
-            title: "例行维保提醒",
-            subtitle: "水泵 C1",
-            severity: "info",
-            time: "08:00:00",
-          },
-        ],
+        initData: {
+          items: [
+            {
+              icon: "AlertTriangle",
+              title: "能耗异常波动 (超出阈值 20%)",
+              subtitle: "中央空调 A1",
+              severity: "critical",
+              time: "10:15:22",
+            },
+            {
+              icon: "ExclamationCircle",
+              title: "电压不稳定告警",
+              subtitle: "配电柜 B3",
+              severity: "warning",
+              time: "09:45:10",
+            },
+            {
+              icon: "InfoCircle",
+              title: "例行维保提醒",
+              subtitle: "水泵 C1",
+              severity: "info",
+              time: "08:00:00",
+            },
+          ],
+        },
       },
       sortOrder: 9,
     },
@@ -575,12 +614,14 @@ async function seedDashboardWidgets() {
       hidden: false,
       dataType: "list" as const,
       dataJson: {
-        items: [
-          { icon: "Wind", label: "devices.airConditioning", value: 6, status: "critical" },
-          { icon: "Zap", label: "devices.lighting", value: 30, status: "warn" },
-          { icon: "Elevator", label: "devices.elevators", value: 10, status: "ok" },
-          { icon: "Server", label: "devices.servers", value: 24, status: "ok" },
-        ],
+        initData: {
+          items: [
+            { icon: "Wind", label: "devices.airConditioning", value: 6, status: "critical" },
+            { icon: "Zap", label: "devices.lighting", value: 30, status: "warn" },
+            { icon: "Elevator", label: "devices.elevators", value: 10, status: "ok" },
+            { icon: "Server", label: "devices.servers", value: 24, status: "ok" },
+          ],
+        },
       },
       sortOrder: 10,
     },
@@ -594,19 +635,21 @@ async function seedDashboardWidgets() {
       hidden: false,
       dataType: "list" as const,
       dataJson: {
-        items: [
-          {
-            icon: "Wind",
-            text: "优化暖通夜间计划——降低夜间温控设定值至 18°C",
-            saving: "预计节能 12%",
-          },
-          { icon: "Zap", text: "根据占用传感器调整照明——B2–B4 区域", saving: "预计节能 8%" },
-          {
-            icon: "Server",
-            text: "将非关键服务器任务迁移至低峰期 (02:00–06:00)",
-            saving: "预计节省 5% 费用",
-          },
-        ],
+        initData: {
+          items: [
+            {
+              icon: "Wind",
+              text: "优化暖通夜间计划——降低夜间温控设定值至 18°C",
+              saving: "预计节能 12%",
+            },
+            { icon: "Zap", text: "根据占用传感器调整照明——B2–B4 区域", saving: "预计节能 8%" },
+            {
+              icon: "Server",
+              text: "将非关键服务器任务迁移至低峰期 (02:00–06:00)",
+              saving: "预计节省 5% 费用",
+            },
+          ],
+        },
       },
       sortOrder: 11,
     },
