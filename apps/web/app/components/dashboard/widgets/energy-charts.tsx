@@ -228,14 +228,27 @@ export function EnergyBreakdownChart({
   title,
   icon,
 }: EnergyBreakdownChartProps) {
+  const MAX_LEGEND_ITEMS = 6;
+
   const totalValue = useMemo(
     () => total ?? data.reduce((sum, item) => sum + item.value, 0),
     [total, data],
   );
 
+  // Split data into top items and "其他" (Other) bucket
+  const displayData = useMemo(() => {
+    if (data.length <= MAX_LEGEND_ITEMS) {
+      return data;
+    }
+    const top = data.slice(0, MAX_LEGEND_ITEMS);
+    const rest = data.slice(MAX_LEGEND_ITEMS);
+    const otherValue = rest.reduce((sum, item) => sum + item.value, 0);
+    return [...top, { label: "其他", value: otherValue }];
+  }, [data]);
+
   const chartData = useMemo(
-    () => data.map((item, index) => ({ ...item, key: `item-${index}` })),
-    [data],
+    () => displayData.map((item, index) => ({ ...item, key: `item-${index}` })),
+    [displayData],
   );
 
   const chartConfig = useMemo(() => {
@@ -258,8 +271,8 @@ export function EnergyBreakdownChart({
       </div>
 
       <div className="flex min-h-0 flex-1 items-center gap-3">
-        {/* Donut chart with centered total */}
-        <div className="relative h-full max-h-full aspect-square">
+        {/* Donut chart with centered total — left side */}
+        <div className="relative h-full max-h-full shrink-0 basis-auto aspect-square">
           <ChartContainer config={chartConfig} className="h-full w-full">
             <PieChart>
               <ChartTooltip content={<ChartTooltipContent hideLabel />} />
@@ -291,7 +304,7 @@ export function EnergyBreakdownChart({
         </div>
 
         {/* Vertical legend — stays inside the widget and scrolls if needed */}
-        <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto text-[10px]">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col justify-center overflow-y-auto text-[10px]">
           {chartData.map((item, index) => {
             const color = item.color ?? CATEGORY_COLORS[index % CATEGORY_COLORS.length];
             return (
