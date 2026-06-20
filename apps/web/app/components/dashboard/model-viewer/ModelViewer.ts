@@ -489,34 +489,17 @@ export class ModelViewer implements ModelViewerRef {
   }
 
   /**
-   * Filter meshes by model group IDs and/or mesh name keywords.
-   *
-   * Two-layer matching logic:
-   * - If `modelIds` are specified, only meshes in those model groups pass.
-   * - If `meshKeywords` are specified, only meshes whose name contains a keyword pass.
-   * - If both are specified, both conditions must be met (AND).
-   * - If neither is specified, all meshes match.
+   * Collect meshes from specified model groups.
+   * If no model IDs are specified, returns all meshes.
    */
-  private filterMeshes(modelIds?: string[], meshKeywords?: string[]): AbstractMesh[] {
+  private filterMeshes(modelIds?: string[]): AbstractMesh[] {
     const ids = (modelIds ?? []).map((k) => k.toLowerCase()).filter(Boolean);
-    const keywords = (meshKeywords ?? []).map((k) => k.toLowerCase()).filter(Boolean);
 
     const result: AbstractMesh[] = [];
     for (const group of this.groups) {
       if (!group.rootNode) continue;
-
-      // Layer 1: filter by model group ID
       if (ids.length > 0 && !ids.includes(group.id.toLowerCase())) continue;
-
-      const meshes = group.rootNode.getChildMeshes();
-      for (const mesh of meshes) {
-        // Layer 2: filter by mesh name keywords
-        if (keywords.length > 0) {
-          const nameToCheck = mesh.name.toLowerCase();
-          if (!keywords.some((k) => nameToCheck.includes(k))) continue;
-        }
-        result.push(mesh);
-      }
+      result.push(...group.rootNode.getChildMeshes());
     }
     return result;
   }
@@ -856,10 +839,9 @@ export class ModelViewer implements ModelViewerRef {
       case "visibility": {
         const cfg = action.config as {
           targets?: string[];
-          meshKeywords?: string[];
           action: string;
         };
-        const matchedMeshes = this.filterMeshes(cfg.targets, cfg.meshKeywords);
+        const matchedMeshes = this.filterMeshes(cfg.targets);
 
         for (const mesh of matchedMeshes) {
           let next: boolean;
@@ -889,12 +871,11 @@ export class ModelViewer implements ModelViewerRef {
       case "highlight": {
         const cfg = action.config as {
           targets?: string[];
-          meshKeywords?: string[];
           mode: string;
           color?: { r: number; g: number; b: number; a?: number };
           duration?: number;
         };
-        const matched = this.filterMeshes(cfg.targets, cfg.meshKeywords);
+        const matched = this.filterMeshes(cfg.targets);
 
         // Unfreeze materials before modifying properties
         if (cfg.mode === "glow" || cfg.mode === "color") {
@@ -974,12 +955,11 @@ export class ModelViewer implements ModelViewerRef {
       case "material": {
         const cfg = action.config as {
           targets?: string[];
-          meshKeywords?: string[];
           property: string;
           value: number | boolean;
           duration?: number;
         };
-        const matched = this.filterMeshes(cfg.targets, cfg.meshKeywords);
+        const matched = this.filterMeshes(cfg.targets);
 
         // Unfreeze materials before modifying properties
         this.unfreezeMaterialsForMeshes(matched);
