@@ -549,7 +549,6 @@ export default function LabelConfigForm({
   disabled,
 }: LabelConfigFormProps) {
   const [groupsJsonOpen, setGroupsJsonOpen] = useState(false);
-  const [actionsJsonOpen, setActionsJsonOpen] = useState(false);
 
   const updateMeta = useCallback(
     (field: "name" | "description", value: string) => {
@@ -608,14 +607,6 @@ export default function LabelConfigForm({
           {label.groups.length > 0 && (
             <Badge variant="secondary" className="ml-1 h-3.5 px-1 text-[9px]">
               {label.groups.length}
-            </Badge>
-          )}
-        </TabsTrigger>
-        <TabsTrigger value="actions" className="text-xs h-7 px-2">
-          动作
-          {label.actions.length > 0 && (
-            <Badge variant="secondary" className="ml-1 h-3.5 px-1 text-[9px]">
-              {label.actions.length}
             </Badge>
           )}
         </TabsTrigger>
@@ -800,30 +791,6 @@ export default function LabelConfigForm({
             "id" in item &&
             "name" in item &&
             "pointIds" in item
-          }
-        />
-      </TabsContent>
-
-      {/* ====== 动作 ====== */}
-      <TabsContent value="actions" className="mt-3">
-        <ActionsEditor
-          actions={label.actions}
-          onChange={(actions) => onChange({ ...label, actions })}
-          onShowJson={() => setActionsJsonOpen(true)}
-          disabled={disabled}
-        />
-        <SubObjectJsonEditor
-          data={label.actions}
-          open={actionsJsonOpen}
-          onOpenChange={setActionsJsonOpen}
-          onConfirm={(actions) => onChange({ ...label, actions: actions as LabelAction[] })}
-          title="编辑动作 JSON"
-          validate={(item): item is LabelAction =>
-            typeof item === "object" &&
-            item !== null &&
-            "id" in item &&
-            "type" in item &&
-            "config" in item
           }
         />
       </TabsContent>
