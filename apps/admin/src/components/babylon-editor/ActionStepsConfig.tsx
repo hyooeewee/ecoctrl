@@ -256,7 +256,10 @@ export default function ActionStepsConfig({
 
       {/* JSON Editor Dialog */}
       <Dialog open={jsonOpen} onOpenChange={setJsonOpen}>
-        <DialogContent showCloseButton={false} className="sm:max-w-2xl overflow-hidden p-0">
+        <DialogContent
+          showCloseButton={false}
+          className="sm:max-w-2xl max-h-[85vh] overflow-hidden p-0"
+        >
           <JsonEditor
             value={jsonText}
             onChange={setJsonText}
@@ -264,6 +267,7 @@ export default function ActionStepsConfig({
             onCancel={() => setJsonOpen(false)}
             error={jsonError}
             title="编辑动作 JSON"
+            height="min(50vh, 400px)"
           />
         </DialogContent>
       </Dialog>
