@@ -331,36 +331,55 @@ export default function DashboardModel() {
                   <div className="p-3">
                     {editorMode === "select" && (
                       <div className="mb-4">
-                        <div className="mb-2 flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">
-                            {existingFiles.length} 个文件
-                          </span>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={uploading}
-                          >
-                            <Upload size={14} className="mr-1" />
-                            上传
-                          </Button>
-                          <input
-                            ref={fileInputRef}
-                            type="file"
+                        {existingFiles.length === 0 ? (
+                          /* Empty state: show FileUpload dropzone */
+                          <FileUpload
                             accept=".glb,.gltf,.obj"
                             multiple
-                            className="hidden"
-                            onChange={(e) => {
-                              const files = Array.from(e.target.files ?? []);
-                              if (files.length > 0) uploadFiles(files);
-                              e.target.value = "";
+                            maxFiles={10}
+                            label="点击或拖拽文件到此处"
+                            disabled={uploading}
+                            onUpload={async (files, { onSuccess, onError }) => {
+                              try {
+                                await uploadFiles(files);
+                                files.forEach((f) => onSuccess(f));
+                              } catch (err) {
+                                files.forEach((f) =>
+                                  onError(f, err instanceof Error ? err : new Error("上传失败")),
+                                );
+                              }
                             }}
                           />
-                        </div>
-
-                        <>
-                          {existingFiles.length > 0 && (
-                            <div className="mb-3 space-y-1.5">
+                        ) : (
+                          /* Has files: show header + file list */
+                          <>
+                            <div className="mb-2 flex items-center justify-between">
+                              <span className="text-xs text-muted-foreground">
+                                {existingFiles.length} 个文件
+                              </span>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={uploading}
+                              >
+                                <Upload size={14} className="mr-1" />
+                                上传
+                              </Button>
+                              <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept=".glb,.gltf,.obj"
+                                multiple
+                                className="hidden"
+                                onChange={(e) => {
+                                  const files = Array.from(e.target.files ?? []);
+                                  if (files.length > 0) uploadFiles(files);
+                                  e.target.value = "";
+                                }}
+                              />
+                            </div>
+                            <div className="space-y-1.5">
                               {existingFiles.map((file, index) => {
                                 const fileName =
                                   file.name || file.fileKey.split("/").pop() || "未知";
@@ -400,28 +419,8 @@ export default function DashboardModel() {
                                 );
                               })}
                             </div>
-                          )}
-
-                          {existingFiles.length === 0 && (
-                            <FileUpload
-                              accept=".glb,.gltf,.obj"
-                              multiple
-                              maxFiles={10}
-                              label="点击或拖拽文件到此处"
-                              disabled={uploading}
-                              onUpload={async (files, { onSuccess, onError }) => {
-                                try {
-                                  await uploadFiles(files);
-                                  files.forEach((f) => onSuccess(f));
-                                } catch (err) {
-                                  files.forEach((f) =>
-                                    onError(f, err instanceof Error ? err : new Error("上传失败")),
-                                  );
-                                }
-                              }}
-                            />
-                          )}
-                        </>
+                          </>
+                        )}
                       </div>
                     )}
 
@@ -435,13 +434,8 @@ export default function DashboardModel() {
                           onDelete={deleteLabel}
                           onEdit={(id) => selectLabel(id)}
                           disabled={existingFiles.length === 0}
+                          addTitle={existingFiles.length === 0 ? "请先上传模型" : "添加标签"}
                         />
-
-                        {existingFiles.length === 0 && (
-                          <div className="rounded-md border border-dashed border-border bg-muted/20 px-3 py-3 text-center text-xs text-muted-foreground">
-                            请先上传模型文件，再创建标签
-                          </div>
-                        )}
 
                         {selectedLabel && (
                           <div className="border-t pt-4">
