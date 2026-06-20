@@ -100,7 +100,7 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
   const startLoopRef = useRef<(() => void) | null>(null);
   const stopLoopRef = useRef<(() => void) | null>(null);
 
-  const { showLabels, defaultCameraRadius } = useSettingsStore();
+  const { showLabels, defaultCameraRadius, environmentPreset } = useSettingsStore();
   const t = useLocale();
 
   const labelText: Record<string, string> = {
@@ -228,6 +228,11 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
   useEffect(() => {
     viewerRef.current?.setDefaultCameraRadius(defaultCameraRadius);
   }, [defaultCameraRadius]);
+
+  useEffect(() => {
+    if (!viewerRef.current) return;
+    viewerRef.current.setEnvironmentPreset(environmentPreset);
+  }, [environmentPreset]);
 
   // Execute tag operations when a label is selected, restore when deselected.
   const visibilitySnapshotRef = useRef<VisibilitySnapshot | null>(null);

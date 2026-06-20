@@ -31,6 +31,8 @@ import {
   createScene,
   loadGltf,
   setupSandboxEnvironment,
+  ENVIRONMENTS,
+  type EnvKey,
 } from "@ecoctrl/shared/babylon";
 import type { ModelGroup, LabelAnchor, ModelLoadConfig, ViewerOptions } from "./types";
 
@@ -770,6 +772,28 @@ export class ModelViewer implements ModelViewerRef {
     if (this.fittedCameraRadius === null) {
       this.camera.radius = radius;
     }
+  }
+
+  setEnvironmentPreset(presetKey: string): void {
+    const url = ENVIRONMENTS[presetKey as EnvKey];
+    if (!url) {
+      console.warn(`[ModelViewer] unknown environment preset: ${presetKey}`);
+      return;
+    }
+
+    // Dispose old skybox.
+    this.skybox?.dispose();
+    this.skybox = null;
+
+    // Clean up old environment texture before creating a new one.
+    if (this.scene.environmentTexture) {
+      this.scene.environmentTexture.dispose();
+      this.scene.environmentTexture = null;
+    }
+
+    // Apply new environment.
+    this.skybox = setupSandboxEnvironment(this.scene, { envUrl: url });
+    console.log(`[ModelViewer] switched environment to: ${presetKey}`);
   }
 
   // ========================================

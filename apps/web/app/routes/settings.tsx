@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
 import { Input, Label, Separator, Switch } from "@ecoctrl/ui";
+import { ENVIRONMENTS } from "@ecoctrl/shared/babylon";
 import {
   Dialog,
   DialogContent,
@@ -59,6 +60,7 @@ export default function SettingsPage() {
     rotateSpeed,
     showLabels,
     glowIntensity,
+    environmentPreset,
     dataRefreshInterval,
     navHideDelay,
     defaultCameraRadius,
@@ -75,6 +77,7 @@ export default function SettingsPage() {
     setRotateSpeed,
     setShowLabels,
     setGlowIntensity,
+    setEnvironmentPreset,
     setDataRefreshInterval,
     setNavHideDelay,
     setDefaultCameraRadius,
@@ -455,6 +458,33 @@ export default function SettingsPage() {
                     step={0.05}
                     onValueChange={(v) => setGlowIntensity(Array.isArray(v) ? v[0] : v)}
                   />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm font-medium">{t.settings.environmentPreset}</Label>
+                    <p className="text-muted-foreground text-xs">
+                      {t.settings.environmentPresetDesc}
+                    </p>
+                  </div>
+                  <Select value={environmentPreset} onValueChange={setEnvironmentPreset}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue>
+                        {t.settings.envPresetNames[
+                          environmentPreset as keyof typeof t.settings.envPresetNames
+                        ] ?? environmentPreset}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.keys(ENVIRONMENTS).map((key) => (
+                        <SelectItem key={key} value={key}>
+                          {t.settings.envPresetNames[
+                            key as keyof typeof t.settings.envPresetNames
+                          ] ?? key}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-3">

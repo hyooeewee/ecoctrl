@@ -34,6 +34,7 @@ const SYNCABLE_FIELDS: (keyof SettingsState)[] = [
   "rotateSpeed",
   "showLabels",
   "glowIntensity",
+  "environmentPreset",
   "defaultCameraRadius",
   "defaultRotationY",
   "dataRefreshInterval",
@@ -50,6 +51,7 @@ export interface SettingsState {
   rotateSpeed: number;
   showLabels: boolean;
   glowIntensity: number;
+  environmentPreset: string;
   dataRefreshInterval: number;
   navHideDelay: number;
   defaultCameraRadius: number;
@@ -72,6 +74,7 @@ interface SettingsStore extends SettingsState {
   setRotateSpeed: (value: number) => void;
   setShowLabels: (value: boolean) => void;
   setGlowIntensity: (value: number) => void;
+  setEnvironmentPreset: (value: string) => void;
   setDataRefreshInterval: (value: number) => void;
   setNavHideDelay: (value: number) => void;
   setDefaultCameraRadius: (value: number) => void;
@@ -102,6 +105,7 @@ const defaults: SettingsState = {
   rotateSpeed: 0.5,
   showLabels: true,
   glowIntensity: 0.4,
+  environmentPreset: "studio",
   dataRefreshInterval: 30,
   navHideDelay: 1500,
   defaultCameraRadius: 25,
@@ -193,6 +197,10 @@ export const useSettingsStore = create<SettingsStore>()(
       },
       setGlowIntensity: (value) => {
         set({ glowIntensity: value, hasUnsavedChanges: true, syncStatus: "idle" });
+        scheduleSync(get);
+      },
+      setEnvironmentPreset: (value) => {
+        set({ environmentPreset: value, hasUnsavedChanges: true, syncStatus: "idle" });
         scheduleSync(get);
       },
       setDataRefreshInterval: (value) => {
