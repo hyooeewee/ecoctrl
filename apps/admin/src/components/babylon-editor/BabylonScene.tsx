@@ -154,7 +154,6 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
                 const cfg = action.config as {
                   target: { x: number; y: number; z: number };
                   distance: number;
-                  fov: number;
                   duration: number;
                   easing?: string;
                 };

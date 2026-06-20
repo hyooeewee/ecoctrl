@@ -332,29 +332,16 @@ function CameraConfig({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <div className="grid gap-2">
-          <Label className="text-xs">距离</Label>
-          <Input
-            type="number"
-            step="any"
-            value={(config.distance as number) ?? 5}
-            onChange={(e) => onChange("distance", parseFloat(e.target.value) || 5)}
-            disabled={disabled}
-            className="h-8 text-sm"
-          />
-        </div>
-        <div className="grid gap-2">
-          <Label className="text-xs">FOV</Label>
-          <Input
-            type="number"
-            step="any"
-            value={(config.fov as number) ?? 30}
-            onChange={(e) => onChange("fov", parseFloat(e.target.value) || 30)}
-            disabled={disabled}
-            className="h-8 text-sm"
-          />
-        </div>
+      <div className="grid gap-2">
+        <Label className="text-xs">距离</Label>
+        <Input
+          type="number"
+          step="any"
+          value={(config.distance as number) ?? 5}
+          onChange={(e) => onChange("distance", parseFloat(e.target.value) || 5)}
+          disabled={disabled}
+          className="h-8 text-sm"
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-2">
@@ -1289,7 +1276,6 @@ function getDefaultConfig(type: LabelAction["type"]): Record<string, unknown> {
       return {
         target: { x: 0, y: 0, z: 0 },
         distance: 5,
-        fov: 30,
         duration: 0.8,
         easing: "easeInOut",
       };
