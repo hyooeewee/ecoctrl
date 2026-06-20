@@ -16,6 +16,8 @@ import {
 import { X, ChevronUp, ChevronDown } from "lucide-react";
 import AppButton from "@/components/AppButton";
 import type { LabelAction } from "@ecoctrl/shared";
+import OrientationGizmo, { type ViewPreset } from "./OrientationGizmo";
+import type { BabylonSceneRef } from "./BabylonScene";
 
 // ========================================
 // Types
@@ -25,6 +27,7 @@ interface ActionStepsConfigProps {
   actions: LabelAction[];
   availableLabels?: { id: string; name: string }[];
   availableModels?: { id: string; name: string }[];
+  sceneRef?: React.RefObject<BabylonSceneRef | null>;
   onChange: (actions: LabelAction[]) => void;
   disabled?: boolean;
 }
@@ -37,6 +40,7 @@ export default function ActionStepsConfig({
   actions,
   availableLabels = [],
   availableModels = [],
+  sceneRef,
   onChange,
   disabled,
 }: ActionStepsConfigProps) {
@@ -135,6 +139,7 @@ export default function ActionStepsConfig({
             {action.type === "camera" && (
               <CameraConfig
                 config={action.config}
+                sceneRef={sceneRef}
                 onChange={(k, v) => updateStepConfig(index, k, v)}
                 disabled={disabled}
               />
@@ -272,78 +277,101 @@ const POSTPROCESS_LABEL_TO_VALUE = Object.fromEntries(
 
 function CameraConfig({
   config,
+  sceneRef,
   onChange,
   disabled,
 }: {
   config: Record<string, unknown>;
+  sceneRef?: React.RefObject<BabylonSceneRef | null>;
   onChange: (key: string, value: unknown) => void;
   disabled?: boolean;
 }) {
-  const target = (config.target as { x: number; y: number; z: number }) ?? {
+  const position = (config.position as { x: number; y: number; z: number }) ?? {
+    x: 0,
+    y: 10,
+    z: -10,
+  };
+  const lookAt = (config.lookAt as { x: number; y: number; z: number }) ?? {
     x: 0,
     y: 0,
     z: 0,
   };
 
+  const handlePreset = (preset: ViewPreset) => {
+    onChange("position", preset.position);
+    onChange("lookAt", preset.lookAt);
+    // Animate the preview camera
+    sceneRef.current?.animateToView(preset.position, preset.lookAt);
+  };
+
+  const handleCapture = () => {
+    const view = sceneRef.current?.captureCameraView();
+    if (view) {
+      onChange("position", view.position);
+      onChange("lookAt", view.lookAt);
+    }
+  };
+
   return (
     <>
-      <div className="grid gap-2">
-        <Label className="text-xs">目标位置</Label>
-        <div className="grid grid-cols-3 gap-2">
-          <div>
-            <Label className="text-[10px] text-muted-foreground mb-1 block">X</Label>
-            <Input
-              type="number"
-              step="any"
-              value={target.x}
-              onChange={(e) =>
-                onChange("target", { ...target, x: parseFloat(e.target.value) || 0 })
-              }
-              disabled={disabled}
-              className="h-8 text-sm"
-            />
+      <div className="flex gap-3">
+        {/* Orientation gizmo */}
+        <div className="flex-shrink-0">
+          <OrientationGizmo onPresetSelect={handlePreset} onCapture={handleCapture} />
+        </div>
+
+        <div className="flex-1 grid gap-2">
+          {/* Position */}
+          <div className="grid gap-1">
+            <Label className="text-[10px] text-muted-foreground">摄像机位置</Label>
+            <div className="grid grid-cols-3 gap-1">
+              {(["x", "y", "z"] as const).map((axis) => (
+                <div key={axis}>
+                  <Label className="text-[9px] text-muted-foreground mb-0.5 block uppercase">
+                    {axis}
+                  </Label>
+                  <Input
+                    type="number"
+                    step="any"
+                    value={position[axis]}
+                    onChange={(e) =>
+                      onChange("position", { ...position, [axis]: parseFloat(e.target.value) || 0 })
+                    }
+                    disabled={disabled}
+                    className="h-7 text-xs px-1.5"
+                  />
+                </div>
+              ))}
+            </div>
           </div>
-          <div>
-            <Label className="text-[10px] text-muted-foreground mb-1 block">Y</Label>
-            <Input
-              type="number"
-              step="any"
-              value={target.y}
-              onChange={(e) =>
-                onChange("target", { ...target, y: parseFloat(e.target.value) || 0 })
-              }
-              disabled={disabled}
-              className="h-8 text-sm"
-            />
-          </div>
-          <div>
-            <Label className="text-[10px] text-muted-foreground mb-1 block">Z</Label>
-            <Input
-              type="number"
-              step="any"
-              value={target.z}
-              onChange={(e) =>
-                onChange("target", { ...target, z: parseFloat(e.target.value) || 0 })
-              }
-              disabled={disabled}
-              className="h-8 text-sm"
-            />
+
+          {/* LookAt */}
+          <div className="grid gap-1">
+            <Label className="text-[10px] text-muted-foreground">看向点</Label>
+            <div className="grid grid-cols-3 gap-1">
+              {(["x", "y", "z"] as const).map((axis) => (
+                <div key={axis}>
+                  <Label className="text-[9px] text-muted-foreground mb-0.5 block uppercase">
+                    {axis}
+                  </Label>
+                  <Input
+                    type="number"
+                    step="any"
+                    value={lookAt[axis]}
+                    onChange={(e) =>
+                      onChange("lookAt", { ...lookAt, [axis]: parseFloat(e.target.value) || 0 })
+                    }
+                    disabled={disabled}
+                    className="h-7 text-xs px-1.5"
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="grid gap-2">
-        <Label className="text-xs">距离</Label>
-        <Input
-          type="number"
-          step="any"
-          value={(config.distance as number) ?? 5}
-          onChange={(e) => onChange("distance", parseFloat(e.target.value) || 5)}
-          disabled={disabled}
-          className="h-8 text-sm"
-        />
-      </div>
-
+      {/* Duration + Easing */}
       <div className="grid grid-cols-2 gap-2">
         <div className="grid gap-2">
           <Label className="text-xs">时长 (秒)</Label>
@@ -1274,8 +1302,8 @@ function getDefaultConfig(type: LabelAction["type"]): Record<string, unknown> {
   switch (type) {
     case "camera":
       return {
-        target: { x: 0, y: 0, z: 0 },
-        distance: 5,
+        position: { x: 0, y: 10, z: -10 },
+        lookAt: { x: 0, y: 0, z: 0 },
         duration: 0.8,
         easing: "easeInOut",
       };

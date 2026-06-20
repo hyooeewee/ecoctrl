@@ -743,29 +743,49 @@ export class ModelViewer implements ModelViewerRef {
     switch (action.type) {
       case "camera": {
         const cfg = action.config as {
-          target: { x: number; y: number; z: number };
-          distance: number;
-          fov?: number;
+          position: { x: number; y: number; z: number };
+          lookAt: { x: number; y: number; z: number };
           duration?: number;
           easing?: string;
         };
-        const target = new Vector3(cfg.target.x, cfg.target.y, cfg.target.z);
+        const pos = new Vector3(cfg.position.x, cfg.position.y, cfg.position.z);
+        const lookAt = new Vector3(cfg.lookAt.x, cfg.lookAt.y, cfg.lookAt.z);
         const duration = cfg.duration ?? 0;
 
+        // Convert position + lookAt → ArcRotateCamera params
+        const direction = lookAt.subtract(pos);
+        const radius = direction.length();
+        const targetAlpha = Math.atan2(direction.x, direction.z);
+        const horizontalDist = Math.sqrt(direction.x * direction.x + direction.z * direction.z);
+        const targetBeta = Math.atan2(horizontalDist, direction.y);
+        // Clamp beta to avoid gimbal lock at poles
+        const clampedBeta = Math.max(0.1, Math.min(Math.PI - 0.1, targetBeta));
+
         if (duration > 0) {
-          // Animated camera transition
           const frameCount = Math.max(1, Math.round(duration * 60));
 
-          const targetAnim = new Animation(
-            "cameraTargetAnim",
-            "target",
+          const alphaAnim = new Animation(
+            "cameraAlphaAnim",
+            "alpha",
             60,
-            Animation.ANIMATIONTYPE_VECTOR3,
+            Animation.ANIMATIONTYPE_FLOAT,
             Animation.ANIMATIONLOOPMODE_CONSTANT,
           );
-          targetAnim.setKeys([
-            { frame: 0, value: this.camera.target.clone() },
-            { frame: frameCount, value: target },
+          alphaAnim.setKeys([
+            { frame: 0, value: this.camera.alpha },
+            { frame: frameCount, value: targetAlpha },
+          ]);
+
+          const betaAnim = new Animation(
+            "cameraBetaAnim",
+            "beta",
+            60,
+            Animation.ANIMATIONTYPE_FLOAT,
+            Animation.ANIMATIONLOOPMODE_CONSTANT,
+          );
+          betaAnim.setKeys([
+            { frame: 0, value: this.camera.beta },
+            { frame: frameCount, value: clampedBeta },
           ]);
 
           const radiusAnim = new Animation(
@@ -777,10 +797,22 @@ export class ModelViewer implements ModelViewerRef {
           );
           radiusAnim.setKeys([
             { frame: 0, value: this.camera.radius },
-            { frame: frameCount, value: cfg.distance },
+            { frame: frameCount, value: radius },
           ]);
 
-          // Apply easing if specified
+          const targetAnim = new Animation(
+            "cameraTargetAnim",
+            "target",
+            60,
+            Animation.ANIMATIONTYPE_VECTOR3,
+            Animation.ANIMATIONLOOPMODE_CONSTANT,
+          );
+          targetAnim.setKeys([
+            { frame: 0, value: this.camera.target.clone() },
+            { frame: frameCount, value: lookAt },
+          ]);
+
+          // Apply easing
           if (cfg.easing && cfg.easing !== "linear") {
             const easingFn = new QuadraticEase();
             switch (cfg.easing) {
@@ -795,13 +827,15 @@ export class ModelViewer implements ModelViewerRef {
                 easingFn.setEasingMode(EasingFunction.EASINGMODE_EASEINOUT);
                 break;
             }
-            targetAnim.setEasingFunction(easingFn);
+            alphaAnim.setEasingFunction(easingFn);
+            betaAnim.setEasingFunction(easingFn);
             radiusAnim.setEasingFunction(easingFn);
+            targetAnim.setEasingFunction(easingFn);
           }
 
           this.scene.beginDirectAnimation(
             this.camera,
-            [targetAnim, radiusAnim],
+            [alphaAnim, betaAnim, radiusAnim, targetAnim],
             0,
             frameCount,
             false,
@@ -817,14 +851,11 @@ export class ModelViewer implements ModelViewerRef {
             duration * 1000 + 100,
           );
         } else {
-          // Instant snap (existing behavior)
-          const direction = target.subtract(this.camera.target);
-          const targetAlpha = Math.atan2(direction.x, direction.z);
-          const horizontalDist = Math.sqrt(direction.x * direction.x + direction.z * direction.z);
-          const targetBeta = Math.atan2(direction.y, horizontalDist) + Math.PI / 2;
+          // Instant snap
           this.camera.alpha = targetAlpha;
-          this.camera.beta = Math.max(0.1, Math.min(Math.PI / 2.2, targetBeta));
-          this.camera.radius = cfg.distance;
+          this.camera.beta = clampedBeta;
+          this.camera.radius = radius;
+          this.camera.setTarget(lookAt);
         }
         break;
       }

@@ -22,8 +22,8 @@ export const CameraOperationSchema = z.object({
   type: z.literal("camera"),
   targetModelFileId: z.string().optional(),
   config: z.object({
-    target: z.object({ x: z.number(), y: z.number(), z: z.number() }),
-    distance: z.number(),
+    position: z.object({ x: z.number(), y: z.number(), z: z.number() }),
+    lookAt: z.object({ x: z.number(), y: z.number(), z: z.number() }),
     duration: z.number(),
     easing: z.string().optional(),
   }),

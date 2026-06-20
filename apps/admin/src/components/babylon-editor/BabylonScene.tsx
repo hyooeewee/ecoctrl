@@ -56,6 +56,14 @@ export interface BabylonSceneRef {
   zoomOut: () => void;
   resetView: () => void;
   executeOperations: (actions: LabelAction[], signal?: AbortSignal) => Promise<void>;
+  captureCameraView: () => {
+    position: { x: number; y: number; z: number };
+    lookAt: { x: number; y: number; z: number };
+  };
+  animateToView: (
+    position: { x: number; y: number; z: number },
+    lookAt: { x: number; y: number; z: number },
+  ) => void;
 }
 
 // ========================================
@@ -135,6 +143,80 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
           axesRef.current,
         );
       },
+      captureCameraView() {
+        const camera = cameraRef.current;
+        if (!camera) return { position: { x: 0, y: 10, z: -10 }, lookAt: { x: 0, y: 0, z: 0 } };
+        // ArcRotateCamera position = target + spherical offset
+        const target = camera.target;
+        const pos = camera.position;
+        return {
+          position: { x: +pos.x.toFixed(2), y: +pos.y.toFixed(2), z: +pos.z.toFixed(2) },
+          lookAt: { x: +target.x.toFixed(2), y: +target.y.toFixed(2), z: +target.z.toFixed(2) },
+        };
+      },
+      animateToView(position, lookAt) {
+        const camera = cameraRef.current;
+        const scene = sceneRef.current;
+        if (!camera || !scene) return;
+        const pos = new Vector3(position.x, position.y, position.z);
+        const target = new Vector3(lookAt.x, lookAt.y, lookAt.z);
+        const dir = target.subtract(pos);
+        const radius = dir.length();
+        const alpha = Math.atan2(dir.x, dir.z);
+        const hDist = Math.sqrt(dir.x * dir.x + dir.z * dir.z);
+        const beta = Math.max(0.1, Math.min(Math.PI - 0.1, Math.atan2(hDist, dir.y)));
+        const frameCount = 30;
+        const anims: Animation[] = [];
+        const alphaA = new Animation(
+          "a",
+          "alpha",
+          60,
+          Animation.ANIMATIONTYPE_FLOAT,
+          Animation.ANIMATIONLOOPMODE_CONSTANT,
+        );
+        alphaA.setKeys([
+          { frame: 0, value: camera.alpha },
+          { frame: frameCount, value: alpha },
+        ]);
+        anims.push(alphaA);
+        const betaA = new Animation(
+          "b",
+          "beta",
+          60,
+          Animation.ANIMATIONTYPE_FLOAT,
+          Animation.ANIMATIONLOOPMODE_CONSTANT,
+        );
+        betaA.setKeys([
+          { frame: 0, value: camera.beta },
+          { frame: frameCount, value: beta },
+        ]);
+        anims.push(betaA);
+        const radiusA = new Animation(
+          "r",
+          "radius",
+          60,
+          Animation.ANIMATIONTYPE_FLOAT,
+          Animation.ANIMATIONLOOPMODE_CONSTANT,
+        );
+        radiusA.setKeys([
+          { frame: 0, value: camera.radius },
+          { frame: frameCount, value: radius },
+        ]);
+        anims.push(radiusA);
+        const targetA = new Animation(
+          "t",
+          "target",
+          60,
+          Animation.ANIMATIONTYPE_VECTOR3,
+          Animation.ANIMATIONLOOPMODE_CONSTANT,
+        );
+        targetA.setKeys([
+          { frame: 0, value: camera.target.clone() },
+          { frame: frameCount, value: target },
+        ]);
+        anims.push(targetA);
+        scene.beginDirectAnimation(camera, anims, 0, frameCount, false, 1);
+      },
       async executeOperations(actions: LabelAction[], signal?: AbortSignal) {
         const camera = cameraRef.current;
         const scene = sceneRef.current;
@@ -152,28 +234,49 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
             switch (action.type) {
               case "camera": {
                 const cfg = action.config as {
-                  target: { x: number; y: number; z: number };
-                  distance: number;
+                  position: { x: number; y: number; z: number };
+                  lookAt: { x: number; y: number; z: number };
                   duration: number;
                   easing?: string;
                 };
-                const target = new Vector3(cfg.target.x, cfg.target.y, cfg.target.z);
+                const pos = new Vector3(cfg.position.x, cfg.position.y, cfg.position.z);
+                const lookAt = new Vector3(cfg.lookAt.x, cfg.lookAt.y, cfg.lookAt.z);
                 const duration = cfg.duration ?? 0.8;
                 const frameCount = Math.max(1, Math.round(duration * 60));
 
-                // Animate target and radius using Babylon Animation.
-                const targetAnim = new Animation(
-                  "cameraTargetAnim",
-                  "target",
+                // Convert position + lookAt → ArcRotateCamera params
+                const direction = lookAt.subtract(pos);
+                const radius = direction.length();
+                const targetAlpha = Math.atan2(direction.x, direction.z);
+                const hDist = Math.sqrt(direction.x * direction.x + direction.z * direction.z);
+                const targetBeta = Math.max(
+                  0.1,
+                  Math.min(Math.PI - 0.1, Math.atan2(hDist, direction.y)),
+                );
+
+                const alphaAnim = new Animation(
+                  "cameraAlphaAnim",
+                  "alpha",
                   60,
-                  Animation.ANIMATIONTYPE_VECTOR3,
+                  Animation.ANIMATIONTYPE_FLOAT,
                   Animation.ANIMATIONLOOPMODE_CONSTANT,
                 );
-                const targetKeys = [
-                  { frame: 0, value: camera.target.clone() },
-                  { frame: frameCount, value: target },
-                ];
-                targetAnim.setKeys(targetKeys);
+                alphaAnim.setKeys([
+                  { frame: 0, value: camera.alpha },
+                  { frame: frameCount, value: targetAlpha },
+                ]);
+
+                const betaAnim = new Animation(
+                  "cameraBetaAnim",
+                  "beta",
+                  60,
+                  Animation.ANIMATIONTYPE_FLOAT,
+                  Animation.ANIMATIONLOOPMODE_CONSTANT,
+                );
+                betaAnim.setKeys([
+                  { frame: 0, value: camera.beta },
+                  { frame: frameCount, value: targetBeta },
+                ]);
 
                 const radiusAnim = new Animation(
                   "cameraRadiusAnim",
@@ -182,15 +285,26 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
                   Animation.ANIMATIONTYPE_FLOAT,
                   Animation.ANIMATIONLOOPMODE_CONSTANT,
                 );
-                const radiusKeys = [
+                radiusAnim.setKeys([
                   { frame: 0, value: camera.radius },
-                  { frame: frameCount, value: cfg.distance ?? 30 },
-                ];
-                radiusAnim.setKeys(radiusKeys);
+                  { frame: frameCount, value: radius },
+                ]);
+
+                const targetAnim = new Animation(
+                  "cameraTargetAnim",
+                  "target",
+                  60,
+                  Animation.ANIMATIONTYPE_VECTOR3,
+                  Animation.ANIMATIONLOOPMODE_CONSTANT,
+                );
+                targetAnim.setKeys([
+                  { frame: 0, value: camera.target.clone() },
+                  { frame: frameCount, value: lookAt },
+                ]);
 
                 scene.beginDirectAnimation(
                   camera,
-                  [targetAnim, radiusAnim],
+                  [alphaAnim, betaAnim, radiusAnim, targetAnim],
                   0,
                   frameCount,
                   false,

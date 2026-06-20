@@ -541,6 +541,7 @@ export default function DashboardModel() {
                                 id: f.id,
                                 name: f.name ?? f.id,
                               }))}
+                              sceneRef={sceneRef}
                               onChange={updateLabelActions}
                             />
                           </>
