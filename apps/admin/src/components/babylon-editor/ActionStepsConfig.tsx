@@ -24,7 +24,7 @@ import type { LabelAction } from "@ecoctrl/shared";
 interface ActionStepsConfigProps {
   actions: LabelAction[];
   availableLabels?: { id: string; name: string }[];
-  availableMeshes?: string[];
+  availableModels?: { id: string; name: string }[];
   onChange: (actions: LabelAction[]) => void;
   disabled?: boolean;
 }
@@ -36,7 +36,7 @@ interface ActionStepsConfigProps {
 export default function ActionStepsConfig({
   actions,
   availableLabels = [],
-  availableMeshes = [],
+  availableModels = [],
   onChange,
   disabled,
 }: ActionStepsConfigProps) {
@@ -150,7 +150,7 @@ export default function ActionStepsConfig({
             {action.type === "visibility" && (
               <VisibilityConfig
                 config={action.config}
-                availableMeshes={availableMeshes}
+                availableModels={availableModels}
                 onChange={(k, v) => updateStepConfig(index, k, v)}
                 disabled={disabled}
               />
@@ -165,7 +165,7 @@ export default function ActionStepsConfig({
             {action.type === "highlight" && (
               <HighlightConfig
                 config={action.config}
-                availableMeshes={availableMeshes}
+                availableModels={availableModels}
                 onChange={(k, v) => updateStepConfig(index, k, v)}
                 disabled={disabled}
               />
@@ -173,7 +173,7 @@ export default function ActionStepsConfig({
             {action.type === "explode" && (
               <ExplodeConfig
                 config={action.config}
-                availableMeshes={availableMeshes}
+                availableModels={availableModels}
                 onChange={(k, v) => updateStepConfig(index, k, v)}
                 disabled={disabled}
               />
@@ -181,7 +181,7 @@ export default function ActionStepsConfig({
             {action.type === "material" && (
               <MaterialConfig
                 config={action.config}
-                availableMeshes={availableMeshes}
+                availableModels={availableModels}
                 onChange={(k, v) => updateStepConfig(index, k, v)}
                 disabled={disabled}
               />
@@ -551,12 +551,12 @@ function ClippingConfig({
 
 function VisibilityConfig({
   config,
-  availableMeshes = [],
+  availableModels = [],
   onChange,
   disabled,
 }: {
   config: Record<string, unknown>;
-  availableMeshes?: string[];
+  availableModels?: { id: string; name: string }[];
   onChange: (key: string, value: unknown) => void;
   disabled?: boolean;
 }) {
@@ -578,15 +578,15 @@ function VisibilityConfig({
   return (
     <>
       <div className="grid gap-2">
-        <Label className="text-xs">目标对象</Label>
+        <Label className="text-xs">目标模型</Label>
         <div className="flex flex-wrap gap-1">
-          {targets.map((name) => (
-            <Badge key={name} variant="secondary" className="gap-1 pr-1">
-              {name}
+          {targets.map((id) => (
+            <Badge key={id} variant="secondary" className="gap-1 pr-1">
+              {availableModels.find((m) => m.id === id)?.name ?? id}
               <button
                 type="button"
                 className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20"
-                onClick={() => removeTarget(name)}
+                onClick={() => removeTarget(id)}
                 disabled={disabled}
               >
                 <X size={10} />
@@ -594,7 +594,7 @@ function VisibilityConfig({
             </Badge>
           ))}
         </div>
-        {availableMeshes.length > 0 ? (
+        {availableModels.length > 0 ? (
           <Select
             onValueChange={(v) => {
               if (typeof v === "string") addTarget(v);
@@ -602,14 +602,14 @@ function VisibilityConfig({
             disabled={disabled}
           >
             <SelectTrigger className="h-8 text-sm">
-              <SelectValue placeholder="选择 Mesh..." />
+              <SelectValue placeholder="选择模型..." />
             </SelectTrigger>
             <SelectContent>
-              {availableMeshes
-                .filter((name) => !targets.includes(name))
-                .map((name) => (
-                  <SelectItem key={name} value={name}>
-                    {name}
+              {availableModels
+                .filter((m) => !targets.includes(m.id))
+                .map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.name}
                   </SelectItem>
                 ))}
             </SelectContent>
@@ -624,14 +624,14 @@ function VisibilityConfig({
                 .filter(Boolean);
               onChange("targets", keywords);
             }}
-            placeholder="用逗号分隔 Mesh 名称"
+            placeholder="用逗号分隔模型 ID"
             disabled={disabled}
             className="h-8 text-sm"
           />
         )}
         {((config.action as string) === "hide" || (config.action as string) === "toggle") &&
           targets.length === 0 && (
-            <p className="text-xs text-destructive">⚠️ 必须指定目标对象，否则将影响所有 Mesh</p>
+            <p className="text-xs text-destructive">⚠️ 必须指定目标模型，否则将影响所有模型</p>
           )}
       </div>
 
@@ -746,12 +746,12 @@ function PostProcessConfig({
 
 function HighlightConfig({
   config,
-  availableMeshes = [],
+  availableModels = [],
   onChange,
   disabled,
 }: {
   config: Record<string, unknown>;
-  availableMeshes?: string[];
+  availableModels?: { id: string; name: string }[];
   onChange: (key: string, value: unknown) => void;
   disabled?: boolean;
 }) {
@@ -771,15 +771,15 @@ function HighlightConfig({
   return (
     <>
       <div className="grid gap-2">
-        <Label className="text-xs">目标对象（留空则全部高亮）</Label>
+        <Label className="text-xs">目标模型（留空则全部高亮）</Label>
         <div className="flex flex-wrap gap-1">
-          {targets.map((name) => (
-            <Badge key={name} variant="secondary" className="gap-1 pr-1">
-              {name}
+          {targets.map((id) => (
+            <Badge key={id} variant="secondary" className="gap-1 pr-1">
+              {availableModels.find((m) => m.id === id)?.name ?? id}
               <button
                 type="button"
                 className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20"
-                onClick={() => removeTarget(name)}
+                onClick={() => removeTarget(id)}
                 disabled={disabled}
               >
                 <X size={10} />
@@ -787,7 +787,7 @@ function HighlightConfig({
             </Badge>
           ))}
         </div>
-        {availableMeshes.length > 0 ? (
+        {availableModels.length > 0 ? (
           <Select
             onValueChange={(v) => {
               if (typeof v === "string") addTarget(v);
@@ -795,14 +795,14 @@ function HighlightConfig({
             disabled={disabled}
           >
             <SelectTrigger className="h-8 text-sm">
-              <SelectValue placeholder="选择 Mesh..." />
+              <SelectValue placeholder="选择模型..." />
             </SelectTrigger>
             <SelectContent>
-              {availableMeshes
-                .filter((n) => !targets.includes(n))
-                .map((n) => (
-                  <SelectItem key={n} value={n}>
-                    {n}
+              {availableModels
+                .filter((m) => !targets.includes(m.id))
+                .map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.name}
                   </SelectItem>
                 ))}
             </SelectContent>
@@ -819,7 +819,7 @@ function HighlightConfig({
                   .filter(Boolean),
               )
             }
-            placeholder="用逗号分隔 Mesh 名称"
+            placeholder="用逗号分隔模型 ID"
             disabled={disabled}
             className="h-8 text-sm"
           />
@@ -909,12 +909,12 @@ function HighlightConfig({
 
 function ExplodeConfig({
   config,
-  availableMeshes = [],
+  availableModels = [],
   onChange,
   disabled,
 }: {
   config: Record<string, unknown>;
-  availableMeshes?: string[];
+  availableModels?: { id: string; name: string }[];
   onChange: (key: string, value: unknown) => void;
   disabled?: boolean;
 }) {
@@ -996,15 +996,15 @@ function ExplodeConfig({
         </div>
       </div>
       <div className="grid gap-2">
-        <Label className="text-xs">目标对象（可选，留空则全部）</Label>
+        <Label className="text-xs">目标模型（可选，留空则全部）</Label>
         <div className="flex flex-wrap gap-1">
-          {targets.map((name) => (
-            <Badge key={name} variant="secondary" className="gap-1 pr-1">
-              {name}
+          {targets.map((id) => (
+            <Badge key={id} variant="secondary" className="gap-1 pr-1">
+              {availableModels.find((m) => m.id === id)?.name ?? id}
               <button
                 type="button"
                 className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20"
-                onClick={() => removeTarget(name)}
+                onClick={() => removeTarget(id)}
                 disabled={disabled}
               >
                 <X size={10} />
@@ -1012,7 +1012,7 @@ function ExplodeConfig({
             </Badge>
           ))}
         </div>
-        {availableMeshes.length > 0 ? (
+        {availableModels.length > 0 ? (
           <Select
             onValueChange={(v) => {
               if (typeof v === "string") addTarget(v);
@@ -1020,14 +1020,14 @@ function ExplodeConfig({
             disabled={disabled}
           >
             <SelectTrigger className="h-8 text-sm">
-              <SelectValue placeholder="选择 Mesh..." />
+              <SelectValue placeholder="选择模型..." />
             </SelectTrigger>
             <SelectContent>
-              {availableMeshes
-                .filter((n) => !targets.includes(n))
-                .map((n) => (
-                  <SelectItem key={n} value={n}>
-                    {n}
+              {availableModels
+                .filter((m) => !targets.includes(m.id))
+                .map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.name}
                   </SelectItem>
                 ))}
             </SelectContent>
@@ -1044,7 +1044,7 @@ function ExplodeConfig({
                   .filter(Boolean),
               )
             }
-            placeholder="用逗号分隔 Mesh 名称"
+            placeholder="用逗号分隔模型 ID"
             disabled={disabled}
             className="h-8 text-sm"
           />
@@ -1060,12 +1060,12 @@ function ExplodeConfig({
 
 function MaterialConfig({
   config,
-  availableMeshes = [],
+  availableModels = [],
   onChange,
   disabled,
 }: {
   config: Record<string, unknown>;
-  availableMeshes?: string[];
+  availableModels?: { id: string; name: string }[];
   onChange: (key: string, value: unknown) => void;
   disabled?: boolean;
 }) {
@@ -1084,15 +1084,15 @@ function MaterialConfig({
   return (
     <>
       <div className="grid gap-2">
-        <Label className="text-xs">目标对象</Label>
+        <Label className="text-xs">目标模型</Label>
         <div className="flex flex-wrap gap-1">
-          {targets.map((name) => (
-            <Badge key={name} variant="secondary" className="gap-1 pr-1">
-              {name}
+          {targets.map((id) => (
+            <Badge key={id} variant="secondary" className="gap-1 pr-1">
+              {availableModels.find((m) => m.id === id)?.name ?? id}
               <button
                 type="button"
                 className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20"
-                onClick={() => removeTarget(name)}
+                onClick={() => removeTarget(id)}
                 disabled={disabled}
               >
                 <X size={10} />
@@ -1100,7 +1100,7 @@ function MaterialConfig({
             </Badge>
           ))}
         </div>
-        {availableMeshes.length > 0 ? (
+        {availableModels.length > 0 ? (
           <Select
             onValueChange={(v) => {
               if (typeof v === "string") addTarget(v);
@@ -1108,14 +1108,14 @@ function MaterialConfig({
             disabled={disabled}
           >
             <SelectTrigger className="h-8 text-sm">
-              <SelectValue placeholder="选择 Mesh..." />
+              <SelectValue placeholder="选择模型..." />
             </SelectTrigger>
             <SelectContent>
-              {availableMeshes
-                .filter((n) => !targets.includes(n))
-                .map((n) => (
-                  <SelectItem key={n} value={n}>
-                    {n}
+              {availableModels
+                .filter((m) => !targets.includes(m.id))
+                .map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.name}
                   </SelectItem>
                 ))}
             </SelectContent>
@@ -1132,7 +1132,7 @@ function MaterialConfig({
                   .filter(Boolean),
               )
             }
-            placeholder="用逗号分隔 Mesh 名称"
+            placeholder="用逗号分隔模型 ID"
             disabled={disabled}
             className="h-8 text-sm"
           />

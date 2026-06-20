@@ -537,7 +537,10 @@ export default function DashboardModel() {
                               availableLabels={labels
                                 .filter((l) => l.meta.id !== selectedLabelId)
                                 .map((l) => ({ id: l.meta.id, name: l.meta.name }))}
-                              availableMeshes={sceneRef.current?.getMeshNames() ?? []}
+                              availableModels={existingFiles.map((f) => ({
+                                id: f.id,
+                                name: f.name ?? f.id,
+                              }))}
                               onChange={updateLabelActions}
                             />
                           </>
