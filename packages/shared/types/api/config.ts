@@ -61,11 +61,60 @@ export const PostProcessOperationSchema = z.object({
   }),
 });
 
+export const HighlightOperationSchema = z.object({
+  type: z.literal("highlight"),
+  targetModelFileId: z.string().optional(),
+  config: z.object({
+    targets: z.array(z.string()),
+    mode: z.enum(["outline", "glow", "color"]),
+    color: z
+      .object({ r: z.number(), g: z.number(), b: z.number(), a: z.number().optional() })
+      .optional(),
+    duration: z.number().optional(),
+  }),
+});
+
+export const ExplodeOperationSchema = z.object({
+  type: z.literal("explode"),
+  targetModelFileId: z.string().optional(),
+  config: z.object({
+    axis: z.object({ x: z.number(), y: z.number(), z: z.number() }),
+    distance: z.number(),
+    targets: z.array(z.string()).optional(),
+    duration: z.number(),
+    easing: z.string().optional(),
+  }),
+});
+
+export const MaterialOperationSchema = z.object({
+  type: z.literal("material"),
+  targetModelFileId: z.string().optional(),
+  config: z.object({
+    targets: z.array(z.string()),
+    property: z.enum(["opacity", "emissive", "wireframe"]),
+    value: z.union([z.number(), z.boolean()]),
+    duration: z.number().optional(),
+  }),
+});
+
+export const LabelControlOperationSchema = z.object({
+  type: z.literal("label"),
+  targetModelFileId: z.string().optional(),
+  config: z.object({
+    labelIds: z.array(z.string()),
+    action: z.enum(["show", "hide", "toggle"]),
+  }),
+});
+
 export const LabelOperationSchema = z.discriminatedUnion("type", [
   CameraOperationSchema,
   ClippingOperationSchema,
   VisibilityOperationSchema,
   PostProcessOperationSchema,
+  HighlightOperationSchema,
+  ExplodeOperationSchema,
+  MaterialOperationSchema,
+  LabelControlOperationSchema,
 ]);
 export type LabelOperation = z.infer<typeof LabelOperationSchema>;
 
@@ -107,7 +156,16 @@ export type LabelGroup = z.infer<typeof LabelGroupSchema>;
 export const LabelActionSchema = z.object({
   id: z.string(),
   label: z.string().optional().describe("Human-readable action name"),
-  type: z.enum(["camera", "clipping", "visibility", "postprocess"]),
+  type: z.enum([
+    "camera",
+    "clipping",
+    "visibility",
+    "postprocess",
+    "highlight",
+    "explode",
+    "material",
+    "label",
+  ]),
   config: z.record(z.string(), z.unknown()).describe("Typed config matching action type"),
 });
 export type LabelAction = z.infer<typeof LabelActionSchema>;

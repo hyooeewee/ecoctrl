@@ -20,5 +20,4 @@ export type { LabelTreeNode } from "./LabelTree";
 export { default as LabelConfigForm } from "./LabelConfigForm";
 export type { LabelGroup } from "@ecoctrl/shared";
 
-export { default as ActionConfig } from "./ActionConfig";
 export { default as ActionStepsConfig } from "./ActionStepsConfig";

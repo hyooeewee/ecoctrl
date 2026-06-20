@@ -225,6 +225,147 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
                   "[BabylonScene] postprocess execution not implemented in admin preview",
                 );
                 break;
+              case "highlight": {
+                const cfg = action.config as {
+                  targets?: string[];
+                  mode: string;
+                  color?: { r: number; g: number; b: number };
+                };
+                const keywords = (cfg.targets ?? [])
+                  .map((k: string) => k.toLowerCase())
+                  .filter(Boolean);
+
+                loadedModelsRef.current.forEach(({ meshes }) => {
+                  meshes.forEach((mesh) => {
+                    const nameToCheck = mesh.name.toLowerCase();
+                    const isMatch =
+                      keywords.length === 0 || keywords.some((k) => nameToCheck.includes(k));
+                    if (!isMatch) return;
+
+                    switch (cfg.mode) {
+                      case "outline":
+                        mesh.renderOutline = true;
+                        mesh.outlineWidth = 0.05;
+                        mesh.outlineColor = new Color3(
+                          cfg.color?.r ?? 1,
+                          cfg.color?.g ?? 1,
+                          cfg.color?.b ?? 0,
+                        );
+                        break;
+                      case "glow":
+                        if (mesh.material) {
+                          (mesh as any).__origEmissive = (
+                            mesh.material as any
+                          ).emissiveColor?.clone();
+                          (mesh.material as any).emissiveColor = new Color3(
+                            cfg.color?.r ?? 0.3,
+                            cfg.color?.g ?? 0.3,
+                            cfg.color?.b ?? 0.3,
+                          );
+                        }
+                        break;
+                      case "color":
+                        if (mesh.material) {
+                          (mesh as any).__origDiffuse = (
+                            mesh.material as any
+                          ).diffuseColor?.clone();
+                          (mesh.material as any).diffuseColor = new Color3(
+                            cfg.color?.r ?? 1,
+                            cfg.color?.g ?? 0.8,
+                            cfg.color?.b ?? 0,
+                          );
+                        }
+                        break;
+                    }
+                  });
+                });
+                break;
+              }
+
+              case "explode": {
+                const cfg = action.config as {
+                  axis: { x: number; y: number; z: number };
+                  distance: number;
+                  targets?: string[];
+                };
+                const axis = new Vector3(cfg.axis.x, cfg.axis.y, cfg.axis.z).normalize();
+                const keywords = (cfg.targets ?? [])
+                  .map((k: string) => k.toLowerCase())
+                  .filter(Boolean);
+
+                loadedModelsRef.current.forEach(({ meshes }) => {
+                  meshes.forEach((mesh) => {
+                    if (keywords.length > 0) {
+                      const nameToCheck = mesh.name.toLowerCase();
+                      const isMatch = keywords.some((k) => nameToCheck.includes(k));
+                      if (!isMatch) return;
+                    }
+                    if (!(mesh as any).__origPosition) {
+                      (mesh as any).__origPosition = mesh.position.clone();
+                    }
+                    const offset = axis.scale(cfg.distance);
+                    mesh.position = (mesh as any).__origPosition.add(offset);
+                  });
+                });
+                break;
+              }
+
+              case "material": {
+                const cfg = action.config as {
+                  targets?: string[];
+                  property: string;
+                  value: number | boolean;
+                };
+                const keywords = (cfg.targets ?? [])
+                  .map((k: string) => k.toLowerCase())
+                  .filter(Boolean);
+
+                loadedModelsRef.current.forEach(({ meshes }) => {
+                  meshes.forEach((mesh) => {
+                    const nameToCheck = mesh.name.toLowerCase();
+                    const isMatch =
+                      keywords.length === 0 || keywords.some((k) => nameToCheck.includes(k));
+                    if (!isMatch) return;
+
+                    const mat = mesh.material as any;
+                    if (!mat) return;
+
+                    switch (cfg.property) {
+                      case "opacity":
+                        if (!(mesh as any).__origVisibility) {
+                          (mesh as any).__origVisibility = mesh.visibility;
+                        }
+                        mesh.visibility = cfg.value as number;
+                        break;
+                      case "emissive":
+                        if (!mat.__origEmissive) {
+                          mat.__origEmissive = mat.emissiveColor?.clone();
+                        }
+                        mat.emissiveColor = new Color3(
+                          cfg.value as number,
+                          cfg.value as number,
+                          cfg.value as number,
+                        );
+                        break;
+                      case "wireframe":
+                        if (mat.__origWireframe === undefined) {
+                          mat.__origWireframe = mat.wireframe;
+                        }
+                        mat.wireframe = cfg.value as boolean;
+                        break;
+                    }
+                  });
+                });
+                break;
+              }
+
+              case "label": {
+                // Label control doesn't affect the 3D scene — it controls the React overlay.
+                // In admin preview, just log it.
+                console.log("[BabylonScene] label control action (preview only):", action.config);
+                break;
+              }
+
               default:
                 break;
             }
@@ -861,6 +1002,36 @@ function restoreSceneSnapshot(camera: ArcRotateCamera, snapshot: SceneSnapshot) 
   snapshot.meshes.forEach(({ mesh, isVisible, isEnabled }) => {
     mesh.setEnabled(isEnabled);
     mesh.isVisible = isVisible;
+
+    // Restore highlight outlines
+    mesh.renderOutline = false;
+
+    // Restore explode positions
+    if ((mesh as any).__origPosition) {
+      mesh.position = (mesh as any).__origPosition;
+      delete (mesh as any).__origPosition;
+    }
+
+    // Restore material properties
+    const mat = mesh.material as any;
+    if (mat) {
+      if (mat.__origEmissive) {
+        mat.emissiveColor = mat.__origEmissive;
+        delete mat.__origEmissive;
+      }
+      if (mat.__origDiffuse) {
+        mat.diffuseColor = mat.__origDiffuse;
+        delete mat.__origDiffuse;
+      }
+      if (mat.__origWireframe !== undefined) {
+        mat.wireframe = mat.__origWireframe;
+        delete mat.__origWireframe;
+      }
+    }
+    if ((mesh as any).__origVisibility !== undefined) {
+      mesh.visibility = (mesh as any).__origVisibility;
+      delete (mesh as any).__origVisibility;
+    }
   });
 
   camera.target = snapshot.camera.target;

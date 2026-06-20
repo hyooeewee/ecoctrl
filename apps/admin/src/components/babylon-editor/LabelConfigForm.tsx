@@ -30,7 +30,7 @@ import {
   TabsContent,
 } from "@ecoctrl/ui";
 import { FileCodeCorner, GripVertical, MapPin, Plus, Trash2, X } from "lucide-react";
-import type { DashboardModelLabel, LabelGroup, LabelAction } from "@ecoctrl/shared";
+import type { DashboardModelLabel, LabelGroup } from "@ecoctrl/shared";
 
 // ========================================
 // Types
@@ -424,110 +424,6 @@ function GroupsEditor({
               disabled={disabled}
               placeholder="输入点位名称，回车或英文逗号分隔"
             />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ========================================
-// Actions Editor (Table View)
-// ========================================
-
-interface ActionsEditorProps {
-  actions: LabelAction[];
-  onChange: (actions: LabelAction[]) => void;
-  onShowJson: () => void;
-  disabled?: boolean;
-}
-
-const ACTION_TYPE_LABELS: Record<string, string> = {
-  camera: "📷 相机飞入",
-  clipping: "✂️ 剖切面",
-  visibility: "👁️ 显隐控制",
-  postprocess: "🎨 后处理",
-};
-
-function ActionsEditor({ actions, onChange, onShowJson, disabled }: ActionsEditorProps) {
-  const addAction = (type: LabelAction["type"]) => {
-    const id = `action_${Date.now()}`;
-    const newAction: LabelAction = { id, label: "", type, config: {} };
-    onChange([...actions, newAction]);
-  };
-
-  const updateAction = (id: string, updates: Partial<LabelAction>) => {
-    onChange(actions.map((a) => (a.id === id ? { ...a, ...updates } : a)));
-  };
-
-  const deleteAction = (id: string) => {
-    onChange(actions.filter((a) => a.id !== id));
-  };
-
-  return (
-    <div className="grid gap-2">
-      <div className="flex items-center justify-between">
-        <Label className="text-xs">点击动作</Label>
-        <div className="flex items-center gap-1.5">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-7 w-7 px-0"
-            onClick={onShowJson}
-            disabled={disabled}
-            title="JSON 编辑"
-            aria-label="JSON 编辑"
-          >
-            <FileCodeCorner size={14} />
-          </Button>
-          <Select value="" onValueChange={(v) => addAction(v as LabelAction["type"])}>
-            <SelectTrigger className="h-7 w-auto text-xs" disabled={disabled}>
-              <SelectValue placeholder="+ 添加动作" />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(ACTION_TYPE_LABELS).map(([type, label]) => (
-                <SelectItem key={type} value={type}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {actions.length === 0 && (
-        <div className="rounded-md border border-dashed border-border bg-muted/20 px-2 py-3 text-center text-xs text-muted-foreground">
-          暂无动作，点击上方按钮添加
-        </div>
-      )}
-
-      <div className="space-y-2">
-        {actions.map((action) => (
-          <div key={action.id} className="rounded-md border bg-muted/30 p-2 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground shrink-0">
-                {ACTION_TYPE_LABELS[action.type] ?? action.type}
-              </span>
-              <Input
-                value={action.label ?? ""}
-                onChange={(e) => updateAction(action.id, { label: e.target.value })}
-                placeholder="动作描述"
-                disabled={disabled}
-                className="h-7 flex-1 text-xs"
-              />
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                onClick={() => deleteAction(action.id)}
-                disabled={disabled}
-                aria-label="删除动作"
-              >
-                <Trash2 size={12} />
-              </Button>
-            </div>
           </div>
         ))}
       </div>
