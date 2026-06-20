@@ -22,16 +22,16 @@ export async function fetchLightingGroups(region: string) {
   return apiGet<LightingRegionGroups>(`/api/control/lighting/${encodeURIComponent(region)}/groups`);
 }
 
-export async function updateLightingGroup(region: string, groupKey: string, opened: boolean) {
+export async function updateLightingGroup(region: string, groupKey: string, status: "off" | "on") {
   return apiPost<LightingGroupResponse>(
     `/api/control/lighting/${encodeURIComponent(region)}/${encodeURIComponent(groupKey)}`,
-    { opened },
+    { status },
   );
 }
 
-export async function batchUpdateLightingGroups(region: string, opened: boolean) {
+export async function batchUpdateLightingGroups(region: string, status: "off" | "on") {
   return apiPost<LightingBatchResponse>(
     `/api/control/lighting/${encodeURIComponent(region)}/batch`,
-    { opened },
+    { status },
   );
 }

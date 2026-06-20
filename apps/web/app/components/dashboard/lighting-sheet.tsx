@@ -3,8 +3,8 @@ import { X } from "lucide-react";
 import { toast } from "sonner";
 import type { LightingGroup } from "@ecoctrl/shared";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ecoctrl/ui/select";
-import { Switch } from "@ecoctrl/ui/switch";
 
+import { LightBulb } from "./light-bulb";
 import {
   batchUpdateLightingGroups,
   fetchLightingGroups,
@@ -91,14 +91,19 @@ export function LightingSheet({ activeLabel, onClose }: LightingSheetProps) {
     };
   }, [region, t.lighting.error]);
 
-  const handleToggle = async (key: string, opened: boolean) => {
-    const snapshot = groups.map((g) => ({ ...g }));
-    setGroups((prev) => prev.map((g) => (g.key === key ? { ...g, opened } : g)));
+  const handleToggle = async (key: string) => {
+    const group = groups.find((g) => g.key === key);
+    if (!group) return;
 
-    const res = await updateLightingGroup(region, key, opened);
+    // Click always toggles between off ↔ on; half is read-only
+    const newStatus = group.status === "on" ? "off" : "on";
+    const snapshot = groups.map((g) => ({ ...g }));
+    setGroups((prev) => prev.map((g) => (g.key === key ? { ...g, status: newStatus } : g)));
+
+    const res = await updateLightingGroup(region, key, newStatus);
     if (!res.ok) {
       console.error("[LightingSheet] update group failed:", res.error);
-      toast.error(t.lighting.error);
+      toast.error(res.error === "HTTP 401" ? t.lighting.authRequired : t.lighting.error);
       setGroups(snapshot);
       return;
     }
@@ -107,14 +112,14 @@ export function LightingSheet({ activeLabel, onClose }: LightingSheetProps) {
     }
   };
 
-  const handleBatch = async (opened: boolean) => {
+  const handleBatch = async (status: "off" | "on") => {
     const snapshot = groups.map((g) => ({ ...g }));
-    setGroups((prev) => prev.map((g) => ({ ...g, opened })));
+    setGroups((prev) => prev.map((g) => ({ ...g, status })));
 
-    const res = await batchUpdateLightingGroups(region, opened);
+    const res = await batchUpdateLightingGroups(region, status);
     if (!res.ok) {
       console.error("[LightingSheet] batch update failed:", res.error);
-      toast.error(t.lighting.error);
+      toast.error(res.error === "HTTP 401" ? t.lighting.authRequired : t.lighting.error);
       setGroups(snapshot);
       return;
     }
@@ -174,19 +179,19 @@ export function LightingSheet({ activeLabel, onClose }: LightingSheetProps) {
                 <div className="flex items-center gap-2 overflow-hidden">
                   <span
                     className={cn(
-                      "size-2 shrink-0 rounded-full",
-                      group.opened ? "bg-cyber-cyan" : "border border-cyber-cyan/40 bg-transparent",
+                      "size-2 shrink-0 rounded-full transition-colors duration-300",
+                      group.status === "on"
+                        ? "bg-cyber-cyan"
+                        : group.status === "half"
+                          ? "bg-yellow-500"
+                          : "border border-cyber-cyan/40 bg-transparent",
                     )}
                   />
                   <span className="truncate text-xs font-medium text-foreground">
                     {`${group.key}_${group.label}`}
                   </span>
                 </div>
-                <Switch
-                  checked={group.opened}
-                  onCheckedChange={(opened) => handleToggle(group.key, opened)}
-                  size="sm"
-                />
+                <LightBulb status={group.status} onClick={() => handleToggle(group.key)} />
               </div>
             ))}
           </div>
@@ -197,14 +202,14 @@ export function LightingSheet({ activeLabel, onClose }: LightingSheetProps) {
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={() => handleBatch(true)}
+              onClick={() => handleBatch("on")}
               className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-white/10"
             >
               {t.lighting.allOn}
             </button>
             <button
               type="button"
-              onClick={() => handleBatch(false)}
+              onClick={() => handleBatch("off")}
               className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-white/10"
             >
               {t.lighting.allOff}

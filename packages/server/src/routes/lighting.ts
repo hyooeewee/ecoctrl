@@ -6,49 +6,51 @@ import { LightingGroupSchema } from "@ecoctrl/shared";
 // In-memory lighting config (seeded from config side)
 // ========================================
 
+type LightingStatus = "off" | "half" | "on";
+
 interface LightingGroupConfig {
   label: string;
-  opened: boolean;
+  status: LightingStatus;
 }
 
 const lightingConfig: Record<string, Record<string, LightingGroupConfig>> = {
   南序厅: {
-    G1: { label: "雨棚", opened: true },
-    G2: { label: "南序厅半幅（含外门顶）", opened: true },
-    G3: { label: "南序厅半幅（含外门顶）", opened: true },
-    G4: { label: "南序厅西门厅", opened: false },
-    G5: { label: "南序厅中门厅", opened: false },
-    G6: { label: "南序厅东门厅", opened: false },
+    G1: { label: "雨棚", status: "on" },
+    G2: { label: "南序厅半幅（含外门顶）", status: "half" },
+    G3: { label: "南序厅半幅（含外门顶）", status: "on" },
+    G4: { label: "南序厅西门厅", status: "off" },
+    G5: { label: "南序厅中门厅", status: "off" },
+    G6: { label: "南序厅东门厅", status: "off" },
   },
   西序厅: {
-    G1: { label: "入口雨棚", opened: true },
-    G2: { label: "西序厅主照明", opened: false },
-    G3: { label: "西侧走廊", opened: true },
-    G4: { label: "西序厅 VIP 区", opened: false },
+    G1: { label: "入口雨棚", status: "on" },
+    G2: { label: "西序厅主照明", status: "off" },
+    G3: { label: "西侧走廊", status: "half" },
+    G4: { label: "西序厅 VIP 区", status: "off" },
   },
   东序厅: {
-    G1: { label: "入口雨棚", opened: true },
-    G2: { label: "东序厅主照明", opened: true },
-    G3: { label: "东侧走廊", opened: false },
-    G4: { label: "东序厅展示区", opened: true },
+    G1: { label: "入口雨棚", status: "on" },
+    G2: { label: "东序厅主照明", status: "on" },
+    G3: { label: "东侧走廊", status: "off" },
+    G4: { label: "东序厅展示区", status: "on" },
   },
   北序厅: {
-    G1: { label: "入口雨棚", opened: false },
-    G2: { label: "北序厅主照明", opened: false },
-    G3: { label: "北侧走廊", opened: false },
-    G4: { label: "北序厅服务区", opened: true },
+    G1: { label: "入口雨棚", status: "off" },
+    G2: { label: "北序厅主照明", status: "off" },
+    G3: { label: "北侧走廊", status: "off" },
+    G4: { label: "北序厅服务区", status: "on" },
   },
   多功能厅1号: {
-    G1: { label: "舞台主灯", opened: true },
-    G2: { label: "观众席照明", opened: false },
-    G3: { label: "侧光", opened: true },
-    G4: { label: "顶光", opened: false },
+    G1: { label: "舞台主灯", status: "on" },
+    G2: { label: "观众席照明", status: "off" },
+    G3: { label: "侧光", status: "half" },
+    G4: { label: "顶光", status: "off" },
   },
   多功能厅2号: {
-    G1: { label: "舞台主灯", opened: false },
-    G2: { label: "观众席照明", opened: false },
-    G3: { label: "侧光", opened: false },
-    G4: { label: "顶光", opened: false },
+    G1: { label: "舞台主灯", status: "off" },
+    G2: { label: "观众席照明", status: "off" },
+    G3: { label: "侧光", status: "off" },
+    G4: { label: "顶光", status: "off" },
   },
 };
 
@@ -61,7 +63,7 @@ function parseGroupIndex(key: string): number {
   return match ? Number.parseInt(match[1], 10) : Number.MAX_SAFE_INTEGER;
 }
 
-function getSortedGroups(region: string): { key: string; label: string; opened: boolean }[] {
+function getSortedGroups(region: string): { key: string; label: string; status: LightingStatus }[] {
   const groups = lightingConfig[region] ?? {};
   return Object.entries(groups)
     .map(([key, cfg]) => ({ key, ...cfg }))
@@ -73,11 +75,11 @@ function getSortedGroups(region: string): { key: string; label: string; opened: 
 // ========================================
 
 const toggleBodySchema = z.object({
-  opened: z.boolean(),
+  status: z.enum(["off", "on"]),
 });
 
 const batchBodySchema = z.object({
-  opened: z.boolean(),
+  status: z.enum(["off", "on"]),
 });
 
 const errorResponse = {
@@ -149,7 +151,7 @@ export default async function lightingRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { region, groupKey } = request.params as { region: string; groupKey: string };
-      const { opened } = request.body as { opened: boolean };
+      const { status } = request.body as { status: "off" | "on" };
 
       const regionGroups = lightingConfig[region];
       if (!regionGroups) {
@@ -160,8 +162,8 @@ export default async function lightingRoutes(fastify: FastifyInstance) {
         return reply.status(404).send({ error: `Group not found: ${groupKey}` });
       }
 
-      group.opened = opened;
-      return reply.send({ group: { key: groupKey, label: group.label, opened: group.opened } });
+      group.status = status;
+      return reply.send({ group: { key: groupKey, label: group.label, status: group.status } });
     },
   );
 
@@ -182,7 +184,7 @@ export default async function lightingRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { region } = request.params as { region: string };
-      const { opened } = request.body as { opened: boolean };
+      const { status } = request.body as { status: "off" | "on" };
 
       const regionGroups = lightingConfig[region];
       if (!regionGroups) {
@@ -190,7 +192,7 @@ export default async function lightingRoutes(fastify: FastifyInstance) {
       }
 
       for (const cfg of Object.values(regionGroups)) {
-        cfg.opened = opened;
+        cfg.status = status;
       }
 
       return reply.send({ region, groups: getSortedGroups(region) });

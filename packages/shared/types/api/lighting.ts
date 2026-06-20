@@ -7,7 +7,7 @@ import { z } from "zod";
 export const LightingGroupSchema = z.object({
   key: z.string(),
   label: z.string(),
-  opened: z.boolean(),
+  status: z.enum(["off", "half", "on"]),
 });
 
 export const LightingRegionGroupsSchema = z.object({
