@@ -748,9 +748,21 @@ export class ModelViewer implements ModelViewerRef {
           duration?: number;
           easing?: string;
         };
+        // Backward compat: old format had target+distance
         if (!cfg.position || !cfg.lookAt) {
-          console.warn("[ModelViewer] camera action missing position/lookAt:", action.id);
-          break;
+          const oldCfg = action.config as {
+            target?: { x: number; y: number; z: number };
+            distance?: number;
+          };
+          if (oldCfg.target && oldCfg.distance) {
+            // Derive position from target + distance (approximate front view)
+            const t = oldCfg.target;
+            cfg.lookAt = { x: t.x, y: t.y, z: t.z };
+            cfg.position = { x: t.x, y: t.y + oldCfg.distance * 0.5, z: t.z - oldCfg.distance };
+          } else {
+            console.warn("[ModelViewer] camera action missing position/lookAt:", action.id);
+            break;
+          }
         }
         const pos = new Vector3(cfg.position.x, cfg.position.y, cfg.position.z);
         const lookAt = new Vector3(cfg.lookAt.x, cfg.lookAt.y, cfg.lookAt.z);

@@ -236,15 +236,19 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
             throwIfAborted();
             switch (action.type) {
               case "camera": {
-                const cfg = action.config as {
-                  position: { x: number; y: number; z: number };
-                  lookAt: { x: number; y: number; z: number };
-                  duration: number;
-                  easing?: string;
-                };
-                const pos = new Vector3(cfg.position.x, cfg.position.y, cfg.position.z);
-                const lookAt = new Vector3(cfg.lookAt.x, cfg.lookAt.y, cfg.lookAt.z);
-                const duration = cfg.duration ?? 0.8;
+                const cfg = action.config as Record<string, unknown>;
+                // Backward compat: old format had target+distance, new has position+lookAt
+                const pos = cfg.position
+                  ? new Vector3(
+                      (cfg.position as any).x,
+                      (cfg.position as any).y,
+                      (cfg.position as any).z,
+                    )
+                  : new Vector3(0, 10, -10);
+                const lookAt = cfg.lookAt
+                  ? new Vector3((cfg.lookAt as any).x, (cfg.lookAt as any).y, (cfg.lookAt as any).z)
+                  : new Vector3(0, 0, 0);
+                const duration = (cfg.duration as number) ?? 0.8;
                 const frameCount = Math.max(1, Math.round(duration * 60));
 
                 // Convert position + lookAt → ArcRotateCamera params
