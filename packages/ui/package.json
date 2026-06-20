@@ -62,6 +62,10 @@
       "types": "./src/components/ui/field.tsx",
       "import": "./src/components/ui/field.tsx"
     },
+    "./file-upload": {
+      "types": "./src/components/ui/file-upload.tsx",
+      "import": "./src/components/ui/file-upload.tsx"
+    },
     "./hover-card": {
       "types": "./src/components/ui/hover-card.tsx",
       "import": "./src/components/ui/hover-card.tsx"
