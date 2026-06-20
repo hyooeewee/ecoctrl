@@ -2,7 +2,7 @@
 // Action Steps Configuration Component
 // ========================================
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Input,
   Label,
@@ -12,11 +12,14 @@ import {
   SelectTrigger,
   SelectValue,
   Badge,
+  Dialog,
+  DialogContent,
 } from "@ecoctrl/ui";
-import { X, ChevronUp, ChevronDown } from "lucide-react";
+import { X, ChevronUp, ChevronDown, FileCode } from "lucide-react";
 import AppButton from "@/components/AppButton";
 import type { LabelAction } from "@ecoctrl/shared";
 import type { BabylonSceneRef } from "./BabylonScene";
+import { JsonEditor } from "@/components/workflow-editor/JsonEditor";
 
 // ========================================
 // Types
@@ -43,6 +46,30 @@ export default function ActionStepsConfig({
   onChange,
   disabled,
 }: ActionStepsConfigProps) {
+  const [jsonOpen, setJsonOpen] = useState(false);
+  const [jsonText, setJsonText] = useState("");
+  const [jsonError, setJsonError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (jsonOpen) {
+      setJsonText(JSON.stringify(actions, null, 2));
+      setJsonError(null);
+    }
+  }, [jsonOpen, actions]);
+
+  const handleJsonConfirm = () => {
+    try {
+      const parsed = JSON.parse(jsonText || "[]");
+      if (!Array.isArray(parsed)) throw new Error("数据必须是数组");
+      for (const item of parsed) {
+        if (!item.id || !item.type) throw new Error("每个动作必须有 id 和 type");
+      }
+      onChange(parsed as LabelAction[]);
+      setJsonOpen(false);
+    } catch (e) {
+      setJsonError(e instanceof Error ? e.message : "JSON 格式错误");
+    }
+  };
   const updateStep = (index: number, patch: Partial<LabelAction>) => {
     const next = actions.map((a, i) => (i === index ? { ...a, ...patch } : a));
     onChange(next);
@@ -216,7 +243,30 @@ export default function ActionStepsConfig({
             ))}
           </SelectContent>
         </Select>
+        <AppButton
+          level="ghost"
+          size="icon-sm"
+          onClick={() => setJsonOpen(true)}
+          disabled={disabled}
+          title="JSON 编辑"
+        >
+          <FileCode size={14} />
+        </AppButton>
       </div>
+
+      {/* JSON Editor Dialog */}
+      <Dialog open={jsonOpen} onOpenChange={setJsonOpen}>
+        <DialogContent showCloseButton={false} className="sm:max-w-2xl overflow-hidden p-0">
+          <JsonEditor
+            value={jsonText}
+            onChange={setJsonText}
+            onConfirm={handleJsonConfirm}
+            onCancel={() => setJsonOpen(false)}
+            error={jsonError}
+            title="编辑动作 JSON"
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
