@@ -22,8 +22,6 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-  Dialog,
-  DialogContent,
   Tabs,
   TabsList,
   TabsTrigger,
@@ -225,9 +223,11 @@ function SubObjectJsonEditor<T>({
     }
   };
 
+  if (!open) return null;
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={false} className="sm:max-w-4xl h-[85vh] overflow-hidden p-0">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="flex h-[90vh] w-[95vw] max-w-6xl flex-col overflow-hidden rounded-lg border bg-background shadow-xl">
         <JsonEditor
           value={text}
           onChange={(v) => {
@@ -235,19 +235,18 @@ function SubObjectJsonEditor<T>({
             setError(null);
           }}
           title={title}
-          mode="inline"
+          mode="fullscreen"
           editor="monaco"
           showHeader
           showFullscreen={false}
           showFormat
           showCopy
-          height="100%"
           error={error}
           onCancel={() => onOpenChange(false)}
           onConfirm={handleConfirm}
         />
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }
 

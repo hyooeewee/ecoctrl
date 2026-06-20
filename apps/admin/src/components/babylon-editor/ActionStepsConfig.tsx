@@ -12,8 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
   Badge,
-  Dialog,
-  DialogContent,
 } from "@ecoctrl/ui";
 import { X, ChevronUp, ChevronDown, FileCode } from "lucide-react";
 import AppButton from "@/components/AppButton";
@@ -254,26 +252,24 @@ export default function ActionStepsConfig({
         </AppButton>
       </div>
 
-      {/* JSON Editor — fullscreen Monaco directly */}
-      <Dialog open={jsonOpen} onOpenChange={setJsonOpen}>
-        <DialogContent
-          showCloseButton={false}
-          className="sm:max-w-4xl h-[85vh] overflow-hidden p-0"
-        >
-          <JsonEditor
-            value={jsonText}
-            onChange={setJsonText}
-            onConfirm={handleJsonConfirm}
-            onCancel={() => setJsonOpen(false)}
-            error={jsonError}
-            title="编辑动作 JSON"
-            mode="inline"
-            editor="monaco"
-            showFullscreen={false}
-            height="100%"
-          />
-        </DialogContent>
-      </Dialog>
+      {/* JSON Editor — fullscreen overlay */}
+      {jsonOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="flex h-[90vh] w-[95vw] max-w-6xl flex-col overflow-hidden rounded-lg border bg-background shadow-xl">
+            <JsonEditor
+              value={jsonText}
+              onChange={setJsonText}
+              onConfirm={handleJsonConfirm}
+              onCancel={() => setJsonOpen(false)}
+              error={jsonError}
+              title="编辑动作 JSON"
+              mode="fullscreen"
+              editor="monaco"
+              showFullscreen={false}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
