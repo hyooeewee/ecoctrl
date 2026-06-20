@@ -186,6 +186,7 @@ export default function Home() {
       buildingRef.current?.focusOnLabel(activeLabel);
       buildingRef.current?.setClipping(activeLabel === "lobby");
     } else {
+      buildingRef.current?.resetCamera();
       buildingRef.current?.setClipping(false);
     }
   }, [activeLabel, buildingRef]);
