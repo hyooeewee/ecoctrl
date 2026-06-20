@@ -36,8 +36,7 @@ interface ModelEditorState {
   visibleFileIds: Set<string>;
   loadingProgress: Map<string, number>;
 
-  // Upload queue
-  pendingFiles: File[];
+  // Upload
   uploading: boolean;
 
   // Actions — data
@@ -53,10 +52,7 @@ interface ModelEditorState {
   setModelProgress: (id: string, progress: number) => void;
 
   // Actions — upload
-  addPendingFiles: (files: File[]) => void;
-  removePendingFile: (index: number) => void;
-  clearPendingFiles: () => void;
-  uploadAll: () => Promise<void>;
+  uploadFiles: (files: File[]) => Promise<void>;
 
   // Actions — labels
   pickLabel: (position: Vector3) => void;
@@ -92,7 +88,6 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
   panelOpen: true,
   visibleFileIds: new Set(),
   loadingProgress: new Map(),
-  pendingFiles: [],
   uploading: false,
 
   // Data loading
@@ -242,24 +237,14 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
       return { loadingProgress: next };
     }),
 
-  // Upload queue
-  addPendingFiles: (files) => set((state) => ({ pendingFiles: [...state.pendingFiles, ...files] })),
-
-  removePendingFile: (index) =>
-    set((state) => ({
-      pendingFiles: state.pendingFiles.filter((_, i) => i !== index),
-    })),
-
-  clearPendingFiles: () => set({ pendingFiles: [] }),
-
-  uploadAll: async () => {
-    const { pendingFiles } = get();
-    if (pendingFiles.length === 0) return;
+  // Upload
+  uploadFiles: async (files) => {
+    if (files.length === 0) return;
     set({ uploading: true });
     try {
-      const updated = await dashboardModelApi.uploadMultiple(pendingFiles);
-      set({ config: updated, pendingFiles: [] });
-      toast.success(`已上传 ${pendingFiles.length} 个文件`);
+      const updated = await dashboardModelApi.uploadMultiple(files);
+      set({ config: updated });
+      toast.success(`已上传 ${files.length} 个文件`);
     } catch (err) {
       console.error("Upload failed:", err);
       const message = err instanceof Error ? err.message : "上传失败";

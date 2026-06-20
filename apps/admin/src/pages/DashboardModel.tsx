@@ -19,8 +19,8 @@ import { Button } from "@ecoctrl/ui";
 import { Badge } from "@ecoctrl/ui";
 import { ScrollArea } from "@ecoctrl/ui";
 import { Tabs, TabsList, TabsTrigger } from "@ecoctrl/ui";
+import { FileUpload } from "@ecoctrl/ui/file-upload";
 
-import ModelFileZone from "@/components/ModelFileZone";
 import ModelEditorTopBar from "@/components/model-editor/ModelEditorTopBar";
 import ViewportControls from "@/components/model-editor/ViewportControls";
 import {
@@ -64,7 +64,6 @@ export default function DashboardModel() {
   const panelOpen = useModelEditorStore((s) => s.panelOpen);
   const visibleFileIds = useModelEditorStore((s) => s.visibleFileIds);
   const loadingProgress = useModelEditorStore((s) => s.loadingProgress);
-  const pendingFiles = useModelEditorStore((s) => s.pendingFiles);
   const uploading = useModelEditorStore((s) => s.uploading);
   const labels = useModelEditorStore((s) => s.labels);
   const selectedLabelId = useModelEditorStore((s) => s.selectedLabelId);
@@ -81,10 +80,7 @@ export default function DashboardModel() {
     updateFileRole,
     reorderFiles,
     setModelProgress,
-    addPendingFiles,
-    removePendingFile,
-    clearPendingFiles,
-    uploadAll,
+    uploadFiles,
     pickLabel,
     selectLabel,
     addLabel,
@@ -343,6 +339,7 @@ export default function DashboardModel() {
                             size="sm"
                             variant="outline"
                             onClick={() => fileInputRef.current?.click()}
+                            disabled={uploading}
                           >
                             <Upload size={14} className="mr-1" />
                             上传
@@ -354,10 +351,9 @@ export default function DashboardModel() {
                             multiple
                             className="hidden"
                             onChange={(e) => {
-                              if (e.target.files?.length) {
-                                addPendingFiles(Array.from(e.target.files));
-                                e.target.value = "";
-                              }
+                              const files = Array.from(e.target.files ?? []);
+                              if (files.length > 0) uploadFiles(files);
+                              e.target.value = "";
                             }}
                           />
                         </div>
@@ -406,51 +402,24 @@ export default function DashboardModel() {
                             </div>
                           )}
 
-                          {pendingFiles.length > 0 && (
-                            <div className="mb-3 space-y-1.5">
-                              <div className="text-xs font-medium text-muted-foreground">
-                                待上传
-                              </div>
-                              {pendingFiles.map((file, index) => (
-                                <div
-                                  key={index}
-                                  className="flex items-center gap-2 rounded-md border border-dashed border-blue-400 bg-blue-50/50 px-3 py-2"
-                                >
-                                  <File size={14} className="shrink-0 text-blue-500" />
-                                  <span className="flex-1 truncate text-xs">{file.name}</span>
-                                  <Badge variant="secondary" className="shrink-0 text-[10px]">
-                                    {file.name.split(".").pop()?.toUpperCase()}
-                                  </Badge>
-                                  <button
-                                    type="button"
-                                    className="ml-1 rounded p-0.5 hover:bg-muted-foreground/20"
-                                    onClick={() => removePendingFile(index)}
-                                  >
-                                    <Trash2 size={12} />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          {existingFiles.length === 0 && pendingFiles.length === 0 && (
-                            <ModelFileZone
-                              file={null}
-                              onFileSelect={(file) => addPendingFiles([file])}
-                              onFileClear={() => {}}
-                              acceptedFormats=".glb,.gltf,.obj"
+                          {existingFiles.length === 0 && (
+                            <FileUpload
+                              accept=".glb,.gltf,.obj"
+                              multiple
+                              maxFiles={10}
+                              label="点击或拖拽文件到此处"
+                              disabled={uploading}
+                              onUpload={async (files, { onSuccess, onError }) => {
+                                try {
+                                  await uploadFiles(files);
+                                  files.forEach((f) => onSuccess(f));
+                                } catch (err) {
+                                  files.forEach((f) =>
+                                    onError(f, err instanceof Error ? err : new Error("上传失败")),
+                                  );
+                                }
+                              }}
                             />
-                          )}
-
-                          {pendingFiles.length > 0 && (
-                            <div className="mt-2 flex gap-2">
-                              <Button className="flex-1" onClick={uploadAll} disabled={uploading}>
-                                {uploading ? "上传中..." : `上传全部 (${pendingFiles.length})`}
-                              </Button>
-                              <Button variant="outline" onClick={clearPendingFiles}>
-                                清空
-                              </Button>
-                            </div>
                           )}
                         </>
                       </div>
