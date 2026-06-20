@@ -227,10 +227,7 @@ function SubObjectJsonEditor<T>({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        showCloseButton={false}
-        className="sm:max-w-2xl max-h-[85vh] overflow-hidden p-0"
-      >
+      <DialogContent showCloseButton={false} className="sm:max-w-4xl h-[85vh] overflow-hidden p-0">
         <JsonEditor
           value={text}
           onChange={(v) => {
@@ -238,11 +235,10 @@ function SubObjectJsonEditor<T>({
             setError(null);
           }}
           title={title}
-          mode="inline"
+          mode="fullscreen"
           editor="monaco"
           showHeader
           showFullscreen={false}
-          height="320px"
           showFormat
           showCopy
           error={error}

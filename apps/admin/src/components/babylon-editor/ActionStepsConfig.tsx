@@ -254,11 +254,11 @@ export default function ActionStepsConfig({
         </AppButton>
       </div>
 
-      {/* JSON Editor Dialog */}
+      {/* JSON Editor — fullscreen Monaco directly */}
       <Dialog open={jsonOpen} onOpenChange={setJsonOpen}>
         <DialogContent
           showCloseButton={false}
-          className="sm:max-w-2xl max-h-[85vh] overflow-hidden p-0"
+          className="sm:max-w-4xl h-[85vh] overflow-hidden p-0"
         >
           <JsonEditor
             value={jsonText}
@@ -267,7 +267,9 @@ export default function ActionStepsConfig({
             onCancel={() => setJsonOpen(false)}
             error={jsonError}
             title="编辑动作 JSON"
-            height="min(50vh, 400px)"
+            mode="fullscreen"
+            editor="monaco"
+            showFullscreen={false}
           />
         </DialogContent>
       </Dialog>
