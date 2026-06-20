@@ -5,6 +5,7 @@ import {
   DirectionalLight,
   HemisphericLight,
   Matrix,
+  SceneLoader,
   TransformNode,
   Vector3,
   Viewport,
@@ -115,6 +116,9 @@ export class ModelViewer implements ModelViewerRef {
 
     this.engine = createEngine(this.canvas);
     this.scene = createScene(this.engine);
+
+    // Disable BabylonJS built-in loading screen — we use a custom React overlay.
+    SceneLoader.ShowLoadingScreen = false;
 
     // Optional hardware scaling. Values below 1 reduce fill-rate on high-DPI
     // displays but may cause grid-like artifacts on some PBR materials.
@@ -276,6 +280,7 @@ export class ModelViewer implements ModelViewerRef {
     } else {
       // Single-model backward compatible path
       await this.loadSingle(fallbackUrl, "default");
+      this.onLoad?.();
     }
   }
 
@@ -330,6 +335,7 @@ export class ModelViewer implements ModelViewerRef {
 
     this.onProgress?.(100);
     this.onCriticalLoaded?.();
+    this.onLoad?.();
 
     // Step 2: Load background models in the background (non-blocking).
     if (background.length > 0) {
