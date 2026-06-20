@@ -493,8 +493,11 @@ export default function DashboardModel() {
                         <div className="grid gap-2">
                           <Label className="text-xs">选择标签</Label>
                           <Select
-                            value={selectedLabelId ?? ""}
-                            onValueChange={(v) => selectLabel(v || null)}
+                            value={selectedLabel?.meta.name ?? ""}
+                            onValueChange={(v) => {
+                              const match = labels.find((l) => l.meta.name === v);
+                              selectLabel(match?.meta.id ?? null);
+                            }}
                             disabled={existingFiles.length === 0}
                           >
                             <SelectTrigger className="h-8 text-sm">
@@ -506,7 +509,7 @@ export default function DashboardModel() {
                             </SelectTrigger>
                             <SelectContent>
                               {labels.map((l) => (
-                                <SelectItem key={l.meta.id} value={l.meta.id}>
+                                <SelectItem key={l.meta.id} value={l.meta.name}>
                                   {l.meta.name}
                                 </SelectItem>
                               ))}
