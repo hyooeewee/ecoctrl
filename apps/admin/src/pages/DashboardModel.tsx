@@ -19,7 +19,7 @@ import { Button } from "@ecoctrl/ui";
 import { Badge } from "@ecoctrl/ui";
 import { ScrollArea } from "@ecoctrl/ui";
 import { Tabs, TabsList, TabsTrigger } from "@ecoctrl/ui";
-import { FileUpload } from "@ecoctrl/ui/file-upload";
+import { FileUpload, FileUploadDropzone, FileUploadTrigger } from "@ecoctrl/ui/file-upload";
 
 import ModelEditorTopBar from "@/components/model-editor/ModelEditorTopBar";
 import ViewportControls from "@/components/model-editor/ViewportControls";
@@ -337,7 +337,6 @@ export default function DashboardModel() {
                             accept=".glb,.gltf,.obj"
                             multiple
                             maxFiles={10}
-                            label="点击或拖拽文件到此处"
                             disabled={uploading}
                             onUpload={async (files, { onSuccess, onError }) => {
                               try {
@@ -349,7 +348,14 @@ export default function DashboardModel() {
                                 );
                               }
                             }}
-                          />
+                          >
+                            <FileUploadDropzone>
+                              <p className="text-xs text-muted-foreground">点击或拖拽文件到此处</p>
+                              <p className="text-[10px] text-muted-foreground/60">
+                                支持 .glb, .gltf, .obj 格式
+                              </p>
+                            </FileUploadDropzone>
+                          </FileUpload>
                         ) : (
                           /* Has files: show header + file list */
                           <>
@@ -465,11 +471,11 @@ export default function DashboardModel() {
                           labels={labelTreeData}
                           selectedId={selectedLabelId}
                           onSelect={selectLabel}
-                          addTitle="选择标签"
-                          disabled
+                          addTitle={existingFiles.length === 0 ? "请先上传模型" : "选择标签"}
+                          disabled={existingFiles.length === 0}
                         />
 
-                        {selectedLabel ? (
+                        {selectedLabel && (
                           <>
                             <div className="flex items-center justify-between">
                               <h3 className="text-sm font-semibold">
@@ -479,7 +485,7 @@ export default function DashboardModel() {
                                 size="sm"
                                 variant={previewing ? "secondary" : "outline"}
                                 onClick={handlePreview}
-                                disabled={!selectedLabel || selectedLabel.actions.length === 0}
+                                disabled={selectedLabel.actions.length === 0}
                               >
                                 {previewing ? "取消执行" : "预览执行"}
                               </Button>
@@ -492,10 +498,6 @@ export default function DashboardModel() {
                               onChange={updateLabelActions}
                             />
                           </>
-                        ) : (
-                          <div className="rounded-md border border-dashed border-border bg-muted/20 px-3 py-6 text-center text-xs text-muted-foreground">
-                            选择一个标签来配置动作
-                          </div>
                         )}
                       </div>
                     )}
