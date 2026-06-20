@@ -921,7 +921,7 @@ export class ModelViewer implements ModelViewerRef {
    */
   private toLabelDefs(labels: DashboardModelLabel[]): LabelDef[] {
     return labels
-      .filter((l) => l.anchor.position !== undefined)
+      .filter((l) => l.anchor?.position !== undefined)
       .map((l) => ({
         key: l.meta.id,
         name: l.meta.name,
