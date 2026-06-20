@@ -1,6 +1,20 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+// crypto.randomUUID() requires a secure context (HTTPS / localhost).
+// Fallback to crypto.getRandomValues for HTTP production environments.
+function generateUUID(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+  bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant 1
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 export type PetTheme = string;
 
 const defaultPetId = "usagi";
@@ -75,7 +89,7 @@ export const usePetStore = create<PetState>()(
       setMessages: (msgs) => set({ messages: msgs }),
       setLoading: (loading) => set({ isLoading: loading }),
       clearMessages: () => set({ messages: [], sessionId: null }),
-      initSession: () => set({ sessionId: crypto.randomUUID() }),
+      initSession: () => set({ sessionId: generateUUID() }),
     }),
     {
       name: "ecoctrl-pet",
