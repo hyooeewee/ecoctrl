@@ -143,19 +143,35 @@ export function createOrientationGizmo(
   const light = new HemisphericLight("light", new Vector3(0, 1, -0.5), gizmoScene);
   light.intensity = 1.0;
 
-  // Build the cube with labeled faces
-  const cube = MeshBuilder.CreateBox("cube", { size: CUBE_SIZE }, gizmoScene);
-  const faceMaterials: StandardMaterial[] = [];
+  // Build the cube from 6 individual planes (one per face, each with its own material)
+  const half = CUBE_SIZE / 2;
+  const facePlanes: Mesh[] = [];
 
-  FACES.forEach((face, i) => {
-    const mat = new StandardMaterial(`mat_${face.name}`, gizmoScene);
+  const FACE_DEFS = [
+    { name: "右", pos: new Vector3(half, 0, 0), rot: new Vector3(0, Math.PI / 2, 0) },
+    { name: "左", pos: new Vector3(-half, 0, 0), rot: new Vector3(0, -Math.PI / 2, 0) },
+    { name: "顶", pos: new Vector3(0, half, 0), rot: new Vector3(-Math.PI / 2, 0, 0) },
+    { name: "底", pos: new Vector3(0, -half, 0), rot: new Vector3(Math.PI / 2, 0, 0) },
+    { name: "前", pos: new Vector3(0, 0, -half), rot: new Vector3(0, 0, 0) },
+    { name: "后", pos: new Vector3(0, 0, half), rot: new Vector3(0, Math.PI, 0) },
+  ];
+
+  FACE_DEFS.forEach((def) => {
+    const face = FACES.find((f) => f.name === def.name)!;
+    const plane = MeshBuilder.CreatePlane(`face_${def.name}`, { size: CUBE_SIZE }, gizmoScene);
+    plane.position = def.pos;
+    plane.rotation = def.rot;
+    plane.isPickable = true;
+
+    const mat = new StandardMaterial(`mat_${def.name}`, gizmoScene);
     mat.diffuseColor = face.color;
     mat.emissiveColor = face.color.scale(0.3);
     mat.specularColor = new Color3(0.2, 0.2, 0.2);
+    mat.backFaceCulling = false;
 
-    // Create a texture with the face label
+    // Texture with face label
     const texSize = 128;
-    const tex = new DynamicTexture(`tex_${face.name}`, texSize, gizmoScene, true);
+    const tex = new DynamicTexture(`tex_${def.name}`, texSize, gizmoScene, true);
     const ctx = tex.getContext();
     ctx.fillStyle = `rgb(${Math.round(face.color.r * 255)},${Math.round(face.color.g * 255)},${Math.round(face.color.b * 255)})`;
     ctx.fillRect(0, 0, texSize, texSize);
@@ -163,12 +179,12 @@ export function createOrientationGizmo(
     ctx.font = "bold 48px sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(face.name, texSize / 2, texSize / 2);
+    ctx.fillText(def.name, texSize / 2, texSize / 2);
     tex.update();
     mat.diffuseTexture = tex;
 
-    faceMaterials.push(mat);
-    (cube as any).setMaterialForFaceIndex(i, mat);
+    plane.material = mat;
+    facePlanes.push(plane);
   });
 
   // Edge highlight meshes (thin boxes along each edge)
@@ -241,6 +257,8 @@ export function createOrientationGizmo(
         (cornerMeshes[idx].material as StandardMaterial).alpha = 0.8;
         hoveredCorner = idx;
         gizmoCanvas.style.cursor = "pointer";
+      } else if (name.startsWith("face_")) {
+        gizmoCanvas.style.cursor = "pointer";
       } else {
         gizmoCanvas.style.cursor = "pointer";
       }
@@ -263,11 +281,10 @@ export function createOrientationGizmo(
     } else if (name.startsWith("edge_")) {
       const idx = parseInt(name.split("_")[1]);
       dir = EDGES[idx].dir;
-    } else if (name === "cube" && pick.getNormal) {
+    } else if (name.startsWith("face_") && pick.getNormal) {
       // Face click — use the face normal
       const normal = pick.getNormal(true);
       if (!normal) return;
-      // Snap to nearest axis-aligned direction
       dir = snapToNearestDir(normal);
     } else {
       return;

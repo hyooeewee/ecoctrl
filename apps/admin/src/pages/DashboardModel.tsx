@@ -56,15 +56,6 @@ export default function DashboardModel() {
   const [previewDone, setPreviewDone] = useState(false);
   const [availablePoints, setAvailablePoints] = useState<Point[]>([]);
 
-  // Reset preview state when label changes
-  useEffect(() => {
-    if (previewDone) {
-      sceneRef.current?.restorePreview();
-    }
-    setPreviewDone(false);
-    setPreviewing(false);
-  }, [selectedLabelId]);
-
   const setActiveTab = useAppStore((state) => state.setActiveTab);
 
   // Store state (selective subscriptions)
@@ -82,6 +73,15 @@ export default function DashboardModel() {
   const selectedLabelId = useModelEditorStore((s) => s.selectedLabelId);
   const placingLabelId = useModelEditorStore((s) => s.placingLabelId);
   const isDirty = useModelEditorStore((s) => s.isDirty);
+
+  // Reset preview state when label changes
+  useEffect(() => {
+    if (previewDone) {
+      sceneRef.current?.restorePreview();
+    }
+    setPreviewDone(false);
+    setPreviewing(false);
+  }, [selectedLabelId]);
 
   // Store actions (stable references)
   const {
