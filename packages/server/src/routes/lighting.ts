@@ -52,10 +52,28 @@ async function findLabel(labelId: string): Promise<DashboardModelLabel | null> {
   return labels.find((l) => l.meta.id === labelId) ?? null;
 }
 
+/** Parse IoT response into flat { pointId: value } map */
+function parseIotResponse(raw: unknown): Record<string, unknown> {
+  const obj = raw as Record<string, unknown>;
+  // IoT returns { code, ResultPointObjArr: [{ pointId, value, time }] }
+  const arr = obj.ResultPointObjArr;
+  if (Array.isArray(arr)) {
+    const map: Record<string, unknown> = {};
+    for (const item of arr) {
+      const { pointId, value } = item as { pointId: string; value: unknown };
+      if (pointId) map[pointId] = value;
+    }
+    return map;
+  }
+  // Fallback: if already flat, return as-is
+  return obj;
+}
+
 /** Read BACnet points with IoT fallback to mock */
 async function readPoints(pointIds: string[]): Promise<Record<string, unknown>> {
   try {
-    return await readPointValues(pointIds);
+    const raw = await readPointValues(pointIds);
+    return parseIotResponse(raw);
   } catch (err) {
     console.warn("[lighting] IoT read failed, using mock fallback:", (err as Error).message);
     // Return mock values

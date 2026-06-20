@@ -33,7 +33,7 @@ export function LightingSheet({ activeLabel, labels, onClose }: LightingSheetPro
   const [selectedId, setSelectedId] = useState(activeLabel);
   const [loading, setLoading] = useState(false);
 
-  const entries = useLightingStore((s) => s.entries);
+  const version = useLightingStore((s) => s.version);
   const initGroups = useLightingStore((s) => s.initGroups);
 
   // Labels that have groups
@@ -44,7 +44,8 @@ export function LightingSheet({ activeLabel, labels, onClose }: LightingSheetPro
 
   const selectedLabel = labels.find((l) => l.meta.name === selectedId);
   const labelId = selectedLabel?.meta.id ?? "";
-  const groups: LightingGroupState[] = entries[labelId] ?? [];
+  // Read from store directly — `version` selector ensures re-render on mutations
+  const groups: LightingGroupState[] = useLightingStore.getState().entries[labelId] ?? [];
 
   // Sync selection when activeLabel changes
   useEffect(() => {
@@ -78,7 +79,7 @@ export function LightingSheet({ activeLabel, labels, onClose }: LightingSheetPro
     return () => {
       cancelled = true;
     };
-  }, [labelId, setStatus]);
+  }, [labelId, initGroups]);
 
   const handleToggle = async (group: LightingGroupState) => {
     const newStatus = group.status === "on" ? "off" : "on";
