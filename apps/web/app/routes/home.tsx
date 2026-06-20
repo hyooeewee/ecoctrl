@@ -76,7 +76,17 @@ export default function Home() {
 
   const onSseMessage = useCallback(
     (msg: SSEMessage) => {
-      console.log("[SSE] received:", msg.type, msg.payload);
+      // Filter noisy SSE events from console
+      const SSE_LOG_BLACKLIST = [
+        "ping",
+        "workflow_node_status",
+        "workflow_execution",
+        "notification",
+      ];
+      if (!SSE_LOG_BLACKLIST.includes(msg.type)) {
+        console.log("[SSE]", msg.type, msg.payload);
+      }
+
       if (msg.type === "widget_update") {
         const { metricKey, timestamp, data } = msg.payload as {
           metricKey: string;
