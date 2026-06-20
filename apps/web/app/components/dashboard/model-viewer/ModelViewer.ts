@@ -178,7 +178,11 @@ export class ModelViewer implements ModelViewerRef {
     this.camera.viewport = new Viewport(0, 0, 1, 1);
 
     // Sandbox-style skybox + minimal IBL for PBR ambient fill.
-    this.skybox = setupSandboxEnvironment(this.scene, { environmentIntensity: 0.05 });
+    try {
+      this.skybox = setupSandboxEnvironment(this.scene, { environmentIntensity: 0.05 });
+    } catch (err) {
+      console.warn("[ModelViewer] Failed to load environment texture:", err);
+    }
 
     // Manual lighting for PBR materials (no IBL = need stronger lights).
     const hemi = new HemisphericLight("hemi", new Vector3(0, 1, 0), this.scene);
@@ -560,7 +564,7 @@ export class ModelViewer implements ModelViewerRef {
 
     // Filter labels by modelBindings: empty = global, otherwise match loaded roles.
     const filteredLabels = this.v2Labels.filter((l) => {
-      if (l.modelBindings.length === 0) return true;
+      if (!l.modelBindings || l.modelBindings.length === 0) return true;
       return l.modelBindings.some((role) => loadedRoles.has(role));
     });
 
