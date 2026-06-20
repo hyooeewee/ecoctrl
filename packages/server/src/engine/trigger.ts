@@ -124,9 +124,9 @@ export const triggerEngine = {
     }
   },
 
-  // Manual: called from API. Prefers a manual trigger node, but falls back to
-  // any trigger node so the run/debug button works for schedule/webhook/event
-  // workflows as well.
+  // Manual: called from API. Any published workflow can be triggered manually.
+  // Prefers a manual trigger node, then any trigger node, then falls back to
+  // the first node with no incoming edges (entry node).
   async emitManual(
     workflowId: string,
     userId: string,
@@ -143,22 +143,29 @@ export const triggerEngine = {
 
     const dsl = (workflow.publishedDsl ?? workflow.dsl) as WorkflowDSL;
     const triggerNodes = getTriggerNodes(dsl);
-    if (triggerNodes.length === 0) {
-      throw new Error("Workflow has no trigger node");
-    }
 
-    let entry: { node: WorkflowNode; mode: TriggerMode } | undefined;
+    // Determine the entry node for execution
+    let entryNodeId: string;
+
     if (startNodeId) {
-      entry = triggerNodes.find((t) => t.node.id === startNodeId);
-      if (!entry) {
-        throw new Error(`Trigger node '${startNodeId}' not found`);
-      }
-    } else {
+      // Explicit start node requested
+      entryNodeId = startNodeId;
+    } else if (triggerNodes.length > 0) {
+      // Prefer manual triggers, fall back to any trigger
       const manualTriggers = triggerNodes.filter((t) => t.mode === "manual");
-      entry = manualTriggers.length > 0 ? manualTriggers[0] : triggerNodes[0];
+      const entry = manualTriggers.length > 0 ? manualTriggers[0] : triggerNodes[0];
+      entryNodeId = entry.node.id;
+    } else {
+      // No trigger nodes — find the first node with no incoming edges
+      const targetIds = new Set(dsl.edges.map((e) => e.target));
+      const entryNode = dsl.nodes.find((n) => !targetIds.has(n.id));
+      if (!entryNode) {
+        throw new Error("Workflow has no entry node");
+      }
+      entryNodeId = entryNode.id;
     }
 
-    return createExecutionAndPublish(workflowId, userId, entry.node.id, {
+    return createExecutionAndPublish(workflowId, userId, entryNodeId, {
       ...payload,
       source: "manual",
     });
