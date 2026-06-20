@@ -259,7 +259,7 @@ export function EnergyBreakdownChart({
 
       <div className="flex min-h-0 flex-1 items-center gap-3">
         {/* Donut chart with centered total */}
-        <div className="relative h-full max-h-full aspect-square">
+        <div className="relative h-full max-h-full shrink-0 basis-auto">
           <ChartContainer config={chartConfig} className="h-full w-full">
             <PieChart>
               <ChartTooltip content={<ChartTooltipContent hideLabel />} />
@@ -291,7 +291,7 @@ export function EnergyBreakdownChart({
         </div>
 
         {/* Vertical legend — stays inside the widget and scrolls if needed */}
-        <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto text-[10px]">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col justify-center overflow-y-auto text-[10px]">
           {chartData.map((item, index) => {
             const color = item.color ?? CATEGORY_COLORS[index % CATEGORY_COLORS.length];
             return (
