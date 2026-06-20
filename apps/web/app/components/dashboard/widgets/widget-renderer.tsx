@@ -1,4 +1,5 @@
 import type { WidgetConfig, WidgetInitData } from "./types";
+import { getWidgetTitle, useLocale } from "~/locales";
 import { StatCard } from "./_stat-card";
 import { EnergyBreakdownChart, EnergyTrendChart } from "./energy-charts";
 import { DynamicIcon } from "./dynamic-icon";
@@ -15,7 +16,10 @@ interface WidgetRendererProps {
  * Data = liveData (SSE) ?? initData (REST fallback).
  */
 export function WidgetRenderer({ widget, liveData }: WidgetRendererProps) {
+  const t = useLocale();
   const { dataType, metricKey, dataJson } = widget;
+  const title = getWidgetTitle(t, metricKey);
+  const icon = <DynamicIcon name={widget.icon} size={14} />;
   const { initData, ...config } = dataJson;
 
   // SSE data覆盖初始数据（shallow merge，结构一致）
@@ -28,6 +32,8 @@ export function WidgetRenderer({ widget, liveData }: WidgetRendererProps) {
       return (
         <StatCard
           data={data}
+          title={title}
+          icon={icon}
           unit={config.unit as string}
           sparklineColor={config.sparklineColor as string}
           footerKey={config.footerKey as string}
@@ -44,6 +50,8 @@ export function WidgetRenderer({ widget, liveData }: WidgetRendererProps) {
               (chartData.items as Array<{ label: string; value: number; color?: string }>) ?? []
             }
             total={chartData.total as number}
+            title={title}
+            icon={icon}
           />
         );
       }
@@ -51,6 +59,8 @@ export function WidgetRenderer({ widget, liveData }: WidgetRendererProps) {
         <EnergyTrendChart
           data={(chartData.points as Array<{ label: string; value: number }>) ?? []}
           chartType={config.chartType as "area" | "line" | "bar"}
+          title={title}
+          icon={icon}
         />
       );
     }

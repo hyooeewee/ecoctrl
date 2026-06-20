@@ -5,14 +5,15 @@ import {
   GraphButtonBlockDetail,
 } from "~/components/dashboard/graph-button-block";
 import { ExpandableModal } from "~/components/expandable-modal";
-import { getNestedLocaleValue, getWidgetTitle, useLocale } from "~/locales";
+import { getNestedLocaleValue, useLocale } from "~/locales";
 
-import { DynamicIcon } from "./dynamic-icon";
-import type { StatInitData, WidgetConfig } from "./types";
+import type { StatInitData } from "./types";
 import type { DashboardOutletContext } from "~/routes/dashboard-layout";
 
 interface StatCardProps {
   data: Record<string, unknown>;
+  title?: string;
+  icon?: React.ReactNode;
   unit?: string;
   sparklineColor?: string;
   footerKey?: string;
@@ -26,7 +27,15 @@ function computeTrendType(trend: string | undefined, direction: "good" | "bad"):
   return isUp ? "up-good" : "down-bad";
 }
 
-export function StatCard({ data, unit, sparklineColor, footerKey, trendDirection }: StatCardProps) {
+export function StatCard({
+  data,
+  title,
+  icon,
+  unit,
+  sparklineColor,
+  footerKey,
+  trendDirection,
+}: StatCardProps) {
   const t = useLocale();
   const { activeLabel } = useOutletContext<DashboardOutletContext>();
 
@@ -42,8 +51,8 @@ export function StatCard({ data, unit, sparklineColor, footerKey, trendDirection
   const hasSparkline = chartData.length > 0;
 
   const props = {
-    title: "",
-    icon: null,
+    title: title ?? "",
+    icon: icon ?? null,
     value: statData.value,
     unit: resolvedUnit,
     delta,
