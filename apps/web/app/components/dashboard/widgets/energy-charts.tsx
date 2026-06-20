@@ -271,8 +271,8 @@ export function EnergyBreakdownChart({
       </div>
 
       <div className="flex min-h-0 flex-1 items-center gap-3">
-        {/* Donut chart with centered total */}
-        <div className="relative h-full max-h-full shrink-0 basis-auto">
+        {/* Donut chart with centered total — left side */}
+        <div className="relative h-full max-h-full shrink-0 basis-auto aspect-square">
           <ChartContainer config={chartConfig} className="h-full w-full">
             <PieChart>
               <ChartTooltip content={<ChartTooltipContent hideLabel />} />
