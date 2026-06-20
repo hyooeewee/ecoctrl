@@ -56,6 +56,7 @@ export interface BabylonSceneRef {
   zoomOut: () => void;
   resetView: () => void;
   executeOperations: (actions: LabelAction[], signal?: AbortSignal) => Promise<void>;
+  restorePreview: () => void;
   captureCameraView: () => {
     position: { x: number; y: number; z: number };
     lookAt: { x: number; y: number; z: number };
@@ -91,6 +92,7 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
     const cameraRef = useRef<ArcRotateCamera | null>(null);
     const rootNodeRef = useRef<TransformNode | null>(null);
     const guiTextureRef = useRef<AdvancedDynamicTexture | null>(null);
+    const previewSnapshotRef = useRef<SceneSnapshot | null>(null);
     const loadedModelsRef = useRef<
       Map<string, { root: TransformNode; modelUrl: string; meshes: AbstractMesh[] }>
     >(new Map());
@@ -484,10 +486,16 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
             }
           }
         } finally {
-          // Preview is non-destructive: restore camera and mesh visibility
-          // whether the sequence completed, was cancelled, or threw.
-          restoreSceneSnapshot(camera, snapshot);
+          // Store snapshot for manual restore via restorePreview()
+          previewSnapshotRef.current = snapshot;
         }
+      },
+      restorePreview() {
+        const camera = cameraRef.current;
+        const snapshot = previewSnapshotRef.current;
+        if (!camera || !snapshot) return;
+        restoreSceneSnapshot(camera, snapshot);
+        previewSnapshotRef.current = null;
       },
     }));
 

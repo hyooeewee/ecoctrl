@@ -53,7 +53,17 @@ export default function DashboardModel() {
   const previewAbortRef = useRef<AbortController | null>(null);
 
   const [previewing, setPreviewing] = useState(false);
+  const [previewDone, setPreviewDone] = useState(false);
   const [availablePoints, setAvailablePoints] = useState<Point[]>([]);
+
+  // Reset preview state when label changes
+  useEffect(() => {
+    if (previewDone) {
+      sceneRef.current?.restorePreview();
+    }
+    setPreviewDone(false);
+    setPreviewing(false);
+  }, [selectedLabelId]);
 
   const setActiveTab = useAppStore((state) => state.setActiveTab);
 
@@ -246,6 +256,13 @@ export default function DashboardModel() {
   }, []);
 
   const handlePreview = async () => {
+    // If done, restore original state
+    if (previewDone) {
+      sceneRef.current?.restorePreview();
+      setPreviewDone(false);
+      return;
+    }
+    // If executing, cancel
     if (previewing) {
       previewAbortRef.current?.abort();
       return;
@@ -254,8 +271,6 @@ export default function DashboardModel() {
 
     const controller = new AbortController();
     previewAbortRef.current = controller;
-    // Force the button to render as "取消执行" immediately so users can cancel
-    // even for very fast operation sequences.
     flushSync(() => setPreviewing(true));
 
     const startTime = performance.now();
@@ -267,8 +282,6 @@ export default function DashboardModel() {
       }
     }
 
-    // Keep the executing state visible for at least 500ms so the state change
-    // is not a sub-frame flash.
     const elapsed = performance.now() - startTime;
     const minDuration = 500;
     if (elapsed < minDuration) {
@@ -276,6 +289,7 @@ export default function DashboardModel() {
     }
 
     setPreviewing(false);
+    setPreviewDone(true);
     previewAbortRef.current = null;
   };
 
@@ -525,11 +539,14 @@ export default function DashboardModel() {
                               </h3>
                               <Button
                                 size="sm"
-                                variant={previewing ? "secondary" : "outline"}
+                                variant={
+                                  previewDone ? "secondary" : previewing ? "secondary" : "outline"
+                                }
                                 onClick={handlePreview}
                                 disabled={selectedLabel.actions.length === 0}
+                                title={previewing ? "点击取消执行" : undefined}
                               >
-                                {previewing ? "取消执行" : "预览执行"}
+                                {previewDone ? "恢复" : previewing ? "执行中..." : "预览执行"}
                               </Button>
                             </div>
                             <ActionStepsConfig
