@@ -42,6 +42,7 @@ interface LabelConfigFormProps {
   label: Label;
   parentOptions: { id: string; name: string }[];
   availablePoints?: { name?: string | null }[];
+  availableRoles?: string[];
   onChange: (label: Label) => void;
   onPickPosition?: () => void;
   disabled?: boolean;
@@ -542,6 +543,7 @@ export default function LabelConfigForm({
   label,
   parentOptions,
   availablePoints = [],
+  availableRoles = [],
   onChange,
   onPickPosition,
   disabled,
@@ -614,6 +616,14 @@ export default function LabelConfigForm({
           {label.actions.length > 0 && (
             <Badge variant="secondary" className="ml-1 h-3.5 px-1 text-[9px]">
               {label.actions.length}
+            </Badge>
+          )}
+        </TabsTrigger>
+        <TabsTrigger value="bindings" className="text-xs h-7 px-2">
+          模型
+          {label.modelBindings.length > 0 && (
+            <Badge variant="secondary" className="ml-1 h-3.5 px-1 text-[9px]">
+              {label.modelBindings.length}
             </Badge>
           )}
         </TabsTrigger>
@@ -816,6 +826,47 @@ export default function LabelConfigForm({
             "config" in item
           }
         />
+      </TabsContent>
+
+      {/* ====== 模型绑定 ====== */}
+      <TabsContent value="bindings" className="mt-3 grid gap-3">
+        <div className="grid gap-2">
+          <Label className="text-xs">关联模型角色</Label>
+          <p className="text-[10px] text-muted-foreground">
+            选择此标签关联的模型角色。不选 = 全局标签（所有模型显示）。
+          </p>
+          {availableRoles.length === 0 ? (
+            <div className="rounded-md border border-dashed border-border bg-muted/20 px-2 py-3 text-center text-xs text-muted-foreground">
+              暂无模型角色，请先在模型列表中设置 role
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {availableRoles.map((role) => {
+                const isChecked = label.modelBindings.includes(role);
+                return (
+                  <label
+                    key={role}
+                    className="flex items-center gap-1.5 rounded-md border bg-muted/30 px-2.5 py-1.5 text-xs cursor-pointer hover:bg-muted/50 transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => {
+                        const next = isChecked
+                          ? label.modelBindings.filter((r) => r !== role)
+                          : [...label.modelBindings, role];
+                        onChange({ ...label, modelBindings: next });
+                      }}
+                      disabled={disabled}
+                      className="h-3 w-3"
+                    />
+                    {role}
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </TabsContent>
     </Tabs>
   );

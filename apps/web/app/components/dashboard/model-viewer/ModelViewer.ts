@@ -288,10 +288,10 @@ export class ModelViewer implements ModelViewerRef {
   async load(config: ModelLoadConfig): Promise<void> {
     const { groups, fallbackUrl = FALLBACK_URL, globalLabels } = config;
 
-    // Store V2 labels and build fallback labelDefs for anchor computation.
+    // Store V2 labels (full set) and build fallback labelDefs for anchor computation.
+    // Filtering by modelBindings happens in computeLabelAnchors after models load.
     if (globalLabels) {
       this.v2Labels = globalLabels;
-      this.labelDefs = this.toLabelDefs(globalLabels);
     }
 
     if (groups && groups.length > 0) {
@@ -554,6 +554,18 @@ export class ModelViewer implements ModelViewerRef {
       };
       collectMeshes(group.rootNode);
     }
+
+    // Build set of loaded model roles for label filtering.
+    const loadedRoles = new Set(this.groups.map((g) => g.role).filter(Boolean));
+
+    // Filter labels by modelBindings: empty = global, otherwise match loaded roles.
+    const filteredLabels = this.v2Labels.filter((l) => {
+      if (l.modelBindings.length === 0) return true;
+      return l.modelBindings.some((role) => loadedRoles.has(role));
+    });
+
+    // Rebuild labelDefs from filtered labels.
+    this.labelDefs = this.toLabelDefs(filteredLabels);
 
     this.labelAnchors = this.labelDefs.map((cfg) => {
       const node = findNode(cfg.meshKeywords);
