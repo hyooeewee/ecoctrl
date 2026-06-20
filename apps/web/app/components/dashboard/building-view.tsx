@@ -81,7 +81,7 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
   {
     className,
     activeLabel,
-    sidebarWidth: _sidebarWidth = 320,
+    sidebarWidth = 0,
     onLabelClick,
     onCanvasClick: _onCanvasClick,
     onLoad,
@@ -122,6 +122,7 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
       onLoad,
       onProgress,
       defaultCameraRadius,
+      sidebarWidth,
     });
     viewerRef.current = viewer;
 
@@ -234,6 +235,10 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
     viewerRef.current.setEnvironmentPreset(environmentPreset);
   }, [environmentPreset]);
 
+  useEffect(() => {
+    viewerRef.current?.setSidebarWidth(sidebarWidth);
+  }, [sidebarWidth]);
+
   // Execute tag operations when a label is selected, restore when deselected.
   const visibilitySnapshotRef = useRef<VisibilitySnapshot | null>(null);
   useEffect(() => {
@@ -277,7 +282,11 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
     <div className={cn("relative overflow-hidden bg-[#060d18]", className)}>
       <canvas
         ref={canvasRef}
-        className="h-full w-full touch-none"
+        className="h-full touch-none"
+        style={{
+          width: sidebarWidth ? `calc(100% - ${sidebarWidth}px)` : "100%",
+          marginLeft: sidebarWidth,
+        }}
         aria-label={t.building.ariaLabel}
       />
 

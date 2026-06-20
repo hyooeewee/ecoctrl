@@ -64,4 +64,6 @@ export interface ViewerOptions {
   defaultCameraRadius: number;
   /** Optional hardware scaling level. Defaults to 1 (native resolution). */
   hardwareScalingLevel?: number;
+  /** Sidebar width in pixels — shifts viewport and label positions right. */
+  sidebarWidth?: number;
 }

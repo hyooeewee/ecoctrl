@@ -55,6 +55,7 @@ export interface ModelViewerRef {
   exitImmersive: () => void;
   focusOnLabel: (key: string) => void;
   setClipping: (enabled: boolean) => void;
+  setSidebarWidth: (width: number) => void;
   executeTagActions: (labelKey: string) => Promise<void>;
   captureVisibilitySnapshot: () => VisibilitySnapshot;
   restoreVisibilitySnapshot: (snapshot: VisibilitySnapshot) => void;
@@ -77,6 +78,9 @@ export class ModelViewer implements ModelViewerRef {
   // Runtime state
   private showLabels = true;
   private isInteracting = false;
+
+  // Sidebar offset for label projection
+  private sidebarWidth = 0;
 
   // Camera defaults
   private defaultCameraRadius: number;
@@ -135,6 +139,7 @@ export class ModelViewer implements ModelViewerRef {
     this.onCriticalLoaded = options.onCriticalLoaded;
     this.onProgress = options.onProgress;
     this.defaultCameraRadius = options.defaultCameraRadius;
+    this.sidebarWidth = options.sidebarWidth ?? 0;
 
     this.engine = createEngine(this.canvas);
     this.scene = createScene(this.engine);
@@ -1026,6 +1031,12 @@ export class ModelViewer implements ModelViewerRef {
   setClipping(enabled: boolean): void {
     // Animate clip plane toward lobbyTop (enabled) or above roof (disabled).
     setClipTarget(this.clipState, enabled ? this.clipState.lobbyTop : 999);
+  }
+
+  setSidebarWidth(width: number): void {
+    this.sidebarWidth = width;
+    // Resize engine so canvas adapts to new effective area
+    this.engine.resize();
   }
 
   // ========================================
