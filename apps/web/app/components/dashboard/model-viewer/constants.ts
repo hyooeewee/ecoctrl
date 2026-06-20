@@ -71,13 +71,14 @@ export const DEFAULT_LABELS: LabelDef[] = [
 
 export const DEFAULT_V2_LABELS: DashboardModelLabel[] = [
   {
-    id: "office1",
-    key: "office1",
-    name: "Office Area 1",
-    position: { x: -4, y: 2.5, z: -3 },
-    meshKeywords: ["office", "办公"],
-    operations: [
+    meta: { id: "office1", name: "Office Area 1" },
+    anchor: { position: { x: -4, y: 2.5, z: -3 }, meshKeywords: ["office", "办公"] },
+    tree: { order: 0 },
+    groups: [],
+    modelBindings: [],
+    actions: [
       {
+        id: "cam_office1",
         type: "camera",
         config: {
           target: { x: -4, y: 2.5, z: -3 },
@@ -87,16 +88,16 @@ export const DEFAULT_V2_LABELS: DashboardModelLabel[] = [
         },
       },
     ],
-    order: 0,
   },
   {
-    id: "meeting",
-    key: "meeting",
-    name: "Meeting Room",
-    position: { x: 0, y: 3.2, z: -3 },
-    meshKeywords: ["meeting", "会议"],
-    operations: [
+    meta: { id: "meeting", name: "Meeting Room" },
+    anchor: { position: { x: 0, y: 3.2, z: -3 }, meshKeywords: ["meeting", "会议"] },
+    tree: { order: 1 },
+    groups: [],
+    modelBindings: [],
+    actions: [
       {
+        id: "cam_meeting",
         type: "camera",
         config: {
           target: { x: 0, y: 3.2, z: -3 },
@@ -106,16 +107,19 @@ export const DEFAULT_V2_LABELS: DashboardModelLabel[] = [
         },
       },
     ],
-    order: 1,
   },
   {
-    id: "dataCenter",
-    key: "dataCenter",
-    name: "Data Center",
-    position: { x: -1.5, y: 1.5, z: 0 },
-    meshKeywords: ["data", "server", "机房", "数据"],
-    operations: [
+    meta: { id: "dataCenter", name: "Data Center" },
+    anchor: {
+      position: { x: -1.5, y: 1.5, z: 0 },
+      meshKeywords: ["data", "server", "机房", "数据"],
+    },
+    tree: { order: 2 },
+    groups: [],
+    modelBindings: [],
+    actions: [
       {
+        id: "cam_dataCenter",
         type: "camera",
         config: {
           target: { x: -1.5, y: 1.5, z: 0 },
@@ -125,16 +129,19 @@ export const DEFAULT_V2_LABELS: DashboardModelLabel[] = [
         },
       },
     ],
-    order: 2,
   },
   {
-    id: "exhibition",
-    key: "exhibition",
-    name: "Exhibition Hall",
-    position: { x: 2.5, y: 2.2, z: -2 },
-    meshKeywords: ["exhibition", "hall", "展示", "展厅"],
-    operations: [
+    meta: { id: "exhibition", name: "Exhibition Hall" },
+    anchor: {
+      position: { x: 2.5, y: 2.2, z: -2 },
+      meshKeywords: ["exhibition", "hall", "展示", "展厅"],
+    },
+    tree: { order: 3 },
+    groups: [],
+    modelBindings: [],
+    actions: [
       {
+        id: "cam_exhibition",
         type: "camera",
         config: {
           target: { x: 2.5, y: 2.2, z: -2 },
@@ -144,16 +151,16 @@ export const DEFAULT_V2_LABELS: DashboardModelLabel[] = [
         },
       },
     ],
-    order: 3,
   },
   {
-    id: "office2",
-    key: "office2",
-    name: "Office Area 2",
-    position: { x: 3.5, y: 2.5, z: -3 },
-    meshKeywords: ["office", "办公"],
-    operations: [
+    meta: { id: "office2", name: "Office Area 2" },
+    anchor: { position: { x: 3.5, y: 2.5, z: -3 }, meshKeywords: ["office", "办公"] },
+    tree: { order: 4 },
+    groups: [],
+    modelBindings: [],
+    actions: [
       {
+        id: "cam_office2",
         type: "camera",
         config: {
           target: { x: 3.5, y: 2.5, z: -3 },
@@ -163,16 +170,19 @@ export const DEFAULT_V2_LABELS: DashboardModelLabel[] = [
         },
       },
     ],
-    order: 4,
   },
   {
-    id: "lobby",
-    key: "lobby",
-    name: "Lobby",
-    position: { x: 3.5, y: 0.8, z: 2 },
-    meshKeywords: ["lobby", "大堂", "大厅", "entrance"],
-    operations: [
+    meta: { id: "lobby", name: "Lobby" },
+    anchor: {
+      position: { x: 3.5, y: 0.8, z: 2 },
+      meshKeywords: ["lobby", "大堂", "大厅", "entrance"],
+    },
+    tree: { order: 5 },
+    groups: [],
+    modelBindings: [],
+    actions: [
       {
+        id: "cam_lobby",
         type: "camera",
         config: {
           target: { x: 3.5, y: 0.8, z: 2 },
@@ -182,6 +192,7 @@ export const DEFAULT_V2_LABELS: DashboardModelLabel[] = [
         },
       },
       {
+        id: "clip_lobby",
         type: "clipping",
         config: {
           planeNormal: { x: 0, y: 1, z: 0 },
@@ -190,6 +201,5 @@ export const DEFAULT_V2_LABELS: DashboardModelLabel[] = [
         },
       },
     ],
-    order: 5,
   },
 ];

@@ -8,7 +8,6 @@ import { AdvancedDynamicTexture, TextBlock, Ellipse, Rectangle } from "@babylonj
 
 export interface LabelMarkerData {
   id: string;
-  key: string;
   name: string;
   position: Vector3;
   isSelected?: boolean;
@@ -68,7 +67,7 @@ export function useLabelMarkers({
 
     // Label text
     const text = new TextBlock(`label_text_${label.id}`);
-    text.text = label.name || label.key;
+    text.text = label.name;
     text.color = "white";
     text.fontSize = 12;
     text.fontFamily = "system-ui, sans-serif";
@@ -180,7 +179,7 @@ export function useLabelMarkers({
         existing.anchor.position = label.position;
         existing.container.background = label.isSelected ? "#3b82f6" : "#1e293b";
         const text = existing.container.children[0] as TextBlock;
-        if (text) text.text = label.name || label.key;
+        if (text) text.text = label.name;
         const dot = existing.container.children[1] as Ellipse;
         if (dot) dot.background = label.isSelected ? "#3b82f6" : "#1e293b";
       } else {

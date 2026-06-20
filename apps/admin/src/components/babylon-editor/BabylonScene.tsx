@@ -23,7 +23,7 @@ import {
 import "@babylonjs/loaders";
 import { AdvancedDynamicTexture } from "@babylonjs/gui";
 import { createEngine, loadGltf, loadModelsByPriority } from "@ecoctrl/shared/babylon";
-import type { LabelOperation } from "@ecoctrl/shared";
+import type { LabelAction } from "@ecoctrl/shared";
 
 // ========================================
 // Types
@@ -55,7 +55,7 @@ export interface BabylonSceneRef {
   zoomIn: () => void;
   zoomOut: () => void;
   resetView: () => void;
-  executeOperations: (operations: LabelOperation[], signal?: AbortSignal) => Promise<void>;
+  executeOperations: (actions: LabelAction[], signal?: AbortSignal) => Promise<void>;
 }
 
 // ========================================
@@ -135,7 +135,7 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
           axesRef.current,
         );
       },
-      async executeOperations(operations: LabelOperation[], signal?: AbortSignal) {
+      async executeOperations(actions: LabelAction[], signal?: AbortSignal) {
         const camera = cameraRef.current;
         const scene = sceneRef.current;
         if (!camera || !scene) return;
@@ -147,11 +147,11 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
         };
 
         try {
-          for (const op of operations) {
+          for (const action of actions) {
             throwIfAborted();
-            switch (op.type) {
+            switch (action.type) {
               case "camera": {
-                const cfg = op.config as {
+                const cfg = action.config as {
                   target: { x: number; y: number; z: number };
                   distance: number;
                   fov: number;
@@ -217,7 +217,7 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
                 console.warn("[BabylonScene] clipping execution not implemented in admin preview");
                 break;
               case "visibility": {
-                await executeVisibility(op, loadedModelsRef.current, signal);
+                await executeVisibility(action, loadedModelsRef.current, signal);
                 break;
               }
               case "postprocess":
@@ -737,18 +737,15 @@ interface VisibilityConfig {
 }
 
 async function executeVisibility(
-  op: Extract<LabelOperation, { type: "visibility" }>,
+  action: { type: string; config: Record<string, unknown> },
   loadedModels: Map<string, { root: TransformNode; modelUrl: string; meshes: AbstractMesh[] }>,
   signal?: AbortSignal,
 ) {
-  const config = op.config as VisibilityConfig;
-  const keywords = (config.targets ?? []).map((k) => k.toLowerCase()).filter(Boolean);
-  const targetModelFileId = op.targetModelFileId;
-  const hasTargetModel = Boolean(targetModelFileId);
+  const config = action.config as unknown as VisibilityConfig;
+  const keywords = (config.targets ?? []).map((k: string) => k.toLowerCase()).filter(Boolean);
 
   loadedModels.forEach(({ meshes, modelUrl }, id) => {
     if (signal?.aborted) return;
-    if (hasTargetModel && id !== targetModelFileId) return;
 
     const modelBasename = modelUrl.split("/").pop()?.toLowerCase() ?? "";
     meshes.forEach((mesh) => {

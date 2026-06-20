@@ -13,11 +13,9 @@ import AppButton from "@/components/AppButton";
 
 export interface LabelTreeNode {
   id: string;
-  key: string;
   name: string;
-  parentId?: string;
   children: LabelTreeNode[];
-  operationCount: number;
+  actionCount: number;
 }
 
 interface LabelTreeProps {
@@ -170,13 +168,13 @@ function LabelTreeItem({
 
         {/* Name */}
         <span className="flex-1 truncate cursor-pointer" onClick={() => onSelect?.(label.id)}>
-          {label.name || label.key}
+          {label.name}
         </span>
 
-        {/* Operation count badge */}
-        {label.operationCount > 0 && (
+        {/* Action count badge */}
+        {label.actionCount > 0 && (
           <Badge variant="secondary" className="h-4 px-1 text-[10px]">
-            {label.operationCount}
+            {label.actionCount}
           </Badge>
         )}
 

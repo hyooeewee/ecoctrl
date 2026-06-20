@@ -70,8 +70,32 @@ export const LabelOperationSchema = z.discriminatedUnion("type", [
 export type LabelOperation = z.infer<typeof LabelOperationSchema>;
 
 // ========================================
-// Label Group Schema
+// Label v2 — Semantic Sub-objects
 // ========================================
+
+// Identity
+export const LabelMetaSchema = z.object({
+  id: z.string().describe("Unique identifier, e.g. 'south_lobby'"),
+  name: z.string().describe("Display name, e.g. '南序厅'"),
+  description: z.string().optional(),
+});
+export type LabelMeta = z.infer<typeof LabelMetaSchema>;
+
+// 3D anchor
+export const LabelAnchorSchema = z.object({
+  position: z.object({ x: z.number(), y: z.number(), z: z.number() }).optional(),
+  meshKeywords: z.array(z.string()).default([]),
+});
+export type LabelAnchor = z.infer<typeof LabelAnchorSchema>;
+
+// Tree hierarchy
+export const LabelTreeSchema = z.object({
+  parentId: z.string().nullable().optional().describe("null/undefined = root"),
+  order: z.number().default(0),
+});
+export type LabelTree = z.infer<typeof LabelTreeSchema>;
+
+// Point groups
 export const LabelGroupSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -79,21 +103,26 @@ export const LabelGroupSchema = z.object({
 });
 export type LabelGroup = z.infer<typeof LabelGroupSchema>;
 
+// Click actions
+export const LabelActionSchema = z.object({
+  id: z.string(),
+  label: z.string().optional().describe("Human-readable action name"),
+  type: z.enum(["camera", "clipping", "visibility", "postprocess"]),
+  config: z.record(z.string(), z.unknown()).describe("Typed config matching action type"),
+});
+export type LabelAction = z.infer<typeof LabelActionSchema>;
+
 // ========================================
-// Label Schema (Tags with optional 3D position)
+// Label Schema v2
 // ========================================
 
 export const DashboardModelLabelSchema = z.object({
-  id: z.string(),
-  key: z.string(),
-  name: z.string(),
-  description: z.string().optional(),
-  parentId: z.string().nullable().optional(),
-  position: z.object({ x: z.number(), y: z.number(), z: z.number() }).optional(),
-  meshKeywords: z.array(z.string()).default([]),
-  operations: z.array(LabelOperationSchema),
-  order: z.number(),
+  meta: LabelMetaSchema,
+  anchor: LabelAnchorSchema.default({ meshKeywords: [] }),
+  tree: LabelTreeSchema.default({ order: 0 }),
   groups: z.array(LabelGroupSchema).default([]),
+  actions: z.array(LabelActionSchema).default([]),
+  modelBindings: z.array(z.string()).default([]).describe("Associated model file IDs"),
 });
 export type DashboardModelLabel = z.infer<typeof DashboardModelLabelSchema>;
 
@@ -110,20 +139,6 @@ export const ModelFileEntrySchema = z.object({
   labels: z.array(DashboardModelLabelSchema).optional(),
 });
 export type ModelFileEntry = z.infer<typeof ModelFileEntrySchema>;
-
-// ========================================
-// Label Schema (Legacy - for backward compat)
-// ========================================
-
-export const LegacyDashboardModelLabelSchema = z.object({
-  key: z.string(),
-  fallbackPosition: z.object({ x: z.number(), y: z.number(), z: z.number() }),
-  meshKeywords: z.array(z.string()),
-  focusAlpha: z.number(),
-  focusBeta: z.number(),
-  focusRadius: z.number(),
-});
-export type LegacyDashboardModelLabel = z.infer<typeof LegacyDashboardModelLabelSchema>;
 
 // ========================================
 // Config Schema
