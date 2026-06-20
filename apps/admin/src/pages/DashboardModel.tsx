@@ -20,6 +20,8 @@ import { Button } from "@ecoctrl/ui";
 import { Badge } from "@ecoctrl/ui";
 import { ScrollArea } from "@ecoctrl/ui";
 import { Tabs, TabsList, TabsTrigger } from "@ecoctrl/ui";
+import { Label } from "@ecoctrl/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ecoctrl/ui/select";
 import { FileUpload, FileUploadDropzone, FileUploadTrigger } from "@ecoctrl/ui/file-upload";
 
 import ModelEditorTopBar from "@/components/model-editor/ModelEditorTopBar";
@@ -487,13 +489,30 @@ export default function DashboardModel() {
 
                     {editorMode === "clipPreview" && (
                       <div className="grid gap-4">
-                        <LabelTree
-                          labels={labelTreeData}
-                          selectedId={selectedLabelId}
-                          onSelect={selectLabel}
-                          addTitle={existingFiles.length === 0 ? "请先上传模型" : "选择标签"}
-                          disabled={existingFiles.length === 0}
-                        />
+                        {/* Label selector dropdown */}
+                        <div className="grid gap-2">
+                          <Label className="text-xs">选择标签</Label>
+                          <Select
+                            value={selectedLabelId ?? ""}
+                            onValueChange={(v) => selectLabel(v || null)}
+                            disabled={existingFiles.length === 0}
+                          >
+                            <SelectTrigger className="h-8 text-sm">
+                              <SelectValue
+                                placeholder={
+                                  existingFiles.length === 0 ? "请先上传模型" : "选择一个标签"
+                                }
+                              />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {labels.map((l) => (
+                                <SelectItem key={l.meta.id} value={l.meta.id}>
+                                  {l.meta.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
 
                         {selectedLabel && (
                           <>
