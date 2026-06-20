@@ -635,6 +635,23 @@ function VisibilityConfig({
           )}
       </div>
 
+      <div className="grid gap-2">
+        <Label className="text-xs">Mesh 关键词（可选，按名称进一步过滤）</Label>
+        <Input
+          value={((config.meshKeywords as string[]) ?? []).join(", ")}
+          onChange={(e) => {
+            const keywords = e.target.value
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean);
+            onChange("meshKeywords", keywords.length > 0 ? keywords : undefined);
+          }}
+          placeholder="如: 顶盖, roof, top"
+          disabled={disabled}
+          className="h-8 text-sm"
+        />
+      </div>
+
       <div className="grid grid-cols-2 gap-2">
         <div className="grid gap-2">
           <Label className="text-xs">动作</Label>
@@ -824,6 +841,22 @@ function HighlightConfig({
             className="h-8 text-sm"
           />
         )}
+      </div>
+      <div className="grid gap-2">
+        <Label className="text-xs">Mesh 关键词（可选，按名称进一步过滤）</Label>
+        <Input
+          value={((config.meshKeywords as string[]) ?? []).join(", ")}
+          onChange={(e) => {
+            const keywords = e.target.value
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean);
+            onChange("meshKeywords", keywords.length > 0 ? keywords : undefined);
+          }}
+          placeholder="如: 顶盖, roof, top"
+          disabled={disabled}
+          className="h-8 text-sm"
+        />
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div className="grid gap-2">
@@ -1137,6 +1170,22 @@ function MaterialConfig({
             className="h-8 text-sm"
           />
         )}
+      </div>
+      <div className="grid gap-2">
+        <Label className="text-xs">Mesh 关键词（可选，按名称进一步过滤）</Label>
+        <Input
+          value={((config.meshKeywords as string[]) ?? []).join(", ")}
+          onChange={(e) => {
+            const keywords = e.target.value
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean);
+            onChange("meshKeywords", keywords.length > 0 ? keywords : undefined);
+          }}
+          placeholder="如: 顶盖, roof, top"
+          disabled={disabled}
+          className="h-8 text-sm"
+        />
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div className="grid gap-2">

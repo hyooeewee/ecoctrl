@@ -489,6 +489,39 @@ export class ModelViewer implements ModelViewerRef {
   }
 
   /**
+   * Filter meshes by model group IDs and/or mesh name keywords.
+   *
+   * Two-layer matching logic:
+   * - If `modelIds` are specified, only meshes in those model groups pass.
+   * - If `meshKeywords` are specified, only meshes whose name contains a keyword pass.
+   * - If both are specified, both conditions must be met (AND).
+   * - If neither is specified, all meshes match.
+   */
+  private filterMeshes(modelIds?: string[], meshKeywords?: string[]): AbstractMesh[] {
+    const ids = (modelIds ?? []).map((k) => k.toLowerCase()).filter(Boolean);
+    const keywords = (meshKeywords ?? []).map((k) => k.toLowerCase()).filter(Boolean);
+
+    const result: AbstractMesh[] = [];
+    for (const group of this.groups) {
+      if (!group.rootNode) continue;
+
+      // Layer 1: filter by model group ID
+      if (ids.length > 0 && !ids.includes(group.id.toLowerCase())) continue;
+
+      const meshes = group.rootNode.getChildMeshes();
+      for (const mesh of meshes) {
+        // Layer 2: filter by mesh name keywords
+        if (keywords.length > 0) {
+          const nameToCheck = mesh.name.toLowerCase();
+          if (!keywords.some((k) => nameToCheck.includes(k))) continue;
+        }
+        result.push(mesh);
+      }
+    }
+    return result;
+  }
+
+  /**
    * Set up camera target after critical models are loaded.
    */
   private setupPostLoadState(): void {
@@ -821,37 +854,29 @@ export class ModelViewer implements ModelViewerRef {
       }
 
       case "visibility": {
-        const cfg = action.config as { targets?: string[]; action: string };
-        const keywords = (cfg.targets ?? []).map((k: string) => k.toLowerCase()).filter(Boolean);
+        const cfg = action.config as {
+          targets?: string[];
+          meshKeywords?: string[];
+          action: string;
+        };
+        const matchedMeshes = this.filterMeshes(cfg.targets, cfg.meshKeywords);
 
-        for (const group of this.groups) {
-          if (!group.rootNode) continue;
-
-          const meshes = group.rootNode.getChildMeshes();
-          for (const mesh of meshes) {
-            const nameToCheck = mesh.name.toLowerCase();
-            const isMatch =
-              keywords.length === 0 ||
-              keywords.some((k) => nameToCheck.includes(k) || group.id.toLowerCase().includes(k));
-
-            if (!isMatch) continue;
-
-            let next: boolean;
-            switch (cfg.action) {
-              case "hide":
-                next = false;
-                break;
-              case "show":
-                next = true;
-                break;
-              case "toggle":
-              default:
-                next = !(mesh.isEnabled() && mesh.isVisible);
-                break;
-            }
-            mesh.setEnabled(next);
-            mesh.isVisible = next;
+        for (const mesh of matchedMeshes) {
+          let next: boolean;
+          switch (cfg.action) {
+            case "hide":
+              next = false;
+              break;
+            case "show":
+              next = true;
+              break;
+            case "toggle":
+            default:
+              next = !(mesh.isEnabled() && mesh.isVisible);
+              break;
           }
+          mesh.setEnabled(next);
+          mesh.isVisible = next;
         }
         break;
       }
@@ -864,60 +889,49 @@ export class ModelViewer implements ModelViewerRef {
       case "highlight": {
         const cfg = action.config as {
           targets?: string[];
+          meshKeywords?: string[];
           mode: string;
           color?: { r: number; g: number; b: number; a?: number };
           duration?: number;
         };
-        const keywords = (cfg.targets ?? []).map((k: string) => k.toLowerCase()).filter(Boolean);
+        const matched = this.filterMeshes(cfg.targets, cfg.meshKeywords);
 
-        for (const group of this.groups) {
-          if (!group.rootNode) continue;
-          const meshes = group.rootNode.getChildMeshes();
-          const matched = meshes.filter((mesh) => {
-            const nameToCheck = mesh.name.toLowerCase();
-            return (
-              keywords.length === 0 ||
-              keywords.some((k) => nameToCheck.includes(k) || group.id.toLowerCase().includes(k))
-            );
-          });
+        // Unfreeze materials before modifying properties
+        if (cfg.mode === "glow" || cfg.mode === "color") {
+          this.unfreezeMaterialsForMeshes(matched);
+        }
 
-          // Unfreeze materials before modifying properties
-          if (cfg.mode === "glow" || cfg.mode === "color") {
-            this.unfreezeMaterialsForMeshes(matched);
-          }
-
-          for (const mesh of matched) {
-            switch (cfg.mode) {
-              case "outline":
-                mesh.renderOutline = true;
-                mesh.outlineWidth = 0.05;
-                mesh.outlineColor = new Color3(
+        for (const mesh of matched) {
+          switch (cfg.mode) {
+            case "outline":
+              mesh.renderOutline = true;
+              mesh.outlineWidth = 0.05;
+              mesh.outlineColor = new Color3(
+                cfg.color?.r ?? 1,
+                cfg.color?.g ?? 1,
+                cfg.color?.b ?? 0,
+              );
+              break;
+            case "glow":
+              if (mesh.material) {
+                (mesh as any).__origEmissive = (mesh.material as any).emissiveColor?.clone();
+                (mesh.material as any).emissiveColor = new Color3(
+                  cfg.color?.r ?? 0.3,
+                  cfg.color?.g ?? 0.3,
+                  cfg.color?.b ?? 0.3,
+                );
+              }
+              break;
+            case "color":
+              if (mesh.material) {
+                (mesh as any).__origDiffuse = (mesh.material as any).diffuseColor?.clone();
+                (mesh.material as any).diffuseColor = new Color3(
                   cfg.color?.r ?? 1,
-                  cfg.color?.g ?? 1,
+                  cfg.color?.g ?? 0.8,
                   cfg.color?.b ?? 0,
                 );
-                break;
-              case "glow":
-                if (mesh.material) {
-                  (mesh as any).__origEmissive = (mesh.material as any).emissiveColor?.clone();
-                  (mesh.material as any).emissiveColor = new Color3(
-                    cfg.color?.r ?? 0.3,
-                    cfg.color?.g ?? 0.3,
-                    cfg.color?.b ?? 0.3,
-                  );
-                }
-                break;
-              case "color":
-                if (mesh.material) {
-                  (mesh as any).__origDiffuse = (mesh.material as any).diffuseColor?.clone();
-                  (mesh.material as any).diffuseColor = new Color3(
-                    cfg.color?.r ?? 1,
-                    cfg.color?.g ?? 0.8,
-                    cfg.color?.b ?? 0,
-                  );
-                }
-                break;
-            }
+              }
+              break;
           }
         }
         break;
@@ -960,54 +974,43 @@ export class ModelViewer implements ModelViewerRef {
       case "material": {
         const cfg = action.config as {
           targets?: string[];
+          meshKeywords?: string[];
           property: string;
           value: number | boolean;
           duration?: number;
         };
-        const keywords = (cfg.targets ?? []).map((k: string) => k.toLowerCase()).filter(Boolean);
+        const matched = this.filterMeshes(cfg.targets, cfg.meshKeywords);
 
-        for (const group of this.groups) {
-          if (!group.rootNode) continue;
-          const meshes = group.rootNode.getChildMeshes();
-          const matched = meshes.filter((mesh) => {
-            const nameToCheck = mesh.name.toLowerCase();
-            return (
-              keywords.length === 0 ||
-              keywords.some((k) => nameToCheck.includes(k) || group.id.toLowerCase().includes(k))
-            );
-          });
+        // Unfreeze materials before modifying properties
+        this.unfreezeMaterialsForMeshes(matched);
 
-          // Unfreeze materials before modifying properties
-          this.unfreezeMaterialsForMeshes(matched);
+        for (const mesh of matched) {
+          const mat = mesh.material as any;
+          if (!mat) continue;
 
-          for (const mesh of matched) {
-            const mat = mesh.material as any;
-            if (!mat) continue;
-
-            switch (cfg.property) {
-              case "opacity":
-                if (!(mesh as any).__origVisibility) {
-                  (mesh as any).__origVisibility = mesh.visibility;
-                }
-                mesh.visibility = cfg.value as number;
-                break;
-              case "emissive":
-                if (!mat.__origEmissive) {
-                  mat.__origEmissive = mat.emissiveColor?.clone();
-                }
-                mat.emissiveColor = new Color3(
-                  cfg.value as number,
-                  cfg.value as number,
-                  cfg.value as number,
-                );
-                break;
-              case "wireframe":
-                if (mat.__origWireframe === undefined) {
-                  mat.__origWireframe = mat.wireframe;
-                }
-                mat.wireframe = cfg.value as boolean;
-                break;
-            }
+          switch (cfg.property) {
+            case "opacity":
+              if (!(mesh as any).__origVisibility) {
+                (mesh as any).__origVisibility = mesh.visibility;
+              }
+              mesh.visibility = cfg.value as number;
+              break;
+            case "emissive":
+              if (!mat.__origEmissive) {
+                mat.__origEmissive = mat.emissiveColor?.clone();
+              }
+              mat.emissiveColor = new Color3(
+                cfg.value as number,
+                cfg.value as number,
+                cfg.value as number,
+              );
+              break;
+            case "wireframe":
+              if (mat.__origWireframe === undefined) {
+                mat.__origWireframe = mat.wireframe;
+              }
+              mat.wireframe = cfg.value as boolean;
+              break;
           }
         }
         break;

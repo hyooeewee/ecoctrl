@@ -46,6 +46,7 @@ export const VisibilityOperationSchema = z.object({
   targetModelFileId: z.string().optional(),
   config: z.object({
     targets: z.array(z.string()),
+    meshKeywords: z.array(z.string()).optional(),
     action: z.enum(["show", "hide", "toggle"]),
     duration: z.number().optional(),
   }),
@@ -66,6 +67,7 @@ export const HighlightOperationSchema = z.object({
   targetModelFileId: z.string().optional(),
   config: z.object({
     targets: z.array(z.string()),
+    meshKeywords: z.array(z.string()).optional(),
     mode: z.enum(["outline", "glow", "color"]),
     color: z
       .object({ r: z.number(), g: z.number(), b: z.number(), a: z.number().optional() })
@@ -91,6 +93,7 @@ export const MaterialOperationSchema = z.object({
   targetModelFileId: z.string().optional(),
   config: z.object({
     targets: z.array(z.string()),
+    meshKeywords: z.array(z.string()).optional(),
     property: z.enum(["opacity", "emissive", "wireframe"]),
     value: z.union([z.number(), z.boolean()]),
     duration: z.number().optional(),
