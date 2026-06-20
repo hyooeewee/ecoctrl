@@ -281,11 +281,11 @@ export class ModelViewer implements ModelViewerRef {
 
   /**
    * Multi-model progressive loading.
+   * Critical models block; background models load after critical are done.
    */
   private async loadMultiModel(entries: ModelFileEntry[], fallbackUrl: string): Promise<void> {
-    // Hard-coded: only load critical-priority models to reduce GPU load.
-    // Background models are skipped entirely.
     const critical = entries.filter((e) => e.priority === "critical");
+    const background = entries.filter((e) => e.priority !== "critical");
 
     // Step 1: Load critical models in parallel, blocking.
     const criticalResults = await Promise.all(
@@ -330,6 +330,19 @@ export class ModelViewer implements ModelViewerRef {
 
     this.onProgress?.(100);
     this.onCriticalLoaded?.();
+
+    // Step 2: Load background models in the background (non-blocking).
+    if (background.length > 0) {
+      Promise.all(background.map((entry) => this.tryLoadGroup(entry).catch(() => null))).then(
+        (results) => {
+          const loaded = results.filter(Boolean);
+          if (loaded.length > 0) {
+            this.freezeStaticMeshes();
+            this.computeLabelAnchors();
+          }
+        },
+      );
+    }
   }
 
   /**
