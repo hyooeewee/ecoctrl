@@ -1,10 +1,8 @@
 import {
   AbstractMesh,
   ArcRotateCamera,
-  Color3,
-  DirectionalLight,
-  HemisphericLight,
   Matrix,
+  Mesh,
   SceneLoader,
   TransformNode,
   Vector3,
@@ -25,7 +23,12 @@ import {
   type LabelDef,
 } from "./constants";
 import type { ModelFileEntry } from "@ecoctrl/shared";
-import { createEngine, createScene, loadGltf } from "@ecoctrl/shared/babylon";
+import {
+  createEngine,
+  createScene,
+  loadGltf,
+  setupSandboxEnvironment,
+} from "@ecoctrl/shared/babylon";
 import type { ModelGroup, LabelAnchor, ModelLoadConfig, ViewerOptions } from "./types";
 
 // ========================================
@@ -96,6 +99,9 @@ export class ModelViewer implements ModelViewerRef {
   // Loaded model groups
   private groups: ModelGroup[] = [];
 
+  // Skybox mesh for cleanup
+  private skybox: Mesh | null = null;
+
   // Resize handler reference for cleanup
   private handleResize: () => void;
 
@@ -125,9 +131,6 @@ export class ModelViewer implements ModelViewerRef {
     if (options.hardwareScalingLevel !== undefined && options.hardwareScalingLevel > 0) {
       this.engine.setHardwareScalingLevel(options.hardwareScalingLevel);
     }
-
-    // Ambient light so PBR materials are visible even without an environment map.
-    this.scene.ambientColor = new Color3(0.4, 0.4, 0.4);
 
     // NOTE: hardware scaling disabled — it causes grid-like rendering artifacts
     // on PBR materials with this model set. Re-enable after root cause is found.
@@ -161,15 +164,9 @@ export class ModelViewer implements ModelViewerRef {
     this.camera.maxZ = 200;
     this.camera.viewport = new Viewport(0, 0, 1, 1);
 
-    // Lighting — match admin setup exactly
-    const hemi = new HemisphericLight("hemi", new Vector3(0, 1, 0), this.scene);
-    hemi.intensity = 0.7;
-    hemi.diffuse = new Color3(1, 1, 1);
-    hemi.groundColor = new Color3(0.5, 0.5, 0.5);
-
-    const dir = new DirectionalLight("dir", new Vector3(-1, -2, 1), this.scene);
-    dir.intensity = 0.5;
-    dir.position = new Vector3(5, 10, -5);
+    // Sandbox-style environment: HDR skybox + image-based lighting (IBL) + tone mapping.
+    // Replaces the previous manual hemispheric + directional light setup.
+    this.skybox = setupSandboxEnvironment(this.scene);
 
     // Skip pointer-move picking unless hover interactions are needed. This saves
     // a full scene raycast on every pointermove event.
@@ -870,6 +867,7 @@ export class ModelViewer implements ModelViewerRef {
 
     this.engine.stopRenderLoop();
     this.camera.detachControl();
+    this.skybox?.dispose();
     this.engine.dispose();
   }
 }
