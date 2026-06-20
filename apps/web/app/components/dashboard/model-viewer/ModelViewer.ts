@@ -31,6 +31,10 @@ import type { ModelGroup, LabelAnchor, ModelLoadConfig, ViewerOptions } from "./
 // ModelViewer — BabylonJS scene manager
 // ========================================
 
+export interface VisibilitySnapshot {
+  meshes: Array<{ mesh: AbstractMesh; isVisible: boolean; isEnabled: boolean }>;
+}
+
 export interface ModelViewerRef {
   zoomIn: () => void;
   zoomOut: () => void;
@@ -40,6 +44,8 @@ export interface ModelViewerRef {
   focusOnLabel: (key: string) => void;
   setClipping: (enabled: boolean) => void;
   executeTagActions: (labelKey: string) => Promise<void>;
+  captureVisibilitySnapshot: () => VisibilitySnapshot;
+  restoreVisibilitySnapshot: (snapshot: VisibilitySnapshot) => void;
 }
 
 export class ModelViewer implements ModelViewerRef {
@@ -610,7 +616,7 @@ export class ModelViewer implements ModelViewerRef {
     }
 
     for (const op of label.operations) {
-      // TODO: support targetModelFileId and sequential animation with duration/easing.
+      // TODO: support sequential animation with duration/easing.
       this.executeOperation(op);
     }
   }
@@ -643,21 +649,38 @@ export class ModelViewer implements ModelViewerRef {
 
       case "visibility": {
         const cfg = op.config;
-        for (const targetId of cfg.targets) {
-          switch (cfg.action) {
-            case "show":
-              this.setGroupVisible(targetId, true);
-              break;
-            case "hide":
-              this.setGroupVisible(targetId, false);
-              break;
-            case "toggle": {
-              const group = this.groups.find((g) => g.id === targetId);
-              if (group) {
-                this.setGroupVisible(targetId, !group.visible);
-              }
-              break;
+        const keywords = (cfg.targets ?? []).map((k) => k.toLowerCase()).filter(Boolean);
+        const targetModelFileId = op.targetModelFileId;
+        const hasTargetModel = Boolean(targetModelFileId);
+
+        for (const group of this.groups) {
+          if (hasTargetModel && group.id !== targetModelFileId) continue;
+          if (!group.rootNode) continue;
+
+          const meshes = group.rootNode.getChildMeshes();
+          for (const mesh of meshes) {
+            const nameToCheck = mesh.name.toLowerCase();
+            const isMatch =
+              keywords.length === 0 ||
+              keywords.some((k) => nameToCheck.includes(k) || group.id.toLowerCase().includes(k));
+
+            if (!isMatch) continue;
+
+            let next: boolean;
+            switch (cfg.action) {
+              case "hide":
+                next = false;
+                break;
+              case "show":
+                next = true;
+                break;
+              case "toggle":
+              default:
+                next = !(mesh.isEnabled() && mesh.isVisible);
+                break;
             }
+            mesh.setEnabled(next);
+            mesh.isVisible = next;
           }
         }
         break;
@@ -765,6 +788,32 @@ export class ModelViewer implements ModelViewerRef {
 
   getGroups(): ModelGroup[] {
     return this.groups;
+  }
+
+  // ========================================
+  // Visibility snapshot
+  // ========================================
+
+  captureVisibilitySnapshot(): VisibilitySnapshot {
+    const meshes: VisibilitySnapshot["meshes"] = [];
+    for (const group of this.groups) {
+      if (!group.rootNode) continue;
+      for (const mesh of group.rootNode.getChildMeshes()) {
+        meshes.push({
+          mesh,
+          isVisible: mesh.isVisible,
+          isEnabled: mesh.isEnabled(),
+        });
+      }
+    }
+    return { meshes };
+  }
+
+  restoreVisibilitySnapshot(snapshot: VisibilitySnapshot): void {
+    for (const { mesh, isVisible, isEnabled } of snapshot.meshes) {
+      mesh.setEnabled(isEnabled);
+      mesh.isVisible = isVisible;
+    }
   }
 
   // ========================================

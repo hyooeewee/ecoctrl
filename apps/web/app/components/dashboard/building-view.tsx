@@ -3,7 +3,7 @@ import type { DashboardModelConfig } from "@ecoctrl/shared";
 import { cn } from "~/lib/utils";
 import { useLocale } from "~/locales";
 import { useSettingsStore } from "~/store/settings";
-import { ModelViewer } from "./model-viewer";
+import { ModelViewer, type VisibilitySnapshot } from "./model-viewer";
 
 // ========================================
 // 3D-projected area label floating pill
@@ -53,6 +53,8 @@ export interface BuildingViewRef {
   focusOnLabel: (key: string) => void;
   setClipping: (enabled: boolean) => void;
   executeTagActions: (labelKey: string) => Promise<void>;
+  captureVisibilitySnapshot: () => VisibilitySnapshot;
+  restoreVisibilitySnapshot: (snapshot: VisibilitySnapshot) => void;
 }
 
 // ========================================
@@ -227,6 +229,21 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
     viewerRef.current?.setDefaultCameraRadius(defaultCameraRadius);
   }, [defaultCameraRadius]);
 
+  // Execute tag operations when a label is selected, restore when deselected.
+  const visibilitySnapshotRef = useRef<VisibilitySnapshot | null>(null);
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+
+    if (activeLabel) {
+      visibilitySnapshotRef.current = viewer.captureVisibilitySnapshot();
+      viewer.executeTagActions(activeLabel);
+    } else if (visibilitySnapshotRef.current) {
+      viewer.restoreVisibilitySnapshot(visibilitySnapshotRef.current);
+      visibilitySnapshotRef.current = null;
+    }
+  }, [activeLabel]);
+
   // Forward imperative methods.
   useImperativeHandle(
     ref,
@@ -240,6 +257,10 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
       setClipping: (enabled: boolean) => viewerRef.current?.setClipping(enabled),
       executeTagActions: (key: string) =>
         viewerRef.current?.executeTagActions(key) ?? Promise.resolve(),
+      captureVisibilitySnapshot: () =>
+        viewerRef.current?.captureVisibilitySnapshot() ?? { meshes: [] },
+      restoreVisibilitySnapshot: (snapshot: VisibilitySnapshot) =>
+        viewerRef.current?.restoreVisibilitySnapshot(snapshot),
     }),
     [],
   );
