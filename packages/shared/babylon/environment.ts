@@ -39,7 +39,7 @@ export const ENVIRONMENTS = {
 
 export type EnvKey = keyof typeof ENVIRONMENTS;
 
-export const DEFAULT_ENV_KEY: EnvKey = "studio";
+export const DEFAULT_ENV_KEY: EnvKey = "sanGiuseppeBridge";
 
 export interface SandboxEnvironmentOptions {
   /** Environment texture URL. Defaults to studio. */
@@ -55,9 +55,7 @@ export interface SandboxEnvironmentOptions {
 /** Load the appropriate texture based on file extension. */
 function loadEnvironmentTexture(url: string, scene: Scene): BaseTexture {
   if (url.endsWith(".hdr")) {
-    // generateHarmonics=false: skip IBL prefilter to avoid _irradianceTexture null crash in BabylonJS v9.
-    // Skybox and manual lights still work; PBR reflections will be minimal.
-    return new HDRCubeTexture(url, scene, 256, false, false, false, true);
+    return new HDRCubeTexture(url, scene, 256, false, true, false, true);
   }
   return CubeTextureCreateFromPrefilteredData(url, scene);
 }
