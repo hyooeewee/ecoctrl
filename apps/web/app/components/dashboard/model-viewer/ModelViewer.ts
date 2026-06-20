@@ -1,11 +1,14 @@
 import {
   AbstractMesh,
+  Animation,
   ArcRotateCamera,
   Color3,
   DirectionalLight,
+  EasingFunction,
   HemisphericLight,
   Matrix,
   Mesh,
+  QuadraticEase,
   SceneLoader,
   TransformNode,
   Vector3,
@@ -468,6 +471,19 @@ export class ModelViewer implements ModelViewerRef {
   }
 
   /**
+   * Unfreeze materials on meshes that will be modified by actions.
+   * Materials are frozen after load for performance; actions that modify
+   * material properties (highlight, material, explode) must unfreeze first.
+   */
+  private unfreezeMaterialsForMeshes(meshes: AbstractMesh[]): void {
+    for (const mesh of meshes) {
+      if (mesh.material?.isFrozen) {
+        mesh.material.unfreeze();
+      }
+    }
+  }
+
+  /**
    * Set up camera target after critical models are loaded.
    */
   private setupPostLoadState(): void {
@@ -708,16 +724,87 @@ export class ModelViewer implements ModelViewerRef {
         const cfg = action.config as {
           target: { x: number; y: number; z: number };
           distance: number;
+          fov?: number;
+          duration?: number;
+          easing?: string;
         };
         const target = new Vector3(cfg.target.x, cfg.target.y, cfg.target.z);
-        // Compute alpha/beta from target direction, use distance as radius.
-        const direction = target.subtract(this.camera.target);
-        const targetAlpha = Math.atan2(direction.x, direction.z);
-        const horizontalDist = Math.sqrt(direction.x * direction.x + direction.z * direction.z);
-        const targetBeta = Math.atan2(direction.y, horizontalDist) + Math.PI / 2;
-        this.camera.alpha = targetAlpha;
-        this.camera.beta = Math.max(0.1, Math.min(Math.PI / 2.2, targetBeta));
-        this.camera.radius = cfg.distance;
+        const duration = cfg.duration ?? 0;
+
+        if (duration > 0) {
+          // Animated camera transition
+          const frameCount = Math.max(1, Math.round(duration * 60));
+
+          const targetAnim = new Animation(
+            "cameraTargetAnim",
+            "target",
+            60,
+            Animation.ANIMATIONTYPE_VECTOR3,
+            Animation.ANIMATIONLOOPMODE_CONSTANT,
+          );
+          targetAnim.setKeys([
+            { frame: 0, value: this.camera.target.clone() },
+            { frame: frameCount, value: target },
+          ]);
+
+          const radiusAnim = new Animation(
+            "cameraRadiusAnim",
+            "radius",
+            60,
+            Animation.ANIMATIONTYPE_FLOAT,
+            Animation.ANIMATIONLOOPMODE_CONSTANT,
+          );
+          radiusAnim.setKeys([
+            { frame: 0, value: this.camera.radius },
+            { frame: frameCount, value: cfg.distance },
+          ]);
+
+          // Apply easing if specified
+          if (cfg.easing && cfg.easing !== "linear") {
+            const easingFn = new QuadraticEase();
+            switch (cfg.easing) {
+              case "easeIn":
+                easingFn.setEasingMode(EasingFunction.EASINGMODE_EASEIN);
+                break;
+              case "easeOut":
+                easingFn.setEasingMode(EasingFunction.EASINGMODE_EASEOUT);
+                break;
+              case "easeInOut":
+              default:
+                easingFn.setEasingMode(EasingFunction.EASINGMODE_EASEINOUT);
+                break;
+            }
+            targetAnim.setEasingFunction(easingFn);
+            radiusAnim.setEasingFunction(easingFn);
+          }
+
+          this.scene.beginDirectAnimation(
+            this.camera,
+            [targetAnim, radiusAnim],
+            0,
+            frameCount,
+            false,
+            1,
+          );
+
+          // Force render loop to stay at 60fps during animation
+          this.isInteracting = true;
+          setTimeout(
+            () => {
+              this.isInteracting = false;
+            },
+            duration * 1000 + 100,
+          );
+        } else {
+          // Instant snap (existing behavior)
+          const direction = target.subtract(this.camera.target);
+          const targetAlpha = Math.atan2(direction.x, direction.z);
+          const horizontalDist = Math.sqrt(direction.x * direction.x + direction.z * direction.z);
+          const targetBeta = Math.atan2(direction.y, horizontalDist) + Math.PI / 2;
+          this.camera.alpha = targetAlpha;
+          this.camera.beta = Math.max(0.1, Math.min(Math.PI / 2.2, targetBeta));
+          this.camera.radius = cfg.distance;
+        }
         break;
       }
 
@@ -766,6 +853,171 @@ export class ModelViewer implements ModelViewerRef {
 
       case "postprocess": {
         // Postprocess operations are not supported in the simplified viewer.
+        break;
+      }
+
+      case "highlight": {
+        const cfg = action.config as {
+          targets?: string[];
+          mode: string;
+          color?: { r: number; g: number; b: number; a?: number };
+          duration?: number;
+        };
+        const keywords = (cfg.targets ?? []).map((k: string) => k.toLowerCase()).filter(Boolean);
+
+        for (const group of this.groups) {
+          if (!group.rootNode) continue;
+          const meshes = group.rootNode.getChildMeshes();
+          const matched = meshes.filter((mesh) => {
+            const nameToCheck = mesh.name.toLowerCase();
+            return (
+              keywords.length === 0 ||
+              keywords.some((k) => nameToCheck.includes(k) || group.id.toLowerCase().includes(k))
+            );
+          });
+
+          // Unfreeze materials before modifying properties
+          if (cfg.mode === "glow" || cfg.mode === "color") {
+            this.unfreezeMaterialsForMeshes(matched);
+          }
+
+          for (const mesh of matched) {
+            switch (cfg.mode) {
+              case "outline":
+                mesh.renderOutline = true;
+                mesh.outlineWidth = 0.05;
+                mesh.outlineColor = new Color3(
+                  cfg.color?.r ?? 1,
+                  cfg.color?.g ?? 1,
+                  cfg.color?.b ?? 0,
+                );
+                break;
+              case "glow":
+                if (mesh.material) {
+                  (mesh as any).__origEmissive = (mesh.material as any).emissiveColor?.clone();
+                  (mesh.material as any).emissiveColor = new Color3(
+                    cfg.color?.r ?? 0.3,
+                    cfg.color?.g ?? 0.3,
+                    cfg.color?.b ?? 0.3,
+                  );
+                }
+                break;
+              case "color":
+                if (mesh.material) {
+                  (mesh as any).__origDiffuse = (mesh.material as any).diffuseColor?.clone();
+                  (mesh.material as any).diffuseColor = new Color3(
+                    cfg.color?.r ?? 1,
+                    cfg.color?.g ?? 0.8,
+                    cfg.color?.b ?? 0,
+                  );
+                }
+                break;
+            }
+          }
+        }
+        break;
+      }
+
+      case "explode": {
+        const cfg = action.config as {
+          axis: { x: number; y: number; z: number };
+          distance: number;
+          targets?: string[];
+          duration?: number;
+        };
+        const axis = new Vector3(cfg.axis.x, cfg.axis.y, cfg.axis.z).normalize();
+        const keywords = (cfg.targets ?? []).map((k: string) => k.toLowerCase()).filter(Boolean);
+
+        for (const group of this.groups) {
+          if (!group.rootNode) continue;
+          const meshes = group.rootNode.getChildMeshes();
+          for (const mesh of meshes) {
+            if (keywords.length > 0) {
+              const nameToCheck = mesh.name.toLowerCase();
+              const isMatch = keywords.some(
+                (k) => nameToCheck.includes(k) || group.id.toLowerCase().includes(k),
+              );
+              if (!isMatch) continue;
+            }
+
+            // Store original position for restore
+            if (!(mesh as any).__origPosition) {
+              (mesh as any).__origPosition = mesh.position.clone();
+            }
+
+            const offset = axis.scale(cfg.distance);
+            mesh.position = (mesh as any).__origPosition.add(offset);
+          }
+        }
+        break;
+      }
+
+      case "material": {
+        const cfg = action.config as {
+          targets?: string[];
+          property: string;
+          value: number | boolean;
+          duration?: number;
+        };
+        const keywords = (cfg.targets ?? []).map((k: string) => k.toLowerCase()).filter(Boolean);
+
+        for (const group of this.groups) {
+          if (!group.rootNode) continue;
+          const meshes = group.rootNode.getChildMeshes();
+          const matched = meshes.filter((mesh) => {
+            const nameToCheck = mesh.name.toLowerCase();
+            return (
+              keywords.length === 0 ||
+              keywords.some((k) => nameToCheck.includes(k) || group.id.toLowerCase().includes(k))
+            );
+          });
+
+          // Unfreeze materials before modifying properties
+          this.unfreezeMaterialsForMeshes(matched);
+
+          for (const mesh of matched) {
+            const mat = mesh.material as any;
+            if (!mat) continue;
+
+            switch (cfg.property) {
+              case "opacity":
+                if (!(mesh as any).__origVisibility) {
+                  (mesh as any).__origVisibility = mesh.visibility;
+                }
+                mesh.visibility = cfg.value as number;
+                break;
+              case "emissive":
+                if (!mat.__origEmissive) {
+                  mat.__origEmissive = mat.emissiveColor?.clone();
+                }
+                mat.emissiveColor = new Color3(
+                  cfg.value as number,
+                  cfg.value as number,
+                  cfg.value as number,
+                );
+                break;
+              case "wireframe":
+                if (mat.__origWireframe === undefined) {
+                  mat.__origWireframe = mat.wireframe;
+                }
+                mat.wireframe = cfg.value as boolean;
+                break;
+            }
+          }
+        }
+        break;
+      }
+
+      case "label": {
+        const cfg = action.config as {
+          labelIds: string[];
+          action: string;
+        };
+        // Dispatch a custom event that the React overlay can listen to
+        const event = new CustomEvent("label-control", {
+          detail: { labelIds: cfg.labelIds, action: cfg.action },
+        });
+        this.canvas.dispatchEvent(event);
         break;
       }
     }

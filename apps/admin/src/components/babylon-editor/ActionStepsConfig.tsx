@@ -159,6 +159,35 @@ export default function ActionStepsConfig({
                 disabled={disabled}
               />
             )}
+            {action.type === "highlight" && (
+              <HighlightConfig
+                config={action.config}
+                onChange={(k, v) => updateStepConfig(index, k, v)}
+                disabled={disabled}
+              />
+            )}
+            {action.type === "explode" && (
+              <ExplodeConfig
+                config={action.config}
+                onChange={(k, v) => updateStepConfig(index, k, v)}
+                disabled={disabled}
+              />
+            )}
+            {action.type === "material" && (
+              <MaterialConfig
+                config={action.config}
+                onChange={(k, v) => updateStepConfig(index, k, v)}
+                disabled={disabled}
+              />
+            )}
+            {action.type === "label" && (
+              <LabelControlConfig
+                config={action.config}
+                availableLabels={availableLabels}
+                onChange={(k, v) => updateStepConfig(index, k, v)}
+                disabled={disabled}
+              />
+            )}
           </div>
         </div>
       ))}
@@ -186,11 +215,15 @@ export default function ActionStepsConfig({
 // Labels
 // ========================================
 
-const ACTION_TYPE_LABELS: Record<LabelAction["type"], string> = {
+const ACTION_TYPE_LABELS: Record<string, string> = {
   camera: "📷 摄像机动画",
   clipping: "✂️ 剖切效果",
   visibility: "👁️ 可见性控制",
   postprocess: "🎨 后期效果",
+  highlight: "✨ 高亮强调",
+  explode: "💥 爆炸视图",
+  material: "🪨 材质变换",
+  label: "🏷️ 标签控制",
 };
 
 const LABEL_TO_ACTION_TYPE = Object.fromEntries(
@@ -538,6 +571,10 @@ function VisibilityConfig({
           disabled={disabled}
           className="h-8 text-sm"
         />
+        {((config.action as string) === "hide" || (config.action as string) === "toggle") &&
+          targets.length === 0 && (
+            <p className="text-xs text-destructive">⚠️ 必须指定目标 Mesh，否则将影响所有对象</p>
+          )}
       </div>
 
       <div className="grid grid-cols-2 gap-2">
@@ -646,6 +683,392 @@ function PostProcessConfig({
 }
 
 // ========================================
+// Highlight Config
+// ========================================
+
+function HighlightConfig({
+  config,
+  onChange,
+  disabled,
+}: {
+  config: Record<string, unknown>;
+  onChange: (key: string, value: unknown) => void;
+  disabled?: boolean;
+}) {
+  const targets = (config.targets as string[]) ?? [];
+  const color = (config.color as { r: number; g: number; b: number }) ?? { r: 1, g: 1, b: 0 };
+
+  return (
+    <>
+      <div className="grid gap-2">
+        <Label className="text-xs">目标 Mesh 关键词</Label>
+        <Input
+          value={targets.join(", ")}
+          onChange={(e) => {
+            const keywords = e.target.value
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean);
+            onChange("targets", keywords);
+          }}
+          placeholder="用逗号分隔，留空则全部高亮"
+          disabled={disabled}
+          className="h-8 text-sm"
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="grid gap-2">
+          <Label className="text-xs">高亮模式</Label>
+          <Select
+            value={(config.mode as string) ?? "outline"}
+            onValueChange={(v) => onChange("mode", v)}
+            disabled={disabled}
+          >
+            <SelectTrigger className="h-8 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="outline">轮廓线</SelectItem>
+              <SelectItem value="glow">发光</SelectItem>
+              <SelectItem value="color">着色</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid gap-2">
+          <Label className="text-xs">时长 (秒, 0=持续)</Label>
+          <Input
+            type="number"
+            step="0.1"
+            value={(config.duration as number) ?? 0}
+            onChange={(e) => onChange("duration", parseFloat(e.target.value) || 0)}
+            disabled={disabled}
+            className="h-8 text-sm"
+          />
+        </div>
+      </div>
+      <div className="grid gap-2">
+        <Label className="text-xs">颜色</Label>
+        <div className="grid grid-cols-3 gap-2">
+          <div>
+            <Label className="text-[10px] text-muted-foreground mb-1 block">R (0-1)</Label>
+            <Input
+              type="number"
+              step="0.1"
+              min={0}
+              max={1}
+              value={color.r}
+              onChange={(e) => onChange("color", { ...color, r: parseFloat(e.target.value) || 0 })}
+              disabled={disabled}
+              className="h-8 text-sm"
+            />
+          </div>
+          <div>
+            <Label className="text-[10px] text-muted-foreground mb-1 block">G (0-1)</Label>
+            <Input
+              type="number"
+              step="0.1"
+              min={0}
+              max={1}
+              value={color.g}
+              onChange={(e) => onChange("color", { ...color, g: parseFloat(e.target.value) || 0 })}
+              disabled={disabled}
+              className="h-8 text-sm"
+            />
+          </div>
+          <div>
+            <Label className="text-[10px] text-muted-foreground mb-1 block">B (0-1)</Label>
+            <Input
+              type="number"
+              step="0.1"
+              min={0}
+              max={1}
+              value={color.b}
+              onChange={(e) => onChange("color", { ...color, b: parseFloat(e.target.value) || 0 })}
+              disabled={disabled}
+              className="h-8 text-sm"
+            />
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ========================================
+// Explode Config
+// ========================================
+
+function ExplodeConfig({
+  config,
+  onChange,
+  disabled,
+}: {
+  config: Record<string, unknown>;
+  onChange: (key: string, value: unknown) => void;
+  disabled?: boolean;
+}) {
+  const axis = (config.axis as { x: number; y: number; z: number }) ?? { x: 0, y: 1, z: 0 };
+  const targets = (config.targets as string[]) ?? [];
+
+  return (
+    <>
+      <div className="grid gap-2">
+        <Label className="text-xs">爆炸方向</Label>
+        <div className="grid grid-cols-3 gap-2">
+          <div>
+            <Label className="text-[10px] text-muted-foreground mb-1 block">X</Label>
+            <Input
+              type="number"
+              step="any"
+              value={axis.x}
+              onChange={(e) => onChange("axis", { ...axis, x: parseFloat(e.target.value) || 0 })}
+              disabled={disabled}
+              className="h-8 text-sm"
+            />
+          </div>
+          <div>
+            <Label className="text-[10px] text-muted-foreground mb-1 block">Y</Label>
+            <Input
+              type="number"
+              step="any"
+              value={axis.y}
+              onChange={(e) => onChange("axis", { ...axis, y: parseFloat(e.target.value) || 0 })}
+              disabled={disabled}
+              className="h-8 text-sm"
+            />
+          </div>
+          <div>
+            <Label className="text-[10px] text-muted-foreground mb-1 block">Z</Label>
+            <Input
+              type="number"
+              step="any"
+              value={axis.z}
+              onChange={(e) => onChange("axis", { ...axis, z: parseFloat(e.target.value) || 0 })}
+              disabled={disabled}
+              className="h-8 text-sm"
+            />
+          </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="grid gap-2">
+          <Label className="text-xs">爆炸距离</Label>
+          <Input
+            type="number"
+            step="any"
+            value={(config.distance as number) ?? 2}
+            onChange={(e) => onChange("distance", parseFloat(e.target.value) || 2)}
+            disabled={disabled}
+            className="h-8 text-sm"
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label className="text-xs">时长 (秒)</Label>
+          <Input
+            type="number"
+            step="0.1"
+            value={(config.duration as number) ?? 0.8}
+            onChange={(e) => onChange("duration", parseFloat(e.target.value) || 0.8)}
+            disabled={disabled}
+            className="h-8 text-sm"
+          />
+        </div>
+      </div>
+      <div className="grid gap-2">
+        <Label className="text-xs">目标 Mesh 关键词 (可选)</Label>
+        <Input
+          value={targets.join(", ")}
+          onChange={(e) => {
+            const keywords = e.target.value
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean);
+            onChange("targets", keywords);
+          }}
+          placeholder="用逗号分隔，留空则全部"
+          disabled={disabled}
+          className="h-8 text-sm"
+        />
+      </div>
+    </>
+  );
+}
+
+// ========================================
+// Material Config
+// ========================================
+
+function MaterialConfig({
+  config,
+  onChange,
+  disabled,
+}: {
+  config: Record<string, unknown>;
+  onChange: (key: string, value: unknown) => void;
+  disabled?: boolean;
+}) {
+  const targets = (config.targets as string[]) ?? [];
+
+  return (
+    <>
+      <div className="grid gap-2">
+        <Label className="text-xs">目标 Mesh 关键词</Label>
+        <Input
+          value={targets.join(", ")}
+          onChange={(e) => {
+            const keywords = e.target.value
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean);
+            onChange("targets", keywords);
+          }}
+          placeholder="用逗号分隔"
+          disabled={disabled}
+          className="h-8 text-sm"
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="grid gap-2">
+          <Label className="text-xs">材质属性</Label>
+          <Select
+            value={(config.property as string) ?? "opacity"}
+            onValueChange={(v) => onChange("property", v)}
+            disabled={disabled}
+          >
+            <SelectTrigger className="h-8 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="opacity">透明度</SelectItem>
+              <SelectItem value="emissive">自发光</SelectItem>
+              <SelectItem value="wireframe">线框</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid gap-2">
+          <Label className="text-xs">值</Label>
+          {(config.property as string) === "wireframe" ? (
+            <Select
+              value={(config.value as boolean) ? "true" : "false"}
+              onValueChange={(v) => onChange("value", v === "true")}
+              disabled={disabled}
+            >
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="true">开启</SelectItem>
+                <SelectItem value="false">关闭</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              type="number"
+              step="0.1"
+              min={0}
+              max={1}
+              value={(config.value as number) ?? 1}
+              onChange={(e) => onChange("value", parseFloat(e.target.value) || 0)}
+              disabled={disabled}
+              className="h-8 text-sm"
+            />
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ========================================
+// Label Control Config
+// ========================================
+
+function LabelControlConfig({
+  config,
+  availableLabels,
+  onChange,
+  disabled,
+}: {
+  config: Record<string, unknown>;
+  availableLabels: { id: string; name: string }[];
+  onChange: (key: string, value: unknown) => void;
+  disabled?: boolean;
+}) {
+  const labelIds = (config.labelIds as string[]) ?? [];
+  const addLabelId = (id: string) => {
+    if (!labelIds.includes(id)) onChange("labelIds", [...labelIds, id]);
+  };
+  const removeLabelId = (id: string) => {
+    onChange(
+      "labelIds",
+      labelIds.filter((i) => i !== id),
+    );
+  };
+
+  return (
+    <>
+      <div className="grid gap-2">
+        <Label className="text-xs">控制动作</Label>
+        <Select
+          value={(config.action as string) ?? "show"}
+          onValueChange={(v) => onChange("action", v)}
+          disabled={disabled}
+        >
+          <SelectTrigger className="h-8 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="show">显示</SelectItem>
+            <SelectItem value="hide">隐藏</SelectItem>
+            <SelectItem value="toggle">切换</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="grid gap-2">
+        <Label className="text-xs">目标标签</Label>
+        <div className="flex flex-wrap gap-1">
+          {labelIds.map((id) => {
+            const label = availableLabels.find((l) => l.id === id);
+            return (
+              <Badge key={id} variant="secondary" className="gap-1 pr-1">
+                {label?.name ?? id}
+                <button
+                  type="button"
+                  className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20"
+                  onClick={() => removeLabelId(id)}
+                  disabled={disabled}
+                >
+                  <X size={10} />
+                </button>
+              </Badge>
+            );
+          })}
+        </div>
+        <Select
+          onValueChange={(v) => {
+            if (typeof v === "string") addLabelId(v);
+          }}
+          disabled={disabled}
+        >
+          <SelectTrigger className="h-8 text-sm">
+            <SelectValue placeholder="添加标签..." />
+          </SelectTrigger>
+          <SelectContent>
+            {availableLabels
+              .filter((l) => !labelIds.includes(l.id))
+              .map((l) => (
+                <SelectItem key={l.id} value={l.id}>
+                  {l.name}
+                </SelectItem>
+              ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </>
+  );
+}
+
+// ========================================
 // Helpers
 // ========================================
 
@@ -677,6 +1100,33 @@ function getDefaultConfig(type: LabelAction["type"]): Record<string, unknown> {
         effect: "exposure",
         value: 1,
         duration: 0.5,
+      };
+    case "highlight":
+      return {
+        targets: [],
+        mode: "outline",
+        color: { r: 1, g: 1, b: 0 },
+        duration: 0,
+      };
+    case "explode":
+      return {
+        axis: { x: 0, y: 1, z: 0 },
+        distance: 2,
+        targets: [],
+        duration: 0.8,
+        easing: "easeInOut",
+      };
+    case "material":
+      return {
+        targets: [],
+        property: "opacity",
+        value: 0.5,
+        duration: 0,
+      };
+    case "label":
+      return {
+        labelIds: [],
+        action: "show",
       };
   }
 }
