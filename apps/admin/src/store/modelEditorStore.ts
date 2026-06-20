@@ -48,7 +48,8 @@ interface ModelEditorState {
   toggleFileVisible: (id: string) => void;
   deleteFile: (id: string) => Promise<void>;
   updateFilePriority: (id: string, priority: "critical" | "background") => Promise<void>;
-  moveFile: (id: string, direction: "up" | "down") => Promise<void>;
+  updateFileRole: (id: string, role: string) => Promise<void>;
+  reorderFiles: (fromIndex: number, toIndex: number) => Promise<void>;
   setModelProgress: (id: string, progress: number) => void;
 
   // Actions — upload
@@ -138,9 +139,21 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
     }),
 
   deleteFile: async (id) => {
-    const { config } = get();
+    const { config, labels } = get();
     if (!config) return;
     const deleted = config.modelFiles?.find((f) => f.id === id);
+    const deletedRole = deleted?.role;
+
+    // Check if any labels bind to the deleted model's role.
+    if (deletedRole) {
+      const boundLabels = labels.filter((l) => l.modelBindings.includes(deletedRole));
+      if (boundLabels.length > 0) {
+        toast.warning(
+          `该模型有 ${boundLabels.length} 个标签绑定到角色 "${deletedRole}"，删除后这些标签将变为全局标签`,
+        );
+      }
+    }
+
     const newFiles = config.modelFiles?.filter((f) => f.id !== id) ?? [];
     try {
       await dashboardModelApi.update({ modelFiles: newFiles });
@@ -184,18 +197,31 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
     }
   },
 
-  moveFile: async (id, direction) => {
+  updateFileRole: async (id: string, role: string) => {
+    const { config } = get();
+    if (!config) return;
+    const newFiles =
+      config.modelFiles?.map((f) => (f.id === id ? { ...f, role: role || undefined } : f)) ?? [];
+    try {
+      await dashboardModelApi.update({ modelFiles: newFiles });
+      set((state) => ({
+        config: state.config ? { ...state.config, modelFiles: newFiles } : null,
+      }));
+    } catch (err) {
+      console.error("Role update failed:", err);
+      toast.error("更新失败");
+    }
+  },
+
+  reorderFiles: async (fromIndex, toIndex) => {
     const { config } = get();
     if (!config) return;
     const files = config.modelFiles ? [...config.modelFiles] : [];
-    const idx = files.findIndex((f) => f.id === id);
-    if (idx === -1) return;
+    if (fromIndex < 0 || fromIndex >= files.length) return;
+    if (toIndex < 0 || toIndex >= files.length) return;
 
-    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
-    if (swapIdx < 0 || swapIdx >= files.length) return;
-
-    // Swap and reassign order values to match new indices.
-    [files[idx], files[swapIdx]] = [files[swapIdx], files[idx]];
+    const [moved] = files.splice(fromIndex, 1);
+    files.splice(toIndex, 0, moved);
     const reordered = files.map((f, i) => ({ ...f, order: i }));
 
     try {

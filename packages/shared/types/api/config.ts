@@ -122,7 +122,7 @@ export const DashboardModelLabelSchema = z.object({
   tree: LabelTreeSchema.default({ order: 0 }),
   groups: z.array(LabelGroupSchema).default([]),
   actions: z.array(LabelActionSchema).default([]),
-  modelBindings: z.array(z.string()).default([]).describe("Associated model file IDs"),
+  modelBindings: z.array(z.string()).default([]).describe("Bound model roles; empty = global"),
 });
 export type DashboardModelLabel = z.infer<typeof DashboardModelLabelSchema>;
 
@@ -134,6 +134,7 @@ export const ModelFileEntrySchema = z.object({
   id: z.string(),
   fileKey: z.string(),
   name: z.string().optional(),
+  role: z.string().optional().describe("Semantic role, e.g. 'building', 'furniture'"),
   priority: z.enum(["critical", "background"]).default("background"),
   order: z.number().default(0),
   labels: z.array(DashboardModelLabelSchema).optional(),
