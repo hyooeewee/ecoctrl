@@ -62,7 +62,9 @@ export default function ActionStepsConfig({
     onChange(next);
   };
 
-  const addStep = (type: LabelAction["type"]) => {
+  const addStep = (label: string) => {
+    const type = LABEL_TO_ACTION_TYPE[label];
+    if (!type) return;
     const id = `action_${type}_${Date.now()}`;
     onChange([...actions, { id, label: "", type, config: getDefaultConfig(type) }]);
   };
@@ -163,15 +165,16 @@ export default function ActionStepsConfig({
 
       {/* Add step */}
       <div className="flex items-center gap-2">
-        <Select onValueChange={(v) => addStep(v as LabelAction["type"])} disabled={disabled}>
+        <Select onValueChange={addStep} disabled={disabled}>
           <SelectTrigger className="h-9 flex-1 text-sm">
             <SelectValue placeholder="添加动作步骤..." />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="camera">📷 摄像机动画</SelectItem>
-            <SelectItem value="clipping">✂️ 剖切效果</SelectItem>
-            <SelectItem value="visibility">👁️ 可见性控制</SelectItem>
-            <SelectItem value="postprocess">🎨 后期效果</SelectItem>
+            {Object.values(ACTION_TYPE_LABELS).map((label) => (
+              <SelectItem key={label} value={label}>
+                {label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -184,11 +187,15 @@ export default function ActionStepsConfig({
 // ========================================
 
 const ACTION_TYPE_LABELS: Record<LabelAction["type"], string> = {
-  camera: "摄像机动画",
-  clipping: "剖切效果",
-  visibility: "可见性控制",
-  postprocess: "后期效果",
+  camera: "📷 摄像机动画",
+  clipping: "✂️ 剖切效果",
+  visibility: "👁️ 可见性控制",
+  postprocess: "🎨 后期效果",
 };
+
+const LABEL_TO_ACTION_TYPE = Object.fromEntries(
+  Object.entries(ACTION_TYPE_LABELS).map(([type, label]) => [label, type]),
+) as Record<string, LabelAction["type"]>;
 
 // ========================================
 // Camera Config
