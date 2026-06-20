@@ -1035,8 +1035,8 @@ export class ModelViewer implements ModelViewerRef {
 
   setSidebarWidth(width: number): void {
     this.sidebarWidth = width;
-    // Resize engine so canvas adapts to new effective area
-    this.engine.resize();
+    // Resize once after CSS transition ends (300ms + buffer)
+    setTimeout(() => this.engine.resize(), 350);
   }
 
   // ========================================
