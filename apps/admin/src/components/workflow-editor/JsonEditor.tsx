@@ -223,7 +223,7 @@ export function JsonEditor({
         </Button>
       )}
       {headerActions}
-      {mode === "inline" && editor === "monaco" && showFullscreen && (
+      {mode === "inline" && editor === "monaco" && (showFullscreen || onConfirm) && (
         <Button
           variant="ghost"
           size="icon"
