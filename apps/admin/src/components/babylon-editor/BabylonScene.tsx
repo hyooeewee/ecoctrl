@@ -24,6 +24,7 @@ import "@babylonjs/loaders";
 import { AdvancedDynamicTexture } from "@babylonjs/gui";
 import { createEngine, loadGltf, loadModelsByPriority } from "@ecoctrl/shared/babylon";
 import type { LabelAction } from "@ecoctrl/shared";
+import { createOrientationGizmo } from "./orientation-gizmo";
 
 // ========================================
 // Types
@@ -608,7 +609,75 @@ const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(
       // Notify parent
       onSceneReady?.(scene, engine);
 
+      // Orientation gizmo (CAD-style cube in top-right corner)
+      const gizmo = createOrientationGizmo(engine, camera, container, {
+        onViewChange: (pos, lookAt) => {
+          // Animate the main camera to the selected view
+          const dir = lookAt.subtract(pos);
+          const radius = dir.length();
+          const alpha = Math.atan2(dir.x, dir.z);
+          const hDist = Math.sqrt(dir.x * dir.x + dir.z * dir.z);
+          const beta = Math.max(0.1, Math.min(Math.PI - 0.1, Math.atan2(hDist, dir.y)));
+          const frameCount = 20;
+
+          const alphaA = new Animation(
+            "a",
+            "alpha",
+            60,
+            Animation.ANIMATIONTYPE_FLOAT,
+            Animation.ANIMATIONLOOPMODE_CONSTANT,
+          );
+          alphaA.setKeys([
+            { frame: 0, value: camera.alpha },
+            { frame: frameCount, value: alpha },
+          ]);
+          const betaA = new Animation(
+            "b",
+            "beta",
+            60,
+            Animation.ANIMATIONTYPE_FLOAT,
+            Animation.ANIMATIONLOOPMODE_CONSTANT,
+          );
+          betaA.setKeys([
+            { frame: 0, value: camera.beta },
+            { frame: frameCount, value: beta },
+          ]);
+          const radiusA = new Animation(
+            "r",
+            "radius",
+            60,
+            Animation.ANIMATIONTYPE_FLOAT,
+            Animation.ANIMATIONLOOPMODE_CONSTANT,
+          );
+          radiusA.setKeys([
+            { frame: 0, value: camera.radius },
+            { frame: frameCount, value: radius },
+          ]);
+          const targetA = new Animation(
+            "t",
+            "target",
+            60,
+            Animation.ANIMATIONTYPE_VECTOR3,
+            Animation.ANIMATIONLOOPMODE_CONSTANT,
+          );
+          targetA.setKeys([
+            { frame: 0, value: camera.target.clone() },
+            { frame: frameCount, value: lookAt },
+          ]);
+
+          scene.beginDirectAnimation(
+            camera,
+            [alphaA, betaA, radiusA, targetA],
+            0,
+            frameCount,
+            false,
+            1,
+          );
+        },
+      });
+
       return () => {
+        gizmo.dispose();
         canvas.removeEventListener("pointerdown", markInteracting);
         canvas.removeEventListener("pointermove", markInteracting);
         canvas.removeEventListener("pointerup", markInteracting);

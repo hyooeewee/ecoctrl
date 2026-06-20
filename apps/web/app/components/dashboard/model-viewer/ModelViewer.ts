@@ -743,11 +743,15 @@ export class ModelViewer implements ModelViewerRef {
     switch (action.type) {
       case "camera": {
         const cfg = action.config as {
-          position: { x: number; y: number; z: number };
-          lookAt: { x: number; y: number; z: number };
+          position?: { x: number; y: number; z: number };
+          lookAt?: { x: number; y: number; z: number };
           duration?: number;
           easing?: string;
         };
+        if (!cfg.position || !cfg.lookAt) {
+          console.warn("[ModelViewer] camera action missing position/lookAt:", action.id);
+          break;
+        }
         const pos = new Vector3(cfg.position.x, cfg.position.y, cfg.position.z);
         const lookAt = new Vector3(cfg.lookAt.x, cfg.lookAt.y, cfg.lookAt.z);
         const duration = cfg.duration ?? 0;

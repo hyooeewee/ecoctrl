@@ -16,7 +16,6 @@ import {
 import { X, ChevronUp, ChevronDown } from "lucide-react";
 import AppButton from "@/components/AppButton";
 import type { LabelAction } from "@ecoctrl/shared";
-import OrientationGizmo, { type ViewPreset } from "./OrientationGizmo";
 import type { BabylonSceneRef } from "./BabylonScene";
 
 // ========================================
@@ -297,13 +296,6 @@ function CameraConfig({
     z: 0,
   };
 
-  const handlePreset = (preset: ViewPreset) => {
-    onChange("position", preset.position);
-    onChange("lookAt", preset.lookAt);
-    // Animate the preview camera
-    sceneRef.current?.animateToView(preset.position, preset.lookAt);
-  };
-
   const handleCapture = () => {
     const view = sceneRef.current?.captureCameraView();
     if (view) {
@@ -314,60 +306,61 @@ function CameraConfig({
 
   return (
     <>
-      <div className="flex gap-3">
-        {/* Orientation gizmo */}
-        <div className="flex-shrink-0">
-          <OrientationGizmo onPresetSelect={handlePreset} onCapture={handleCapture} />
+      {/* Capture button — use the 3D gizmo to set view, then capture */}
+      <button
+        type="button"
+        onClick={handleCapture}
+        disabled={disabled}
+        className="w-full rounded border border-dashed border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground hover:bg-muted/60 transition-colors"
+      >
+        📷 捕获当前视角（转动 3D 视图后点击此处保存）
+      </button>
+
+      {/* Position */}
+      <div className="grid gap-1">
+        <Label className="text-[10px] text-muted-foreground">摄像机位置</Label>
+        <div className="grid grid-cols-3 gap-1">
+          {(["x", "y", "z"] as const).map((axis) => (
+            <div key={axis}>
+              <Label className="text-[9px] text-muted-foreground mb-0.5 block uppercase">
+                {axis}
+              </Label>
+              <Input
+                type="number"
+                step="any"
+                value={position[axis]}
+                onChange={(e) =>
+                  onChange("position", { ...position, [axis]: parseFloat(e.target.value) || 0 })
+                }
+                disabled={disabled}
+                className="h-7 text-xs px-1.5"
+              />
+            </div>
+          ))}
         </div>
+      </div>
 
-        <div className="flex-1 grid gap-2">
-          {/* Position */}
-          <div className="grid gap-1">
-            <Label className="text-[10px] text-muted-foreground">摄像机位置</Label>
-            <div className="grid grid-cols-3 gap-1">
-              {(["x", "y", "z"] as const).map((axis) => (
-                <div key={axis}>
-                  <Label className="text-[9px] text-muted-foreground mb-0.5 block uppercase">
-                    {axis}
-                  </Label>
-                  <Input
-                    type="number"
-                    step="any"
-                    value={position[axis]}
-                    onChange={(e) =>
-                      onChange("position", { ...position, [axis]: parseFloat(e.target.value) || 0 })
-                    }
-                    disabled={disabled}
-                    className="h-7 text-xs px-1.5"
-                  />
-                </div>
-              ))}
+      {/* LookAt */}
+      <div className="grid gap-1">
+        <Label className="text-[10px] text-muted-foreground">看向点</Label>
+        <div className="grid grid-cols-3 gap-1">
+          {(["x", "y", "z"] as const).map((axis) => (
+            <div key={axis}>
+              <Label className="text-[9px] text-muted-foreground mb-0.5 block uppercase">
+                {axis}
+              </Label>
+              <Input
+                type="number"
+                step="any"
+                value={lookAt[axis]}
+                onChange={(e) =>
+                  onChange("lookAt", { ...lookAt, [axis]: parseFloat(e.target.value) || 0 })
+                }
+                disabled={disabled}
+                className="h-7 text-xs px-1.5"
+              />
             </div>
-          </div>
-
-          {/* LookAt */}
-          <div className="grid gap-1">
-            <Label className="text-[10px] text-muted-foreground">看向点</Label>
-            <div className="grid grid-cols-3 gap-1">
-              {(["x", "y", "z"] as const).map((axis) => (
-                <div key={axis}>
-                  <Label className="text-[9px] text-muted-foreground mb-0.5 block uppercase">
-                    {axis}
-                  </Label>
-                  <Input
-                    type="number"
-                    step="any"
-                    value={lookAt[axis]}
-                    onChange={(e) =>
-                      onChange("lookAt", { ...lookAt, [axis]: parseFloat(e.target.value) || 0 })
-                    }
-                    disabled={disabled}
-                    className="h-7 text-xs px-1.5"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
+          ))}
         </div>
       </div>
 
