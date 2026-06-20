@@ -7,7 +7,7 @@ import type { DashboardModelLabel } from "@ecoctrl/shared";
 
 export const INITIAL_ALPHA = Math.PI / 4;
 export const INITIAL_BETA = Math.PI / 2.8;
-export const INITIAL_TARGET = new Vector3(0, 2, 0);
+export const INITIAL_TARGET = new Vector3(0, 1.5, 0);
 
 // ========================================
 // Model fallback

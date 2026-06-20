@@ -1,6 +1,9 @@
 import {
   AbstractMesh,
   ArcRotateCamera,
+  Color3,
+  DirectionalLight,
+  HemisphericLight,
   Matrix,
   Mesh,
   SceneLoader,
@@ -79,6 +82,14 @@ export class ModelViewer implements ModelViewerRef {
   // Radius that frames the loaded model; used as the baseline for
   // reset / fullscreen instead of the user-supplied default.
   private fittedCameraRadius: number | null = null;
+
+  // Full camera snapshot after model load — used by resetCamera.
+  private initialCameraState: {
+    alpha: number;
+    beta: number;
+    radius: number;
+    target: Vector3;
+  } | null = null;
 
   // Label anchors (computed after model load)
   private labelAnchors: LabelAnchor[] = [];
@@ -164,9 +175,18 @@ export class ModelViewer implements ModelViewerRef {
     this.camera.maxZ = 200;
     this.camera.viewport = new Viewport(0, 0, 1, 1);
 
-    // Sandbox-style environment: HDR skybox + image-based lighting (IBL) + tone mapping.
-    // Replaces the previous manual hemispheric + directional light setup.
-    this.skybox = setupSandboxEnvironment(this.scene);
+    // Sandbox-style skybox + minimal IBL for PBR ambient fill.
+    this.skybox = setupSandboxEnvironment(this.scene, { environmentIntensity: 0.05 });
+
+    // Manual lighting for PBR materials (no IBL = need stronger lights).
+    const hemi = new HemisphericLight("hemi", new Vector3(0, 1, 0), this.scene);
+    hemi.intensity = 1.2;
+    hemi.diffuse = new Color3(1, 1, 1);
+    hemi.groundColor = new Color3(0.7, 0.7, 0.7);
+
+    const dir = new DirectionalLight("dir", new Vector3(-1, -2, 1), this.scene);
+    dir.intensity = 1.0;
+    dir.position = new Vector3(5, 10, -5);
 
     // Skip pointer-move picking unless hover interactions are needed. This saves
     // a full scene raycast on every pointermove event.
@@ -475,11 +495,19 @@ export class ModelViewer implements ModelViewerRef {
       // Frame the camera on the model's actual center, preserving the original
       // world-space coordinates so label positions match the admin preview.
       const target = center;
-      const radius = Math.max(size.x, size.y, size.z) * 1.5;
+      const radius = Math.max(size.x, size.y, size.z) * 2.0;
       this.camera.setTarget(target);
       this.postLoadTarget = target.clone();
       this.fittedCameraRadius = radius;
       this.camera.radius = radius;
+
+      // Snapshot the complete camera state for resetCamera.
+      this.initialCameraState = {
+        alpha: this.camera.alpha,
+        beta: this.camera.beta,
+        radius: this.camera.radius,
+        target: target.clone(),
+      };
       this.camera.lowerRadiusLimit = radius * 0.1;
       this.camera.upperRadiusLimit = radius * 5;
       this.camera.maxZ = radius * 10;
@@ -586,11 +614,19 @@ export class ModelViewer implements ModelViewerRef {
   }
 
   resetCamera(): void {
-    this.camera.alpha = INITIAL_ALPHA;
-    this.camera.beta = INITIAL_BETA;
-    this.camera.radius = this.fittedCameraRadius ?? this.defaultCameraRadius;
-    // Use setTarget to match the load path and avoid a one-frame target mismatch.
-    this.camera.setTarget(this.postLoadTarget ?? INITIAL_TARGET);
+    // Restore the exact camera state captured after model load.
+    if (this.initialCameraState) {
+      this.camera.alpha = this.initialCameraState.alpha;
+      this.camera.beta = this.initialCameraState.beta;
+      this.camera.radius = this.initialCameraState.radius;
+      this.camera.setTarget(this.initialCameraState.target);
+    } else {
+      // Fallback if model hasn't loaded yet.
+      this.camera.alpha = INITIAL_ALPHA;
+      this.camera.beta = INITIAL_BETA;
+      this.camera.radius = this.fittedCameraRadius ?? this.defaultCameraRadius;
+      this.camera.setTarget(this.postLoadTarget ?? INITIAL_TARGET);
+    }
 
     // Reset viewport
     this.camera.viewport = new Viewport(0, 0, 1, 1);
@@ -599,6 +635,11 @@ export class ModelViewer implements ModelViewerRef {
     this.clipState.targetY = 999;
     this.clipState.currentY = 999;
     this.scene.clipPlane = null;
+
+    // Restore all model groups to visible (labels may have toggled them off).
+    for (const group of this.groups) {
+      this.setGroupVisible(group.id, true);
+    }
   }
 
   enterImmersive(): void {
