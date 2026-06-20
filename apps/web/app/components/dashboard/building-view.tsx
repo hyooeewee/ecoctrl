@@ -251,6 +251,9 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
     } else if (visibilitySnapshotRef.current) {
       viewer.restoreVisibilitySnapshot(visibilitySnapshotRef.current);
       visibilitySnapshotRef.current = null;
+      // Reset camera and clipping to default state
+      viewer.resetCamera();
+      viewer.setClipping(false);
     }
   }, [activeLabel]);
 

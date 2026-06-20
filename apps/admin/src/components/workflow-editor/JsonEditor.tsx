@@ -223,13 +223,13 @@ export function JsonEditor({
         </Button>
       )}
       {headerActions}
-      {mode === "inline" && editor === "monaco" && (showFullscreen || onConfirm) && (
+      {mode === "inline" && editor === "monaco" && showFullscreen && (
         <Button
           variant="ghost"
           size="icon"
           className="h-7 w-7"
           title="全屏编辑"
-          onClick={onConfirm ?? handleOpenDialog}
+          onClick={handleOpenDialog}
         >
           <Maximize2 size={14} />
         </Button>
