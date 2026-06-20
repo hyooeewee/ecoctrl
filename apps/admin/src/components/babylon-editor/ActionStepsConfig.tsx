@@ -190,13 +190,6 @@ const ACTION_TYPE_LABELS: Record<LabelAction["type"], string> = {
   postprocess: "后期效果",
 };
 
-const EASING_LABELS: Record<string, string> = {
-  linear: "线性",
-  easeIn: "缓入",
-  easeOut: "缓出",
-  easeInOut: "缓入缓出",
-};
-
 // ========================================
 // Camera Config
 // ========================================
@@ -308,10 +301,7 @@ function CameraConfig({
             disabled={disabled}
           >
             <SelectTrigger className="h-8 text-sm">
-              <SelectValue>
-                {EASING_LABELS[(config.easing as string) ?? "easeInOut"] ??
-                  (config.easing as string)}
-              </SelectValue>
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="linear">线性</SelectItem>
