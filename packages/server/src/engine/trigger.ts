@@ -137,11 +137,11 @@ export const triggerEngine = {
     if (!workflow) {
       throw new Error("Workflow not found");
     }
-    if (!workflow.publishedDsl) {
-      throw new Error("Workflow has not been published. Please publish before triggering.");
+    if (!workflow.publishedDsl && !workflow.dsl) {
+      throw new Error("Workflow has no DSL. Please save or publish before triggering.");
     }
 
-    const dsl = workflow.publishedDsl as WorkflowDSL;
+    const dsl = (workflow.publishedDsl ?? workflow.dsl) as WorkflowDSL;
     const triggerNodes = getTriggerNodes(dsl);
     if (triggerNodes.length === 0) {
       throw new Error("Workflow has no trigger node");

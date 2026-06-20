@@ -20,6 +20,10 @@ export function SseProvider({ children }: { children: ReactNode }) {
     });
 
     const removeWorkflow = onWorkflowExecution((exec) => {
+      // Only show toasts for manually triggered workflows;
+      // schedule, webhook, event triggers should run silently.
+      if (exec.triggerData?.source !== "manual") return;
+
       if (exec.status === "completed") {
         toast.success("Workflow completed", {
           id: `workflow-completed-${exec.executionId}`,

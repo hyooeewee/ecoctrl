@@ -446,8 +446,15 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
       }
 
       const body = (request.body as { data?: Record<string, unknown> }) ?? {};
-      const executionId = await triggerEngine.emitManual(id, payload.userId, body.data ?? {});
-      return reply.send({ executionId });
+
+      try {
+        const executionId = await triggerEngine.emitManual(id, payload.userId, body.data ?? {});
+        return reply.send({ executionId });
+      } catch (err) {
+        const msg = (err as Error).message;
+        request.log.error({ err, workflowId: id }, "manual trigger failed");
+        return reply.status(400).send({ error: msg });
+      }
     },
   );
 

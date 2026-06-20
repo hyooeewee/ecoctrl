@@ -55,7 +55,13 @@ class ScheduleEngine {
 
   private async fire(entry: ScheduleEntry): Promise<void> {
     await this.fireHandler?.(entry);
-    this.scheduleNext(entry);
+
+    // Guard against race: sync() may have cleared this entry while we were
+    // awaiting the handler above. Only reschedule if the entry is still live.
+    const key = this.key(entry.workflowId, entry.nodeId);
+    if (this.entries.has(key) && this.entries.get(key) === entry) {
+      this.scheduleNext(entry);
+    }
   }
 
   sync(
