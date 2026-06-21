@@ -42,14 +42,14 @@ export function WidgetRenderer({ widget, liveData }: WidgetRendererProps) {
       );
 
     case "chart": {
-      const chartData = data as Record<string, unknown>;
+      const chartData = (data ?? {}) as Record<string, unknown>;
       if (config.chartType === "donut") {
         return (
           <EnergyBreakdownChart
             data={
               (chartData.items as Array<{ label: string; value: number; color?: string }>) ?? []
             }
-            total={chartData.total as number}
+            total={(chartData.total as number) ?? 0}
             title={title}
             icon={icon}
           />
@@ -66,10 +66,15 @@ export function WidgetRenderer({ widget, liveData }: WidgetRendererProps) {
     }
 
     case "list":
-      return <ListWidget widget={widget} data={data as { items: Record<string, unknown>[] }} />;
+      return (
+        <ListWidget
+          widget={widget}
+          data={(data ?? { items: [] }) as { items: Record<string, unknown>[] }}
+        />
+      );
 
     case "weather":
-      return <WeatherWidget widget={widget} data={data} />;
+      return <WeatherWidget widget={widget} data={data ?? {}} />;
 
     default:
       return (
