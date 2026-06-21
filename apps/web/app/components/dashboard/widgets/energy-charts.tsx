@@ -279,12 +279,12 @@ export function EnergyBreakdownChart({
         <div className="relative shrink-0 basis-auto" style={{ width: 150, height: 150 }}>
           <ChartContainer
             config={chartConfig}
-            className="aspect-auto h-full w-full"
+            className="h-full w-full"
             width={150}
             height={150}
             initialDimension={{ width: 150, height: 150 }}
           >
-            <PieChart>
+            <PieChart width={150} height={150}>
               <ChartTooltip content={<ChartTooltipContent hideLabel />} />
               <Pie
                 data={chartData}
