@@ -199,6 +199,51 @@ async function injectApi(context: ivm.Context, api: PluginApi): Promise<void> {
     [(name: string, values: Record<string, unknown>) => api.iot.writePoint(name, values)],
     { arguments: { reference: true } },
   );
+  await context.evalClosure(
+    `globalThis.__iot_writePoints = async function(points) {
+      return await $0.apply(undefined, [points], { arguments: { copy: true }, result: { copy: true, promise: true } });
+    }`,
+    [(points: Array<{ pointId: string; value: unknown }>) => api.iot.writePoints(points)],
+    { arguments: { reference: true } },
+  );
+  await context.evalClosure(
+    `globalThis.__iot_forceWritePoint = async function(name, value) {
+      return await $0.apply(undefined, [name, value], { arguments: { copy: true }, result: { copy: true, promise: true } });
+    }`,
+    [(name: string, value: unknown) => api.iot.forceWritePoint(name, value)],
+    { arguments: { reference: true } },
+  );
+  await context.evalClosure(
+    `globalThis.__iot_readPointHistory = async function(codes, beginTime, endTime, interval) {
+      return await $0.apply(undefined, [codes, beginTime, endTime, interval], { arguments: { copy: true }, result: { copy: true, promise: true } });
+    }`,
+    [
+      (codes: string[], beginTime: string, endTime: string, interval?: number) =>
+        api.iot.readPointHistory(codes, beginTime, endTime, interval),
+    ],
+    { arguments: { reference: true } },
+  );
+  await context.evalClosure(
+    `globalThis.__iot_readPointProp = async function(name, prop) {
+      return await $0.apply(undefined, [name, prop], { arguments: { copy: true }, result: { copy: true, promise: true } });
+    }`,
+    [(name: string, prop?: string) => api.iot.readPointProp(name, prop)],
+    { arguments: { reference: true } },
+  );
+  await context.evalClosure(
+    `globalThis.__iot_getAlarmConfigurations = async function() {
+      return await $0.apply(undefined, [], { result: { copy: true, promise: true } });
+    }`,
+    [() => api.iot.getAlarmConfigurations()],
+    { arguments: { reference: true } },
+  );
+  await context.evalClosure(
+    `globalThis.__iot_getHistoricalAlarms = async function(beginTime, endTime) {
+      return await $0.apply(undefined, [beginTime, endTime], { arguments: { copy: true }, result: { copy: true, promise: true } });
+    }`,
+    [(beginTime: string, endTime: string) => api.iot.getHistoricalAlarms(beginTime, endTime)],
+    { arguments: { reference: true } },
+  );
 
   // Notify
   await context.evalClosure(
@@ -317,7 +362,13 @@ async function injectApi(context: ivm.Context, api: PluginApi): Promise<void> {
       iot: {
         readPoint: async function(name) { return await __iot_readPoint(name); },
         readPoints: async function(names) { return await __iot_readPoints(names); },
-        writePoint: async function(name, values) { return await __iot_writePoint(name, values); }
+        writePoint: async function(name, values) { return await __iot_writePoint(name, values); },
+        writePoints: async function(points) { return await __iot_writePoints(points); },
+        forceWritePoint: async function(name, value) { return await __iot_forceWritePoint(name, value); },
+        readPointHistory: async function(codes, beginTime, endTime, interval) { return await __iot_readPointHistory(codes, beginTime, endTime, interval); },
+        readPointProp: async function(name, prop) { return await __iot_readPointProp(name, prop); },
+        getAlarmConfigurations: async function() { return await __iot_getAlarmConfigurations(); },
+        getHistoricalAlarms: async function(beginTime, endTime) { return await __iot_getHistoricalAlarms(beginTime, endTime); }
       },
       notify: {
         send: function(options) { return __notify_send(options); },

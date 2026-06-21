@@ -90,7 +90,7 @@ export interface PluginApi {
     writePoints(points: Array<{ pointId: string; value: unknown }>): Promise<void>;
     forceWritePoint(name: string, value: unknown): Promise<void>;
     readPointHistory(
-      name: string,
+      codes: string[],
       beginTime: string,
       endTime: string,
       interval?: number,

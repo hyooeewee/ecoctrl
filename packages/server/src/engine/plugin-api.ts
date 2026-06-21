@@ -91,12 +91,12 @@ export function createPluginApi(
         await withRetry(() => forceWritePointValues([{ pointId: name, value }]), 500);
       },
       readPointHistory: async (
-        name: string,
+        codes: string[],
         beginTime: string,
         endTime: string,
         interval?: number,
       ) => {
-        return withRetry(() => readPointHistory([name], beginTime, endTime, interval), 500);
+        return withRetry(() => readPointHistory(codes, beginTime, endTime, interval), 500);
       },
       readPointProp: async (name: string, prop?: string) => {
         const values = await withRetry(() => readPointProperties([name], prop), 500);
