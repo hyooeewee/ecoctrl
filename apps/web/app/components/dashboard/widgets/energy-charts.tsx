@@ -88,7 +88,11 @@ export function EnergyTrendChart({
         <span style={{ color }}>{icon}</span>
         <p className="text-[11px] font-semibold tracking-widest text-muted-foreground">{title}</p>
       </div>
-      <ChartContainer config={chartConfig} className="min-h-0 flex-1">
+      <ChartContainer
+        config={chartConfig}
+        className="min-h-0 flex-1"
+        initialDimension={{ width: 300, height: 150 }}
+      >
         {chartType === "area" && (
           <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
             <defs>
@@ -273,7 +277,11 @@ export function EnergyBreakdownChart({
       <div className="flex min-h-0 flex-1 items-center gap-3">
         {/* Donut chart with centered total — left side */}
         <div className="relative h-full max-h-full shrink-0 basis-auto">
-          <ChartContainer config={chartConfig} className="h-full w-full aspect-square">
+          <ChartContainer
+            config={chartConfig}
+            className="h-full w-full aspect-square"
+            initialDimension={{ width: 200, height: 200 }}
+          >
             <PieChart>
               <ChartTooltip content={<ChartTooltipContent hideLabel />} />
               <Pie
