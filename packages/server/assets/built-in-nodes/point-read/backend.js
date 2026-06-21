@@ -56,17 +56,17 @@ module.exports = async function execute(ctx, api) {
       throw new Error("history 模式需要填写 beginTime 和 endTime");
     }
 
-    api.log.info(`[point-read] history: ${firstName} from ${beginTime} to ${endTime}`);
+    api.log.info(`[point-read] history: ${names.join(", ")} from ${beginTime} to ${endTime}`);
 
     let raw;
     try {
-      raw = await api.iot.readPointHistory([firstName], beginTime, endTime);
+      raw = await api.iot.readPointHistory(names, beginTime, endTime);
     } catch (err) {
-      api.log.error(`[point-read] history read failed for ${firstName}: ${err.message}`);
-      throw new Error(`读取点位 ${firstName} 历史数据失败: ${err.message}`, { cause: err });
+      api.log.error(`[point-read] history read failed: ${err.message}`);
+      throw new Error(`读取点位历史数据失败: ${err.message}`, { cause: err });
     }
 
-    api.log.info(`[point-read] history read success for ${firstName}`);
+    api.log.info(`[point-read] history read success for ${names.length} point(s)`);
 
     return { input: { pointNames: names, beginTime, endTime }, raw };
   }
