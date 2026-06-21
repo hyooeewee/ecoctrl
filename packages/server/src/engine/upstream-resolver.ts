@@ -101,9 +101,12 @@ export async function resolveUpstreamOutputs(
   const logs: NodeLogEntry[] = [];
   const visiting = new Set<string>();
 
+  console.log("[upstream] allNodeIds:", [...allNodeIds]);
+
   const targetNode = dsl.nodes.find((n) => n.id === targetNodeId);
   if (targetNode) {
     const referencedIds = extractReferencedNodeIds(targetNode.config, allNodeIds);
+    console.log("[upstream] referencedIds for", targetNodeId, ":", [...referencedIds]);
     for (const refId of referencedIds) {
       await resolveNode(refId);
     }
@@ -112,6 +115,7 @@ export async function resolveUpstreamOutputs(
   return { nodeOutputs: resolved, nodeLogs: logs };
 
   async function resolveNode(nodeId: string): Promise<void> {
+    console.log("[upstream] resolveNode:", nodeId, "exists:", allNodeIds.has(nodeId));
     if (resolved.has(nodeId)) return;
 
     if (visiting.has(nodeId)) {

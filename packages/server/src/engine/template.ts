@@ -253,7 +253,11 @@ export function resolveTemplate(value: unknown, ctx: ExecutionContext): unknown 
           vars[k] = v;
         });
         vars.trigger = ctx.triggerData;
-        return evaluateExpression(inner, vars);
+        console.log("[template] evaluateExpression:", inner);
+        console.log("[template] nodeOutputs keys:", [...ctx.nodeOutputs.keys()]);
+        const result = evaluateExpression(inner, vars);
+        console.log("[template] result:", result);
+        return result;
       }
       return getValueFromPath(inner, ctx);
     }
