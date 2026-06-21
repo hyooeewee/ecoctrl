@@ -92,7 +92,11 @@ export function WorkflowTestPanel({
           <span className="text-sm font-medium">测试运行日志</span>
           <Badge
             variant={testResult.status === "completed" ? "default" : "destructive"}
-            className="text-[10px]"
+            className={
+              testResult.status === "completed"
+                ? "bg-emerald-500 hover:bg-emerald-600 text-[10px]"
+                : "text-[10px]"
+            }
           >
             {testResult.status === "completed" ? "成功" : "失败"}
           </Badge>

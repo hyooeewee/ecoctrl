@@ -25,14 +25,14 @@ export function SseProvider({ children }: { children: ReactNode }) {
       if (exec.triggerData?.source !== "manual") return;
 
       if (exec.status === "completed") {
-        toast.success("Workflow completed", {
+        toast.success("工作流执行成功", {
           id: `workflow-completed-${exec.executionId}`,
-          description: `Execution ${exec.executionId.slice(0, 8)} finished`,
+          description: `执行 ${exec.executionId.slice(0, 8)} 已完成`,
         });
       } else if (exec.status === "failed") {
-        toast.error("Workflow failed", {
+        toast.error("工作流执行失败", {
           id: `workflow-failed-${exec.executionId}`,
-          description: exec.errorMessage || `Execution ${exec.executionId.slice(0, 8)} failed`,
+          description: exec.errorMessage || `执行 ${exec.executionId.slice(0, 8)} 失败`,
         });
       }
     });

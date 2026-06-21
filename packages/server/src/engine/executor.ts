@@ -392,8 +392,11 @@ export async function executeWorkflow(
 
     const trimmedLogs = state.nodeLogs.slice(-500);
 
+    // If any node failed, mark the entire workflow as failed
+    const hasFailedNode = trimmedLogs.some((log) => log.status === "failed");
+
     return {
-      status: "completed",
+      status: hasFailedNode ? "failed" : "completed",
       output: lastEnd ? ctx.nodeOutputs.get(lastEnd.id) : undefined,
       nodeLogs: trimmedLogs,
       dryRun,

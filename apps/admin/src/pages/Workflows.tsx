@@ -465,28 +465,37 @@ export default function Workflows() {
       {
         accessorKey: "status",
         header: "状态",
-        cell: ({ row }) => (
-          <Badge
-            variant={
-              row.original.status === "completed"
-                ? "default"
-                : row.original.status === "failed"
-                  ? "destructive"
-                  : row.original.status === "running"
-                    ? "secondary"
-                    : "outline"
-            }
-            className={row.original.status === "running" ? "animate-pulse" : ""}
-          >
-            {row.original.status === "completed"
-              ? "已完成"
-              : row.original.status === "failed"
-                ? "失败"
-                : row.original.status === "running"
-                  ? "运行中"
-                  : "待定"}
-          </Badge>
-        ),
+        cell: ({ row }) => {
+          const s = row.original.status;
+          return (
+            <Badge
+              variant={
+                s === "completed"
+                  ? "default"
+                  : s === "failed"
+                    ? "destructive"
+                    : s === "running"
+                      ? "secondary"
+                      : "outline"
+              }
+              className={
+                s === "running"
+                  ? "animate-pulse"
+                  : s === "completed"
+                    ? "bg-emerald-500 hover:bg-emerald-600"
+                    : ""
+              }
+            >
+              {s === "completed"
+                ? "成功"
+                : s === "failed"
+                  ? "失败"
+                  : s === "running"
+                    ? "运行中"
+                    : "待定"}
+            </Badge>
+          );
+        },
       },
       {
         accessorKey: "durationMs",
