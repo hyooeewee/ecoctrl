@@ -39,21 +39,21 @@ export function StatCard({
   const t = useLocale();
   const { activeLabel } = useOutletContext<DashboardOutletContext>();
 
-  const statData = data as StatInitData;
+  const statData = data as StatInitData | undefined;
   const resolvedUnit = unit ? (getNestedLocaleValue(t, unit) ?? unit) : undefined;
   const footer = footerKey ? getNestedLocaleValue(t, footerKey) : undefined;
-  const delta = statData.trend
+  const delta = statData?.trend
     ? (getNestedLocaleValue(t, statData.trend) ?? statData.trend)
     : undefined;
-  const deltaVariant = computeTrendType(statData.trend, trendDirection ?? "bad");
+  const deltaVariant = computeTrendType(statData?.trend, trendDirection ?? "bad");
 
-  const chartData = statData.sparkline?.map((v) => ({ v })) ?? [];
+  const chartData = statData?.sparkline?.map((v) => ({ v })) ?? [];
   const hasSparkline = chartData.length > 0;
 
   const props = {
     title: title ?? "",
     icon: icon ?? null,
-    value: statData.value,
+    value: statData?.value ?? "—",
     unit: resolvedUnit,
     delta,
     deltaVariant,
