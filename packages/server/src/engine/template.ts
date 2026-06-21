@@ -5,6 +5,46 @@ import { format } from "date-fns";
 const TEMPLATE_REGEX = /\{\{([^}]+)\}\}/g;
 
 /**
+ * Convert common date format tokens to date-fns conventions.
+ *
+ * Tokens: YYYY→yyyy, MM→MM, M→M, DD→dd, D→d, HH→HH, H→H, mm→mm, m→m, ss→ss, s→s
+ * Mixed case like "Mm" (unpadded month) → "M"
+ */
+function normalizeDateFormat(fmt: string): string {
+  const parts = fmt.match(/[A-Za-z]+|[^A-Za-z]+/g) ?? [fmt];
+  return parts
+    .map((part) => {
+      if (!/^[A-Za-z]+$/.test(part)) return part;
+      // Padded tokens (exact match)
+      if (part === "YYYY") return "yyyy";
+      if (part === "MM") return "MM";
+      if (part === "DD") return "dd";
+      if (part === "HH") return "HH";
+      if (part === "mm") return "mm";
+      if (part === "ss") return "ss";
+      // Single-letter unpadded
+      if (part === "M") return "M";
+      if (part === "D") return "d";
+      if (part === "H") return "H";
+      if (part === "h") return "h";
+      if (part === "m") return "m";
+      if (part === "s") return "s";
+      // Mixed case: "Mm"→"M", "Dd"→"d", "Hh"→"H"
+      if (
+        part.length === 2 &&
+        part[0] === part[0].toUpperCase() &&
+        part[1] === part[1].toLowerCase()
+      ) {
+        if (part[0] === "M") return "M";
+        if (part[0] === "D") return "d";
+        if (part[0] === "H") return "H";
+      }
+      return part;
+    })
+    .join("");
+}
+
+/**
  * Parse a path segment that may include bracket indices, e.g.:
  * - `points` -> { prop: "points", indices: [] }
  * - `arr[0]` -> { prop: "arr", indices: ["0"] }
@@ -69,7 +109,7 @@ function getValueFromPath(path: string, ctx: ExecutionContext): unknown {
   // now(format) - format current time with date-fns format string
   const nowFormatMatch = path.match(/^now\("(.+)"\)$/);
   if (nowFormatMatch) {
-    const fmt = nowFormatMatch[1]!;
+    const fmt = normalizeDateFormat(nowFormatMatch[1]!);
     return format(new Date(), fmt);
   }
 
