@@ -13,7 +13,7 @@ function detectListType(items: Record<string, unknown>[]): "devices" | "alerts" 
   if (items.length === 0) return "generic";
   const first = items[0];
   if ("status" in first && "label" in first) return "devices";
-  if ("severity" in first && "time" in first) return "alerts";
+  if (("severity" in first || "level" in first) && "time" in first) return "alerts";
   if ("text" in first) return "ai";
   return "generic";
 }
@@ -176,13 +176,29 @@ function AlertListWidget({
   title: string;
 }) {
   const t = useLocale();
-  const items = data.items as Array<{
-    icon: string;
-    title: string;
-    subtitle: string;
-    severity: string;
-    time: string;
-  }>;
+  const rawItems = data.items as Array<Record<string, unknown>>;
+
+  // Map API fields to component fields (supports both formats)
+  const items = rawItems.map((item) => {
+    const severity =
+      (item.severity as string) ??
+      {
+        critical: "critical",
+        high: "critical",
+        warning: "warning",
+        medium: "warning",
+        low: "info",
+        info: "info",
+      }[item.level as string] ??
+      "info";
+    return {
+      icon: (item.icon as string) ?? "bell",
+      title: (item.title as string) ?? (item.device as string) ?? "—",
+      subtitle: (item.subtitle as string) ?? (item.message as string) ?? "",
+      severity,
+      time: (item.time as string) ?? "",
+    };
+  });
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
