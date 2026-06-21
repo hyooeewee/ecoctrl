@@ -44,6 +44,7 @@
     "async-lock": "^1.4.1",
     "bcryptjs": "^3.0.3",
     "cron-parser": "^5.5.0",
+    "date-fns": "^4.4.0",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "fastify": "^5.0.0",

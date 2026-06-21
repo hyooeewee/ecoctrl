@@ -1,5 +1,6 @@
 import type { ExecutionContext } from "./types";
 import { evaluateExpression } from "./expr";
+import { format } from "date-fns";
 
 const TEMPLATE_REGEX = /\{\{([^}]+)\}\}/g;
 
@@ -63,6 +64,63 @@ function getValueFromPath(path: string, ctx: ExecutionContext): unknown {
       const v = c === "x" ? r : (r & 0x3) | 0x8;
       return v.toString(16);
     });
+  }
+
+  // now(format) - format current time with date-fns format string
+  const nowFormatMatch = path.match(/^now\("(.+)"\)$/);
+  if (nowFormatMatch) {
+    const fmt = nowFormatMatch[1]!;
+    return format(new Date(), fmt);
+  }
+
+  // timestamp() - Unix timestamp in milliseconds
+  if (path === "timestamp()") {
+    return Date.now();
+  }
+
+  // date(date, format) - format a date string
+  const dateFormatMatch = path.match(/^date\("(.+)",\s*"(.+)"\)$/);
+  if (dateFormatMatch) {
+    const dateStr = dateFormatMatch[1]!;
+    const fmt = dateFormatMatch[2]!;
+    return format(new Date(dateStr), fmt);
+  }
+
+  // upper(str) - uppercase
+  const upperMatch = path.match(/^upper\("(.+)"\)$/);
+  if (upperMatch) {
+    return upperMatch[1]!.toUpperCase();
+  }
+
+  // lower(str) - lowercase
+  const lowerMatch = path.match(/^lower\("(.+)"\)$/);
+  if (lowerMatch) {
+    return lowerMatch[1]!.toLowerCase();
+  }
+
+  // trim(str) - trim whitespace
+  const trimMatch = path.match(/^trim\("(.+)"\)$/);
+  if (trimMatch) {
+    return trimMatch[1]!.trim();
+  }
+
+  // length(str) - string length
+  const lengthMatch = path.match(/^length\("(.+)"\)$/);
+  if (lengthMatch) {
+    return lengthMatch[1]!.length;
+  }
+
+  // if(cond, a, b) - conditional
+  const ifMatch = path.match(/^if\((.+),\s*"(.+)",\s*"(.+)"\)$/);
+  if (ifMatch) {
+    const cond = ifMatch[1]!;
+    return cond === "true" || cond === "1" ? ifMatch[2] : ifMatch[3];
+  }
+
+  // coalesce(a, b) - return first non-empty
+  const coalesceMatch = path.match(/^coalesce\("(.*)",\s*"(.+)"\)$/);
+  if (coalesceMatch) {
+    return coalesceMatch[1] || coalesceMatch[2];
   }
 
   // trigger.key

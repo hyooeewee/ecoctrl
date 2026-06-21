@@ -125,11 +125,6 @@ function buildCandidates(
 ): Candidate[] {
   const candidates: Candidate[] = [];
 
-  candidates.push(
-    { label: "now()", value: "{{now()}}", category: "内置函数" },
-    { label: "uuid()", value: "{{uuid()}}", category: "内置函数" },
-  );
-
   for (const v of envVars.filter((v) => v.type !== "secret")) {
     candidates.push({ label: `var.${v.key}`, value: `{{var.${v.key}}}`, category: "环境变量" });
   }
@@ -159,6 +154,34 @@ function buildCandidates(
       }
     }
   }
+
+  // Built-in functions at the end
+  candidates.push(
+    { label: "now()", value: "{{now()}}", category: "内置函数" },
+    { label: 'now("YYYY-MM-DD")', value: '{{now("YYYY-MM-DD")}}', category: "内置函数" },
+    { label: 'now("HH:mm:ss")', value: '{{now("HH:mm:ss")}}', category: "内置函数" },
+    {
+      label: 'now("YYYY-MM-DD HH:mm:ss")',
+      value: '{{now("YYYY-MM-DD HH:mm:ss")}}',
+      category: "内置函数",
+    },
+    { label: "timestamp()", value: "{{timestamp()}}", category: "内置函数" },
+    { label: "uuid()", value: "{{uuid()}}", category: "内置函数" },
+    { label: 'upper("hello")', value: '{{upper("hello")}}', category: "内置函数" },
+    { label: 'lower("HELLO")', value: '{{lower("HELLO")}}', category: "内置函数" },
+    { label: 'trim(" hello ")', value: '{{trim(" hello ")}}', category: "内置函数" },
+    { label: 'length("hello")', value: '{{length("hello")}}', category: "内置函数" },
+    {
+      label: 'if("true", "yes", "no")',
+      value: '{{if("true", "yes", "no")}}',
+      category: "内置函数",
+    },
+    {
+      label: 'coalesce("", "default")',
+      value: '{{coalesce("", "default")}}',
+      category: "内置函数",
+    },
+  );
 
   return candidates;
 }
