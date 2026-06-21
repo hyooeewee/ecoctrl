@@ -24,14 +24,42 @@ interface InternalExecutionState {
 
 /**
  * Build the `output` object from a node's custom output config.
+ *
+ * Supported formats:
+ *   - Record<string, string>: each key is the output field name, value is a path or expression
+ *   - Single string: a path or expression template; if the result is an object it is spread
+ *     directly into output, otherwise stored under the key "value"
+ *
  * Each entry is either a path string (e.g. "ResultPointObjArr[0].value")
  * or an expression template (e.g. "{{ raw.value * 2 }}").
  */
 function buildOutput(
   raw: Record<string, unknown>,
-  outputsConfig: Record<string, string> | undefined,
+  outputsConfig: Record<string, string> | string | undefined,
 ): Record<string, unknown> {
-  if (!outputsConfig || typeof outputsConfig !== "object") return {};
+  if (!outputsConfig) return {};
+
+  // Single string: evaluate and spread into output (objects) or wrap under "value" (primitives)
+  if (typeof outputsConfig === "string") {
+    const trimmed = outputsConfig.trim();
+    let evaluated: unknown;
+    if (trimmed.startsWith("{{") && trimmed.endsWith("}}")) {
+      const inner = trimmed.slice(2, -2).trim();
+      try {
+        evaluated = evaluateExpression(inner, { raw });
+      } catch {
+        evaluated = undefined;
+      }
+    } else {
+      evaluated = walkPath(raw, trimmed);
+    }
+    if (evaluated !== null && typeof evaluated === "object" && !Array.isArray(evaluated)) {
+      return evaluated as Record<string, unknown>;
+    }
+    return { value: evaluated };
+  }
+
+  if (typeof outputsConfig !== "object") return {};
   const result: Record<string, unknown> = {};
   for (const [key, exprOrPath] of Object.entries(outputsConfig)) {
     if (typeof exprOrPath !== "string") {
@@ -135,7 +163,7 @@ async function executeNode(
 
     // Build output from custom output config (node returns { input, raw })
     const raw = (nodeResult.raw ?? {}) as Record<string, unknown>;
-    const outputsConfig = node.config.outputs as Record<string, string> | undefined;
+    const outputsConfig = node.config.outputs as Record<string, string> | string | undefined;
     const output = buildOutput(raw, outputsConfig);
 
     const outputs: Record<string, unknown> = {

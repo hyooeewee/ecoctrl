@@ -777,73 +777,106 @@ function SchemaField({
     );
   }
 
-  // Object with string values (Record<string, string>): key-value form
+  // Object with string values (Record<string, string> or single string)
   if (prop.type === "object" && prop.additionalProperties?.type === "string" && !prop.properties) {
-    const entries = Object.entries((value as Record<string, string>) ?? {});
+    const isSimple = typeof value === "string" || value === undefined || value === null;
+    const entries = isSimple ? [] : Object.entries((value as Record<string, string>) ?? {});
+
     return (
       <div className="space-y-1.5">
-        <FieldLabel label={label} required={required} inputId={inputId} />
+        <div className="flex items-center justify-between">
+          <FieldLabel label={label} required={required} inputId={inputId} />
+          <button
+            type="button"
+            className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => {
+              if (isSimple) {
+                // Switch to key-value mode
+                const str = (value as string) ?? "";
+                onChange(str ? { value: str } : {});
+              } else {
+                // Switch to simple mode
+                const firstVal = Object.values((value as Record<string, string>) ?? {})[0];
+                onChange(firstVal ?? "");
+              }
+            }}
+          >
+            {isSimple ? "多字段模式" : "简单模式"}
+          </button>
+        </div>
         <FieldDescription text={description} />
-        <div className="space-y-2">
-          {entries.map(([k, v], i) => (
-            <div key={i} className="flex items-start gap-1.5">
-              <Input
-                value={k}
-                placeholder="字段名"
-                className={inputBaseClasses + " flex-1"}
-                onChange={(e) => {
-                  const next = { ...((value as Record<string, string>) ?? {}) };
-                  const val = next[k];
-                  delete next[k];
-                  next[e.target.value] = val ?? "";
-                  onChange(next);
-                }}
-              />
-              <div className="flex-1">
-                <ExpressionInput
-                  value={v ?? ""}
-                  placeholder="值（支持 {{ 表达式）"
-                  upstreamNodes={upstreamNodes}
-                  envVars={envVars}
-                  onChange={(val) => {
+
+        {isSimple ? (
+          <ExpressionInput
+            id={inputId}
+            value={(value as string) ?? ""}
+            placeholder={'表达式，如 {{ map(raw.ResultPointObjArr, "pointId", "value") }}'}
+            upstreamNodes={upstreamNodes}
+            envVars={envVars}
+            onChange={(v) => onChange(v)}
+          />
+        ) : (
+          <div className="space-y-2">
+            {entries.map(([k, v], i) => (
+              <div key={i} className="flex items-start gap-1.5">
+                <Input
+                  value={k}
+                  placeholder="字段名"
+                  className={inputBaseClasses + " flex-1"}
+                  onChange={(e) => {
                     const next = { ...((value as Record<string, string>) ?? {}) };
-                    next[k] = val;
+                    const val = next[k];
+                    delete next[k];
+                    next[e.target.value] = val ?? "";
                     onChange(next);
                   }}
                 />
+                <div className="flex-1">
+                  <ExpressionInput
+                    value={v ?? ""}
+                    placeholder="值（支持 {{ 表达式）"
+                    upstreamNodes={upstreamNodes}
+                    envVars={envVars}
+                    onChange={(val) => {
+                      const next = { ...((value as Record<string, string>) ?? {}) };
+                      next[k] = val;
+                      onChange(next);
+                    }}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="mt-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded text-muted-foreground/50 transition-colors hover:bg-rose-50 hover:text-rose-500"
+                  onClick={() => {
+                    const next = { ...((value as Record<string, string>) ?? {}) };
+                    delete next[k];
+                    onChange(next);
+                  }}
+                >
+                  <Trash2 size={13} />
+                </button>
               </div>
-              <button
-                type="button"
-                className="mt-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded text-muted-foreground/50 transition-colors hover:bg-rose-50 hover:text-rose-500"
-                onClick={() => {
-                  const next = { ...((value as Record<string, string>) ?? {}) };
-                  delete next[k];
-                  onChange(next);
-                }}
-              >
-                <Trash2 size={13} />
-              </button>
-            </div>
-          ))}
-          <button
-            type="button"
-            className="flex h-7 items-center gap-1 rounded px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            onClick={() => {
-              const next = { ...((value as Record<string, string>) ?? {}) };
-              let newKey = "";
-              let idx = 1;
-              while (`key${idx}` in next || newKey === "") {
-                newKey = `key${idx}`;
-                idx++;
-              }
-              next[newKey] = "";
-              onChange(next);
-            }}
-          >
-            <Plus size={12} />
-            添加字段
-          </button>
-        </div>
+            ))}
+            <button
+              type="button"
+              className="flex h-7 items-center gap-1 rounded px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              onClick={() => {
+                const next = { ...((value as Record<string, string>) ?? {}) };
+                let newKey = "";
+                let idx = 1;
+                while (`key${idx}` in next || newKey === "") {
+                  newKey = `key${idx}`;
+                  idx++;
+                }
+                next[newKey] = "";
+                onChange(next);
+              }}
+            >
+              <Plus size={12} />
+              添加字段
+            </button>
+          </div>
+        )}
       </div>
     );
   }
