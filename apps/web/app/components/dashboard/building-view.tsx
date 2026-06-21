@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import type { DashboardModelConfig } from "@ecoctrl/shared";
 import { cn } from "~/lib/utils";
 import { useLocale } from "~/locales";
@@ -103,6 +103,9 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
   const { showLabels, defaultCameraRadius, environmentPreset } = useSettingsStore();
   const t = useLocale();
 
+  // Track labels from viewer to trigger re-renders when they change.
+  const [labelDefs, setLabelDefs] = useState<Array<{ key: string; name: string }>>([]);
+
   const labelText: Record<string, string> = {
     office1: t.building.officeArea,
     meeting: t.building.meetingArea,
@@ -119,7 +122,15 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
 
     const viewer = new ModelViewer({
       canvas,
-      onLoad,
+      onLoad: () => {
+        // Update labelDefs state to trigger re-render with actual labels.
+        setLabelDefs(viewer.getLabelDefs());
+        onLoad?.();
+      },
+      onLabelsChange: () => {
+        // Update labelDefs when background models load and labels change.
+        setLabelDefs(viewer.getLabelDefs());
+      },
       onProgress,
       defaultCameraRadius,
       sidebarWidth,
@@ -277,9 +288,6 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
     }),
     [],
   );
-
-  // Get current label definitions for rendering overlay pills.
-  const labelDefs = viewerRef.current?.getLabelDefs() ?? [];
 
   return (
     <div className={cn("relative overflow-hidden bg-[#060d18]", className)}>

@@ -74,6 +74,7 @@ export class ModelViewer implements ModelViewerRef {
   private onLoad?: () => void;
   private onCriticalLoaded?: () => void;
   private onProgress?: (progress: number) => void;
+  private onLabelsChange?: () => void;
 
   // Runtime state
   private showLabels = true;
@@ -138,6 +139,7 @@ export class ModelViewer implements ModelViewerRef {
     this.onLoad = options.onLoad;
     this.onCriticalLoaded = options.onCriticalLoaded;
     this.onProgress = options.onProgress;
+    this.onLabelsChange = options.onLabelsChange;
     this.defaultCameraRadius = options.defaultCameraRadius;
     this.sidebarWidth = options.sidebarWidth ?? 0;
 
@@ -376,6 +378,7 @@ export class ModelViewer implements ModelViewerRef {
           if (loaded.length > 0) {
             this.freezeStaticMeshes();
             this.computeLabelAnchors();
+            this.onLabelsChange?.();
           }
         },
       );

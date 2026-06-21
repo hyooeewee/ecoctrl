@@ -61,6 +61,8 @@ export interface ViewerOptions {
   onLoad?: () => void;
   onCriticalLoaded?: () => void;
   onProgress?: (progress: number) => void;
+  /** Called when label definitions change (e.g., after background models load). */
+  onLabelsChange?: () => void;
   defaultCameraRadius: number;
   /** Optional hardware scaling level. Defaults to 1 (native resolution). */
   hardwareScalingLevel?: number;
