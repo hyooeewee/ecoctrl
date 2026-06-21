@@ -32,6 +32,9 @@ export async function publishWorkflowNodeStatus(
   error?: string,
   output?: Record<string, unknown>,
 ): Promise<void> {
+  // Strip `raw` from the notification payload — it can be large (e.g. full history data)
+  // and exceeds PostgreSQL NOTIFY's 8000-byte limit. Raw data is already in execution logs.
+  const { raw: _raw, ...outputRest } = output ?? {};
   const payload: WorkflowNodeStatusPayload = {
     workflowId,
     executionId,
@@ -41,7 +44,7 @@ export async function publishWorkflowNodeStatus(
     status,
     durationMs,
     error,
-    output,
+    output: Object.keys(outputRest).length > 0 ? outputRest : undefined,
     timestamp: new Date().toISOString(),
   };
   await emitEvent("workflow_node_status", payload);
