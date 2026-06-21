@@ -88,12 +88,65 @@ async function executeNode(
     log.completedAt = new Date().toISOString();
     log.durationMs = Date.now() - startTime;
 
-    const originalMsg = (error as Error).message;
-    log.error = [
-      `Node [${node.type}] "${node.name}" (id=${node.id}) failed`,
-      `Error: ${originalMsg}`,
-      `Context: workflow=${state.workflowId}, execution=${state.executionId}`,
-    ].join("\n");
+    const err = error as Error;
+
+    // Build structured error report
+    const lines: string[] = [];
+
+    // Node metadata
+    lines.push(`Node [${node.type}] "${node.name}" (id=${node.id}) failed`);
+    lines.push("");
+
+    // Error message
+    lines.push(`Error: ${err.message}`);
+
+    // Stack trace
+    if (err.stack) {
+      lines.push("");
+      lines.push("Stack:");
+      // Skip the first line (the error message itself)
+      const stackLines = err.stack.split("\n").slice(1);
+      for (const s of stackLines) {
+        lines.push(`  ${s.trim()}`);
+      }
+    }
+
+    // Cause chain
+    let cause = (err as Error & { cause?: unknown }).cause;
+    let depth = 0;
+    while (cause && depth < 5) {
+      lines.push("");
+      lines.push(
+        `${"Caused by".padStart(depth === 0 ? 0 : depth * 2)}: ${cause instanceof Error ? cause.message : String(cause)}`,
+      );
+      if (cause instanceof Error && cause.stack) {
+        const causeStack = cause.stack.split("\n").slice(1);
+        for (const s of causeStack) {
+          lines.push(`  ${s.trim()}`);
+        }
+      }
+      cause = cause instanceof Error ? (cause as Error & { cause?: unknown }).cause : undefined;
+      depth++;
+    }
+
+    // Node config (input values)
+    const resolvedConfig = node.config;
+    const configEntries = Object.entries(resolvedConfig).filter(([k]) => !k.startsWith("__"));
+    if (configEntries.length > 0) {
+      lines.push("");
+      lines.push("Input config:");
+      for (const [k, v] of configEntries) {
+        const display =
+          typeof v === "string" && v.length > 120 ? v.slice(0, 120) + "…" : JSON.stringify(v);
+        lines.push(`  ${k}: ${display}`);
+      }
+    }
+
+    // Context
+    lines.push("");
+    lines.push(`Context: workflow=${state.workflowId}, execution=${state.executionId}`);
+
+    log.error = lines.join("\n");
 
     state.failed.add(node.id);
     if (callbacks.onNodeLog) {

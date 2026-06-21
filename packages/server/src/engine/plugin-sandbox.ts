@@ -61,7 +61,13 @@ export async function executeInSandbox(
           var __result = await module.exports(__ctx, __api);
           ${resolveName}(__result);
         } catch (err) {
-          ${rejectName}(err.message || String(err));
+          var msg = err.message || String(err);
+          if (err.stack) msg += "\\n" + err.stack;
+          if (err.cause) {
+            msg += "\\nCaused by: " + (err.cause.message || String(err.cause));
+            if (err.cause.stack) msg += "\\n" + err.cause.stack;
+          }
+          ${rejectName}(msg);
         }
       })();
     `;

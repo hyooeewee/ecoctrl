@@ -1,4 +1,7 @@
 import { iotRequest } from "./client";
+import { getLogger } from "@/lib/logger";
+
+const logger = getLogger("iot");
 
 interface ReadOptions {
   codes: string[];
@@ -10,14 +13,14 @@ interface WriteOptions {
 
 interface HistoryOptions {
   codes: string[];
-  beginTime: string;
-  endTime: string;
+  starttime: string;
+  endtime: string;
   interval?: number;
 }
 
 interface AlarmOptions {
-  beginTime: string;
-  endTime: string;
+  starttime: string;
+  endtime: string;
 }
 
 export async function readPointValues(codes: string[]): Promise<Record<string, unknown>> {
@@ -43,9 +46,15 @@ export async function readPointHistory(
   endTime: string,
   interval?: number,
 ): Promise<Record<string, unknown>> {
+  logger.info({ codes, beginTime, endTime, interval }, "readPointHistory called");
   const res = await iotRequest("/_webtalk/_cur/api/getCodesHisVal", {
     method: "POST",
-    body: JSON.stringify({ codes, beginTime, endTime, interval } satisfies HistoryOptions),
+    body: JSON.stringify({
+      codes,
+      starttime: beginTime,
+      endtime: endTime,
+      interval,
+    } satisfies HistoryOptions),
   });
   return res as Record<string, unknown>;
 }
@@ -68,8 +77,11 @@ export async function getHistoricalAlarms(
 ): Promise<Record<string, unknown>> {
   const res = await iotRequest("/_webtalk/_cur/api/getHisAlarms", {
     method: "POST",
-    body: JSON.stringify({ beginTime, endTime, ...options } satisfies AlarmOptions &
-      Record<string, unknown>),
+    body: JSON.stringify({
+      starttime: beginTime,
+      endtime: endTime,
+      ...options,
+    } satisfies AlarmOptions & Record<string, unknown>),
   });
   const { code, msg, ...values } = res as Record<string, unknown>;
   void code;

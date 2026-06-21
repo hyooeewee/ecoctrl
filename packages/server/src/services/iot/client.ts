@@ -1,6 +1,9 @@
 import { ensureToken, authorize } from "@/services/iot/auth";
 import type { IotResponse } from "@/services/iot/types";
 import { env } from "@/lib/env";
+import { getLogger } from "@/lib/logger";
+
+const logger = getLogger("iot");
 
 const BASE_URL = env.BASE_URL?.replace(/\/+$/, "") || "";
 const APP_ID = env.APP_ID || "";
@@ -35,7 +38,14 @@ export async function iotRequest(
   }
 
   if (body.code !== 200) {
-    throw new Error(`IoT request failed: code=${body.code}, path=${path}`);
+    const detail =
+      typeof body.error === "string"
+        ? body.error
+        : typeof body.msg === "string"
+          ? body.msg
+          : JSON.stringify(body);
+    logger.warn({ code: body.code, path, body }, "IoT request failed");
+    throw new Error(`IoT request failed: code=${body.code}, msg=${detail}, path=${path}`);
   }
 
   return body;
