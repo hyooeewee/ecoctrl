@@ -8,7 +8,7 @@ import pkg from "./package.json" with { type: "json" };
 const staticAssets = ["ecoctrl.config.cjs", ".env.example"];
 
 export default defineConfig({
-  input: ["index.ts", "src/queue/worker.ts", "scripts/init.ts"],
+  input: ["index.ts", "src/queue/worker.ts", "scripts/init.ts", "scripts/seed.ts"],
 
   output: {
     dir: "dist",
