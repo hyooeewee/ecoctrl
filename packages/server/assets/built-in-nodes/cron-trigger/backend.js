@@ -17,9 +17,7 @@ module.exports = async function (ctx, api) {
   });
 
   return {
-    triggered: true,
-    cron,
-    timezone: tz,
-    timestamp: now,
+    input: { cron, timezone: tz },
+    raw: { triggered: true, timestamp: now },
   };
 };

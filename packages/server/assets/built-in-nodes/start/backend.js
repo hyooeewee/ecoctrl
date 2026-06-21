@@ -3,5 +3,5 @@ module.exports = async function execute(ctx, api) {
   api.log.info(
     `[start] workflow triggered, data keys=${Object.keys(triggerData || {}).join(", ") || "none"}`,
   );
-  return { data: triggerData };
+  return { input: {}, raw: { data: triggerData } };
 };

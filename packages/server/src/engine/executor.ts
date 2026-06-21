@@ -9,6 +9,7 @@ import type {
 import { executePluginNode } from "./plugin-executor";
 import type { PluginRegistry } from "./plugin-registry";
 import { executeSubGraph } from "./sub-graph";
+import { evaluateExpression } from "./expr";
 
 export { executeSubGraph };
 
@@ -19,6 +20,65 @@ interface InternalExecutionState {
   failed: Set<string>;
   workflowId: string;
   executionId: string;
+}
+
+/**
+ * Build the `output` object from a node's custom output config.
+ * Each entry is either a path string (e.g. "ResultPointObjArr[0].value")
+ * or an expression template (e.g. "{{ raw.value * 2 }}").
+ */
+function buildOutput(
+  raw: Record<string, unknown>,
+  outputsConfig: Record<string, string> | undefined,
+): Record<string, unknown> {
+  if (!outputsConfig || typeof outputsConfig !== "object") return {};
+  const result: Record<string, unknown> = {};
+  for (const [key, exprOrPath] of Object.entries(outputsConfig)) {
+    if (typeof exprOrPath !== "string") {
+      result[key] = exprOrPath;
+      continue;
+    }
+    const trimmed = exprOrPath.trim();
+    // Expression template: {{ expr }}
+    if (trimmed.startsWith("{{") && trimmed.endsWith("}}")) {
+      const inner = trimmed.slice(2, -2).trim();
+      try {
+        result[key] = evaluateExpression(inner, { raw });
+      } catch {
+        result[key] = undefined;
+      }
+    } else {
+      // Plain path: walk the raw object
+      result[key] = walkPath(raw, trimmed);
+    }
+  }
+  return result;
+}
+
+/** Walk a dot/bracket path like "ResultPointObjArr[0].value". */
+function walkPath(obj: unknown, path: string): unknown {
+  let current: unknown = obj;
+  for (const part of path.split(".")) {
+    if (current == null) return undefined;
+    const bracketMatch = part.match(/^([^[]+)((?:\[[^\]]+\])+)$/);
+    if (bracketMatch) {
+      current = (current as Record<string, unknown>)[bracketMatch[1]!];
+      for (const idx of bracketMatch[2].matchAll(/\[([^\]]+)\]/g)) {
+        if (current == null) return undefined;
+        const raw = idx[1]!.trim();
+        const isQuoted =
+          (raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"));
+        current = isQuoted
+          ? (current as Record<string, unknown>)[raw.slice(1, -1)]
+          : Array.isArray(current)
+            ? current[Number(raw)]
+            : (current as Record<string, unknown>)[raw];
+      }
+    } else {
+      current = (current as Record<string, unknown>)[part];
+    }
+  }
+  return current;
 }
 
 export interface ExecutionCallbacks {
@@ -71,7 +131,26 @@ async function executeNode(
       throw new Error(`Plugin node type '${node.type}' not found`);
     }
 
-    const outputs = await executePluginNode(node, state, dsl, registry, dryRun);
+    const nodeResult = await executePluginNode(node, state, dsl, registry, dryRun);
+
+    // Build output from custom output config (node returns { input, raw })
+    const raw = (nodeResult.raw ?? {}) as Record<string, unknown>;
+    const outputsConfig = node.config.outputs as Record<string, string> | undefined;
+    const output = buildOutput(raw, outputsConfig);
+
+    const outputs: Record<string, unknown> = {
+      _meta: {
+        nodeId: node.id,
+        nodeName: node.name,
+        nodeType: node.type,
+        timestamp: new Date().toISOString(),
+        durationMs: Date.now() - startTime,
+        status: "completed" as const,
+      },
+      input: nodeResult.input,
+      output,
+      raw,
+    };
 
     log.status = "completed";
     log.completedAt = new Date().toISOString();

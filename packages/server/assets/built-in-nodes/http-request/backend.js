@@ -45,8 +45,7 @@ module.exports = async function execute(ctx, api) {
   }
 
   return {
-    statusCode: response.status,
-    body: parsedBody,
-    responseBody: response.body,
+    input: { method, url, headers, timeoutMs },
+    raw: { statusCode: response.status, body: parsedBody, responseBody: response.body },
   };
 };

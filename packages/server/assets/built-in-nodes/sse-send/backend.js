@@ -44,11 +44,14 @@ module.exports = async function execute(ctx, api) {
   api.log.info(`[sse-send] event emitted successfully`);
 
   return {
-    sent: true,
-    type: eventType,
-    target: targetMode,
-    targetUserId: targetUserId || null,
-    eventId,
-    payload,
+    input: { eventType, payload, targetMode, targetUserId },
+    raw: {
+      sent: true,
+      type: eventType,
+      target: targetMode,
+      targetUserId: targetUserId || null,
+      eventId,
+      payload,
+    },
   };
 };

@@ -11,5 +11,5 @@ module.exports = async function execute(ctx, api) {
   }
 
   api.log.info(`[condition] "${expression}" = ${result}`);
-  return { result };
+  return { input: { expression }, raw: { result } };
 };

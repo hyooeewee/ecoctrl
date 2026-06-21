@@ -5,18 +5,7 @@
  * Supports:
  *   - one or more points by `pointNames`
  *   - historical data when `mode` is "history"
- *   - custom output field mapping via `outputs`
  */
-
-function toNumber(v) {
-  if (v === null || v === undefined) return 0;
-  if (typeof v === "number") return v;
-  if (typeof v === "string") {
-    const n = Number(v);
-    return Number.isNaN(n) ? 0 : n;
-  }
-  return 0;
-}
 
 function collectNames(config) {
   const names = [];
@@ -39,93 +28,10 @@ function collectNames(config) {
   return names;
 }
 
-/**
- * Extract a value from an object by dot/bracket path.
- * Examples:
- *   ResultPointObjArr[0].value
- *   ResultPointObjArr[0]["name"]
- *   data.points["C_5003_AV_0131"]
- */
-function getValueAtPath(obj, path) {
-  if (path === undefined || path === null || path === "") return undefined;
-  const pathStr = String(path).trim();
-  if (!pathStr) return undefined;
-
-  let current = obj;
-  const parts = pathStr.split(".");
-
-  for (const part of parts) {
-    if (current === null || current === undefined) return undefined;
-
-    const bracketMatch = part.match(/^([^[]+)((?:\[[^\]]+\])+)$/);
-    if (bracketMatch) {
-      const prop = bracketMatch[1];
-      current = current[prop];
-
-      const indices = bracketMatch[2].match(/\[[^\]]+\]/g) || [];
-      for (const idxRaw of indices) {
-        if (current === null || current === undefined) return undefined;
-
-        const idx = idxRaw.slice(1, -1).trim();
-        const isQuoted =
-          (idx.startsWith('"') && idx.endsWith('"')) || (idx.startsWith("'") && idx.endsWith("'"));
-
-        if (isQuoted) {
-          const key = idx.slice(1, -1);
-          current = current[key];
-        } else {
-          const n = Number(idx);
-          current = Array.isArray(current) ? current[n] : current[idx];
-        }
-      }
-    } else {
-      current = current[part];
-    }
-  }
-
-  return current;
-}
-
-function isExpressionTemplate(str) {
-  if (typeof str !== "string") return false;
-  const s = str.trim();
-  return s.startsWith("{{") && s.endsWith("}}");
-}
-
-function resolveOutputValue(raw, exprOrPath, api) {
-  if (exprOrPath === null || exprOrPath === undefined) return undefined;
-
-  // Expression template: {{ raw["ResultPointObjArr"][0]["data"][0]["value"] + ... }}
-  if (isExpressionTemplate(exprOrPath)) {
-    const inner = exprOrPath.trim().slice(2, -2).trim();
-    api.variables.set("raw", raw);
-    try {
-      return api.expr.evaluateExpression(inner);
-    } catch (err) {
-      api.log.warn(`[point-read] custom output expression failed: ${err.message}`);
-      return undefined;
-    }
-  }
-
-  // Plain path string
-  return getValueAtPath(raw, String(exprOrPath));
-}
-
-function applyCustomOutputs(raw, configOutputs, api) {
-  const mapped = {};
-  if (configOutputs && typeof configOutputs === "object" && !Array.isArray(configOutputs)) {
-    for (const [key, exprOrPath] of Object.entries(configOutputs)) {
-      mapped[key] = resolveOutputValue(raw, exprOrPath, api);
-    }
-  }
-  return mapped;
-}
-
 module.exports = async function execute(ctx, api) {
   const mode = String(ctx.config.mode || "current");
   const names = collectNames(ctx.config);
   const firstName = names[0] || "";
-  const retry = Number(ctx.config.retry || 0);
 
   if (mode === "history") {
     if (!firstName) {
@@ -152,19 +58,7 @@ module.exports = async function execute(ctx, api) {
 
     api.log.info(`[point-read] history read success for ${firstName}`);
 
-    const custom = applyCustomOutputs(raw, ctx.config.outputs, api);
-    if (Object.keys(custom).length > 0) {
-      return { raw, mode, retry, ...custom };
-    }
-
-    return {
-      pointName: firstName,
-      beginTime,
-      endTime,
-      mode,
-      retry,
-      raw,
-    };
+    return { input: { pointNames: names, beginTime, endTime }, raw };
   }
 
   // current mode
@@ -222,18 +116,5 @@ module.exports = async function execute(ctx, api) {
     `[point-read] ${names.length} point(s) read; first ${firstName} = ${JSON.stringify(firstValue)}`,
   );
 
-  const custom = applyCustomOutputs(raw, ctx.config.outputs, api);
-  if (Object.keys(custom).length > 0) {
-    return { raw, mode, retry, points, ...custom };
-  }
-
-  return {
-    value: firstValue,
-    pointName: firstName,
-    points,
-    requestedNames: names,
-    mode,
-    retry,
-    raw,
-  };
+  return { input: { pointNames: names }, raw };
 };

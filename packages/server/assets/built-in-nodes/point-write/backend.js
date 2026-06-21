@@ -23,5 +23,5 @@ module.exports = async function execute(ctx, api) {
   }
 
   api.log.info(`[point-write] successfully wrote to ${pointName}`);
-  return { updated: true, pointName, value };
+  return { input: { pointName, value }, raw: { updated: true } };
 };

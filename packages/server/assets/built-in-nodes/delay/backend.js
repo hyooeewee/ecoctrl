@@ -3,7 +3,7 @@ module.exports = async function execute(ctx, api) {
 
   if (durationMs <= 0) {
     api.log.warn(`[delay] durationMs=${durationMs} is not positive, skipping sleep`);
-    return { delayedMs: 0 };
+    return { input: { durationMs }, raw: { delayedMs: 0 } };
   }
   if (durationMs > 300000) {
     api.log.warn(`[delay] durationMs=${durationMs} exceeds max 300000ms, clamping to 300000ms`);
@@ -15,5 +15,5 @@ module.exports = async function execute(ctx, api) {
   await api.utils.sleep(actualMs);
 
   api.log.info(`[delay] slept for ${actualMs}ms`);
-  return { delayedMs: actualMs };
+  return { input: { durationMs }, raw: { delayedMs: actualMs } };
 };

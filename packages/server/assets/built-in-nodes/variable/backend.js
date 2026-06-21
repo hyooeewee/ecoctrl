@@ -12,7 +12,10 @@ module.exports = async function execute(ctx, api) {
     api.log.warn(
       "[variable] no variables to set (neither 'set' object nor 'name'/'value' provided)",
     );
-    return { vars: api.variables.all(), setCount: 0 };
+    return {
+      input: entries.length > 0 ? Object.fromEntries(entries) : {},
+      raw: { vars: api.variables.all(), setCount: 0 },
+    };
   }
 
   api.log.info(
@@ -24,5 +27,8 @@ module.exports = async function execute(ctx, api) {
     api.log.info(`[variable] ${key} = ${JSON.stringify(value)}`);
   }
 
-  return { vars: api.variables.all(), setCount: entries.length };
+  return {
+    input: entries.length > 0 ? Object.fromEntries(entries) : {},
+    raw: { vars: api.variables.all(), setCount: entries.length },
+  };
 };

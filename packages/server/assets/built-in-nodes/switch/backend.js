@@ -44,10 +44,10 @@ module.exports = async function execute(ctx, api) {
     }
     if (match) {
       api.log.info(`[switch] matched case ${i}: operator="${op}" value="${c.value}"`);
-      return { value, matched: c.value, matchedIndex: i };
+      return { input: { expression, cases }, raw: { value, matched: c.value, matchedIndex: i } };
     }
   }
 
   api.log.info(`[switch] no case matched, returning default`);
-  return { value, matched: "default", matchedIndex: -1 };
+  return { input: { expression, cases }, raw: { value, matched: "default", matchedIndex: -1 } };
 };

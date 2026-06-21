@@ -4,7 +4,7 @@ module.exports = async function execute(ctx, api) {
 
   if (branches.length === 0) {
     api.log.warn("[parallel] no branches configured");
-    return { branches: [] };
+    return { input: { branchCount: 0 }, raw: { branches: [] } };
   }
 
   const branchResults = await Promise.all(
@@ -40,5 +40,8 @@ module.exports = async function execute(ctx, api) {
   }
 
   api.log.info(`[parallel] all ${branches.length} branches completed`);
-  return { branches: branchResults.map((r) => r.result) };
+  return {
+    input: { branchCount: branches.length },
+    raw: { branches: branchResults.map((r) => r.result) },
+  };
 };

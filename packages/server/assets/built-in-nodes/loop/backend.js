@@ -22,7 +22,7 @@ module.exports = async function execute(ctx, api) {
 
     if (items.length === 0) {
       api.log.warn("[loop] foreach items is empty, no iterations will run");
-      return { iterations: 0, results: [] };
+      return { input: { mode, maxIterations }, raw: { iterations: 0, results: [] } };
     }
 
     const itemVar = String(ctx.config.itemVar || "item");
@@ -50,7 +50,10 @@ module.exports = async function execute(ctx, api) {
       }
     }
     api.log.info(`[loop] foreach completed: ${results.length} iterations succeeded`);
-    return { iterations: results.length, results };
+    return {
+      input: { mode, maxIterations, items, itemVar },
+      raw: { iterations: results.length, results },
+    };
   }
 
   if (mode === "while") {
@@ -88,7 +91,10 @@ module.exports = async function execute(ctx, api) {
       iterations++;
     }
     api.log.info(`[loop] while completed: ${iterations} iterations`);
-    return { iterations, results };
+    return {
+      input: { mode, maxIterations, condition: conditionStr },
+      raw: { iterations, results },
+    };
   }
 
   api.log.error(`[loop] unknown mode: ${mode}`);

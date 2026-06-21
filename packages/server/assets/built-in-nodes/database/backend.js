@@ -21,5 +21,5 @@ module.exports = async function execute(ctx, api) {
   }
 
   api.log.info(`[database] ${operation} on "${table}" succeeded`);
-  return result;
+  return { input: { operation, table, where, data, returning }, raw: result };
 };

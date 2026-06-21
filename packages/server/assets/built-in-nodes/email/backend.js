@@ -53,17 +53,13 @@ module.exports = async function execute(ctx, api) {
   );
 
   return {
-    sent: true,
-    messageId: result.messageId,
-    accepted: result.accepted,
-    rejected: result.rejected,
-    response: result.response,
-    from: from || smtpUser,
-    to: filteredTo,
-    cc: cc || undefined,
-    bcc: bcc || undefined,
-    replyTo: replyTo || undefined,
-    subject,
-    bodyType,
+    input: { to: filteredTo, from, subject, body, bodyType, smtpHost, smtpPort },
+    raw: {
+      sent: true,
+      messageId: result.messageId,
+      accepted: result.accepted,
+      rejected: result.rejected,
+      response: result.response,
+    },
   };
 };
