@@ -173,8 +173,8 @@ export async function resolveUpstreamOutputs(
       version: "1.0",
       nodes: [startNode, node, endNode],
       edges: [
-        { id: `e-start-${node.id}`, source: "start", target: node.id },
-        { id: `e-${node.id}-end`, source: node.id, target: "end" },
+        { id: `e-start-${node.id}`, source: startNode.id, target: node.id },
+        { id: `e-${node.id}-end`, source: node.id, target: endNode.id },
       ],
       envVars: dsl.envVars,
       settings: dsl.settings,

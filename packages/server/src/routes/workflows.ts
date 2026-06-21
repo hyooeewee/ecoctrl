@@ -376,8 +376,8 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
             version: "1.0",
             nodes: [startNode, targetNode, endNode],
             edges: [
-              { id: `e-start-${targetNode.id}`, source: "start", target: targetNode.id },
-              { id: `e-${targetNode.id}-end`, source: targetNode.id, target: "end" },
+              { id: `e-start-${targetNode.id}`, source: startNode.id, target: targetNode.id },
+              { id: `e-${targetNode.id}-end`, source: targetNode.id, target: endNode.id },
             ],
             envVars: dsl.envVars,
             settings: dsl.settings,
