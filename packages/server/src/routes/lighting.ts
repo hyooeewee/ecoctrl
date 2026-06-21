@@ -245,6 +245,9 @@ export default async function lightingRoutes(fastify: FastifyInstance) {
       const value = status === "on" ? 1 : 0;
       await writePoints(pointIds.map((pid) => ({ pointId: pid, value })));
 
+      // Give IoT devices time to propagate before reading back
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       // Read back to confirm actual state
       const pointValues = await readPoints(pointIds);
       const actualStatus = calcGroupStatus(pointValues, pointIds);
@@ -300,6 +303,9 @@ export default async function lightingRoutes(fastify: FastifyInstance) {
       // Write target value to all points
       const value = status === "on" ? 1 : 0;
       await writePoints(allPointIds.map((pid) => ({ pointId: pid, value })));
+
+      // Give IoT devices time to propagate before reading back
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Read back all points
       const pointValues = await readPoints(allPointIds);
