@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
-import { Braces, ChevronRight, Info } from "lucide-react";
+import { Braces, ChevronRight, Info, Plus, Trash2 } from "lucide-react";
 import type { Node } from "@xyflow/react";
 import { Label } from "@ecoctrl/ui/label";
 import { Input } from "@ecoctrl/ui/input";
@@ -27,6 +27,7 @@ interface JsonSchemaProperty {
   maxLength?: number;
   format?: string;
   placeholder?: string;
+  additionalProperties?: { type?: string };
 }
 
 interface JsonSchema {
@@ -772,6 +773,77 @@ function SchemaField({
           multiline
           rows={4}
         />
+      </div>
+    );
+  }
+
+  // Object with string values (Record<string, string>): key-value form
+  if (prop.type === "object" && prop.additionalProperties?.type === "string" && !prop.properties) {
+    const entries = Object.entries((value as Record<string, string>) ?? {});
+    return (
+      <div className="space-y-1.5">
+        <FieldLabel label={label} required={required} inputId={inputId} />
+        <FieldDescription text={description} />
+        <div className="space-y-2">
+          {entries.map(([k, v], i) => (
+            <div key={i} className="flex items-start gap-1.5">
+              <Input
+                value={k}
+                placeholder="字段名"
+                className={inputBaseClasses + " flex-1"}
+                onChange={(e) => {
+                  const next = { ...((value as Record<string, string>) ?? {}) };
+                  const val = next[k];
+                  delete next[k];
+                  next[e.target.value] = val ?? "";
+                  onChange(next);
+                }}
+              />
+              <div className="flex-1">
+                <ExpressionInput
+                  value={v ?? ""}
+                  placeholder="值（支持 {{ 表达式）"
+                  upstreamNodes={upstreamNodes}
+                  envVars={envVars}
+                  onChange={(val) => {
+                    const next = { ...((value as Record<string, string>) ?? {}) };
+                    next[k] = val;
+                    onChange(next);
+                  }}
+                />
+              </div>
+              <button
+                type="button"
+                className="mt-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded text-muted-foreground/50 transition-colors hover:bg-rose-50 hover:text-rose-500"
+                onClick={() => {
+                  const next = { ...((value as Record<string, string>) ?? {}) };
+                  delete next[k];
+                  onChange(next);
+                }}
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            className="flex h-7 items-center gap-1 rounded px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            onClick={() => {
+              const next = { ...((value as Record<string, string>) ?? {}) };
+              let newKey = "";
+              let idx = 1;
+              while (`key${idx}` in next || newKey === "") {
+                newKey = `key${idx}`;
+                idx++;
+              }
+              next[newKey] = "";
+              onChange(next);
+            }}
+          >
+            <Plus size={12} />
+            添加字段
+          </button>
+        </div>
       </div>
     );
   }

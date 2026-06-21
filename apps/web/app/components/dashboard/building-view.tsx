@@ -291,29 +291,34 @@ export const BuildingView = forwardRef<BuildingViewRef, BuildingViewProps>(funct
 
   return (
     <div className={cn("relative overflow-hidden bg-[#060d18]", className)}>
-      <canvas
-        ref={canvasRef}
-        className="h-full touch-none"
+      {/* Canvas + labels share the same shifting container */}
+      <div
+        className="relative h-full"
         style={{
           width: sidebarWidth ? `calc(100% - ${sidebarWidth}px)` : "100%",
           marginLeft: sidebarWidth,
           transition: "margin-left 0.3s ease, width 0.3s ease",
         }}
-        aria-label={t.building.ariaLabel}
-      />
-
-      {/* Floating area labels */}
-      {labelDefs.map((cfg) => (
-        <AreaLabel
-          key={cfg.key}
-          label={cfg.name ?? labelText[cfg.key] ?? cfg.key}
-          isActive={activeLabel === cfg.key}
-          onClick={() => onLabelClick?.(cfg.key)}
-          ref={(el) => {
-            labelElsRef.current[cfg.key] = el;
-          }}
+      >
+        <canvas
+          ref={canvasRef}
+          className="h-full w-full touch-none"
+          aria-label={t.building.ariaLabel}
         />
-      ))}
+
+        {/* Floating area labels — positioned relative to the canvas wrapper */}
+        {labelDefs.map((cfg) => (
+          <AreaLabel
+            key={cfg.key}
+            label={cfg.name ?? labelText[cfg.key] ?? cfg.key}
+            isActive={activeLabel === cfg.key}
+            onClick={() => onLabelClick?.(cfg.key)}
+            ref={(el) => {
+              labelElsRef.current[cfg.key] = el;
+            }}
+          />
+        ))}
+      </div>
     </div>
   );
 });
