@@ -71,6 +71,24 @@ const SAFE_METHODS = new Set([
   "sqrt",
 ]);
 
+function formatDate(d: Date, fmt: string): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const tokens: Record<string, string> = {
+    YYYY: String(d.getFullYear()),
+    MM: pad(d.getMonth() + 1),
+    DD: pad(d.getDate()),
+    HH: pad(d.getHours()),
+    mm: pad(d.getMinutes()),
+    ss: pad(d.getSeconds()),
+  };
+  let result = fmt;
+  // Replace longer tokens first to avoid partial matches (e.g. MM before M)
+  for (const [token, val] of Object.entries(tokens).sort((a, b) => b[0].length - a[0].length)) {
+    result = result.replaceAll(token, val);
+  }
+  return result;
+}
+
 function toNumber(v: unknown): number {
   if (typeof v === "number") return v;
   if (typeof v === "string") {
@@ -246,8 +264,10 @@ function evaluateNode(node: jsep.Expression, vars: Record<string, unknown>): unk
 
       // Direct function call
       switch (methodName) {
-        case "now":
-          return new Date().toISOString();
+        case "now": {
+          const fmt = evaluatedArgs[0] as string | undefined;
+          return fmt ? formatDate(new Date(), fmt) : new Date().toISOString();
+        }
         case "uuid": {
           // Simple UUID v4
           return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
