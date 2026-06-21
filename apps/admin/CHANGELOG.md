@@ -1,5 +1,11 @@
 # @ecoctrl/admin
 
+## 0.8.1
+
+### Patch Changes
+
+- 063579a: Add map() template function, fix donut chart rendering in production, optimize SSE notification payload, and improve workflow execution status display
+
 ## 0.8.0
 
 ### Minor Changes
