@@ -334,7 +334,7 @@ function GenericListWidget({
 export function ListWidget({ widget, data }: ListWidgetProps) {
   const t = useLocale();
   const title = getWidgetTitle(t, widget.metricKey);
-  const type = detectListType(data.items);
+  const type = detectListType(data?.items ?? []);
 
   switch (type) {
     case "devices":
