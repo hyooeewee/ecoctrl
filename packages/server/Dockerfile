@@ -56,6 +56,9 @@ set -e
 echo "Running production init..."
 node init.mjs
 
+echo "Running production seed..."
+node seed.mjs
+
 echo "Starting server..."
 exec node index.mjs
 ENTRYPOINT
