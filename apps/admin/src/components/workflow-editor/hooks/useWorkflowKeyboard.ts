@@ -71,7 +71,7 @@ export function useWorkflowKeyboard(options: UseWorkflowKeyboardOptions) {
         const copied = copiedNodesRef.current;
         const idMap = new Map<string, string>();
         const newNodes: Node[] = copied.map((n) => {
-          const newId = `${n.type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+          const newId = `${n.type.replace(/-/g, "_")}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
           idMap.set(n.id, newId);
           return {
             ...n,
