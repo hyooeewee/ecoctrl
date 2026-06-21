@@ -39,7 +39,10 @@ await ensureS3Buckets();
 // await migrateDatabase();
 await syncSmtpFromEnv();
 
-const fastify = Fastify({ loggerInstance: getRootLogger() }).withTypeProvider<ZodTypeProvider>();
+const fastify = Fastify({
+  loggerInstance: getRootLogger(),
+  pluginTimeout: 30_000,
+}).withTypeProvider<ZodTypeProvider>();
 
 fastify.setValidatorCompiler(validatorCompiler);
 fastify.setSerializerCompiler(serializerCompiler);

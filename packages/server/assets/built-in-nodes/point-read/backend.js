@@ -7,6 +7,16 @@
  *   - historical data when `mode` is "history"
  */
 
+function toNumber(v) {
+  if (v === null || v === undefined) return 0;
+  if (typeof v === "number") return v;
+  if (typeof v === "string") {
+    const n = Number(v);
+    return Number.isNaN(n) ? 0 : n;
+  }
+  return 0;
+}
+
 function collectNames(config) {
   const names = [];
 
