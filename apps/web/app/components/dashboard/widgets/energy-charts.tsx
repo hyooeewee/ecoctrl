@@ -279,7 +279,7 @@ export function EnergyBreakdownChart({
         <div className="relative shrink-0 basis-auto" style={{ width: 150, height: 150 }}>
           <ChartContainer
             config={chartConfig}
-            className="h-full w-full"
+            className="aspect-auto h-full w-full"
             width={150}
             height={150}
             initialDimension={{ width: 150, height: 150 }}
