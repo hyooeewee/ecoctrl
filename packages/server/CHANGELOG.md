@@ -1,5 +1,18 @@
 # @ecoctrl/server
 
+## 0.8.0
+
+### Minor Changes
+
+- a08dc80: Unify widget data structure with config/initData separation and SSE timestamp-based merge
+- a08dc80: Add 3D gizmo, camera position+lookAt model, and JSON editor for action steps
+- a08dc80: Replace lighting toggle with three-state lightbulb and real IoT BACnet integration
+- a08dc80: Add sidebar-aware viewport, smooth canvas transitions, and camera reset on label close
+
+### Patch Changes
+
+- a08dc80: Fix HDR environment crash, null-safe label anchors, and ModelViewer loading overlay
+
 ## 0.7.1
 
 ### Patch Changes
