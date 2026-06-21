@@ -29,8 +29,15 @@ export async function executePluginNode(
   const ctx = state.context;
 
   // Build sandbox context — node outputs are accessed via {{nodeId.key}} template syntax
+  // Exclude `outputs` from template resolution: it uses `raw` which is only available in buildOutput
+  const { outputs: _outputsConfig, ...configRest } = node.config;
+  const resolvedConfig = resolveTemplate(configRest, ctx) as Record<string, unknown>;
+  if (_outputsConfig !== undefined) {
+    resolvedConfig.outputs = _outputsConfig;
+  }
+
   const sandboxCtx: Record<string, unknown> = {
-    config: resolveTemplate(node.config, ctx),
+    config: resolvedConfig,
     variables: Object.fromEntries(ctx.variables),
     triggerData: ctx.triggerData,
     workflowId: "", // Will be populated by caller

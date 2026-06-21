@@ -37,6 +37,7 @@ const ALLOWED_FUNCTIONS = new Set([
   "String",
   "Number",
   "Boolean",
+  "map",
 ]);
 
 // Safe methods that can be called on primitive objects
@@ -265,6 +266,23 @@ function evaluateNode(node: jsep.Expression, vars: Record<string, unknown>): unk
           return Number(evaluatedArgs[0]);
         case "Boolean":
           return Boolean(evaluatedArgs[0]);
+        case "map": {
+          // map(array, keyField, valueField) - convert array to {key: value} object
+          const arr = evaluatedArgs[0];
+          const keyField = evaluatedArgs[1] as string;
+          const valueField = evaluatedArgs[2] as string;
+          if (!Array.isArray(arr)) return {};
+          const mapped: Record<string, unknown> = {};
+          for (const item of arr) {
+            if (item != null && typeof item === "object") {
+              const key = (item as Record<string, unknown>)[keyField];
+              if (key != null) {
+                mapped[String(key)] = (item as Record<string, unknown>)[valueField];
+              }
+            }
+          }
+          return mapped;
+        }
         default:
           throw new Error(`Unknown function: ${methodName}`);
       }

@@ -43,6 +43,9 @@ export function extractReferencedNodeIds(config: unknown, allNodeIds?: Set<strin
         // Simple dotted path: first segment is the namespace/nodeId.
         if (RESERVED_PREFIXES.some((prefix) => raw.startsWith(prefix))) continue;
 
+        // Function call (e.g. map(...)) — not a node reference
+        if (/^\w+\(/.test(raw)) continue;
+
         const parts = raw.split(".");
         if (parts.length < 2) continue;
 

@@ -138,7 +138,7 @@ export function useWorkflowPersistence(options: UseWorkflowPersistenceOptions) {
         (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
         "测试运行失败";
       console.error("[Workflow Test Error]", msg, err);
-      setTestResult(null);
+      setTestResult({ status: "failed", error: msg, nodeLogs: [] });
     } finally {
       setTesting(false);
     }
@@ -161,7 +161,7 @@ export function useWorkflowPersistence(options: UseWorkflowPersistenceOptions) {
           (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
           "单节点测试失败";
         console.error("[Workflow TestNode Error]", msg, err);
-        setTestResult(null);
+        setTestResult({ status: "failed", error: msg, nodeLogs: [] });
       } finally {
         setTesting(false);
       }

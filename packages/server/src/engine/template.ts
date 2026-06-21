@@ -123,6 +123,29 @@ function getValueFromPath(path: string, ctx: ExecutionContext): unknown {
     return coalesceMatch[1] || coalesceMatch[2];
   }
 
+  // map(path, keyField, valueField) - convert array to {key: value} object
+  // e.g. map(point_read_all.raw.ResultPointObjArr, "pointId", "value")
+  const mapMatch = path.match(/^map\(([^,]+),\s*"([^"]+)",\s*"([^"]+)"\)$/);
+  if (mapMatch) {
+    const sourcePath = mapMatch[1]!.trim();
+    const keyField = mapMatch[2]!;
+    const valueField = mapMatch[3]!;
+    const arr = getValueFromPath(sourcePath, ctx);
+    if (Array.isArray(arr)) {
+      const result: Record<string, unknown> = {};
+      for (const item of arr) {
+        if (item != null && typeof item === "object") {
+          const key = (item as Record<string, unknown>)[keyField];
+          if (key != null) {
+            result[String(key)] = (item as Record<string, unknown>)[valueField];
+          }
+        }
+      }
+      return result;
+    }
+    return {};
+  }
+
   // trigger.key
   if (path.startsWith("trigger.")) {
     const keys = path.slice(8).split(".");

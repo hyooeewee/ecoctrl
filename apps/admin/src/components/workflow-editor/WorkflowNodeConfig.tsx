@@ -487,10 +487,24 @@ export function WorkflowNodeConfig({
             <div className="p-4 space-y-3">
               {!testResult?.nodeLogs || testResult.nodeLogs.length === 0 ? (
                 <div className="flex h-32 flex-col items-center justify-center gap-2">
-                  <div className="text-muted-foreground text-sm">暂无执行历史</div>
-                  <div className="text-muted-foreground text-xs">
-                    点击工具栏的调试按钮运行工作流后查看
-                  </div>
+                  {testResult?.error ? (
+                    <div className="w-full space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-medium text-red-600">错误</span>
+                        <CopyErrorButton error={testResult.error} />
+                      </div>
+                      <div className="rounded bg-red-50 p-2 text-[11px] text-red-700 whitespace-pre-wrap">
+                        {testResult.error}
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-muted-foreground text-sm">暂无执行历史</div>
+                      <div className="text-muted-foreground text-xs">
+                        点击工具栏的调试按钮运行工作流后查看
+                      </div>
+                    </>
+                  )}
                 </div>
               ) : (
                 testResult.nodeLogs
