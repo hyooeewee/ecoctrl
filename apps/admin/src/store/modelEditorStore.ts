@@ -42,6 +42,7 @@ interface ModelEditorState {
   // Actions — data
   fetchConfig: () => Promise<void>;
   saveLabels: () => Promise<void>;
+  importLabels: (newLabels: Label[]) => void;
 
   // Actions — model files
   toggleFileVisible: (id: string) => void;
@@ -122,6 +123,13 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
       set({ saving: false });
     }
   },
+
+  // Import labels (merge into existing)
+  importLabels: (newLabels) =>
+    set((state) => ({
+      labels: [...state.labels, ...newLabels],
+      isDirty: true,
+    })),
 
   // Model file visibility
   toggleFileVisible: (id) =>

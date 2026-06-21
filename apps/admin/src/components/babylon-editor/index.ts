@@ -16,6 +16,8 @@ export type { LabelMarkerData } from "./LabelMarker";
 
 export { default as LabelTree } from "./LabelTree";
 export type { LabelTreeNode } from "./LabelTree";
+export { default as LabelExportDialog } from "./LabelExportDialog";
+export { default as LabelImportDialog } from "./LabelImportDialog";
 
 export { default as LabelConfigForm } from "./LabelConfigForm";
 export type { LabelGroup } from "@ecoctrl/shared";

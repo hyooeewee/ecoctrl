@@ -34,6 +34,8 @@ import {
   LabelTree,
   LabelConfigForm,
   ActionStepsConfig,
+  LabelExportDialog,
+  LabelImportDialog,
   type LabelTreeNode,
   type LabelMarkerData,
 } from "@/components/babylon-editor";
@@ -55,6 +57,8 @@ export default function DashboardModel() {
   const [previewing, setPreviewing] = useState(false);
   const [previewDone, setPreviewDone] = useState(false);
   const [availablePoints, setAvailablePoints] = useState<Point[]>([]);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   const setActiveTab = useAppStore((state) => state.setActiveTab);
 
@@ -87,6 +91,7 @@ export default function DashboardModel() {
   const {
     fetchConfig,
     saveLabels,
+    importLabels,
     toggleFileVisible,
     deleteFile,
     updateFilePriority,
@@ -473,6 +478,8 @@ export default function DashboardModel() {
                           onAdd={addLabel}
                           onDelete={deleteLabel}
                           onEdit={(id) => selectLabel(id)}
+                          onExport={() => setExportDialogOpen(true)}
+                          onImport={() => setImportDialogOpen(true)}
                           disabled={existingFiles.length === 0}
                           addTitle={existingFiles.length === 0 ? "请先上传模型" : "添加标签"}
                         />
@@ -609,6 +616,22 @@ export default function DashboardModel() {
           onToggleAxes={toggleAxes}
         />
       </div>
+
+      {/* Label Import/Export Dialogs */}
+      <LabelExportDialog
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
+        labels={labels}
+      />
+      <LabelImportDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        existingLabels={labels}
+        onImport={(imported) => {
+          importLabels(imported);
+          saveLabels();
+        }}
+      />
     </div>
   );
 }

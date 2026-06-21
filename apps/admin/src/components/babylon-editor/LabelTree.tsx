@@ -3,7 +3,7 @@
 // ========================================
 
 import React, { useState } from "react";
-import { ChevronRight, ChevronDown, Plus, Trash2, Pencil, GripVertical } from "lucide-react";
+import { ChevronRight, ChevronDown, Plus, Trash2, Pencil, Download, Upload } from "lucide-react";
 import { Badge } from "@ecoctrl/ui";
 import AppButton from "@/components/AppButton";
 
@@ -25,6 +25,8 @@ interface LabelTreeProps {
   onAdd?: (parentId?: string) => void;
   onDelete?: (id: string) => void;
   onEdit?: (id: string) => void;
+  onExport?: () => void;
+  onImport?: () => void;
   disabled?: boolean;
   addTitle?: string;
 }
@@ -40,6 +42,8 @@ export default function LabelTree({
   onAdd,
   onDelete,
   onEdit,
+  onExport,
+  onImport,
   disabled,
   addTitle = "添加标签",
 }: LabelTreeProps) {
@@ -67,16 +71,28 @@ export default function LabelTree({
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">标签树</h3>
-        <AppButton
-          level="action"
-          size="sm"
-          onClick={handleAddRoot}
-          disabled={disabled}
-          title={disabled ? "请先上传模型文件" : addTitle}
-        >
-          <Plus size={14} className="mr-1" />
-          {addTitle}
-        </AppButton>
+        <div className="flex items-center gap-1">
+          {labels.length > 0 && (
+            <>
+              <AppButton level="ghost" size="icon-sm" onClick={onExport} title="导出标签">
+                <Download size={14} />
+              </AppButton>
+              <AppButton level="ghost" size="icon-sm" onClick={onImport} title="导入标签">
+                <Upload size={14} />
+              </AppButton>
+            </>
+          )}
+          <AppButton
+            level="action"
+            size="sm"
+            onClick={handleAddRoot}
+            disabled={disabled}
+            title={disabled ? "请先上传模型文件" : addTitle}
+          >
+            <Plus size={14} className="mr-1" />
+            {addTitle}
+          </AppButton>
+        </div>
       </div>
 
       {/* Tree */}
