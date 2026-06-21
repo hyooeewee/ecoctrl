@@ -90,7 +90,7 @@ export function EnergyTrendChart({
       </div>
       <ChartContainer
         config={chartConfig}
-        className="min-h-0 flex-1"
+        className="aspect-video min-h-0 flex-1"
         initialDimension={{ width: 300, height: 150 }}
       >
         {chartType === "area" && (
@@ -280,6 +280,8 @@ export function EnergyBreakdownChart({
           <ChartContainer
             config={chartConfig}
             className="h-full w-full"
+            width={150}
+            height={150}
             initialDimension={{ width: 150, height: 150 }}
           >
             <PieChart>
