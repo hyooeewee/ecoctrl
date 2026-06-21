@@ -471,7 +471,7 @@ export function useWorkflowCanvas({ workflowId, onBack, onDirtyChange }: UseWork
       if (!currentNode) return;
 
       const item = pluginNodes.find((p) => p.id === type);
-      const newNodeId = `${type}-${Date.now()}`;
+      const newNodeId = `${type.replace(/-/g, "_")}-${Date.now()}`;
       const newNode: Node = {
         id: newNodeId,
         type,
@@ -593,7 +593,7 @@ export function useWorkflowCanvas({ workflowId, onBack, onDirtyChange }: UseWork
       }
 
       const newNode: Node = {
-        id: `${type}-${Date.now()}`,
+        id: `${type.replace(/-/g, "_")}-${Date.now()}`,
         type,
         position,
         data: { label: plugin?.name ?? type, type, config },

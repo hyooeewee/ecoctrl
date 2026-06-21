@@ -275,7 +275,7 @@ export default function WorkflowCanvas({ workflowId, onBack, onDirtyChange }: Wo
                         }
                         const idMap = new Map<string, string>();
                         const newNodes = copied.map((n) => {
-                          const newId = `${n.type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+                          const newId = `${n.type.replace(/-/g, "_")}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
                           idMap.set(n.id, newId);
                           return {
                             ...n,
