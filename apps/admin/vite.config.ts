@@ -21,6 +21,8 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "src"),
+        "zod/v4/core": path.resolve(__dirname, "node_modules/zod/v4/core/index.js"),
+        "zod/v3": path.resolve(__dirname, "node_modules/zod/v3/index.js"),
       },
     },
     optimizeDeps: {
