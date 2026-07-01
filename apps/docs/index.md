@@ -10,14 +10,17 @@ hero:
     alt: EcoCtrl
   actions:
     - theme: brand
-      text: 快速上手
+      text: 什么是EcoCtrl？
+      link: /guide/introduction
+    - theme: alt
+      text: 快速开始
       link: /guide/getting-started
     - theme: alt
-      text: 架构总览
-      link: /reference/architecture
-    - theme: alt
-      text: GitHub
+      text: GitHub ↗
       link: https://github.com/hyooeewee/ecoctrl
+    - theme: alt
+      text: 用户手册 📥
+      link: /EcoCtrl(易控)用户手册.pdf
 
 features:
   - icon: 🏢
