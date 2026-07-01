@@ -1,53 +1,53 @@
-# Getting Started
+# 快速上手
 
-There are two supported ways to run EcoCtrl. Pick the one that matches your situation:
+EcoCtrl 提供两种运行方式，按需选择：
 
-| You want to…                                     | Use this path                              |
-| ------------------------------------------------ | ------------------------------------------ |
-| Try it out quickly with everything in containers | [Docker Compose](#run-with-docker-compose) |
-| Hack on the code locally with hot reload         | See the [Development guide](./development) |
+| 你的目标               | 推荐路径                               |
+| ---------------------- | -------------------------------------- |
+| 用容器一键体验整个平台 | [Docker Compose](#docker-compose-启动) |
+| 在本地修改源码并热更新 | 见 [开发指南](./development)           |
 
-## Run with Docker Compose
+## Docker Compose 启动
 
-This brings up PostgreSQL, the API server, the admin dashboard and the public web portal in one command.
+一条命令把 PostgreSQL、API 服务、admin 后台、web 公共门户全部拉起来。
 
-### Prerequisites
+### 前置要求
 
-- Docker 24+ with the Compose plugin
-- Free TCP ports: `3000` (API), `4173` (admin), `8081` (web), `5432` (Postgres)
+- Docker 24+ 并启用 Compose 插件
+- 空闲的 TCP 端口：`3000`（API）、`4173`（admin）、`8081`（web）、`5432`（Postgres）
 
-### Steps
+### 步骤
 
 ```bash
 git clone https://github.com/hyooeewee/ecoctrl.git
 cd ecoctrl/docker
 cp .env.example .env.local
-# Open .env.local and set JWT_SECRET (required) and BASE_URL / APP_ID for the IoT gateway (optional).
+# 打开 .env.local，设置 JWT_SECRET（必填）以及 BASE_URL / APP_ID（IoT 网关，可选）。
 docker compose -f compose.yml up --build
 ```
 
-When the build finishes, the stack is reachable at:
+构建完成后，可通过以下地址访问：
 
-| Service         | URL                                 |
-| --------------- | ----------------------------------- |
-| Web portal      | http://localhost:8081               |
-| Admin dashboard | http://localhost:4173               |
-| REST API        | http://localhost:3000               |
-| Swagger UI      | http://localhost:3000/documentation |
+| 服务       | URL                                 |
+| ---------- | ----------------------------------- |
+| Web 门户   | http://localhost:8081               |
+| Admin 后台 | http://localhost:4173               |
+| REST API   | http://localhost:3000               |
+| Swagger UI | http://localhost:3000/documentation |
 
-::: tip First-time login
-The seeded admin account is created on the very first run. The default credentials are `admin` / the password printed by `pnpm db:seed` (or set via `INITIAL_ADMIN_PASSWORD` in `.env.local`). Open the admin dashboard at http://localhost:4173 and sign in.
+::: tip 首次登录
+首次启动时会自动创建管理员账号。默认凭据为 `admin` / `pnpm db:seed` 打印的密码（或通过 `.env.local` 中的 `INITIAL_ADMIN_PASSWORD` 设置）。打开 admin 后台 http://localhost:4173 并登录。
 :::
 
-### Stop the stack
+### 停止服务
 
 ```bash
-docker compose -f compose.yml down          # keep data
-docker compose -f compose.yml down -v       # also wipe Postgres volume
+docker compose -f compose.yml down          # 保留数据
+docker compose -f compose.yml down -v       # 同时清空 Postgres volume
 ```
 
-## What's next
+## 下一步
 
-- Set up your **local development environment** with hot reload → [Development](./development).
-- Understand the **monorepo layout and tooling** → [Monorepo Structure](./monorepo).
-- Browse the **environment variables** you can set → [Environment Variables](/reference/env-vars).
+- 配置 **本地开发环境** 并启用热更新 → [开发指南](./development)。
+- 了解 **Monorepo 与工具链** → [Monorepo 结构](./monorepo)。
+- 浏览 **环境变量** 列表 → [环境变量](/reference/env-vars)。

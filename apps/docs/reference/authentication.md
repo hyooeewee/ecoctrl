@@ -1,17 +1,17 @@
-# Authentication
+# 认证机制
 
-EcoCtrl uses short-lived JWT access tokens combined with rotating refresh tokens. Optional OAuth providers (WeChat, Feishu) issue identical tokens after a third-party identity hand-off.
+EcoCtrl 使用短生命周期的 JWT Access Token 配合可轮换的 Refresh Token。可选的 OAuth Provider（微信、飞书）在第三方身份握手完成后会颁发同样形态的 Token。
 
-## Token model
+## Token 模型
 
-| Token   | Lifetime   | Stored in                             | Issued by                                   |
-| ------- | ---------- | ------------------------------------- | ------------------------------------------- |
-| Access  | 15 minutes | Memory (admin) / `localStorage` (web) | `fastify.jwt.sign({ userId, username })`    |
-| Refresh | 7 days     | `refresh_tokens` table (sha256 hash)  | `crypto.randomBytes(32).toString("base64")` |
+| Token   | 有效期  | 存放位置                              | 签发方                                      |
+| ------- | ------- | ------------------------------------- | ------------------------------------------- |
+| Access  | 15 分钟 | 内存（admin） / `localStorage`（web） | `fastify.jwt.sign({ userId, username })`    |
+| Refresh | 7 天    | `refresh_tokens` 表（保存 sha256）    | `crypto.randomBytes(32).toString("base64")` |
 
-The access token carries `{ userId, username }` and is verified by Fastify's `request.jwtVerify()` in the global `onRequest` hook on every protected route. The refresh token is opaque — only its sha256 hash hits the database, so a database leak does not yield usable tokens.
+Access Token 携带 `{ userId, username }`，每个受保护路由的全局 `onRequest` 钩子里调用 `request.jwtVerify()` 进行校验。Refresh Token 是不可解析的随机串 — 数据库里只有它的 sha256 哈希，因此即使数据库泄漏也无法直接复用。
 
-## Login flow
+## 登录流程
 
 ```
 POST /api/auth/login { username, password }
@@ -27,11 +27,11 @@ POST /api/auth/login { username, password }
   200 { accessToken, refreshToken, user }
 ```
 
-The deletion-then-insert step means a successful login on a new device kicks any previous device off. This is intentional. Multi-device support is not currently exposed; if you need it, drop the `deleteRefreshTokensByUserId` call inside `routes/auth.ts`.
+“先删除再插入” 的步骤意味着新设备登录会把上一个设备踢下线 — 这是有意的设计。多设备会话目前未对外提供；如确有需要，可在 `routes/auth.ts` 中删掉 `deleteRefreshTokensByUserId` 这一步。
 
-## Refresh flow
+## 刷新流程
 
-The frontend automatically refreshes when the access token expires. The endpoint returns **a new pair**:
+前端在 Access Token 过期时会自动刷新。该接口返回 **新的 Token 对**：
 
 ```
 POST /api/auth/refresh { refreshToken }
@@ -41,29 +41,29 @@ POST /api/auth/refresh { refreshToken }
   row  = SELECT * FROM refresh_tokens WHERE tokenHash = hash AND expiresAt > now
         │
         ▼
-  delete that row              (old refresh token is invalidated immediately)
-  insert new row with new hash (expiresAt = now + 7d)
+  delete that row              （旧 Refresh Token 立即失效）
+  insert new row with new hash （expiresAt = now + 7d）
         │
         ▼
   200 { accessToken, refreshToken }
 ```
 
-This is _rotating refresh_: the previous refresh token cannot be reused. If a refresh request comes in with a hash that no longer exists, the response is `401` and the client must re-authenticate.
+这就是 _Rotating Refresh_：旧的 Refresh Token 不能再次使用。如果传来的 hash 已经不存在，接口返回 `401`，客户端必须重新登录。
 
-## Registration flow
+## 注册流程
 
-Email verification is enforced before the account is created.
+注册前必须完成邮件验证码校验。
 
 ```
 POST /auth/register/send-code { email }
-        │  (server stores { code, expiresAt: now+5min, purpose: "register" } in memory)
+        │  （服务端在内存中保存 { code, expiresAt: now+5min, purpose: "register" }）
         ▼
-        smtp send 6-digit code
+        smtp 发送 6 位验证码
 
 POST /auth/register { username, email, password, code }
         │
         ▼
-  validate code (single use, 5 min)
+  校验验证码（一次性、5 分钟有效）
   bcrypt.hash(password, 10)
   insert users
   delete refresh_tokens where userId = newUser.id
@@ -73,20 +73,20 @@ POST /auth/register { username, email, password, code }
   201 { accessToken, refreshToken, user }
 ```
 
-The default role is the lowest entry of `USER_ROLE_LIST` (currently `viewer`). Promote a user from the admin dashboard's user management page.
+默认角色取自 `USER_ROLE_LIST` 的最低项（当前为 `viewer`）。如需提权，在 admin 后台的用户管理页中调整。
 
-## Password reset flow
+## 密码重置流程
 
-Identical shape to registration:
+与注册流程结构相同：
 
-1. `POST /auth/forgot-password/send-code` — server stores a 5-minute code with `purpose: "reset"`.
-2. `POST /auth/forgot-password/reset { email, code, newPassword }` — verifies the code, hashes the new password, replaces it in `users`.
+1. `POST /auth/forgot-password/send-code` — 服务端保存 5 分钟有效的 `purpose: "reset"` 验证码。
+2. `POST /auth/forgot-password/reset { email, code, newPassword }` — 校验验证码、用 bcrypt 哈希新密码并写入 `users`。
 
-Existing access tokens remain valid until they expire, but no new ones can be issued without the new password. If you need to invalidate them right away, also delete the user's refresh tokens; the next refresh attempt will fail.
+已有的 Access Token 在过期前仍然有效，但没有新密码就无法签发新 Token。如果想立即吊销，可同时清除该用户的 Refresh Token，使下一次刷新失败。
 
-## OAuth flow (WeChat / Feishu)
+## OAuth 流程（微信 / 飞书）
 
-Configure provider credentials in `packages/server/.env.local`:
+在 `packages/server/.env.local` 中配置 Provider 凭据：
 
 ```bash
 WECHAT_APPID=...
@@ -95,48 +95,48 @@ FEISHU_APPID=...
 FEISHU_SECRET=...
 ```
 
-Configured providers appear in `GET /api/auth/oauth/providers`; the admin UI uses that response to render OAuth buttons.
+已配置的 Provider 会出现在 `GET /api/auth/oauth/providers` 中；admin UI 据此渲染对应按钮。
 
 ```
-1. Browser → GET /api/auth/oauth/<provider>/authorize
-              ← provider redirect URL
-2. Browser → opens popup at provider's authorize page
-3. Provider → callback URL → GET /api/auth/oauth/<provider>/callback
-              server exchanges code for provider tokens, fetches user info
-4. Two outcomes:
-   a) An oauth_accounts row already links to a users row
-      → server signs an EcoCtrl JWT pair and the popup posts it to the opener
-   b) No link exists
-      → frontend prompts the user to bind: POST /auth/oauth/bind
-        (or /auth/oauth/register-and-bind if no EcoCtrl account yet)
+1. 浏览器 → GET /api/auth/oauth/<provider>/authorize
+              ← 返回 Provider 跳转地址
+2. 浏览器 → 在弹窗打开 Provider 授权页
+3. Provider → 回调 → GET /api/auth/oauth/<provider>/callback
+              服务端用 code 换取 Provider Token，并拉取用户信息
+4. 两种结果：
+   a) 已存在 oauth_accounts 与 users 的关联
+      → 服务端签发 EcoCtrl 的 JWT 对，弹窗将其 postMessage 给主窗口
+   b) 还没有关联
+      → 前端引导用户绑定：POST /auth/oauth/bind
+        （或 /auth/oauth/register-and-bind 用于尚未注册的用户）
 ```
 
-Once linked, the user can log in either with username/password or via OAuth — both yield the same `users` row.
+绑定完成后，用户既可以用账号密码登录，也可以走 OAuth — 两种方式得到的都是同一行 `users` 记录。
 
-## Token storage on the client
+## 客户端 Token 存放位置
 
-| App          | Access token                                 | Refresh token                                 |
-| ------------ | -------------------------------------------- | --------------------------------------------- |
-| `apps/web`   | `localStorage`                               | `localStorage`                                |
-| `apps/admin` | `localStorage`                               | `localStorage`                                |
-| Swagger UI   | `localStorage` (`swagger_auto_access_token`) | `localStorage` (`swagger_auto_refresh_token`) |
+| App          | Access Token                                  | Refresh Token                                  |
+| ------------ | --------------------------------------------- | ---------------------------------------------- |
+| `apps/web`   | `localStorage`                                | `localStorage`                                 |
+| `apps/admin` | `localStorage`                                | `localStorage`                                 |
+| Swagger UI   | `localStorage`（`swagger_auto_access_token`） | `localStorage`（`swagger_auto_refresh_token`） |
 
-The frontends share an Axios-like client (`apps/admin/src/api/request.ts`, `apps/web/app/lib/api.ts`) that:
+前端共享一个类 Axios 客户端（`apps/admin/src/api/request.ts`、`apps/web/app/lib/api.ts`），它会：
 
-1. Adds `Authorization: Bearer <accessToken>` to every request.
-2. Catches `401`, calls `/auth/refresh` once, retries the original request with the new token.
-3. On a refresh failure, clears storage and redirects to the login screen.
+1. 给每个请求加上 `Authorization: Bearer <accessToken>`。
+2. 拦截 `401`，调用一次 `/auth/refresh` 然后用新 Token 重放原始请求。
+3. 刷新失败时清空 storage 并跳转登录页。
 
-## Public routes
+## 公共路由
 
-Refer to [API Routes — Public routes](/reference/api#public-routes-no-token) for the exact list. The hook in `routes/index.ts` checks `request.url.startsWith(p)` against an explicit allow-list, so any new public endpoint must be added to that list.
+完整列表请见 [API 路由 — 公共路由](/reference/api#公共路由（无需-token）)。`routes/index.ts` 中的钩子会用 `request.url.startsWith(p)` 比对显式白名单 — 新增公共路由必须把路径加入这个列表。
 
-## Operational tips
+## 运维要点
 
-- **Rotating `JWT_SECRET`**: invalidates every issued access token. Refresh tokens still work, so users can mint a new access token without a fresh login. Combine with a refresh-token wipe (`TRUNCATE refresh_tokens`) for a hard logout-everyone.
-- **Session length**: increase access-token lifetime by editing `expiresIn: "15m"` in `packages/server/index.ts`. Increase refresh-token lifetime by editing the `7 * 24 * 60 * 60 * 1000` constant in `routes/auth.ts`.
-- **Audit who is signed in**: `SELECT userId, COUNT(*) FROM refresh_tokens GROUP BY userId` shows live sessions (currently always 0 or 1 per user).
+- **轮换 `JWT_SECRET`**：所有已签发的 Access Token 立即失效；但 Refresh Token 仍有效，用户可以无需重登就刷出新 Access Token。如果想强制全员下线，搭配清空 Refresh Token（`TRUNCATE refresh_tokens`）即可。
+- **延长会话**：编辑 `packages/server/index.ts` 中的 `expiresIn: "15m"` 调整 Access Token 寿命；编辑 `routes/auth.ts` 中的 `7 * 24 * 60 * 60 * 1000` 调整 Refresh Token 寿命。
+- **审计在线会话**：执行 `SELECT userId, COUNT(*) FROM refresh_tokens GROUP BY userId` 即可看到当前活跃会话（目前每个用户固定为 0 或 1）。
 
-## Role-based access
+## 基于角色的访问控制
 
-Users have a `role` column drawn from `USER_ROLE_LIST`. The default role for new registrations is the lowest entry (currently `viewer`). Roles are checked in route handlers or via Fastify decorators — there is no middleware-level RBAC gate. The admin dashboard's user management page allows promoting or demoting users.
+用户有一个 `role` 字段，取值来自 `USER_ROLE_LIST`。新注册用户的默认角色是列表中的最低项（当前为 `viewer`）。角色校验在路由处理器或 Fastify decorator 中完成，没有中间件层面的 RBAC 网关。admin 后台的用户管理页面支持升降级用户角色。

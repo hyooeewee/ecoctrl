@@ -1,31 +1,31 @@
-# Queue & Worker
+# 队列与 Worker
 
-EcoCtrl uses [pg-boss](https://github.com/timgit/pg-boss) for reliable background job processing. Jobs are stored in PostgreSQL and processed by a worker that runs in the same Node process as the API server.
+EcoCtrl 使用 [pg-boss](https://github.com/timgit/pg-boss) 实现可靠的后台任务处理。任务存储在 PostgreSQL 中，由运行在 API 服务器同一 Node 进程中的 Worker 消费。
 
-## Architecture
+## 架构
 
 ```
-API request or schedule trigger
+API 请求或定时触发器
         │
         ▼
    boss.send('queue-name', payload)
         │
         ▼
-   PostgreSQL (pg-boss tables)
+   PostgreSQL (pg-boss 表)
         │
         ▼
-   Worker polls and picks up job
+   Worker 轮询并取回任务
         │
         ▼
-   Handler executes
+   处理器执行
         │
         ▼
-   Job marked completed / failed / retried
+   任务标记为完成 / 失败 / 重试
 ```
 
-## Queue initialization
+## 队列初始化
 
-`packages/server/src/queue/pgboss.ts` creates a single pg-boss instance using the same database connection pool as the rest of the application:
+`packages/server/src/queue/pgboss.ts` 使用与应用程序其余部分相同的数据库连接池创建单个 pg-boss 实例：
 
 ```ts
 import { getDb } from "@/plugins/database";
@@ -33,35 +33,35 @@ import PgBoss from "pg-boss";
 
 const boss = new PgBoss({
   connectionString: process.env.DATABASE_URL,
-  // ...other options
+  // ...其他选项
 });
 ```
 
-The instance is started during server bootstrap and shut down gracefully on `SIGTERM`.
+实例在服务器启动时启动，并在收到 `SIGTERM` 时优雅关闭。
 
-## Worker registration
+## Worker 注册
 
-`packages/server/src/queue/worker.ts` registers job handlers for each queue:
+`packages/server/src/queue/worker.ts` 为每个队列注册任务处理器：
 
-| Queue                | Handler                   | Description                                                 |
-| -------------------- | ------------------------- | ----------------------------------------------------------- |
-| `report-generation`  | `handleReportGeneration`  | Generates scheduled reports from templates.                 |
-| `backup-task`        | `handleBackupTask`        | Executes database backup and uploads to configured storage. |
-| `workflow-execution` | `handleWorkflowExecution` | Runs a workflow DSL through the engine executor.            |
+| 队列                 | 处理器                    | 说明                               |
+| -------------------- | ------------------------- | ---------------------------------- |
+| `report-generation`  | `handleReportGeneration`  | 根据模板生成定时报表。             |
+| `backup-task`        | `handleBackupTask`        | 执行数据库备份并上传到配置的存储。 |
+| `workflow-execution` | `handleWorkflowExecution` | 通过引擎执行器运行工作流 DSL。     |
 
-Example handler shape:
+处理器签名示例：
 
 ```ts
 async function handleReportGeneration(job: PgBoss.Job) {
   const { planId, format } = job.data;
-  // ...generate report...
+  // ...生成报表...
   return { fileUrl, size };
 }
 ```
 
-## Enqueuing jobs
+## 入队任务
 
-From anywhere in the server codebase:
+在服务器代码的任意位置：
 
 ```ts
 import { boss } from "@/queue/pgboss";
@@ -72,7 +72,7 @@ await boss.send("report-generation", {
 });
 ```
 
-For schedule-based work, pg-boss supports cron syntax:
+对于基于定时的工作，pg-boss 支持 Cron 语法：
 
 ```ts
 await boss.schedule("daily-report", "0 9 * * *", {
@@ -80,31 +80,31 @@ await boss.schedule("daily-report", "0 9 * * *", {
 });
 ```
 
-## Retry and dead-letter
+## 重试与死信
 
-Failed jobs are retried with exponential backoff:
+失败的任务会以指数退避重试：
 
-- Default max retries: 5
-- Base delay: 15 seconds
-- Max delay: 1 hour
+- 默认最大重试次数：5
+- 基础延迟：15 秒
+- 最大延迟：1 小时
 
-After exhausting retries, the job is moved to the `pg-boss.archive` table (dead-letter queue). You can query it directly in PostgreSQL for debugging.
+重试耗尽后，任务会被移动到 `pg-boss.archive` 表（死信队列）。你可以直接在 PostgreSQL 中查询以进行调试。
 
-## Monitoring
+## 监控
 
-pg-boss exposes an internal state table. Useful diagnostic queries:
+pg-boss 暴露了内部状态表。常用诊断查询：
 
 ```sql
--- Pending jobs
+-- 待处理任务
 SELECT name, state, COUNT(*) FROM pgboss.job
 WHERE state = 'created' GROUP BY name, state;
 
--- Failed jobs in the last hour
+-- 最近一小时失败的任务
 SELECT name, data, output FROM pgboss.job
 WHERE state = 'failed' AND createdon > NOW() - INTERVAL '1 hour';
 ```
 
-## Development vs production
+## 开发环境与生产环境
 
-- **Development**: the worker starts automatically when `pnpm dev:server` boots. Jobs run inline in the same process.
-- **Production**: the worker runs alongside the API in the same container. If you need horizontal scaling, run the worker in a separate container using the same `packages/server` image but with a different entry point (`node dist/queue/worker.js`).
+- **开发环境**：Worker 在 `pnpm dev:server` 启动时自动启动。任务在同一线程内运行。
+- **生产环境**：Worker 与 API 运行在同一容器中。如需水平扩展，可以在单独的容器中运行 Worker，使用相同的 `packages/server` 镜像但指定不同的入口点（`node dist/queue/worker.js`）。

@@ -3,17 +3,17 @@ layout: home
 
 hero:
   name: "EcoCtrl"
-  text: "Energy & IoT Control Platform"
-  tagline: "3D building visualization, real-time monitoring, and a unified management dashboard — all in one pnpm monorepo."
+  text: "能源与 IoT 控制平台"
+  tagline: "3D 建筑可视化、实时监控、统一管理控制台 — 全部集成在一个 pnpm 单仓库中。"
   image:
     src: /logo.svg
     alt: EcoCtrl
   actions:
     - theme: brand
-      text: Get Started
+      text: 快速上手
       link: /guide/getting-started
     - theme: alt
-      text: Architecture
+      text: 架构总览
       link: /reference/architecture
     - theme: alt
       text: GitHub
@@ -21,30 +21,21 @@ hero:
 
 features:
   - icon: 🏢
-    title: 3D Building Visualization
-    details: Interactive Babylon.js scene loaded from a single glTF model, with hotspot labels, glow layers and an auto-rotating camera driven entirely by user settings.
+    title: 3D 建筑可视化
+    details: 基于 Babylon.js 的交互式场景，从单个 glTF 模型加载，包含热点标签、辉光层和由用户配置驱动的自动旋转相机。
   - icon: 📊
-    title: Real-time Monitoring
-    details: Live energy usage, fault stats and IoT device alerts streamed through a Fastify REST API, with Recharts visualizations on the admin dashboard.
+    title: 实时监控
+    details: 通过 Fastify REST API 推送实时能耗、故障统计和 IoT 设备告警，配合 Recharts 在管理后台呈现可视化分析。
   - icon: ⚡
-    title: Unified Admin Dashboard
-    details: Tab-based React 19 control panel for accounts, models, energy, faults, maintenance, reports and platform configuration — backed by Drizzle ORM and PostgreSQL.
+    title: 统一管理后台
+    details: 基于 React 19 的 Tab 式控制面板，覆盖账号、模型、能源、故障、维护、报告与平台配置 — 由 Drizzle ORM 与 PostgreSQL 提供支撑。
   - icon: 🧱
-    title: Modern Monorepo
-    details: pnpm workspace with shared schemas, a source-distributed UI library, Rolldown-bundled server and Voidzero vite-plus tooling across all apps.
+    title: 现代化 Monorepo
+    details: pnpm 工作区，包含共享 schema、源码分发的 UI 组件库、Rolldown 打包的服务端，以及全栈统一的 Voidzero vite-plus 工具链。
   - icon: 🔐
-    title: Production-ready Auth
-    details: Self-rotating JWT + refresh tokens, OAuth login, SMTP email verification and a role-based permission model out of the box.
+    title: 生产可用的认证
+    details: 自动轮转的 JWT + Refresh Token、OAuth 登录、SMTP 邮件验证码、基于角色的权限模型，开箱即用。
   - icon: 🐳
-    title: One-command Deploy
-    details: Ship the full stack with a single docker compose up. Offline deployment bundles are also available for air-gapped environments.
-  - icon: ⚙️
-    title: Workflow Engine
-    details: Visual workflow builder with a DSL-based execution engine. Support state-change, schedule, webhook and manual triggers with retry and error handling.
-  - icon: 📬
-    title: Queue & Worker
-    details: Background job processing via pg-boss. Report generation, backups and workflow executions run asynchronously without blocking the API.
-  - icon: 🔗
-    title: IoT Gateway Proxy
-    details: Transparent proxy to upstream IoT platforms with automatic token refresh. Object metadata and point values flow into the dashboard in real time.
+    title: 一键部署
+    details: 通过单条 docker compose up 启动整套服务。同时提供离线部署包，适用于无外网环境。
 ---

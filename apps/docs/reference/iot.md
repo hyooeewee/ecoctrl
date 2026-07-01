@@ -1,75 +1,75 @@
-# IoT Integration
+# IoT 集成
 
-EcoCtrl acts as a transparent proxy to an upstream IoT gateway. The frontends never talk to the gateway directly; all requests flow through the EcoCtrl API, which handles authentication, token refresh, and request/response translation.
+EcoCtrl 充当上游 IoT 网关的透明代理。前端从不直接与网关通信；所有请求都通过 EcoCtrl API 流转，由 API 处理认证、令牌刷新和请求/响应转换。
 
-## Architecture
+## 架构
 
 ```
-Browser (apps/web or apps/admin)
+浏览器（apps/web 或 apps/admin）
         │
         ▼
    EcoCtrl API  /api/iot/*
         │
         ▼
-   Token refresh service
+   令牌刷新服务
         │
         ▼
-   Upstream IoT gateway
+   上游 IoT 网关
 ```
 
-## Token management
+## 令牌管理
 
-The IoT gateway issues short-lived access tokens. EcoCtrl caches them in the single-row `iot_tokens` table:
+IoT 网关颁发短生命周期的访问令牌。EcoCtrl 将其缓存在单行 `iot_tokens` 表中：
 
-| Column         | Type      | Notes                                       |
-| -------------- | --------- | ------------------------------------------- |
-| `id`           | serial PK |                                             |
-| `accessToken`  | text      | Current bearer token from the gateway.      |
-| `refreshToken` | text      | Long-lived refresh token.                   |
-| `expiresAt`    | bigint    | Absolute expiry as Unix epoch milliseconds. |
+| 列             | 类型      | 说明                            |
+| -------------- | --------- | ------------------------------- |
+| `id`           | serial PK |                                 |
+| `accessToken`  | text      | 来自网关的当前 Bearer Token。   |
+| `refreshToken` | text      | 长生命周期的刷新令牌。          |
+| `expiresAt`    | bigint    | 绝对过期时间，Unix 毫秒时间戳。 |
 
-Before every outbound request, the service layer checks `expiresAt`. If the token is within 5 minutes of expiry (or already expired), it calls the gateway's refresh endpoint, persists the new pair, and then proceeds with the original request. This happens transparently — callers never see a 401 from the gateway.
+每次出站请求前，服务层会检查 `expiresAt`。如果令牌在 5 分钟内过期（或已过期），它会调用网关的刷新端点，持久化新令牌对，然后继续原始请求。这个过程对调用者是透明的——调用者永远不会看到网关返回 401。
 
-## Object metadata
+## 对象元数据
 
-Physical devices and data points are represented as `objects` in EcoCtrl:
+物理设备和数据点在 EcoCtrl 中表示为 `objects`：
 
-| Column        | Type    | Notes                                                  |
-| ------------- | ------- | ------------------------------------------------------ |
-| `id`          | uuid PK |                                                        |
-| `code`        | varchar | Unique identifier from the upstream gateway.           |
-| `name`        | varchar | Human-readable label.                                  |
-| `type`        | varchar | Category (sensor, actuator, meter, etc.).              |
-| `description` | text    | Optional.                                              |
-| `metadata`    | jsonb   | Free-form upstream properties (unit, range, protocol). |
+| 列            | 类型    | 说明                             |
+| ------------- | ------- | -------------------------------- |
+| `id`          | uuid PK |                                  |
+| `code`        | varchar | 来自上游网关的唯一标识符。       |
+| `name`        | varchar | 人类可读的标签。                 |
+| `type`        | varchar | 类别（传感器、执行器、仪表等）。 |
+| `description` | text    | 可选。                           |
+| `metadata`    | jsonb   | 上游属性（单位、量程、协议）。   |
 
-Objects can be created manually in the admin dashboard or synced in bulk from the gateway.
+对象可以在 admin 后台手动创建，或从网关批量同步。
 
-## API routes
+## API 路由
 
-All routes under `/api/iot/*` require a valid JWT (they are not public).
+`/api/iot/*` 下的所有路由都需要有效的 JWT（非公开）。
 
-| Method | Path                   | Description                                             |
-| ------ | ---------------------- | ------------------------------------------------------- |
-| GET    | `/iot/token`           | Returns the cached access token (useful for debugging). |
-| POST   | `/iot/codes/values`    | Read current point values for one or more object codes. |
-| POST   | `/iot/codes/history`   | Historical values for a point within a time range.      |
-| POST   | `/iot/codes/set`       | Write a value back to a writable point.                 |
-| POST   | `/iot/codes/force-set` | Force-write, bypassing validation.                      |
-| POST   | `/iot/alarms`          | Alarm history from the gateway.                         |
-| POST   | `/iot/alarm-configs`   | Alarm threshold configuration.                          |
+| 方法 | 路径                   | 说明                               |
+| ---- | ---------------------- | ---------------------------------- |
+| GET  | `/iot/token`           | 返回缓存的访问令牌（调试用）。     |
+| POST | `/iot/codes/values`    | 读取一个或多个对象码的当前点位值。 |
+| POST | `/iot/codes/history`   | 查询某点位在时间段内的历史值。     |
+| POST | `/iot/codes/set`       | 向可写点位写入值。                 |
+| POST | `/iot/codes/force-set` | 强制写入，绕过校验。               |
+| POST | `/iot/alarms`          | 网关的告警历史。                   |
+| POST | `/iot/alarm-configs`   | 告警阈值配置。                     |
 
-Request and response shapes match the upstream gateway's contract. EcoCtrl forwards the body verbatim and returns the gateway's response unchanged (minus any credential headers).
+请求和响应形状与上游网关的契约一致。EcoCtrl 原样转发请求体，并返回网关的响应（去除任何凭证头）。
 
-## Environment variables
+## 环境变量
 
-| Variable   | Required | Description                                       |
-| ---------- | -------- | ------------------------------------------------- |
-| `BASE_URL` | yes      | Upstream IoT gateway base URL.                    |
-| `APP_ID`   | yes      | Gateway application ID used during token refresh. |
+| 变量       | 必填 | 说明                          |
+| ---------- | ---- | ----------------------------- |
+| `BASE_URL` | 是   | 上游 IoT 网关基础 URL。       |
+| `APP_ID`   | 是   | 令牌刷新时使用的网关应用 ID。 |
 
-Both are read from `packages/server/.env.local` and forwarded to the IoT service layer.
+两者均从 `packages/server/.env.local` 读取，并转发给 IoT 服务层。
 
-## Web portal integration
+## Web 门户集成
 
-`apps/web` displays real-time IoT data on the dashboard. The widget system (`dashboard-widgets`) can bind to IoT point values via the `dataType` field. When a widget's `dataType` is set to `iot`, the frontend polls `/api/iot/codes/values` periodically and renders the latest readings.
+`apps/web` 在仪表盘上显示实时 IoT 数据。组件系统（`dashboard-widgets`）可以通过 `dataType` 字段绑定到 IoT 点位值。当组件的 `dataType` 设置为 `iot` 时，前端会定期轮询 `/api/iot/codes/values` 并渲染最新读数。

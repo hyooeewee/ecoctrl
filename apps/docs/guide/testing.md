@@ -1,38 +1,38 @@
-# Testing
+# 测试
 
-Every package in the EcoCtrl monorepo ships with [Vitest](https://vitest.dev/) tests. This page covers how to run them, what conventions to follow, and how the test infrastructure is wired up.
+EcoCtrl monorepo 中的每个包都配备了 [Vitest](https://vitest.dev/) 测试。本页介绍如何运行测试、遵循哪些约定，以及测试基础设施如何连接。
 
-## Running tests
+## 运行测试
 
-From the monorepo root:
+从 monorepo 根目录：
 
 ```bash
-pnpm test              # run all tests across all packages once
-pnpm test:watch        # watch mode in all packages
-pnpm test:coverage     # generate coverage reports
-pnpm test:ui           # open the Vitest UI
+pnpm test              # 一次性运行所有包的所有测试
+pnpm test:watch        # 所有包的监听模式
+pnpm test:coverage     # 生成覆盖率报告
+pnpm test:ui           # 打开 Vitest UI
 ```
 
-To run a specific package's tests:
+运行特定包的测试：
 
 ```bash
 cd packages/server
-pnpm test              # server unit tests
+pnpm test              # 服务端单元测试
 
 cd apps/admin
-pnpm test              # admin component tests
+pnpm test              # admin 组件测试
 
 cd apps/web
-pnpm test              # web component tests
+pnpm test              # web 组件测试
 ```
 
-## Test configuration
+## 测试配置
 
-Only `packages/server` has a `vitest.config.ts` (environment: `node`). The frontend apps (`apps/admin`, `apps/web`) have testing dependencies installed (`@testing-library/react`, `@vitest/coverage-v8`) but no active Vitest configuration yet.
+只有 `packages/server` 拥有 `vitest.config.ts`（环境：`node`）。前端应用（`apps/admin`、`apps/web`）已安装测试依赖（`@testing-library/react`、`@vitest/coverage-v8`），但尚未配置 Vitest。
 
-### Server tests (`packages/server`)
+### 服务端测试（`packages/server`）
 
-The server test suite runs against the configured database (PostgreSQL in production, or a local instance in CI). There is no in-memory fallback — tests expect `DATABASE_URL` to be available:
+服务端测试套件针对配置的数据库运行（生产环境用 PostgreSQL，CI 中用本地实例）。没有内存回退 — 测试依赖 `DATABASE_URL`：
 
 ```ts
 import { describe, it, expect } from "vitest";
@@ -51,9 +51,9 @@ describe("users repository", () => {
 });
 ```
 
-### Frontend tests (`apps/admin`, `apps/web`)
+### 前端测试（`apps/admin`、`apps/web`）
 
-Testing libraries (`@testing-library/react`, `@testing-library/jest-dom`) are installed but no Vitest config is present yet. When configured, tests will look like:
+测试库（`@testing-library/react`、`@testing-library/jest-dom`）已安装，但尚未配置 Vitest。配置完成后，测试形如：
 
 ```tsx
 import { render, screen } from "@testing-library/react";
@@ -67,33 +67,33 @@ describe("Button", () => {
 });
 ```
 
-## Conventions
+## 约定
 
-- **Test files**: co-located with source (`*.test.ts` or `*.test.tsx`) or in a dedicated `__tests__/` directory.
-- **Naming**: `describe` the module, `it` describes the behavior.
-- **Mocking**: prefer minimal mocks. For API tests, mock the repository layer rather than the database.
-- **Coverage**: There is no enforced threshold yet. New server features should include tests for the happy path and at least one error case.
+- **测试文件**：与源码同目录（`*.test.ts` 或 `*.test.tsx`）或放在专用 `__tests__/` 目录中。
+- **命名**：`describe` 描述模块，`it` 描述行为。
+- **Mock**：优先使用最小 Mock。API 测试应 Mock 仓库层而非数据库。
+- **覆盖率**：目前无强制阈值。新服务端功能应包含主路径测试和至少一个错误用例。
 
-## CI integration
+## CI 集成
 
-The root `package.json` does not define test scripts. Run tests from the server package directly:
+根 `package.json` 未定义测试脚本。直接从服务端包运行测试：
 
 ```bash
 cd packages/server
-pnpm test              # run server tests
-pnpm test:coverage     # generate coverage report
+pnpm test              # 运行服务端测试
+pnpm test:coverage     # 生成覆盖率报告
 ```
 
-## Adding tests for a new feature
+## 为新功能添加测试
 
-1. Write the test first (or alongside the implementation).
-2. If testing a repository function, add the test in `packages/server/src/repositories/__tests__/`.
-3. If testing a React component, add the test next to the component file (once a Vitest config is added to the app).
-4. Run `pnpm test` from the server package directory to verify.
-5. Run `pnpm test:coverage` to check coverage impact.
+1. 先写测试（或与实现同时写）。
+2. 如果测试仓库函数，测试放在 `packages/server/src/repositories/__tests__/`。
+3. 如果测试 React 组件，测试放在组件文件旁边（等该应用添加 Vitest 配置后）。
+4. 从服务端包目录运行 `pnpm test` 验证。
+5. 运行 `pnpm test:coverage` 检查覆盖率影响。
 
-## Debugging tips
+## 调试技巧
 
-- Use `vitest --reporter=verbose` for detailed per-test output.
-- Use `vitest --testNamePattern="creates a user"` to run a single test.
-- The Vitest UI (`pnpm test:ui`) is useful for visually inspecting test results and coverage maps.
+- 使用 `vitest --reporter=verbose` 获取详细的逐测试输出。
+- 使用 `vitest --testNamePattern="creates a user"` 运行单个测试。
+- Vitest UI（`pnpm test:ui`）适合可视化检查测试结果和覆盖率地图。

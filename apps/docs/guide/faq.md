@@ -1,114 +1,114 @@
-# FAQ
+# 常见问题
 
-Solutions to the questions and gotchas that come up most often when setting up or operating EcoCtrl.
+EcoCtrl 在搭建与日常运行过程中最常遇到的问题与解决方案。
 
-## Setup
+## 安装
 
-### `pnpm install` complains about the Node version
+### `pnpm install` 报告 Node 版本不兼容
 
-The release pipeline uses Node 24, and several dependencies declare `engines.node >= 20`. If you see `Unsupported engine`, switch to a supported version:
+发布流水线使用 Node 24，而很多依赖声明 `engines.node >= 20`。如果看到 `Unsupported engine`，请切换到受支持的版本：
 
 ```bash
 nvm install 24 && nvm use 24
-# or with fnm:
+# 或者使用 fnm：
 fnm install 24 && fnm use 24
 ```
 
-### `pnpm install` is slow / wrong pnpm version
+### `pnpm install` 缓慢 / pnpm 版本不对
 
-The repo pins `pnpm@10.33.1`. Use corepack to make sure you are running the same version:
+仓库锁定 `pnpm@10.33.1`。建议通过 corepack 保证版本一致：
 
 ```bash
 corepack enable
 corepack prepare pnpm@10.33.1 --activate
 ```
 
-### The API exits with `database "ecoctrl" does not exist`
+### API 启动报 `database "ecoctrl" does not exist`
 
-By default the API tries to create the database on first boot if your Postgres role has the `CREATE DATABASE` privilege. On managed services that disallow that privilege, create the database yourself first:
+默认情况下，API 在首次启动时会尝试自动创建数据库（前提是 Postgres 角色具备 `CREATE DATABASE` 权限）。在禁用此权限的托管服务上，请先手动建库：
 
 ```sql
 CREATE DATABASE ecoctrl;
 ```
 
-then re-run `pnpm db:push` and `pnpm db:seed`.
+然后重新执行 `pnpm db:push` 与 `pnpm db:seed`。
 
-### `db:push` succeeded but the admin says "no data"
+### `db:push` 成功，但 admin 提示 “暂无数据”
 
-You also need the seed data:
+还需要导入种子数据：
 
 ```bash
 cd packages/server
 pnpm db:seed
 ```
 
-If you want to start over completely, `pnpm db:refresh` performs **drop → push → seed → open Drizzle Studio**. It is destructive — never run it against a production database.
+如果想完全重置，可执行 `pnpm db:refresh`，它会按顺序执行 **drop → push → seed → 打开 Drizzle Studio**。这是破坏性命令 — 切勿在生产数据库上执行。
 
-## Authentication
+## 认证
 
-### Why am I getting logged out every 15 minutes?
+### 为什么我每 15 分钟会被退出？
 
-Access tokens are intentionally short-lived (15 minutes). The frontend automatically calls `/api/auth/refresh` to obtain a new one as long as a valid refresh token is present. If you are forcibly logged out:
+Access Token 故意设计为短生命周期（15 分钟）。前端会在 Refresh Token 仍有效时自动调用 `/api/auth/refresh` 获取新的 Access Token。如果你被强制登出：
 
-- Check the browser console for refresh failures.
-- Confirm `JWT_SECRET` did not change between server restarts (an updated secret invalidates every existing token).
+- 检查浏览器 Console 是否有刷新失败的报错。
+- 确认服务重启之间 `JWT_SECRET` 没有变化（更新该密钥会让所有已签发的 Token 失效）。
 
-### "Logging in on a second device kicked me out from the first"
+### “在第二台设备登录后，原设备被踢下线了”
 
-Yes — by design. EcoCtrl currently issues a single active refresh token per user. Logging in on a new device clears refresh tokens from previous sessions. If your team needs multi-device support, that is a server-side change (see `routes/auth.ts`).
+这是有意的设计。EcoCtrl 当前每个用户只保留一个有效的 Refresh Token，新设备登录会清除旧的。如果你的团队需要多端登录，需要在服务端调整（参见 `routes/auth.ts`）。
 
-### OAuth login button does nothing
+### OAuth 登录按钮没反应
 
-The button opens a popup window. Pop-ups must be allowed for the admin domain. The available providers are returned by `GET /api/auth/oauth/providers` — if that list is empty, no OAuth credentials are configured in the server `.env.local`.
+按钮会打开一个弹出窗口。请确认浏览器允许 admin 域名弹窗。可用的 Provider 列表由 `GET /api/auth/oauth/providers` 返回 — 如果该接口返回空，说明服务端 `.env.local` 中没有配置 OAuth 凭据。
 
-## 3D portal
+## 3D 门户
 
-### The building view shows a black screen
+### 楼宇视图显示黑屏
 
-The web portal expects `apps/web/public/building.glb`. If that file is missing or corrupt the Babylon scene fails silently. Verify it exists and is valid glTF binary.
+web 门户依赖 `apps/web/public/building.glb`。该文件缺失或损坏时，Babylon 场景会静默失败。请确认文件存在且为合法的 glTF 二进制。
 
-### How do I tweak camera, lights or hotspots?
+### 如何调整相机、灯光、热点？
 
-All 3D parameters are stored in `useSettingsStore` (`apps/web/app/store/settings.ts`) and synced through `/api/dashboard/settings`. Open the admin dashboard, go to **3D Configuration**, change values and save. The web portal picks them up on its next reload.
+所有 3D 参数都保存在 `useSettingsStore`（`apps/web/app/store/settings.ts`），通过 `/api/dashboard/settings` 同步。打开 admin 后台，进入 **3D 配置** 修改保存即可。Web 门户在下次刷新时拉取最新配置。
 
-## Builds and deployment
+## 构建与部署
 
-### `vp build` fails with "Cannot find module @ecoctrl/ui/..."
+### `vp build` 报 “Cannot find module @ecoctrl/ui/...”
 
-`@ecoctrl/ui` is consumed as **source**, so you do not need to build it separately. If imports fail, make sure `pnpm install` finished successfully and that `apps/<your-app>/vite.config.ts` includes the `resolveUiAlias()` plugin from `@ecoctrl/shared`.
+`@ecoctrl/ui` 是以 **源码形式** 被消费的，无需单独构建。如果 import 失败，请确认 `pnpm install` 成功完成，并且 `apps/<your-app>/vite.config.ts` 已经引入 `@ecoctrl/shared` 提供的 `resolveUiAlias()` 插件。
 
-### Docker build error: "workspace package not found"
+### Docker 构建报 “workspace package not found”
 
-Docker images must be built from the monorepo root, not from the app's directory:
+Docker 镜像必须从 monorepo 根目录构建，而不是在 App 目录内：
 
 ```bash
 docker build -f apps/admin/Dockerfile .
 ```
 
-The Dockerfiles assume `pnpm-lock.yaml` and the entire workspace are present.
+Dockerfile 假设 `pnpm-lock.yaml` 与整个工作区都存在于上下文中。
 
-### Changing `API_BASE_URL` doesn't seem to update the frontend
+### 修改 `API_BASE_URL` 后前端没有变化
 
-Frontend code addresses the API as `/api` literally — that prefix is rewritten at runtime:
+前端代码字面写死了 `/api` 前缀 — 真正的转发发生在运行时层：
 
-- In dev: by Vite's proxy (`createDevProxy`).
-- In containers: by Caddy.
+- 开发环境：通过 Vite 的 proxy（`createDevProxy`）。
+- 容器环境：通过 Caddy。
 
-You **don't** need to rebuild the frontend after changing the host or prefix; just update the matching env variable on the runtime layer (see [Environment Variables](/reference/env-vars)).
+修改 API 主机或前缀 **不需要重新构建前端**，只需更新对应运行时层的环境变量（参见 [环境变量](/reference/env-vars)）。
 
-## Documentation site
+## 文档站
 
-### Why is `/api/dashboard` accessible without a token?
+### 为什么 `/api/dashboard` 不需要 Token 也能访问？
 
-It is intentionally on the public allowlist so the public web portal can render building stats without forcing visitors to log in. Mutating endpoints under `/api/dashboard/settings` still require authentication.
+它被有意放进了公共白名单，让 web 公共门户在不强制登录的前提下展示楼宇统计。`/api/dashboard/settings` 等修改接口仍要求认证。
 
-### My local docs server doesn't open
+### 本地文档服务无法启动
 
-Run `pnpm dev:docs` from the repo root. The docs site listens on port `5174` to avoid clashing with admin (`5173`).
+请在仓库根目录执行 `pnpm dev:docs`。文档站监听 `5174` 端口，避免与 admin（`5173`）冲突。
 
-## Where to file an issue
+## 在哪里提 Issue
 
-If you hit something that isn't covered here:
+如果遇到本页未覆盖的问题：
 
-1. Search [GitHub issues](https://github.com/hyooeewee/ecoctrl/issues) first.
-2. Open a new issue with the failing command, the full error and your environment (`node -v`, `pnpm -v`, OS).
+1. 先在 [GitHub Issues](https://github.com/hyooeewee/ecoctrl/issues) 中搜索。
+2. 提交新 issue，附带失败命令、完整报错与运行环境（`node -v`、`pnpm -v`、操作系统）。

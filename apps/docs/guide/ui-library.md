@@ -1,24 +1,24 @@
-# UI Library
+# UI 组件库
 
-`packages/ui` is the shared component library used by both `apps/admin` and `apps/web`. It is built on top of [Base UI](https://base-ui.com/) (Radix v2) and styled with Tailwind CSS v4 + `class-variance-authority`.
+`packages/ui` 是 `apps/admin` 和 `apps/web` 共享的组件库。它基于 [Base UI](https://base-ui.com/)（Radix v2）构建，使用 Tailwind CSS v4 + `class-variance-authority` 进行样式处理。
 
-## Key characteristic: source-distributed
+## 关键特性：源码分发
 
-Unlike most UI libraries, `@ecoctrl/ui` does **not** ship a compiled bundle. Consuming apps import TypeScript source directly:
+与大多数 UI 库不同，`@ecoctrl/ui` **不**提供编译后的包。消费应用直接导入 TypeScript 源码：
 
 ```tsx
 import { Button, Dialog, Input } from "@ecoctrl/ui";
 ```
 
-The `resolveUiAlias()` plugin in `@ecoctrl/shared` rewrites internal `@/` aliases inside the library back to `packages/ui/src/`, so the consuming app's bundler compiles everything together. This means:
+`@ecoctrl/shared` 中的 `resolveUiAlias()` 插件将库内部的 `@/` 别名重写回 `packages/ui/src/`，让消费应用的打包器一起编译。这意味着：
 
-- **Zero build step** for the library — edit a component and every app picks it up on the next reload.
-- **Tree-shaking friendly** — only imported components end up in the bundle.
-- **Type-safe** — TypeScript definitions are inferred directly from source.
+- **库零构建步骤** — 编辑组件后，所有应用下次热更新时自动生效。
+- **Tree-shaking 友好** — 只有导入的组件会进入最终包。
+- **类型安全** — TypeScript 定义直接从源码推断。
 
-## Adding a shadcn component
+## 添加 shadcn 组件
 
-The library maintains shadcn-style base components. To add one:
+库维护了 shadcn 风格的基础组件。添加方式：
 
 ```bash
 cd packages/ui
@@ -26,43 +26,43 @@ pnpm dlx shadcn@latest add <component-name> -y
 pnpm generate-proxies
 ```
 
-`generate-proxies` updates `package.json` exports so subpath imports work:
+`generate-proxies` 更新 `package.json` 的 exports，使子路径导入生效：
 
 ```tsx
 import { Field } from "@ecoctrl/ui/field";
 import { buttonVariants } from "@ecoctrl/ui/button";
 ```
 
-## Adding a custom component
+## 添加自定义组件
 
-For project-specific components that are not part of shadcn:
+对于不属于 shadcn 的项目专属组件：
 
-1. Create the component in `packages/ui/src/components/community/`.
-2. Export it from `packages/ui/src/index.ts`.
-3. Run `pnpm generate-proxies`.
+1. 在 `packages/ui/src/components/community/` 中创建组件。
+2. 从 `packages/ui/src/index.ts` 导出。
+3. 运行 `pnpm generate-proxies`。
 
-Example:
+示例：
 
 ```tsx
 // packages/ui/src/components/community/autocomplete.tsx
 import { useState } from "react";
 
 export function Autocomplete({ options, onSelect }) {
-  // ...implementation
+  // ...实现
 }
 ```
 
-## Component conventions
+## 组件约定
 
-| Pattern       | Rule                                                    |
-| ------------- | ------------------------------------------------------- |
-| Class merging | Always use `cn()` from `@/lib/utils`                    |
-| Variants      | Use `cva` for components with style variants            |
-| Styling hooks | Add `data-slot="component-name"` to root elements       |
-| Exports       | Named exports; compound components export all sub-parts |
-| Icons         | Use `lucide-react`                                      |
+| 模式     | 规则                                        |
+| -------- | ------------------------------------------- |
+| 类名合并 | 始终使用 `@/lib/utils` 中的 `cn()`          |
+| 变体     | 使用 `cva` 为带样式变体的组件               |
+| 样式钩子 | 在根元素上添加 `data-slot="component-name"` |
+| 导出     | 命名导出；复合组件导出所有子部分            |
+| 图标     | 使用 `lucide-react`                         |
 
-Example component:
+组件示例：
 
 ```tsx
 import { cva, type VariantProps } from "class-variance-authority";
@@ -90,9 +90,9 @@ export function Badge({ className, variant, ...props }: BadgeProps) {
 }
 ```
 
-## UI Adapter pattern
+## UI Adapter 模式
 
-Apps should **never** modify generated shadcn base components in `packages/ui/src/components/ui/` directly. Instead, create an adapter in the app's own directory:
+应用应**永远不要**直接修改 `packages/ui/src/components/ui/` 中生成的 shadcn 基础组件。而是在应用自己的目录中创建适配器：
 
 ```tsx
 // apps/web/app/components/ui-adapter/button.tsx
@@ -103,15 +103,15 @@ export function Button(props) {
 }
 ```
 
-This keeps the library clean while allowing per-app customization.
+这保持了库的干净，同时允许每个应用进行定制。
 
-## Available components
+## 可用组件
 
-Run this from the monorepo root to see the current component list:
+从 monorepo 根目录运行以下命令查看当前组件列表：
 
 ```bash
 ls packages/ui/src/components/ui/
 ls packages/ui/src/components/community/
 ```
 
-Common components include: `button`, `dialog`, `input`, `select`, `table`, `card`, `badge`, `avatar`, `tooltip`, `popover`, `sheet`, `scroll-area`, `command`, `combobox`, `switch`, `slider`, `toggle`, `dropdown-menu`, `separator`, `progress`, `skeleton`, `tabs`, `textarea`, `field`, `label`, `sonner`.
+常用组件包括：`button`、`dialog`、`input`、`select`、`table`、`card`、`badge`、`avatar`、`tooltip`、`popover`、`sheet`、`scroll-area`、`command`、`combobox`、`switch`、`slider`、`toggle`、`dropdown-menu`、`separator`、`progress`、`skeleton`、`tabs`、`textarea`、`field`、`label`、`sonner`。

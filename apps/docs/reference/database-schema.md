@@ -1,235 +1,235 @@
-# Database Schema
+# 数据库 Schema
 
-EcoCtrl persists everything in a single PostgreSQL database. The schema is defined with [Drizzle ORM](https://orm.drizzle.team/) under `packages/server/src/schemas/`, one file per table.
+EcoCtrl 把所有数据保存在一个 PostgreSQL 数据库中。Schema 使用 [Drizzle ORM](https://orm.drizzle.team/) 在 `packages/server/src/schemas/` 下定义，每张表一个文件。
 
-## Workflow
+## 工作流
 
-| Command            | Purpose                                                                                                  |
-| ------------------ | -------------------------------------------------------------------------------------------------------- |
-| `pnpm db:generate` | Diff the current schema against the previous one and emit a new migration in `packages/server/drizzle/`. |
-| `pnpm db:migrate`  | Apply pending migrations.                                                                                |
-| `pnpm db:push`     | Push the current schema directly (dev shortcut — no migration history).                                  |
-| `pnpm db:seed`     | Insert sample users, dashboards and energy data.                                                         |
-| `pnpm db:refresh`  | Drop → push → seed → open Drizzle Studio. **Destructive.**                                               |
-| `pnpm db:studio`   | Open Drizzle Studio against the configured database.                                                     |
+| 命令               | 作用                                                                    |
+| ------------------ | ----------------------------------------------------------------------- |
+| `pnpm db:generate` | 对比当前 schema 与上一版本，生成新的迁移到 `packages/server/drizzle/`。 |
+| `pnpm db:migrate`  | 应用待执行迁移。                                                        |
+| `pnpm db:push`     | 直接推送当前 schema（开发期捷径，不保留迁移历史）。                     |
+| `pnpm db:seed`     | 写入示例用户、看板、能耗数据。                                          |
+| `pnpm db:refresh`  | drop → push → seed → 打开 Drizzle Studio。**破坏性命令**。              |
+| `pnpm db:studio`   | 在配置好的数据库上打开 Drizzle Studio。                                 |
 
-Schemas re-export from `schemas/index.ts`, so any new table only needs to be added once there.
+每个 schema 都从 `schemas/index.ts` 重新导出，新增表只需添加一次即可。
 
-## Tables
+## 表清单
 
-### Identity & sessions
+### 身份与会话
 
 #### `users`
 
-| Column        | Type         | Notes                                              |
-| ------------- | ------------ | -------------------------------------------------- |
-| `id`          | uuid PK      | Generated server-side.                             |
-| `username`    | varchar(255) | Unique-ish — also used as login identifier.        |
-| `password`    | varchar(255) | bcrypt hash, nullable for OAuth-only accounts.     |
-| `email`       | varchar(255) | Required, used for verification codes.             |
-| `role`        | varchar(100) | Defaults to the lowest role from `USER_ROLE_LIST`. |
-| `status`      | varchar(20)  | `online` / `offline`.                              |
-| `lastLogin`   | varchar(50)  | Free-form timestamp string.                        |
-| `avatarUrl`   | varchar(500) | Nullable.                                          |
-| `preferences` | jsonb        | UI preferences blob.                               |
-| `createdAt`   | timestamptz  | `defaultNow()`.                                    |
+| 字段          | 类型         | 说明                                   |
+| ------------- | ------------ | -------------------------------------- |
+| `id`          | uuid PK      | 服务端生成。                           |
+| `username`    | varchar(255) | 通常唯一 — 同时作为登录标识符。        |
+| `password`    | varchar(255) | bcrypt 哈希；纯 OAuth 账号可为空。     |
+| `email`       | varchar(255) | 必填，用于发送验证码。                 |
+| `role`        | varchar(100) | 默认是 `USER_ROLE_LIST` 中最低的角色。 |
+| `status`      | varchar(20)  | `online` / `offline`。                 |
+| `lastLogin`   | varchar(50)  | 时间戳字符串。                         |
+| `avatarUrl`   | varchar(500) | 可空。                                 |
+| `preferences` | jsonb        | UI 偏好。                              |
+| `createdAt`   | timestamptz  | `defaultNow()`。                       |
 
 #### `oauth_accounts`
 
-Links a `users.id` to one or more external providers (WeChat, Feishu).
+把 `users.id` 与外部 Provider（微信、飞书）关联。
 
-| Column           | Type                | Notes                          |
-| ---------------- | ------------------- | ------------------------------ |
-| `id`             | uuid PK             |                                |
-| `userId`         | uuid FK → users(id) | `ON DELETE CASCADE`.           |
-| `provider`       | varchar(50)         | `wechat`, `feishu`.            |
-| `providerUserId` | varchar(255)        | The provider's stable user id. |
-| `providerEmail`  | varchar(255)        | Optional.                      |
-| `accessToken`    | varchar(1000)       | Provider-issued.               |
-| `refreshToken`   | varchar(1000)       | Provider-issued.               |
-| `expiresAt`      | timestamptz         | Provider-issued expiry.        |
+| 字段             | 类型                | 说明                      |
+| ---------------- | ------------------- | ------------------------- |
+| `id`             | uuid PK             |                           |
+| `userId`         | uuid FK → users(id) | `ON DELETE CASCADE`。     |
+| `provider`       | varchar(50)         | `wechat`、`feishu`。      |
+| `providerUserId` | varchar(255)        | Provider 的稳定用户 ID。  |
+| `providerEmail`  | varchar(255)        | 可选。                    |
+| `accessToken`    | varchar(1000)       | Provider 颁发。           |
+| `refreshToken`   | varchar(1000)       | Provider 颁发。           |
+| `expiresAt`      | timestamptz         | Provider 给定的过期时间。 |
 
 #### `refresh_tokens`
 
-| Column      | Type                | Notes                               |
-| ----------- | ------------------- | ----------------------------------- |
-| `id`        | uuid PK             |                                     |
-| `userId`    | uuid FK → users(id) | `ON DELETE CASCADE`.                |
-| `tokenHash` | varchar(255)        | sha256 of the issued refresh token. |
-| `expiresAt` | timestamptz         | 7 days from issuance.               |
-| `createdAt` | timestamptz         |                                     |
+| 字段        | 类型                | 说明                             |
+| ----------- | ------------------- | -------------------------------- |
+| `id`        | uuid PK             |                                  |
+| `userId`    | uuid FK → users(id) | `ON DELETE CASCADE`。            |
+| `tokenHash` | varchar(255)        | 已签发 Refresh Token 的 sha256。 |
+| `expiresAt` | timestamptz         | 自签发起 7 天。                  |
+| `createdAt` | timestamptz         |                                  |
 
-Each successful login deletes the user's previous refresh tokens before inserting the new one — this is the mechanism behind single-device sessions.
+每次成功登录都会先删除该用户已有的 Refresh Token，再写入新记录 — 这就是单设备会话的机制。
 
 #### `user_settings`
 
-Per-user dashboard layout preferences stored as a single jsonb blob, keyed by `userId`.
+每个用户的看板布局偏好，整张表以 `userId` 为主键，配置以 jsonb 存储。
 
-### IoT integration
+### IoT 集成
 
 #### `iot_tokens`
 
-Single-row token cache for the upstream IoT gateway.
+为上游 IoT 网关缓存的单行 token。
 
-| Column         | Type      | Notes                        |
-| -------------- | --------- | ---------------------------- |
-| `id`           | serial PK |                              |
-| `accessToken`  | text      |                              |
-| `refreshToken` | text      |                              |
-| `expiresAt`    | bigint    | Absolute expiry as ms-epoch. |
+| 字段           | 类型      | 说明                       |
+| -------------- | --------- | -------------------------- |
+| `id`           | serial PK |                            |
+| `accessToken`  | text      |                            |
+| `refreshToken` | text      |                            |
+| `expiresAt`    | bigint    | 绝对过期时间，毫秒时间戳。 |
 
-### Operational data
+### 业务运行数据
 
 #### `alerts`
 
-Real-time event log surfaced on the dashboard. Columns: `id`, `device`, `level`, `message`, `time`, `status` (`pending` / acknowledged).
+实时事件流，展示在仪表盘上。字段：`id`、`device`、`level`、`message`、`time`、`status`（`pending` / 已确认）。
 
 #### `faults`
 
-Persistent fault records. Columns: `id`, `device`, `level`, `time`, `status`, `createdAt`.
+持久化故障记录。字段：`id`、`device`、`level`、`time`、`status`、`createdAt`。
 
 #### `fault_stats`
 
-Single-row snapshot of fault metrics: `totalCount`, `trend`, `mttr`, `avgResponseTime`, `snapshotAt`.
+故障指标的单行快照：`totalCount`、`trend`、`mttr`、`avgResponseTime`、`snapshotAt`。
 
 #### `maintenance_reminders`
 
-Maintenance task queue. Columns: `id`, `task`, `description`, `dueDate`, `priority`, `status`, `assignee`, `location`, `estimatedHours`, `lastCompleted`.
+维护任务队列。字段：`id`、`task`、`description`、`dueDate`、`priority`、`status`、`assignee`、`location`、`estimatedHours`、`lastCompleted`。
 
 #### `energy_readings`
 
-Hourly kWh readings. Columns: `id`, `hour` (string label like `09:00`), `kWh` (real), `readingAt`.
+每小时 kWh 读数。字段：`id`、`hour`（如 `09:00` 的字符串标签）、`kWh`（real）、`readingAt`。
 
 #### `energy_areas`
 
-Per-area energy summary cards. Columns: `id`, `title`, `current`, `target`, `color`, `powerFactor`, `loadRate`.
+按区域汇总的能源卡片。字段：`id`、`title`、`current`、`target`、`color`、`powerFactor`、`loadRate`。
 
-### Dashboard configuration
+### 仪表盘配置
 
 #### `dashboard_widgets`
 
-Drag-and-drop widget grid. Columns include layout metrics (`layoutX/Y/W/H`), `dataType`, a freeform `dataJson` blob, `enabled`, `hidden`, `sortOrder`.
+可拖拽布局的挂件网格。包含布局尺寸（`layoutX/Y/W/H`）、`dataType`、自由格式的 `dataJson`、`enabled`、`hidden`、`sortOrder`。
 
-### Reports & backups
+### 报表与备份
 
-#### `report_plans`, `report_templates`
+#### `report_plans`、`report_templates`
 
-Scheduled report jobs and their templates.
+定时报表任务及其模板。
 
 #### `backup_schedules`
 
-Single-row record holding `nextBackup` (timestamp string).
+仅有一行：保存 `nextBackup`（时间戳字符串）。
 
-### Platform & files
+### 平台与文件
 
 #### `platform_configs`
 
-Single-row global config: platform name, refresh interval, alert toggles, timezone, backup retention, session timeout, and SMTP credentials. `syncSmtpFromEnv()` updates this row from environment variables on every boot.
+单行全局配置：平台名称、刷新频率、告警开关、时区、备份保留天数、会话超时与 SMTP 凭据。每次启动 `syncSmtpFromEnv()` 都会用环境变量更新这一行。
 
 #### `models`
 
-Uploaded 3D model metadata. `fileUrl` points at `/static/models/<filename>`.
+上传的 3D 模型元数据。`fileUrl` 指向 `/static/models/<filename>`。
 
 #### `files`
 
-Generic upload metadata: name, mime type, size, fileUrl.
+通用上传元数据：name、mime、size、fileUrl。
 
-### Workflow engine
+### 工作流引擎
 
 #### `workflows`
 
-Workflow definitions stored as a JSON DSL.
+工作流定义以 JSON DSL 存储。
 
-| Column        | Type        | Notes                                     |
-| ------------- | ----------- | ----------------------------------------- |
-| `id`          | uuid PK     |                                           |
-| `name`        | varchar     | Human-readable name                       |
-| `description` | text        | Optional                                  |
-| `dsl`         | jsonb       | Full workflow DSL (nodes, edges, trigger) |
-| `enabled`     | boolean     | Whether the workflow is active            |
-| `createdAt`   | timestamptz |                                           |
-| `updatedAt`   | timestamptz |                                           |
+| 字段          | 类型        | 说明                               |
+| ------------- | ----------- | ---------------------------------- |
+| `id`          | uuid PK     |                                    |
+| `name`        | varchar     | 可读名称                           |
+| `description` | text        | 可选                               |
+| `dsl`         | jsonb       | 完整工作流 DSL（节点、边、触发器） |
+| `enabled`     | boolean     | 是否激活                           |
+| `createdAt`   | timestamptz |                                    |
+| `updatedAt`   | timestamptz |                                    |
 
 #### `workflow_executions`
 
-Execution logs for each workflow run.
+每次工作流运行的执行日志。
 
-| Column        | Type        | Notes                              |
+| 字段          | 类型        | 说明                               |
 | ------------- | ----------- | ---------------------------------- |
 | `id`          | uuid PK     |                                    |
 | `workflowId`  | uuid FK     | → workflows(id)                    |
 | `status`      | varchar     | `completed` / `failed` / `running` |
-| `triggerData` | jsonb       | Data that fired the trigger        |
-| `result`      | jsonb       | Final output and node logs         |
+| `triggerData` | jsonb       | 触发时的数据                       |
+| `result`      | jsonb       | 最终输出与节点日志                 |
 | `startedAt`   | timestamptz |                                    |
-| `completedAt` | timestamptz | Nullable                           |
+| `completedAt` | timestamptz | 可为空                             |
 
-### IoT integration
+### IoT 集成
 
 #### `objects`
 
-IoT object metadata — physical devices or data points from the upstream gateway.
+IoT 对象元数据 — 上游网关中的物理设备或数据点。
 
-| Column        | Type        | Notes                          |
-| ------------- | ----------- | ------------------------------ |
-| `id`          | uuid PK     |                                |
-| `code`        | varchar     | Unique upstream identifier     |
-| `name`        | varchar     | Human-readable name            |
-| `type`        | varchar     | Object category                |
-| `description` | text        | Optional                       |
-| `metadata`    | jsonb       | Additional upstream properties |
-| `createdAt`   | timestamptz |                                |
+| 字段          | 类型        | 说明           |
+| ------------- | ----------- | -------------- |
+| `id`          | uuid PK     |                |
+| `code`        | varchar     | 上游唯一标识符 |
+| `name`        | varchar     | 可读名称       |
+| `type`        | varchar     | 对象类别       |
+| `description` | text        | 可选           |
+| `metadata`    | jsonb       | 上游属性       |
+| `createdAt`   | timestamptz |                |
 
-### Carbon tracking
+### 碳排放追踪
 
 #### `carbon_factors`
 
-Emission factors for carbon calculations.
+碳计算排放因子。
 
-| Column      | Type        | Notes             |
-| ----------- | ----------- | ----------------- |
-| `id`        | uuid PK     |                   |
-| `name`      | varchar     | Factor name       |
-| `value`     | real        | kg CO₂e per unit  |
-| `unit`      | varchar     | e.g. `kWh`, `m³`  |
-| `category`  | varchar     | Grouping category |
-| `createdAt` | timestamptz |                   |
+| 字段        | 类型        | 说明           |
+| ----------- | ----------- | -------------- |
+| `id`        | uuid PK     |                |
+| `name`      | varchar     | 因子名称       |
+| `value`     | real        | 每单位 kg CO₂e |
+| `unit`      | varchar     | 如 `kWh`、`m³` |
+| `category`  | varchar     | 分组类别       |
+| `createdAt` | timestamptz |                |
 
 #### `carbon_factor_nodes`
 
-Tree-structured nodes for organizing carbon factors.
+排放因子的树形节点。
 
-| Column      | Type    | Notes                               |
-| ----------- | ------- | ----------------------------------- |
-| `id`        | uuid PK |                                     |
-| `parentId`  | uuid FK | → carbon_factor_nodes(id), nullable |
-| `factorId`  | uuid FK | → carbon_factors(id), nullable      |
-| `name`      | varchar | Node label                          |
-| `sortOrder` | integer | Display order                       |
+| 字段        | 类型    | 说明                              |
+| ----------- | ------- | --------------------------------- |
+| `id`        | uuid PK |                                   |
+| `parentId`  | uuid FK | → carbon_factor_nodes(id)，可为空 |
+| `factorId`  | uuid FK | → carbon_factors(id)，可为空      |
+| `name`      | varchar | 节点标签                          |
+| `sortOrder` | integer | 显示顺序                          |
 
-### 3D scene configuration
+### 3D 场景配置
 
 #### `dashboard_models`
 
-Single-row 3D scene configuration for the web portal.
+web 门户的单行 3D 场景配置。
 
-| Column                  | Type        | Notes                      |
-| ----------------------- | ----------- | -------------------------- |
-| `id`                    | serial PK   |                            |
-| `modelFileUrl`          | varchar     | Path to the glTF/glB model |
-| `cameraPreset`          | varchar     | Named camera angle         |
-| `ambientLightIntensity` | real        | 0–1 ambient light level    |
-| `hotspots`              | jsonb       | Array of {x,y,z,label}     |
-| `labels`                | jsonb       | Array of {position,text}   |
-| `updatedAt`             | timestamptz |                            |
+| 字段                    | 类型        | 说明                 |
+| ----------------------- | ----------- | -------------------- |
+| `id`                    | serial PK   |                      |
+| `modelFileUrl`          | varchar     | glTF/glB 模型路径    |
+| `cameraPreset`          | varchar     | 命名相机角度         |
+| `ambientLightIntensity` | real        | 0–1 环境光强度       |
+| `hotspots`              | jsonb       | {x,y,z,label} 数组   |
+| `labels`                | jsonb       | {position,text} 数组 |
+| `updatedAt`             | timestamptz |                      |
 
-## Adding a new table
+## 新增一张表
 
-1. Create `packages/server/src/schemas/<name>.ts` — export the `pgTable(...)` definition.
-2. Re-export it from `schemas/index.ts`.
-3. Run `pnpm db:generate` and review the generated SQL migration.
-4. Apply it with `pnpm db:migrate` (or `pnpm db:push` in dev).
-5. Add a repository module under `repositories/<name>.ts` exposing `createXxx`, `findXxx`, etc.
-6. Wire routes that need it through the repository.
+1. 创建 `packages/server/src/schemas/<name>.ts`，导出 `pgTable(...)` 定义。
+2. 在 `schemas/index.ts` 中重新导出。
+3. 运行 `pnpm db:generate` 并审阅生成的 SQL 迁移。
+4. 通过 `pnpm db:migrate` 应用迁移（开发期可用 `pnpm db:push`）。
+5. 在 `repositories/<name>.ts` 中新增 repository 模块，暴露 `createXxx`、`findXxx` 等函数。
+6. 把需要使用它的路由通过 repository 接入。
 
-Never call Drizzle directly from a route — every read/write goes through the repository layer so the routes stay focused on validation and response shaping.
+切勿在路由层直接调用 Drizzle，所有读写都通过 repository 完成，保持路由聚焦在校验与响应整形。

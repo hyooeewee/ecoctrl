@@ -1,89 +1,89 @@
-# Environment Variables
+# 环境变量
 
-Every EcoCtrl process reads its configuration from a `.env.local` file co-located with its source. `.env.local` always takes precedence over `.env.example`, which serves as a template and a fallback for missing keys.
+每个 EcoCtrl 进程都从源码同目录的 `.env.local` 读取配置。`.env.local` 始终高于 `.env.example`，后者作为模板与缺省回落值。
 
-## Server (`packages/server/.env.local`)
+## 服务端（`packages/server/.env.local`）
 
-Loaded by `dotenv` at the top of `packages/server/index.ts`.
+由 `packages/server/index.ts` 顶部的 `dotenv` 加载。
 
-### Core
+### 核心
 
-| Variable       | Required | Default     | Description                                                                                                                                                                         |
-| -------------- | -------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL` | yes      | —           | PostgreSQL connection string, e.g. `postgresql://ecoctrl:ecoctrl_secret@localhost:5432/ecoctrl`. The server attempts `CREATE DATABASE` on first boot if the role has the privilege. |
-| `JWT_SECRET`   | yes      | —           | Used to sign access tokens. Changing it invalidates every issued token.                                                                                                             |
-| `PORT`         | no       | `3000`      | Listening port.                                                                                                                                                                     |
-| `HOST`         | no       | `0.0.0.0`   | Listening host.                                                                                                                                                                     |
-| `CORS_ORIGIN`  | no       | reflect any | Comma-separated allowlist (e.g. `https://app.example.com,https://admin.example.com`). When unset, the server reflects the request origin.                                           |
+| 变量           | 必填 | 默认值      | 说明                                                                                                                                                       |
+| -------------- | ---- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL` | 是   | —           | PostgreSQL 连接串，例如 `postgresql://ecoctrl:ecoctrl_secret@localhost:5432/ecoctrl`。如果角色拥有相应权限，服务端首次启动时会自动尝试 `CREATE DATABASE`。 |
+| `JWT_SECRET`   | 是   | —           | 用于签发 Access Token。修改后所有已签发 Token 立即失效。                                                                                                   |
+| `PORT`         | 否   | `3000`      | 监听端口。                                                                                                                                                 |
+| `HOST`         | 否   | `0.0.0.0`   | 监听地址。                                                                                                                                                 |
+| `CORS_ORIGIN`  | 否   | reflect any | 逗号分隔的白名单（例如 `https://app.example.com,https://admin.example.com`）。未设置时直接反射请求 Origin。                                                |
 
-### Mail (verification codes)
+### 邮件（验证码）
 
-The platform stores SMTP credentials in the `platform_configs` row; on boot, `syncSmtpFromEnv()` overwrites that row with whatever is in env. Set these once and they propagate.
+平台把 SMTP 凭据保存在 `platform_configs` 表的单行记录里；启动时 `syncSmtpFromEnv()` 会用环境变量覆盖该行。设置一次即可生效。
 
-| Variable      | Description                                        |
-| ------------- | -------------------------------------------------- |
-| `SMTP_HOST`   | SMTP relay host.                                   |
-| `SMTP_PORT`   | SMTP port (default `587`).                         |
-| `SMTP_USER`   | SMTP username.                                     |
-| `SMTP_PASS`   | SMTP password / app password.                      |
-| `SMTP_SECURE` | `true` for SMTPS (port 465), `false` for STARTTLS. |
+| 变量          | 说明                                                   |
+| ------------- | ------------------------------------------------------ |
+| `SMTP_HOST`   | SMTP 中继主机。                                        |
+| `SMTP_PORT`   | SMTP 端口（默认 `587`）。                              |
+| `SMTP_USER`   | SMTP 用户名。                                          |
+| `SMTP_PASS`   | SMTP 密码或应用专用密码。                              |
+| `SMTP_SECURE` | `true` 表示 SMTPS（端口 465），`false` 表示 STARTTLS。 |
 
-### IoT gateway proxy (optional)
+### IoT 网关代理（可选）
 
-| Variable   | Description                                                |
-| ---------- | ---------------------------------------------------------- |
-| `BASE_URL` | Upstream IoT gateway base URL.                             |
-| `APP_ID`   | Upstream gateway application id used during token refresh. |
+| 变量       | 说明                                       |
+| ---------- | ------------------------------------------ |
+| `BASE_URL` | 上游 IoT 网关地址。                        |
+| `APP_ID`   | 上游网关在 token 刷新流程中使用的应用 ID。 |
 
-### Weather widget (optional)
+### 天气挂件（可选）
 
-| Variable              | Default    | Description                                                                      |
-| --------------------- | ---------- | -------------------------------------------------------------------------------- |
-| `OPENWEATHER_API_KEY` | —          | OpenWeatherMap API key. When empty, the weather card on the dashboard is hidden. |
-| `WEATHER_LAT`         | `39.9042`  | Default latitude.                                                                |
-| `WEATHER_LNG`         | `116.4074` | Default longitude.                                                               |
-| `WEATHER_LOCATION`    | `Beijing`  | Display name.                                                                    |
+| 变量                  | 默认值     | 说明                                                   |
+| --------------------- | ---------- | ------------------------------------------------------ |
+| `OPENWEATHER_API_KEY` | —          | OpenWeatherMap API key。为空时仪表盘的天气卡片不展示。 |
+| `WEATHER_LAT`         | `39.9042`  | 默认纬度。                                             |
+| `WEATHER_LNG`         | `116.4074` | 默认经度。                                             |
+| `WEATHER_LOCATION`    | `Beijing`  | 显示名。                                               |
 
-### OAuth providers (optional)
+### OAuth Provider（可选）
 
-Configured providers are returned by `GET /api/auth/oauth/providers`; if the list is empty the admin UI hides the OAuth buttons.
+`GET /api/auth/oauth/providers` 会返回已配置的 Provider；该接口为空时管理后台不会渲染 OAuth 按钮。
 
-| Variable                        | Description          |
-| ------------------------------- | -------------------- |
-| `WECHAT_APPID`, `WECHAT_SECRET` | Enable WeChat login. |
-| `FEISHU_APPID`, `FEISHU_SECRET` | Enable Feishu login. |
+| 变量                            | 说明           |
+| ------------------------------- | -------------- |
+| `WECHAT_APPID`、`WECHAT_SECRET` | 启用微信登录。 |
+| `FEISHU_APPID`、`FEISHU_SECRET` | 启用飞书登录。 |
 
-## Admin & web (`apps/{admin,web}/.env.local`)
+## Admin 与 Web（`apps/{admin,web}/.env.local`）
 
-These variables are **read by the runtime layer (Caddy in Docker), not by the JavaScript bundle**. Client code always issues requests against the literal `/api` and `/static` prefixes.
+这些变量 **由运行时层读取（Docker 中是 Caddy），并不会被 JavaScript bundle 读取**。客户端代码总是请求字面量 `/api` 与 `/static` 前缀。
 
-| Variable        | Default                 | Description                                                                           |
-| --------------- | ----------------------- | ------------------------------------------------------------------------------------- |
-| `API_BASE_URL`  | `http://localhost:3000` | Upstream API host. Inside Docker compose use the service name (`http://server:3000`). |
-| `API_PREFIX`    | `/api`                  | Path prefix on the upstream that handles JSON requests.                               |
-| `STATIC_PREFIX` | `/static`               | Path prefix on the upstream that serves uploaded files (3D models).                   |
+| 变量            | 默认值                  | 说明                                                                    |
+| --------------- | ----------------------- | ----------------------------------------------------------------------- |
+| `API_BASE_URL`  | `http://localhost:3000` | 上游 API 地址。在 Docker compose 内使用服务名（`http://server:3000`）。 |
+| `API_PREFIX`    | `/api`                  | 上游处理 JSON 请求的路径前缀。                                          |
+| `STATIC_PREFIX` | `/static`               | 上游提供静态文件（3D 模型）的路径前缀。                                 |
 
-::: tip Why no `VITE_*` variables here?
-Putting the API host into the bundle means rebuilding for every deployment target. EcoCtrl chose to keep the API host out of the bundle entirely; only the proxy layer needs to know it. See [Architecture](/reference/architecture#runtime-topologies) for how the rewrite happens in each environment.
+::: tip 为什么这里没有 `VITE_*` 变量？
+把 API 主机塞进 bundle 意味着每次部署目标变化都要重新构建。EcoCtrl 选择把 API 主机完全隔离在 bundle 之外，仅由代理层感知。具体实现见 [架构总览 — 运行时拓扑](/reference/architecture#运行时拓扑)。
 :::
 
-## Docker Compose (`docker/.env.local`)
+## Docker Compose（`docker/.env.local`）
 
-`docker/compose.yml` interpolates these into the `server` service environment:
+`docker/compose.yml` 会把以下变量插值到 `server` 服务的环境中：
 
-| Variable     | Description                                     |
-| ------------ | ----------------------------------------------- |
-| `JWT_SECRET` | Required. Mounted into the server container.    |
-| `BASE_URL`   | Optional. Forwarded to the server's `BASE_URL`. |
-| `APP_ID`     | Optional. Forwarded to the server's `APP_ID`.   |
+| 变量         | 说明                              |
+| ------------ | --------------------------------- |
+| `JWT_SECRET` | 必填。挂载到服务端容器。          |
+| `BASE_URL`   | 可选。转发到服务端的 `BASE_URL`。 |
+| `APP_ID`     | 可选。转发到服务端的 `APP_ID`。   |
 
-Database credentials, ports and `DATABASE_URL` are hardcoded inside `compose.yml` so the stack works out of the box. Edit the compose file if you need different credentials or different ports.
+数据库凭据、端口与 `DATABASE_URL` 都直接写死在 `compose.yml` 里，开箱即用。如需修改，请编辑 compose 文件。
 
-## Order of precedence
+## 优先级顺序
 
-When the same variable is set in multiple places, EcoCtrl resolves it in this order (highest wins):
+同一变量在多个位置出现时，EcoCtrl 按以下顺序解析（高优先级在前）：
 
-1. **Shell environment** — `JWT_SECRET=... node index.mjs`.
-2. **Per-app `.env.local`** — `apps/admin/.env.local`, `apps/web/.env.local`, `packages/server/.env.local`.
-3. **Per-app `.env.example`** — used by tests / fallbacks only.
-4. **Built-in defaults** inside the server.
+1. **Shell 环境变量** — `JWT_SECRET=... node index.mjs`。
+2. **每个 App 的 `.env.local`** — `apps/admin/.env.local`、`apps/web/.env.local`、`packages/server/.env.local`。
+3. **每个 App 的 `.env.example`** — 仅作为兜底/测试用。
+4. **服务端中的内置默认值**。

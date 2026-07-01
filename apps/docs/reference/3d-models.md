@@ -1,104 +1,104 @@
-# 3D Models
+# 3D 模型
 
-EcoCtrl supports interactive 3D building visualization through Babylon.js. Administrators upload glTF/glB models via the admin dashboard; the public web portal renders them with configurable camera angles, lighting and annotated hotspots.
+EcoCtrl 通过 Babylon.js 支持交互式 3D 建筑可视化。管理员通过 admin 后台上传 glTF/glB 模型；公共 web 门户以可配置的相机角度、光照和标注热点渲染它们。
 
-## Upload pipeline
+## 上传管道
 
 ### Admin UI
 
-The **Models** page in the admin dashboard provides:
+admin 后台的**模型**页面提供：
 
-- **ModelFileZone.tsx** — drag-and-drop upload area with format validation.
-- **ModelViewer.tsx** — preview the model before publishing using Google Model Viewer.
-- Scene configuration panel for camera preset, ambient light and hotspot placement.
+- **ModelFileZone.tsx** — 带格式校验的拖拽上传区域。
+- **ModelViewer.tsx** — 使用 Google Model Viewer 在发布前预览模型。
+- 场景配置面板，用于设置相机预设、环境光和热点位置。
 
-### Supported formats
+### 支持格式
 
-- **glTF 2.0** (`.gltf` + `.bin` + textures)
-- **glB** (binary glTF, `.glb`) — preferred for single-file uploads
+- **glTF 2.0**（`.gltf` + `.bin` + 纹理）
+- **glB**（二进制 glTF，`.glb`）— 单文件上传的首选
 
-Other formats (FBX, OBJ, STL) are not supported directly. Convert to glB using Blender or online converters before upload.
+其他格式（FBX、OBJ、STL）不直接支持。上传前请使用 Blender 或在线转换器转换为 glB。
 
-## Data model
+## 数据模型
 
 ### `models`
 
-Uploaded 3D model metadata.
+已上传的 3D 模型元数据。
 
-| Column        | Type        | Notes                                     |
-| ------------- | ----------- | ----------------------------------------- |
-| `id`          | uuid PK     |                                           |
-| `name`        | varchar     | Original filename.                        |
-| `fileUrl`     | varchar     | Public URL: `/static/models/<filename>`.  |
-| `fileSize`    | bigint      | Bytes.                                    |
-| `mimeType`    | varchar     | `model/gltf+json` or `model/gltf-binary`. |
-| `description` | text        | Optional.                                 |
-| `createdAt`   | timestamptz |                                           |
+| 列            | 类型        | 说明                                       |
+| ------------- | ----------- | ------------------------------------------ |
+| `id`          | uuid PK     |                                            |
+| `name`        | varchar     | 原始文件名。                               |
+| `fileUrl`     | varchar     | 公共 URL：`/static/models/<filename>`。    |
+| `fileSize`    | bigint      | 字节数。                                   |
+| `mimeType`    | varchar     | `model/gltf+json` 或 `model/gltf-binary`。 |
+| `description` | text        | 可选。                                     |
+| `createdAt`   | timestamptz |                                            |
 
 ### `dashboard_models`
 
-Single-row scene configuration.
+单行场景配置。
 
-| Column                  | Type        | Notes                                                     |
-| ----------------------- | ----------- | --------------------------------------------------------- |
-| `id`                    | serial PK   |                                                           |
-| `modelFileUrl`          | varchar     | Active model file URL.                                    |
-| `cameraPreset`          | varchar     | Named camera angle (`Default_View_01`, `Top_View`, etc.). |
-| `ambientLightIntensity` | real        | 0–1, default 0.85.                                        |
-| `hotspots`              | jsonb       | Array of `{x, y, z, label, targetId}`.                    |
-| `labels`                | jsonb       | Array of `{position: {x,y,z}, text, color}`.              |
-| `updatedAt`             | timestamptz |                                                           |
+| 列                      | 类型        | 说明                                               |
+| ----------------------- | ----------- | -------------------------------------------------- |
+| `id`                    | serial PK   |                                                    |
+| `modelFileUrl`          | varchar     | 当前模型文件 URL。                                 |
+| `cameraPreset`          | varchar     | 命名相机角度（`Default_View_01`、`Top_View` 等）。 |
+| `ambientLightIntensity` | real        | 0–1，默认 0.85。                                   |
+| `hotspots`              | jsonb       | `{x, y, z, label, targetId}` 数组。                |
+| `labels`                | jsonb       | `{position: {x,y,z}, text, color}` 数组。          |
+| `updatedAt`             | timestamptz |                                                    |
 
-## Web portal rendering
+## Web 门户渲染
 
-`apps/web/app/components/dashboard/building-view.tsx` loads the active model into a Babylon.js scene:
+`apps/web/app/components/dashboard/building-view.tsx` 将活动模型加载到 Babylon.js 场景中：
 
 ```ts
-// Simplified flow
+// 简化流程
 const config = await fetch("/api/public/model").then((r) => r.json());
 const engine = new Engine(canvas, true);
 const scene = new Scene(engine);
 await SceneLoader.ImportMeshAsync("", config.modelFileUrl, "", scene);
-// Apply camera preset, ambient light, hotspots and labels from config
+// 从配置应用相机预设、环境光、热点和标签
 ```
 
-### Camera presets
+### 相机预设
 
-Camera presets are named views stored in the model's glTF data or overridden in `dashboard_models.cameraPreset`. Common presets:
+相机预设是存储在模型 glTF 数据中的命名视图，或在 `dashboard_models.cameraPreset` 中覆盖。常用预设：
 
-| Preset            | Description            |
-| ----------------- | ---------------------- |
-| `Default_View_01` | Front-facing overview. |
-| `Top_View`        | Bird's eye view.       |
-| `Side_View`       | Left-side elevation.   |
+| 预设              | 说明         |
+| ----------------- | ------------ |
+| `Default_View_01` | 正面概览。   |
+| `Top_View`        | 鸟瞰图。     |
+| `Side_View`       | 左侧立面图。 |
 
-### Hotspots
+### 热点
 
-Hotspots are clickable markers placed at 3D coordinates. When clicked, they can:
+热点是放置在 3D 坐标处的可点击标记。点击时可以：
 
-- Display a tooltip with the `label` text.
-- Navigate to a specific floor or system page.
-- Show real-time IoT data for the associated `targetId`.
+- 显示 `label` 文本的工具提示。
+- 导航到特定楼层或系统页面。
+- 显示关联 `targetId` 的实时 IoT 数据。
 
-### Labels
+### 标签
 
-Labels are persistent text annotations floating at fixed 3D positions. They are useful for marking building sections, equipment rooms or energy zones.
+标签是固定在 3D 位置的持久文本注释。适用于标记建筑分区、设备间或能耗区域。
 
 ## API
 
-| Method | Path                   | Description                    |
-| ------ | ---------------------- | ------------------------------ |
-| GET    | `/api/public/model`    | Public scene config (no auth). |
-| GET    | `/api/models`          | List uploaded models.          |
-| POST   | `/api/models`          | Upload a new model.            |
-| GET    | `/api/models/:id`      | Get model metadata.            |
-| DELETE | `/api/models/:id`      | Delete model and file.         |
-| GET    | `/api/dashboard-model` | Get full scene config.         |
-| PUT    | `/api/dashboard-model` | Update scene config.           |
+| 方法   | 路径                   | 说明                       |
+| ------ | ---------------------- | -------------------------- |
+| GET    | `/api/public/model`    | 公开场景配置（无需认证）。 |
+| GET    | `/api/models`          | 列出已上传模型。           |
+| POST   | `/api/models`          | 上传新模型。               |
+| GET    | `/api/models/:id`      | 获取模型元数据。           |
+| DELETE | `/api/models/:id`      | 删除模型和文件。           |
+| GET    | `/api/dashboard-model` | 获取完整场景配置。         |
+| PUT    | `/api/dashboard-model` | 更新场景配置。             |
 
-## File serving
+## 文件服务
 
-Models are served as static files at `/static/models/<filename>`. Fastify's `fastify-static` plugin handles this:
+模型通过 `/static/models/<filename>` 作为静态文件提供。Fastify 的 `fastify-static` 插件处理此路由：
 
 ```ts
 await fastify.register(fastifyStatic, {
@@ -107,4 +107,4 @@ await fastify.register(fastifyStatic, {
 });
 ```
 
-No authentication is required for `/static/models/*` — the web portal needs to load them directly in the browser.
+`/static/models/*` 无需认证——web 门户需要直接在浏览器中加载它们。

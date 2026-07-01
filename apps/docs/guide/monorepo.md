@@ -1,29 +1,29 @@
-# Monorepo Structure
+# Monorepo 结构
 
-EcoCtrl is a [pnpm](https://pnpm.io/) workspace with three apps and three packages. This page explains the non-obvious choices behind the layout — what is special about the `vite` dependency, why `@ecoctrl/ui` ships source files instead of a build, and how versions stay in sync.
+EcoCtrl 是一个 [pnpm](https://pnpm.io/) 工作区，包含 3 个应用与 3 个共享包。本页解释一些不那么显而易见的设计决定 — 比如 `vite` 这个依赖名为何特殊、`@ecoctrl/ui` 为什么直接发布源码、版本如何保持同步。
 
-## Workspace layout
+## 工作区结构
 
 ```
 ecoctrl/
 ├── apps/
-│   ├── admin/          # React 19 admin dashboard (Tab-based SPA)
-│   ├── web/            # React Router 7 + Babylon.js public portal
-│   └── docs/           # VitePress 2 documentation site
+│   ├── admin/          # React 19 管理后台（Tab 式 SPA）
+│   ├── web/            # React Router 7 + Babylon.js 公共门户
+│   └── docs/           # VitePress 2 文档站点
 ├── packages/
 │   ├── server/         # Fastify 5 REST API
-│   ├── ui/             # Shared component library (shadcn/ui style, source-only)
-│   └── shared/         # Zod schemas, types, and Vite tooling
-├── docker/             # Compose manifests and per-app Dockerfiles
-├── scripts/            # release and migration helpers
+│   ├── ui/             # 共享组件库（shadcn/ui 风格、源码分发）
+│   └── shared/         # Zod schema、类型与 Vite 工具
+├── docker/             # Compose 清单与各 App 的 Dockerfile
+├── scripts/            # 发布与迁移辅助脚本
 └── pnpm-workspace.yaml
 ```
 
-`pnpm-workspace.yaml` declares both `apps/*` and `packages/*` as workspaces. Cross-package imports use the published name (`@ecoctrl/ui`, `@ecoctrl/shared`, etc.) and resolve to the local sources during development.
+`pnpm-workspace.yaml` 同时声明了 `apps/*` 与 `packages/*` 为工作区。跨包导入直接使用发布名（`@ecoctrl/ui`、`@ecoctrl/shared` 等），开发期解析到本地源码。
 
-## Catalog-pinned dependencies
+## Catalog 锁定的依赖
 
-The workspace uses [pnpm catalogs](https://pnpm.io/catalogs) to pin shared dependency versions in one place:
+工作区使用 [pnpm catalogs](https://pnpm.io/catalogs) 把共享依赖的版本集中在一处：
 
 ```yaml
 catalog:
@@ -39,33 +39,33 @@ overrides:
   vitest: "catalog:"
 ```
 
-Two things are worth highlighting:
+两点值得注意：
 
-1. **`vite` is not Vite.** It is aliased to `@voidzero-dev/vite-plus-core` — Voidzero's "Vite Plus" distribution. Every package that imports from `vite` actually loads vite-plus. The `overrides` section forces the same alias even for transitive dependencies.
-2. **Adding or upgrading a shared dependency** is a one-line change in `pnpm-workspace.yaml`. Each app then references it with `"react": "catalog:"` in its own `package.json`.
+1. **`vite` 不是 Vite。** 它被别名指向 `@voidzero-dev/vite-plus-core` — Voidzero 的 “Vite Plus” 发行版。所有从 `vite` 导入的代码实际加载的是 vite-plus。`overrides` 段把这个别名延伸到所有间接依赖。
+2. **新增或升级共享依赖** 只需要改 `pnpm-workspace.yaml` 一行。每个 App 在自己的 `package.json` 里写 `"react": "catalog:"` 即可对齐。
 
-### What is vite-plus?
+### 什么是 vite-plus？
 
-vite-plus is a Voidzero-distributed superset of Vite that ships:
+vite-plus 是 Voidzero 发行的 Vite 超集，提供：
 
-- **`vp`**, an opinionated CLI bundling `dev`, `build`, `check`, `fmt` and `lint`. Both `apps/admin` and `apps/web` use `vp dev` and `vp build` instead of plain `vite`.
-- **Rolldown** as the bundler, accelerating production builds.
-- **OXC** for linting and formatting.
+- **`vp` CLI**，把 `dev`、`build`、`check`、`fmt`、`lint` 整合在一起。`apps/admin` 与 `apps/web` 都用 `vp dev` / `vp build` 替代原生 `vite`。
+- **Rolldown** 作为打包器，加速生产构建。
+- **OXC** 提供 lint 与格式化能力。
 
-Because the API surface is compatible with Vite's, plugins such as `@vitejs/plugin-react` and `@tailwindcss/vite` continue to work unmodified.
+由于 API 兼容标准 Vite，`@vitejs/plugin-react`、`@tailwindcss/vite` 等插件可以原样工作。
 
-## Shared utilities (`@ecoctrl/shared`)
+## 共享工具（`@ecoctrl/shared`）
 
-`packages/shared` exposes:
+`packages/shared` 暴露：
 
-- **Zod schemas** under `types/api/` — used by the server for request/response validation and by the frontends for type-safe fetch clients. Sharing the same `z.infer` types ensures the contract cannot drift.
-- **`createDevProxy(apiBaseUrl, options?)`** — returns a Vite `server.proxy` block that forwards `/api` and `/static` to the API only when the URL is `localhost`. In production the rewrite happens at the reverse proxy layer instead.
-- **`resolveUiAlias()`** — a Vite plugin that fixes `@/` imports across the package boundary; see below.
-- **`viteConfig`** — the default base config used by every frontend app, wiring up TailwindCSS, sort-imports, lint, format and type checks.
+- **Zod schema**（`types/api/`）— 服务端用来校验请求/响应，前端用来生成类型安全的 fetch 客户端。共享同一份 `z.infer` 类型，确保协议不会偏移。
+- **`createDevProxy(apiBaseUrl, options?)`** — 返回一个 Vite `server.proxy` 配置，在 URL 是 `localhost` 时把 `/api` 与 `/static` 转发到 API。生产环境的重写交给反向代理处理。
+- **`resolveUiAlias()`** — 一个 Vite 插件，跨包修正 `@/` 别名（见下文）。
+- **`viteConfig`** — 各前端 App 的默认基础配置，预装 TailwindCSS、import 排序、lint、format、类型检查等。
 
-## The `@ecoctrl/ui` package — source-distributed
+## `@ecoctrl/ui` — 源码分发
 
-Most workspace UI libraries ship a compiled bundle under `dist/`. `@ecoctrl/ui` does **not**:
+大多数工作区 UI 库都会发布编译过的 `dist/`。`@ecoctrl/ui` **不会**：
 
 ```jsonc
 // packages/ui/package.json
@@ -79,53 +79,41 @@ Most workspace UI libraries ship a compiled bundle under `dist/`. `@ecoctrl/ui` 
 }
 ```
 
-The library exports `cn`, `ThemeProvider`, and a curated set of shadcn-style components built on top of [Base UI](https://base-ui.com/). They are imported as TypeScript source and bundled by each consuming app.
+库导出 `cn`、`ThemeProvider`，以及一组基于 [Base UI](https://base-ui.com/) 的 shadcn 风格组件。它们以 TypeScript 源码形式被 import，并由每个消费 App 的打包器统一打包。
 
-### Why a Vite plugin is needed
+### 为什么需要一个 Vite 插件
 
-When `apps/admin/src/somewhere.tsx` imports from `@ecoctrl/ui`, that source still contains relative aliases like `@/lib/utils`. From admin's perspective `@` points to admin's own `src/`, not to ui's. The `resolveUiAlias()` plugin in `@ecoctrl/shared` rewrites those aliases back to the ui package's own `src/` and tries each TypeScript extension explicitly (Rolldown does not auto-probe extensions in production). Both `apps/admin` and `apps/web` already include it in their `vite.config.ts`.
+当 `apps/admin/src/somewhere.tsx` 从 `@ecoctrl/ui` 导入时，源码里仍有诸如 `@/lib/utils` 之类的相对别名。从 admin 的角度看，`@` 指向 admin 自己的 `src/`，而不是 ui 包。`@ecoctrl/shared` 中的 `resolveUiAlias()` 插件会把这些别名重写到 ui 包自己的 `src/`，并显式尝试每种 TypeScript 扩展名（Rolldown 在生产构建时不会自动尝试扩展名）。`apps/admin` 与 `apps/web` 的 `vite.config.ts` 中已经包含该插件。
 
-The practical implication: **whenever you edit something in `packages/ui`, the change is picked up by every consuming app on the next reload — no build step required.**
+实际带来的便利：**只要修改 `packages/ui` 的源码，每个消费 App 在下次刷新时就能看到效果，无需任何构建步骤。**
 
-## Server build: Rolldown with auto-emitted `dist/package.json`
+## 服务端构建：Rolldown 自动产出 `dist/package.json`
 
-`packages/server` is bundled by [Rolldown](https://rolldown.rs/). Its config (`rolldown.config.ts`) externalizes every bare specifier and Node built-in, so the resulting `dist/index.mjs` is a thin entry point that imports from `node_modules/`.
+`packages/server` 由 [Rolldown](https://rolldown.rs/) 打包。它的 `rolldown.config.ts` 把所有 bare specifier 与 Node 内置模块都标为外部依赖，因此最终的 `dist/index.mjs` 只是一个轻量入口，运行时仍然 import `node_modules/`。
 
-A custom plugin scans the bundle's external imports, looks up each version from the source `package.json`, and emits a fresh `dist/package.json` listing only the runtime dependencies. The resulting bundle is self-contained and can be installed with a plain `pnpm install --prod`.
+一个自定义插件会扫描 bundle 用到的外部 import，从源 `package.json` 中查找版本并写出新的 `dist/package.json`，仅列出真正使用的运行时依赖。产物自包含，部署到任何主机只需 `pnpm install --prod`。
 
-## Versioning with Changesets
+## 使用 Changesets 管理版本
 
-The repo uses [Changesets](https://github.com/changesets/changesets) for versioning. Two configuration choices are worth knowing:
+仓库使用 [Changesets](https://github.com/changesets/changesets) 管理版本。两个配置项需要了解：
 
-- **Fixed packages**: `@ecoctrl/admin`, `@ecoctrl/web` and `@ecoctrl/server` share the same version number — bumping any one of them bumps all three. Docker image tags are derived from this shared version.
-- **Ignored packages**: `@ecoctrl/ui` and `@ecoctrl/shared` do not participate in versioning. They evolve continuously alongside the apps that consume them.
+- **Fixed 包**：`@ecoctrl/admin`、`@ecoctrl/web` 与 `@ecoctrl/server` 共享同一个版本号 — 任意一个升级都会带动另外两个一起升级。Docker 镜像标签也由这个共享版本决定。
+- **Ignored 包**：`@ecoctrl/ui` 与 `@ecoctrl/shared` 不参与版本管理，跟随消费它们的 App 持续演进。
 
-Create a changeset before opening a PR with user-visible changes:
+提交带有用户可见变更的 PR 之前，先创建一个 changeset：
 
 ```bash
 pnpm changeset
-# pick the affected package(s), describe the change, commit the markdown.
+# 选择受影响的包，描述变更，提交生成的 markdown 文件。
 ```
 
-The release workflow (see [Deployment](/reference/deployment)) takes care of bumping versions, generating the changelog and publishing the release.
+发布工作流（见 [部署指南](/reference/deployment)）会自动完成版本号升级、changelog 生成与 release 发布。
 
-## Path aliases recap
+## `@ecoctrl/ui` — 共享组件库
 
-| App               | Alias             | Resolves to                                          |
-| ----------------- | ----------------- | ---------------------------------------------------- |
-| `apps/admin`      | `@/`              | `apps/admin/src/`                                    |
-| `apps/web`        | `~/`              | `apps/web/app/`                                      |
-| `apps/web`        | `~/components/ui` | `apps/web/app/components/ui` (project shadcn copies) |
-| `packages/server` | `@/`              | `packages/server/src/`                               |
-| `packages/ui`     | `@/`              | `packages/ui/src/` (rewritten by `resolveUiAlias()`) |
+`packages/ui` 是一个**源码分发**的 UI 库，基于 [Base UI](https://base-ui.com/)（Radix v2）构建，使用 Tailwind CSS v4 + `class-variance-authority` 进行样式处理。
 
-If you encounter `@/` inside a `@ecoctrl/ui` source file, that is the case `resolveUiAlias()` handles for you — do not change it.
-
-## `@ecoctrl/ui` — the shared component library
-
-`packages/ui` is a **source-distributed** UI library built on top of [Base UI](https://base-ui.com/) (Radix v2) and styled with Tailwind CSS v4 + `class-variance-authority`.
-
-### Adding a shadcn component
+### 添加 shadcn 组件
 
 ```bash
 cd packages/ui
@@ -133,31 +121,48 @@ pnpm dlx shadcn@latest add <component-name> -y
 pnpm generate-proxies
 ```
 
-`generate-proxies` syncs the `package.json` `exports` field so consumers can import subpaths like `@ecoctrl/ui/button`.
+`generate-proxies` 会同步 `package.json` 的 `exports` 字段，使消费者可以使用子路径导入：
 
-### Adding a custom component
+```tsx
+import { Field } from "@ecoctrl/ui/field";
+import { buttonVariants } from "@ecoctrl/ui/button";
+```
 
-Create in `src/components/ui/` (shadcn base) or `src/components/community/` (project-specific). Then run `pnpm generate-proxies`.
+### 添加自定义组件
 
-### Conventions
+在 `src/components/ui/`（shadcn 基础）或 `src/components/community/`（项目专属）中创建，然后运行 `pnpm generate-proxies`。
 
-- Use `cn()` from `@/lib/utils` for class merging.
-- Use `cva` for components with style variants.
-- Add `data-slot="component-name"` to root elements.
-- Export named exports; compound components export all sub-parts.
-- Icons come from `lucide-react`.
+### 约定
 
-### UI Adapter pattern
+- 使用 `cn()` 来自 `@/lib/utils` 进行类名合并。
+- 使用 `cva` 为带样式变体的组件。
+- 在根元素上添加 `data-slot="component-name"`。
+- 命名导出；复合组件导出所有子部分。
+- 图标使用 `lucide-react`。
 
-Apps should not modify generated shadcn base components directly. Instead, create wrappers in the app's own `components/` directory. This keeps the library clean while allowing per-app customization.
+### UI Adapter 模式
 
-## `@ecoctrl/shared` — shared infrastructure
+应用不应直接修改生成的 shadcn 基础组件。而是在应用自己的目录中创建包装器，保持库的清洁同时允许每个应用定制。
 
-`packages/shared` exposes:
+## `@ecoctrl/shared` — 共享基础设施
 
-- **TypeScript configs** (`tsconfig.base.json`, `tsconfig.app.json`, `tsconfig.node.json`) used by every app.
-- **Vite base config** (`vite.config.base.ts`) wiring Tailwind, sort-imports, lint, format and type checks.
-- **Zod schemas** under `types/api/` — shared request/response types between server and frontends.
-- **`createDevProxy()`** — Vite proxy block that forwards `/api` and `/static` to the API only on `localhost`.
-- **`resolveUiAlias()`** — Vite plugin that rewrites `@/` inside `@ecoctrl/ui` source back to the ui package's own `src/`.
-- **`gen-env-example.ts`** — script that generates `.env.example` files from `.env.local` comments, used by `env:sync` and `env:check` scripts in every package.
+`packages/shared` 暴露：
+
+- **TypeScript 配置**（`tsconfig.base.json`、`tsconfig.app.json`、`tsconfig.node.json`）被每个应用使用。
+- **Vite 基础配置**（`vite.config.base.ts`）预装 Tailwind、import 排序、lint、format 和类型检查。
+- **Zod schema**（`types/api/`）— 服务端和前端共享的请求/响应类型。
+- **`createDevProxy()`** — 仅在 `localhost` 时把 `/api` 和 `/static` 转发到 API 的 Vite 代理块。
+- **`resolveUiAlias()`** — 将 `@ecoctrl/ui` 源码中的 `@/` 重写回 ui 包自身的 `src/`。
+- **`gen-env-example.ts`** — 从 `.env.local` 注释生成 `.env.example` 的脚本，每个包的 `env:sync` 和 `env:check` 都使用它。
+
+## 路径别名速查
+
+| App               | 别名              | 解析到                                                     |
+| ----------------- | ----------------- | ---------------------------------------------------------- |
+| `apps/admin`      | `@/`              | `apps/admin/src/`                                          |
+| `apps/web`        | `~/`              | `apps/web/app/`                                            |
+| `apps/web`        | `~/components/ui` | `apps/web/app/components/ui`（web 项目本地的 shadcn 副本） |
+| `packages/server` | `@/`              | `packages/server/src/`                                     |
+| `packages/ui`     | `@/`              | `packages/ui/src/`（由 `resolveUiAlias()` 重写）           |
+
+如果你在 `@ecoctrl/ui` 源码里看到 `@/`，那正是 `resolveUiAlias()` 处理的场景，请保持原样。
