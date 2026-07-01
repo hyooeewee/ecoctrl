@@ -20,7 +20,7 @@ hero:
       link: https://github.com/hyooeewee/ecoctrl
     - theme: alt
       text: 用户手册 📥
-      link: /EcoCtrl(易控)用户手册.pdf
+      link: /EcoCtrl User Manual.pdf
 
 features:
   - icon: 🏢
