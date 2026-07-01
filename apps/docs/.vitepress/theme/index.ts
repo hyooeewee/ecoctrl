@@ -2,7 +2,7 @@ import DefaultTheme from "vitepress/theme";
 import type { EnhanceAppContext } from "vitepress";
 import { enhanceAppWithTabs } from "vitepress-plugin-tabs/client";
 
-import "./style/cjk-fonts.css";
+import "./style/index.css";
 
 export default {
   ...DefaultTheme,
