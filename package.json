@@ -45,7 +45,7 @@
     "sharp": "^0.35.1",
     "tsx": "catalog:",
     "vite-plus": "catalog:",
-    "vitest": "^4.1.5",
+    "vitest": "catalog:",
     "wrangler": "^4.90.0"
   },
   "packageManager": "pnpm@11.7.0"
