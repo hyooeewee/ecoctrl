@@ -7,10 +7,9 @@
     "dev": "vitepress dev --port 5174",
     "build": "vitepress build",
     "preview": "vitepress preview --port 5174",
-    "export": "press-export-pdf export ../docs"
+    "export": "press-export-pdf export ."
   },
   "devDependencies": {
-    "oxc-minify": "^0.127.0",
     "vitepress": "2.0.0-alpha.17",
     "vitepress-export-pdf": "^1.0.0",
     "vitepress-plugin-tabs": "^0.9.0"
