@@ -11,6 +11,7 @@
   },
   "devDependencies": {
     "mermaid": "^11.16.0",
+    "oxc-minify": "^0.138.0",
     "pdf-lib": "^1.17.1",
     "vitepress": "2.0.0-alpha.17",
     "vitepress-export-pdf": "^1.0.0",
