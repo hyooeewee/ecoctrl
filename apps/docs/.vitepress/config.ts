@@ -148,7 +148,7 @@ export const deploymentSidebar = [
 ];
 
 // ========================================
-// Vite Plugin — Serve raw markdown on .md URLs
+// Vite Plugin — Serve raw markdown (dev)
 // ========================================
 
 const serveRawMarkdown = {
@@ -157,16 +157,13 @@ const serveRawMarkdown = {
   configureServer(server) {
     server.middlewares.use((req, res, next) => {
       const url = req.url || "";
-      if (!url.endsWith(".md") || url.includes("node_modules")) return next();
-
-      const isDirectNavigation =
-        req.headers["sec-fetch-dest"] === "document" ||
-        (req.headers.accept || "").includes("text/html");
-
-      if (!isDirectNavigation) return next();
+      // Strip query params and hash to get the actual path
+      const path = url.split("?")[0].split("#")[0];
+      // Only respond to direct browser navigation to .md files
+      if (!path.endsWith(".md") || req.headers["sec-fetch-dest"] !== "document") return next();
 
       try {
-        const decoded = decodeURIComponent(url.split("?")[0].split("#")[0]);
+        const decoded = decodeURIComponent(path);
         const root = server.config.root;
         let relativePath = decoded.replace(/^\//, "");
         let filePath = `${root}/${relativePath}`;
@@ -183,10 +180,9 @@ const serveRawMarkdown = {
           res.end(readFileSync(filePath, "utf-8"));
           return;
         }
-      } catch {
-        // fall through to next middleware
+      } catch (e) {
+        console.error("[serveRawMarkdown]", e);
       }
-
       next();
     });
   },

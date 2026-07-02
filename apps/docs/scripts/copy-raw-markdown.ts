@@ -6,7 +6,7 @@
 //
 // Runs after `vitepress build` — called from the `build` npm script.
 
-import { existsSync, mkdirSync, copyFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, copyFileSync, readdirSync } from "node:fs";
 import { join, relative, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
