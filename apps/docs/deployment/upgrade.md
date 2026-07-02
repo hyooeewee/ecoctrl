@@ -109,16 +109,16 @@ git diff v1.2.3..v2.0.0 -- packages/server/src/routes/
 ### 回滚数据库
 
 ```bash
-# 1. 停止服务
+### 停止服务
 docker compose down
 
-# 2. 恢复数据库（使用升级前的备份）
+### 恢复数据库（使用升级前的备份）
 cat pre_upgrade_20260701.sql | docker compose exec -T postgres psql -U ecoctrl -d ecoctrl
 
-# 3. 回滚镜像版本
+### 回滚镜像版本
 # 编辑 compose.yaml，将 image 标签改回旧版本号
 
-# 4. 启动服务
+### 启动服务
 docker compose up -d
 ```
 
@@ -150,16 +150,16 @@ services:
 ### 生产环境滚动升级
 
 ```bash
-# 1. 先升级 API 服务
+### 先升级 API 服务
 docker compose up -d server
 # 检查：curl http://localhost:3000/health
 
-# 2. 再升级前端
+### 再升级前端
 docker compose up -d web admin
 
-# 3. 最后手动执行数据库迁移（如未自动运行）
+### 最后手动执行数据库迁移（如未自动运行）
 docker compose exec server npx drizzle-kit migrate
 
-# 4. 全面验证
+### 全面验证
 docker compose ps
 ```

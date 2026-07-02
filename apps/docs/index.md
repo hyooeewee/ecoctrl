@@ -10,17 +10,8 @@ hero:
     alt: EcoCtrl
   actions:
     - theme: brand
-      text: 快速入门
+      text: 什么是 EcoCtrl ?
       link: /guide/getting-started/platform-overview
-    - theme: alt
-      text: 用户指南
-      link: /guide/getting-started/login-auth
-    - theme: alt
-      text: 部署指南
-      link: /deployment/requirements
-    - theme: alt
-      text: GitHub ↗
-      link: https://github.com/hyooeewee/ecoctrl
     - theme: alt
       text: 用户手册 📖
       link: /EcoCtrl User Manual.pdf

@@ -30,6 +30,8 @@ description: 工作流列表、启用/禁用、手动触发、触发器类型
 - 适用于测试工作流逻辑
 - 执行记录会出现在 [执行记录](/guide/workflows/execution-logs) 中
 
+> 技术细节：工作流引擎架构与 DSL 参考见 [工作流引擎](/reference/subsystems/workflow-engine.md)
+
 ## 触发器类型
 
 | 类型     | 说明                                                  |

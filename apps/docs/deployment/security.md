@@ -25,14 +25,14 @@ openssl rand -base64 64
 更换 `JWT_SECRET` 会使所有已签发的 Access Token **立即失效**，但 Refresh Token 仍然有效：
 
 ```bash
-# 1. 更新环境变量
+### 更新环境变量
 # docker/.env.local
 JWT_SECRET=<new-secret>
 
-# 2. 重启 API 服务
+### 重启 API 服务
 docker compose up -d server
 
-# 3. 【可选】强制所有用户重新登录（使所有 Refresh Token 失效）
+### 【可选】强制所有用户重新登录（使所有 Refresh Token 失效）
 docker compose exec postgres psql -U ecoctrl -d ecoctrl -c "TRUNCATE refresh_tokens;"
 ```
 

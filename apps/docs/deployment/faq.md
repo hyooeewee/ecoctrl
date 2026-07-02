@@ -98,14 +98,14 @@ WEB_PORT=8082
 **解决**：
 
 ```bash
-# 1. 检查 OAuth 配置是否加载
+# 检查 OAuth 配置是否加载
 curl http://localhost:3000/api/auth/oauth/providers
 
-# 2. 确认浏览器允许弹窗
-# 3. 检查回调 URL 是否与 OAuth 提供商后台配置一致
+# 确认浏览器允许弹窗
+# 检查回调 URL 是否与 OAuth 提供商后台配置一致
 # 回调 URL 格式：{BASE_URL}/api/auth/oauth/{provider}/callback
 
-# 4. 查看服务端日志中的 OAuth 错误
+# 查看服务端日志中的 OAuth 错误
 docker compose logs server | grep -i oauth
 ```
 
@@ -238,10 +238,10 @@ docker compose -f compose.build.yaml build --memory=1g admin
 **排查步骤**：
 
 ```bash
-# 1. 检查数据库连接数
+### 检查数据库连接数
 docker compose exec postgres psql -U ecoctrl -c "SELECT count(*) FROM pg_stat_activity;"
 
-# 2. 检查慢查询
+### 检查慢查询
 docker compose exec postgres psql -U ecoctrl -c "
 SELECT query, calls, mean_time
 FROM pg_stat_statements
@@ -249,7 +249,7 @@ ORDER BY mean_time DESC
 LIMIT 10;
 "
 
-# 3. 检查服务器资源使用
+### 检查服务器资源使用
 docker compose stats
 ```
 
@@ -260,13 +260,13 @@ docker compose stats
 **排查**：
 
 ```bash
-# 1. 检查 SMTP 配置
+### 检查 SMTP 配置
 docker compose logs server | grep -i smtp
 
-# 2. 测试 SMTP 连接
+### 测试 SMTP 连接
 # 在 Admin 后台系统配置 > SMTP 设置中点击「发送测试邮件」
 
-# 3. 检查 pg-boss 队列中待发送邮件
+### 检查 pg-boss 队列中待发送邮件
 docker compose exec postgres psql -U ecoctrl -c "
 SELECT count(*) FROM pgboss.job WHERE name = 'send-email' AND state = 'created';
 "
@@ -290,16 +290,16 @@ SELECT count(*) FROM pgboss.job WHERE name = 'send-email' AND state = 'created';
 **清理步骤**：
 
 ```bash
-# 1. 清理 Docker 无用的镜像和卷
+### 清理 Docker 无用的镜像和卷
 docker system prune -af
 
-# 2. 检查数据卷使用情况
+### 检查数据卷使用情况
 docker system df
 
-# 3. 清理 MinIO 中的过期模型文件
+### 清理 MinIO 中的过期模型文件
 # Admin 后台 > 存储管理 > 清理未引用模型
 
-# 4. 检查 PostgreSQL 数据大小
+### 检查 PostgreSQL 数据大小
 docker compose exec postgres psql -U ecoctrl -c "
 SELECT pg_database_size('ecoctrl')/1024/1024 as size_mb;
 "

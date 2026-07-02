@@ -98,17 +98,17 @@ interface BackupSchedule {
 ### 恢复完整备份
 
 ```bash
-# 1. 停止 API 服务（避免恢复期间写入数据）
+# 停止 API 服务（避免恢复期间写入数据）
 docker compose stop server
 
-# 2. 删除旧数据库（谨慎操作！）
+# 删除旧数据库（谨慎操作！）
 docker compose exec postgres psql -U ecoctrl -c "DROP DATABASE IF EXISTS ecoctrl;"
 docker compose exec postgres psql -U ecoctrl -c "CREATE DATABASE ecoctrl;"
 
-# 3. 恢复数据
+# 恢复数据
 cat ecoctrl-backup-20250101_030000.sql | docker compose exec -T postgres psql -U ecoctrl -d ecoctrl
 
-# 4. 启动 API 服务
+# 启动 API 服务
 docker compose start server
 ```
 
