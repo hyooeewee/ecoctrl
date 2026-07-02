@@ -1,5 +1,6 @@
 import { defineConfig } from "vitepress";
 import { tabsMarkdownPlugin } from "vitepress-plugin-tabs";
+import { readFileSync, existsSync } from "node:fs";
 import { withMermaid } from "vitepress-plugin-mermaid";
 import { version } from "../../admin/package.json";
 
@@ -146,8 +147,54 @@ export const deploymentSidebar = [
   },
 ];
 
+// ========================================
+// Vite Plugin — Serve raw markdown on .md URLs
+// ========================================
+
+const serveRawMarkdown = {
+  name: "serve-raw-markdown",
+  apply: "serve",
+  configureServer(server) {
+    server.middlewares.use((req, res, next) => {
+      const url = req.url || "";
+      if (!url.endsWith(".md") || url.includes("node_modules")) return next();
+
+      const isDirectNavigation =
+        req.headers["sec-fetch-dest"] === "document" ||
+        (req.headers.accept || "").includes("text/html");
+
+      if (!isDirectNavigation) return next();
+
+      try {
+        const decoded = decodeURIComponent(url.split("?")[0].split("#")[0]);
+        const root = server.config.root;
+        let relativePath = decoded.replace(/^\//, "");
+        let filePath = `${root}/${relativePath}`;
+
+        // /some/path/index.md → also try /some/path.md
+        if (!existsSync(filePath) && relativePath.endsWith("/index.md")) {
+          const alt = relativePath.replace(/\/index\.md$/, "") + ".md";
+          filePath = `${root}/${alt}`;
+        }
+
+        if (existsSync(filePath)) {
+          res.setHeader("Content-Type", "text/markdown; charset=utf-8");
+          res.setHeader("Access-Control-Allow-Origin", "*");
+          res.end(readFileSync(filePath, "utf-8"));
+          return;
+        }
+      } catch {
+        // fall through to next middleware
+      }
+
+      next();
+    });
+  },
+};
+
 // Fix pnpm's hoisting issue with dayjs and @braintree/sanitize-url
 const vite = {
+  plugins: [serveRawMarkdown],
   resolve: {
     alias: [
       { find: /^dayjs$/, replacement: "dayjs/esm" },

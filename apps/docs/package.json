@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vitepress dev",
-    "build": "vitepress build",
+    "build": "vitepress build && node scripts/copy-raw-markdown.ts",
     "preview": "vitepress preview",
     "export": "press-export-pdf export . && node scripts/pagination.ts"
   },
