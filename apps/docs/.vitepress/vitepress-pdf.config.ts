@@ -49,7 +49,7 @@ const footerTemplate = `<div style="margin-bottom: -0.4cm; height: 70%; width: 1
 
 export default defineUserConfig({
   outFile: "EcoCtrl User Manual.pdf",
-  outDir: "public",
+  outDir: ".vitepress/dist",
   pdfOutlines: true,
   pdfOptions: {
     format: "A4",
@@ -63,7 +63,6 @@ export default defineUserConfig({
       top: 60,
     },
   },
-  routePatterns: ["!/changelog.html"],
   /** Order pages by their position in the sidebar hierarchy. */
   sorter(pageA, pageB) {
     const a = routePriority.get(pageA.path) ?? Infinity;

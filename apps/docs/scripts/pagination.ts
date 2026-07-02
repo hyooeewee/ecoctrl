@@ -2,7 +2,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
-const pathToPdf = "public/EcoCtrl User Manual.pdf";
+const pathToPdf = ".vitepress/dist/EcoCtrl User Manual.pdf";
 const existingPdfBytes = readFileSync(pathToPdf);
 const pdfDoc = await PDFDocument.load(existingPdfBytes);
 const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
