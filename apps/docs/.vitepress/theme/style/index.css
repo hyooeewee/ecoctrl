@@ -20,3 +20,24 @@
     display: none !important;
   }
 }
+
+/* ========================================
+   Auto-number headings (CSS counters)
+   ======================================== */
+.vp-doc {
+  counter-reset: h2-counter;
+}
+
+.vp-doc h2 {
+  counter-reset: h3-counter;
+}
+
+.vp-doc h2::before {
+  counter-increment: h2-counter;
+  content: counter(h2-counter) ". ";
+}
+
+.vp-doc h3::before {
+  counter-increment: h3-counter;
+  content: counter(h2-counter) "." counter(h3-counter) ". ";
+}
