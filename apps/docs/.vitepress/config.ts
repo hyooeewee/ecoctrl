@@ -1,7 +1,7 @@
 import { defineConfig } from "vitepress";
 import { tabsMarkdownPlugin } from "vitepress-plugin-tabs";
 
-const guideSidebar = [
+export const guideSidebar = [
   {
     text: "快速入门",
     items: [
@@ -80,7 +80,7 @@ const guideSidebar = [
   },
 ];
 
-const referenceSidebar = [
+export const referenceSidebar = [
   {
     text: "系统架构",
     items: [
@@ -126,7 +126,7 @@ const referenceSidebar = [
   },
 ];
 
-const deploymentSidebar = [
+export const deploymentSidebar = [
   {
     text: "部署运维",
     items: [
