@@ -49,7 +49,7 @@ const footerTemplate = `<div style="margin-bottom: -0.4cm; height: 70%; width: 1
 
 export default defineUserConfig({
   outFile: "EcoCtrl User Manual.pdf",
-  outDir: ".vitepress/dist",
+  outDir: "public",
   pdfOutlines: true,
   pdfOptions: {
     format: "A4",
