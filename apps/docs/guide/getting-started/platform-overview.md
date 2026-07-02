@@ -118,4 +118,4 @@ flowchart TB
 | `packages/ui`     | React + Base UI + TailwindCSS v4                | 共享组件库（shadcn/ui 风格）                |
 | `packages/shared` | Zod + TypeScript                                | 共享 schema、类型与 Vite 工具               |
 
-> 还在寻找更多信息？浏览左侧完整的 **用户指南** 与 **技术参考** 目录，或使用顶部的搜索功能查找关键词。
+> 还在寻找更多信息？查阅完整的 **用户指南** 与 **技术参考** 文档，或通过搜索功能查找关键词。

@@ -5,7 +5,7 @@ description: StatCard、EnergyTrendChart、EnergyBreakdownChart、Device/Alert/S
 
 # 仪表盘小组件参考
 
-![仪表盘小组件](/screenshots/web-3d.png)
+![仪表盘小组件](/screenshots/widgets.png)
 
 Web 门户的仪表盘由多种类型的小组件组成，每个组件展示不同维度的数据。
 

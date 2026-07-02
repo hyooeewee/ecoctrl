@@ -13,7 +13,7 @@ hero:
       text: 什么是 EcoCtrl ?
       link: /guide/getting-started/platform-overview
     - theme: alt
-      text: 用户手册 📖
+      text: 用户手册 📥
       link: /EcoCtrl User Manual.pdf
 
 features:

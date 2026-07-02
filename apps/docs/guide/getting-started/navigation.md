@@ -5,6 +5,8 @@ description: Admin 管理后台的 Tab 侧边栏导航架构、页面内子 Tab 
 
 # 导航与界面布局
 
+![Admin 侧边栏导航](/screenshots/navigation.png)
+
 EcoCtrl 提供两个前端入口——**Admin 管理后台**和 **Web 3D 驾驶舱**——它们的导航逻辑和页面布局各有不同。本文将系统性地介绍这两个入口的界面结构，帮助你快速找到所需功能。
 
 ---
