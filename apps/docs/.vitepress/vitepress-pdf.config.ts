@@ -28,6 +28,8 @@ function buildRoutePriority(
 }
 
 const routePriority = buildRoutePriority(guideSidebar, referenceSidebar, deploymentSidebar);
+// Place the index/home page first in the PDF — it is not in any sidebar.
+routePriority.set("/", -1);
 
 // ========================================
 // Template
