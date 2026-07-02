@@ -48,7 +48,7 @@ services:
     container_name: ecoctrl-server
     restart: always
     environment:
-      NODE_ENV: development
+      NODE_ENV: production
       PORT: '3000'
       HOST: 0.0.0.0
       DATABASE_URL: postgresql://ecoctrl:ecoctrl_secret@postgres:5432/ecoctrl
@@ -58,11 +58,9 @@ services:
       S3_SECRET_KEY: ecoctrl_secret
       S3_BUCKET_FILES: ecoctrl-files
       S3_BUCKET_MODELS: ecoctrl-models
-      S3_BUCKET_PLUGINS: ecoctrl-nodes
+      S3_BUCKET_NODES: ecoctrl-nodes
       S3_FORCE_PATH_STYLE: 'true'
-      INIT_ADMIN_USERNAME: admin
       INIT_ADMIN_PASSWORD: admin_secret
-      INIT_ADMIN_EMAIL: admin@example.com
     ports:
       - 3000:3000
     depends_on:
