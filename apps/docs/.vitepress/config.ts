@@ -1,5 +1,7 @@
 import { defineConfig } from "vitepress";
 import { tabsMarkdownPlugin } from "vitepress-plugin-tabs";
+import { withMermaid } from "vitepress-plugin-mermaid";
+import { version } from "../../admin/package.json";
 
 export const guideSidebar = [
   {
@@ -144,7 +146,17 @@ export const deploymentSidebar = [
   },
 ];
 
-export default defineConfig({
+// Fix pnpm's hoisting issue with dayjs and @braintree/sanitize-url
+const vite = {
+  resolve: {
+    alias: [
+      { find: /^dayjs$/, replacement: "dayjs/esm" },
+      { find: /^@braintree\/sanitize-url$/, replacement: "@braintree/sanitize-url" },
+    ],
+  },
+};
+
+export const config = defineConfig({
   title: "EcoCtrl",
   description: "EcoCtrl 能源与 IoT 控制平台 — 用户手册与技术参考",
   lastUpdated: true,
@@ -166,6 +178,8 @@ export default defineConfig({
   sitemap: {
     hostname: "https://docs.godot.qzz.io",
   },
+
+  vite,
 
   themeConfig: {
     logo: "/logo.svg",
@@ -209,6 +223,19 @@ export default defineConfig({
         link: "/deployment/requirements",
         activeMatch: "/deployment/",
       },
+      {
+        text: `v${version}`,
+        items: [
+          {
+            text: "最新版本",
+            link: "https://github.com/hyooeewee/ecoctrl/releases/latest",
+          },
+          {
+            text: "更新日志",
+            link: "https://github.com/hyooeewee/ecoctrl/blob/main/apps/admin/CHANGELOG.md",
+          },
+        ],
+      },
     ],
 
     sidebar: {
@@ -239,3 +266,5 @@ export default defineConfig({
     returnToTopLabel: "返回顶部",
   },
 });
+
+export default withMermaid(config);
