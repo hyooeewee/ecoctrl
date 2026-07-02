@@ -27,7 +27,7 @@ flowchart TB
 
     subgraph Storage["数据与外部系统"]
         PG[("PostgreSQL<br/>Drizzle ORM")]
-        Uploads["文件存储<br/>uploads/models/"]
+        MinIO["MinIO 对象存储 (S3)<br/>模型 · 文件"]
         IoT["第三方 IoT 网关<br/>自动刷新 Token"]
     end
 
@@ -35,7 +35,7 @@ flowchart TB
     Web --> Proxy
     Proxy --> Server
     Server --> PG
-    Server --> Uploads
+    Server --> MinIO
     Server --> IoT
 ```
 

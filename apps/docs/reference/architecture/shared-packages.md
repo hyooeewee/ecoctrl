@@ -173,32 +173,25 @@ export default defineConfig({
 
 ## 包依赖图
 
-```text
- packages/shared                    packages/ui
-（Zod Schema + Vite 配置）         （shadcn 组件源码）
-       │                                  │
-       │ 提供:                            │ 提供:
-       │  - Zod Schema 类型定义           │  - React 组件实现
-       │  - viteConfig 基座              │  - TailwindCSS 样式
-       │  - resolveUiAlias 插件          │  - Radix UI 原语封装
-       ▼                                  ▼
- ┌──────────────────────────────────────────────────┐
- │                Consumer Apps                      │
- │  apps/admin（React 19 SPA）                       │
- │  apps/web  （React Router 7 + BabylonJS 3D）     │
- │                                                   │
- │  vite.config.ts 继承 shared/viteConfig            │
- │  + 注册 resolveUiAlias()                          │
- └──────────────────────────────────────────────────┘
-       │
-       │ 提供:
-       │  - viteConfig（统一构建配置）
-       │  - resolveUiAlias（源码路径解析）
-       ▼
- ┌──────────────────────────────────────────────────┐
- │           vite build 编译流程                     │
- │  Rolldown 直接从 packages/ui/src/*.tsx 编译       │
- └──────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    subgraph Packages["共享包"]
+        Shared["packages/shared<br/>Zod Schema · Vite 配置"]
+        UI["packages/ui<br/>shadcn 组件源码"]
+    end
+
+    subgraph Apps["消费应用"]
+        Admin["apps/admin<br/>React 19 SPA"]
+        Web["apps/web<br/>React Router 7 · BabylonJS"]
+    end
+
+    subgraph Build["构建流程"]
+        Vite["vite build<br/>Rolldown 编译"]
+    end
+
+    Shared -- "viteConfig + resolveUiAlias" --> Apps
+    UI -- "组件源码" --> Apps
+    Apps --> Vite
 ```
 
 `packages/server` 不依赖 `@ecoctrl/ui` 或 `@ecoctrl/shared` — 它是独立的 Node.js Fastify 应用，拥有自己的依赖树。
