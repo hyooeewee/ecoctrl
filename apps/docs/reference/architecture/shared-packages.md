@@ -94,7 +94,7 @@ export default {
 
 ### 1. Zod Schema
 
-跨前后端共享的数据结构定义，位于 `packages/shared/src/schema/`：
+跨前后端共享的数据结构定义，位于 `packages/shared/types/api/`：
 
 - **用户相关**：`UserPreferences`、`UserProfile`、`LoginRequest`、`LoginResponse`
 - **3D 场景相关**：`DashboardModelConfig`（场景配置）、`DashboardModelLabel`（标签）、`LabelAction`（标签行为）

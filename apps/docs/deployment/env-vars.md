@@ -22,11 +22,9 @@ description: 完整变量表（JWT、数据库、AI、SMTP、OAuth、S3、日志
 
 ## 认证与初始管理员
 
-| 变量                     | 默认值              | 必填 | 说明                                                                                                     |
-| ------------------------ | ------------------- | ---- | -------------------------------------------------------------------------------------------------------- |
-| `INITIAL_ADMIN_PASSWORD` | —                   | 否   | 首次启动时创建的超级管理员密码。未设置则随机生成并输出到日志                                             |
-| `INIT_ADMIN_USERNAME`    | `admin`             | 否   | DEPRECATED — 与 `INITIAL_ADMIN_PASSWORD` 冲突时以 `INITIAL_ADMIN_PASSWORD` 为准（Docker Compose 中使用） |
-| `INIT_ADMIN_EMAIL`       | `admin@example.com` | 否   | 初始管理员邮箱                                                                                           |
+| 变量                     | 默认值 | 必填 | 说明                                                         |
+| ------------------------ | ------ | ---- | ------------------------------------------------------------ |
+| `INITIAL_ADMIN_PASSWORD` | —      | 否   | 首次启动时创建的超级管理员密码。未设置则随机生成并输出到日志 |
 
 ## 日志
 
@@ -95,19 +93,19 @@ description: 完整变量表（JWT、数据库、AI、SMTP、OAuth、S3、日志
 
 ## 对象存储 (S3)
 
-| 变量                  | 默认值           | 必填 | 说明                                                   |
-| --------------------- | ---------------- | ---- | ------------------------------------------------------ |
-| `STORAGE_PROVIDER`    | `local`          | 否   | 存储后端 `minio` / `local`（local 仅用于开发）         |
-| `S3_ENDPOINT`         | —                | 否   | S3 兼容端点地址                                        |
-| `S3_REGION`           | `us-east-1`      | 否   | S3 区域                                                |
-| `S3_ACCESS_KEY`       | —                | 否   | S3 访问密钥                                            |
-| `S3_SECRET_KEY`       | —                | 否   | S3 秘密密钥                                            |
-| `S3_BUCKET_FILES`     | `ecoctrl-files`  | 否   | 文件附件存储桶                                         |
-| `S3_BUCKET_MODELS`    | `ecoctrl-models` | 否   | 3D 模型存储桶                                          |
-| `S3_BUCKET_NODES`     | `ecoctrl-nodes`  | 否   | 工作流节点插件存储桶（代码中旧名 `S3_BUCKET_PLUGINS`） |
-| `S3_BUCKET_PETS`      | `ecoctrl-pets`   | 否   | AI 宠物插件存储桶                                      |
-| `S3_FORCE_PATH_STYLE` | `false`          | 否   | 是否强制使用路径风格（MinIO 需设为 `true`）            |
-| `S3_PUBLIC_ENDPOINT`  | —                | 否   | 公开访问的 S3 端点（若需要客户端直连）                 |
+| 变量                  | 默认值           | 必填 | 说明                                           |
+| --------------------- | ---------------- | ---- | ---------------------------------------------- |
+| `STORAGE_PROVIDER`    | `local`          | 否   | 存储后端 `minio` / `local`（local 仅用于开发） |
+| `S3_ENDPOINT`         | —                | 否   | S3 兼容端点地址                                |
+| `S3_REGION`           | `us-east-1`      | 否   | S3 区域                                        |
+| `S3_ACCESS_KEY`       | —                | 否   | S3 访问密钥                                    |
+| `S3_SECRET_KEY`       | —                | 否   | S3 秘密密钥                                    |
+| `S3_BUCKET_FILES`     | `ecoctrl-files`  | 否   | 文件附件存储桶                                 |
+| `S3_BUCKET_MODELS`    | `ecoctrl-models` | 否   | 3D 模型存储桶                                  |
+| `S3_BUCKET_NODES`     | `ecoctrl-nodes`  | 否   | 工作流节点插件存储桶                           |
+| `S3_BUCKET_PETS`      | `ecoctrl-pets`   | 否   | AI 宠物插件存储桶                              |
+| `S3_FORCE_PATH_STYLE` | `false`          | 否   | 是否强制使用路径风格（MinIO 需设为 `true`）    |
+| `S3_PUBLIC_ENDPOINT`  | —                | 否   | 公开访问的 S3 端点（若需要客户端直连）         |
 
 > `STORAGE_PROVIDER=local` 将文件存储在本地磁盘的 `uploads/` 目录。`minio` 模式需要运行 MinIO 容器并配置 S3 环境变量。
 

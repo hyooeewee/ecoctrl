@@ -99,7 +99,7 @@ interface LightingStore {
 
 ## Mock 降级策略
 
-当 IoT 服务不可用时（网络故障、网关离线），`mockGroupStore` 提供内存级状态模拟：
+当 IoT 服务不可用时（网络故障、网关离线），照明路由内置的 mock 降级机制提供内存级状态模拟：
 
 - 从 `dashboard_models` 的 label 配置中推断照明分组
 - 状态保存在内存 Map 中（keyed by point ID）
@@ -135,7 +135,4 @@ Mock 模式对所有 API 调用方透明 — 前端不需要感知 IoT 是否在
 
 ## 相关文件
 
-- `packages/server/src/routes/lighting.ts` — 照明控制路由
-- `apps/web/app/components/dashboard/lighting-sheet.tsx` — 前端 LightingSheet 组件
-- `apps/web/store/lighting.ts` — 照明状态 Zustand store
-- `packages/server/src/services/iot/mockGroupStore.ts` — Mock 降级存储
+- `packages/server/src/routes/lighting.ts` — 照明控制路由（含 Mock 降级逻辑）

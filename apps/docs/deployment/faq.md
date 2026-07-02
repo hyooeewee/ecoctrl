@@ -57,6 +57,8 @@ pnpm db:push
 pnpm db:seed
 ```
 
+> Docker 部署的用户请使用 `docker compose exec server pnpm db:push` 和 `docker compose exec server pnpm db:seed` 替代，宿主机上的 pnpm 无法直接连接容器内的数据库。
+
 ### 端口冲突
 
 **现象**：`docker compose up` 时报 `port is already allocated`。
