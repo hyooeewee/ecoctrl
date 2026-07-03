@@ -31,13 +31,16 @@ flowchart TB
         Caddy["Caddy<br/>TLS 终止 · 路由转发"]
     end
 
-    subgraph Backend["后端服务"]
-        API["Fastify 5 API 服务<br/>Drizzle ORM · Rolldown"]
-        PG[("PostgreSQL<br/>主数据库")]
-        MinIO["MinIO 对象存储 (S3)<br/>模型 · 文件"]
+    subgraph Backend["服务层"]
+        API["Fastify 5 API 服务<br/>Drizzle ORM"]
     end
 
-    subgraph External["外部集成"]
+    subgraph Storage["存储层"]
+        PG[("PostgreSQL<br/>主数据库")]
+        MinIO[("MinIO 对象存储 (S3)<br/>模型 · 文件")]
+    end
+
+    subgraph Intergation["外部集成"]
         IoT["第三方 IoT 网关<br/>自动令牌刷新"]
         WebTalk["WebTalk 反向代理<br/>第三方系统嵌入"]
     end
@@ -49,16 +52,12 @@ flowchart TB
     API --> MinIO
     API --> IoT
     API --> WebTalk
-
-    style Admin fill:#1a73e8,color:#fff
-    style Web fill:#34a853,color:#fff
-    style Caddy fill:#fbbc04,color:#000
-    style API fill:#ea4335,color:#fff
-    style PG fill:#673ab7,color:#fff
-    style MinIO fill:#ff6d01,color:#fff
 ```
 
-**关键设计原则**：所有前端应用统一使用 `/api` 前缀访问后端。实际后端主机地址由开发模式下的 Vite 代理或生产环境中的 Caddy 在运行时改写，**修改 API 地址无需重新构建前端**。
+**关键设计原则**：
+
+- 所有前端应用统一使用 `/api` 前缀访问后端。实际后端主机地址由开发模式下的 Vite 代理或生产环境中的 Caddy 在运行时改写，**修改 API 地址无需重新构建前端**。
+- 存储于 MinIO 的对象存储文件（3D 模型、上传文件、宠物精灵图等）均通过 API 服务端 `streamFile()` 反向代理流式传输至前端，**前端不直接访问 MinIO**。这一设计避免了独立 MinIO 实例的跨域（CORS）问题，同时简化了鉴权与缓存控制（支持 304 条件请求与 `Cache-Control` 头部）。
 
 ## 核心能力全景
 
