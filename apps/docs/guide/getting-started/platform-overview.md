@@ -34,6 +34,7 @@ flowchart TB
     subgraph Backend["后端服务"]
         API["Fastify 5 API 服务<br/>Drizzle ORM · Rolldown"]
         PG[("PostgreSQL<br/>主数据库")]
+        MinIO["MinIO 对象存储 (S3)<br/>模型 · 文件"]
     end
 
     subgraph External["外部集成"]
@@ -45,6 +46,7 @@ flowchart TB
     Web -->|HTTPS| Caddy
     Caddy -->|/api/*| API
     API --> PG
+    API --> MinIO
     API --> IoT
     API --> WebTalk
 
@@ -53,6 +55,7 @@ flowchart TB
     style Caddy fill:#fbbc04,color:#000
     style API fill:#ea4335,color:#fff
     style PG fill:#673ab7,color:#fff
+    style MinIO fill:#ff6d01,color:#fff
 ```
 
 **关键设计原则**：所有前端应用统一使用 `/api` 前缀访问后端。实际后端主机地址由开发模式下的 Vite 代理或生产环境中的 Caddy 在运行时改写，**修改 API 地址无需重新构建前端**。

@@ -11,7 +11,8 @@ description: 数据模型 CRUD、业务对象 CRUD、点位 CRUD、批量导入
 
 ## 模型
 
-模型对应上传的 3D 模型文件（如建筑结构、设备模型）。文件落盘到 `uploads/models/`，对外通过 `/static/models/<filename>` 访问。
+模型对应上传的 3D 模型文件（如建筑结构、设备模型）。文件存储位置取决于 `STORAGE_PROVIDER` 配置：
+**local** 模式落盘到 `uploads/models/`，**minio** 模式存储于 MinIO `ecoctrl-models` 存储桶。统一通过 API 代理端点 `/api/models/:id/file` 访问。
 
 ### GET /api/models
 

@@ -1,6 +1,6 @@
 ---
 title: 3D 模型管线
-description: 模型上传（100MB、glb/gltf/obj）、磁盘存储、场景编辑器（模型/标签/动作三种模式）、热点交互系统
+description: 模型上传（100MB、glb/gltf/obj）、文件存储（本地磁盘或 MinIO S3）、场景编辑器（模型/标签/动作三种模式）、热点交互系统
 ---
 
 # 3D 模型管线
@@ -15,8 +15,10 @@ EcoCtrl 通过 Babylon.js 支持交互式 3D 建筑可视化。管理员通过 A
 
 - **单文件限制**：100 MB
 - **支持格式**：`.glb`（二进制 glTF，首选）、`.gltf` + `.bin` + 纹理、`.obj`
-- **存储位置**：`uploads/models/` 目录
-- **对外公开**：通过 `fastify-static` 插件暴露于 `/static/models/<filename>`
+- **存储位置**：取决于 `STORAGE_PROVIDER` 配置
+  - `local`（开发环境）：`uploads/models/` 目录
+  - `minio`（生产环境）：MinIO 的 `ecoctrl-models` 存储桶
+- **对外公开**：统一通过 API 代理端点 `/api/models/:id/file` 或 `/api/dashboard-model/file` 访问
 - **MIME 类型**：`model/gltf+json`、`model/gltf-binary`
 
 ### 上传流程
