@@ -2,6 +2,9 @@
 
 本项目提供三种 Docker Compose 场景，适用于不同使用需求。
 
+> [!WARNING]
+> 在生产环境中，建议只放开web和admin，其他端口建议仅在排查BUG的时候开放。
+
 ---
 
 ## 场景一：预构建部署（默认）
@@ -32,7 +35,8 @@ docker compose up -d
 - Admin: http://localhost:4173
 - API: http://localhost:3000
 - API Docs: http://localhost:3000/documentation
-- DB: localhost:5432
+- MinIO Console: http://localhost:9001
+- DB: http://localhost:5432
 
 ---
 
@@ -64,7 +68,8 @@ cp .env.example .env.local
 - Admin: http://localhost:4173
 - API: http://localhost:3000
 - API Docs: http://localhost:3000/documentation
-- DB: localhost:5432
+- MinIO Console: http://localhost:9001
+- DB: http://localhost:5432
 
 ---
 
@@ -76,15 +81,15 @@ cp .env.example .env.local
 cd docker
 cp .env.example .env.local
 # 编辑 .env.local 填入必要配置（JWT_SECRET、数据库密码等）
-docker compose -f compose.build.yaml -f compose.dev.yaml up --build
+docker compose -f compose.build.yaml -f compose.dev.yaml up
 ```
 
 访问：
 
 - Web: http://localhost:8080
 - Admin: http://localhost:5173
-- API: http://localhost:3000
-- DB: localhost:5432
+- API: http://localhost:3001
+- DB: http://localhost:5432
 
 ---
 
@@ -98,13 +103,17 @@ cp .env.example .env.local
 
 主要配置项：
 
-| 变量                                  | 说明                                              | 必填                 |
-| ------------------------------------- | ------------------------------------------------- | -------------------- |
-| `JWT_SECRET`                          | JWT 签名密钥                                      | 是                   |
-| `INITIAL_ADMIN_PASSWORD`              | 初始管理员密码                                    | 否（留空则随机生成） |
-| `DATABASE_URL`                        | 外部数据库连接字符串（留空则使用内部 PostgreSQL） | 否                   |
-| `OPENWEATHER_API_KEY`                 | 天气 API 密钥                                     | 否                   |
-| `SMTP_USER` / `SMTP_PASS`             | 邮件服务器账号                                    | 否                   |
-| `WECHAT_APP_ID` / `WECHAT_APP_SECRET` | 微信 OAuth                                        | 否                   |
-| `FEISHU_APP_ID` / `FEISHU_APP_SECRET` | 飞书 OAuth                                        | 否                   |
-| `BASE_URL` / `APP_ID`                 | IoT 客户端接入地址和应用 ID                       | 否                   |
+| 变量                                   | 说明                                              | 必填                            |
+| -------------------------------------- | ------------------------------------------------- | ------------------------------- |
+| `JWT_SECRET`                           | JWT 签名密钥                                      | 是                              |
+| `INITIAL_ADMIN_PASSWORD`               | 初始管理员密码                                    | 否（留空则随机生成）            |
+| `DATABASE_URL`                         | 外部数据库连接字符串（留空则使用内部 PostgreSQL） | 否                              |
+| `OPENWEATHER_API_KEY`                  | 天气 API 密钥                                     | 否                              |
+| `SMTP_USER` / `SMTP_PASS`              | 邮件服务器账号                                    | 否                              |
+| `WECHAT_APP_ID` / `WECHAT_APP_SECRET`  | 微信 OAuth                                        | 否                              |
+| `FEISHU_APP_ID` / `FEISHU_APP_SECRET`  | 飞书 OAuth                                        | 否                              |
+| `BASE_URL` / `APP_ID`                  | IoT 客户端接入地址和应用 ID                       | 否                              |
+| `STORAGE_PROVIDER`                     | 对象存储后端 (`minio` / `local`)                  | 否                              |
+| `S3_ENDPOINT`                          | S3 兼容存储地址                                   | 否（使用内部 MinIO 时自动配置） |
+| `S3_ACCESS_KEY` / `S3_SECRET_KEY`      | S3 访问密钥                                       | 否                              |
+| `S3_BUCKET_FILES` / `S3_BUCKET_MODELS` | 上传文件和 3D 模型存储桶                          | 否                              |

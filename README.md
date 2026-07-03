@@ -17,7 +17,7 @@ An energy & IoT control platform built as a pnpm monorepo, featuring 3D visualiz
 | `apps/admin`      | React 19 + vite-plus + TailwindCSS + shadcn/ui          | Admin dashboard                                            |
 | `apps/web`        | React Router 7 + Babylon.js + vite-plus + TailwindCSS   | Public 3D portal                                           |
 | `packages/server` | Fastify 5 + Drizzle ORM + PostgreSQL + Rolldown + MinIO | REST API (bundled with auto-generated `dist/package.json`) |
-| `packages/ui`     | React + TailwindCSS + Base UI                           | Shared component library                                   |
+| `packages/ui`     | React + TailwindCSS + shadcn/ui                         | Shared component library                                   |
 | `packages/shared` | Zod + TypeScript + shared Vite configs                  | Shared schemas, types, and build utilities                 |
 
 ## Quick Start
@@ -85,19 +85,19 @@ pnpm dev
 | `pnpm dev:admin`  | Admin on http://localhost:5173 |
 | `pnpm dev:web`    | Web on http://localhost:8080   |
 
-Other useful commands:
+Other useful commands (run from `packages/server/`):
 
 ```bash
-pnpm db:refresh   # drop + push + seed + studio (destructive)
-pnpm db:migrate   # apply pending migrations
-pnpm db:studio    # open Drizzle Studio
+pnpm db:reset    # drop all tables, re-run init + seed (destructive)
+pnpm db:migrate  # apply pending migrations
+pnpm db:studio   # open Drizzle Studio
 ```
 
 ## Documentation
 
-- [Deployment Guide](https://ecoctrl.godot.run/reference/deployment) — Docker deployment, local development
-- [Architecture](https://ecoctrl.godot.run/reference/architecture) — request flow, runtime topology
-- [Environment Variables](https://ecoctrl.godot.run/reference/env-vars) — full reference
+- [Deployment Guide](https://docs.godot.qzz.io/deployment/docker) — Docker deployment, local development
+- [Architecture](https://docs.godot.qzz.io/reference/architecture/overview) — request flow, runtime topology
+- [Environment Variables](https://docs.godot.qzz.io/deployment/env-vars) — full reference
 - [API Docs](http://localhost:3001/documentation) — Swagger UI (server must be running)
 
 ## License

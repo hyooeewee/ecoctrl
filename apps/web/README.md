@@ -4,18 +4,18 @@ React Router 7 dashboard application with 3D building visualization via BabylonJ
 
 ## Prerequisites
 
-- Node.js 22+
-- pnpm 10+
+- Node.js 24+
+- pnpm 11+
 - Backend API running (see `packages/server`)
 
 ## Environment Variables
 
-| Variable            | Description                                                     | Example                 |
-| ------------------- | --------------------------------------------------------------- | ----------------------- |
-| `VITE_API_BASE_URL` | Backend API origin (must be accessible from the user's browser) | `http://localhost:3000` |
-| `VITE_API_PREFIX`   | API route prefix                                                | `/api`                  |
+| Variable       | Description                                                     | Example                 |
+| -------------- | --------------------------------------------------------------- | ----------------------- |
+| `API_BASE_URL` | Backend API origin (must be accessible from the user's browser) | `http://localhost:3001` |
+| `API_PREFIX`   | API route prefix                                                | `/api`                  |
 
-> **⚠️ Important:** `VITE_API_BASE_URL` must be a **publicly accessible address** from the user's browser. If the web app is deployed at `http://example.com:8081`, setting this to `http://localhost:3000` will cause users' browsers to try connecting to their own local machine instead of the server. Use the server's public IP or domain name for production deployments.
+> **⚠️ Important:** `API_BASE_URL` must be a **publicly accessible address** from the user's browser. If the web app is deployed at `http://example.com:8081`, setting this to `http://localhost:3001` will cause users' browsers to try connecting to their own local machine instead of the server. Use the server's public IP or domain name for production deployments.
 
 Create a local environment file:
 
@@ -63,7 +63,7 @@ pnpm --filter @ecoctrl/web build
 cd apps/web && caddy run --config Caddyfile
 
 # Option B: using any static file server
-npx serve apps/web/build/client -l 8081
+pnpm dlx serve apps/web/build/client -l 8081 -s
 ```
 
 ## Development

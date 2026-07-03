@@ -4,18 +4,18 @@ EcoCtrl energy management platform admin dashboard. React 19 SPA built with Vite
 
 ## Prerequisites
 
-- Node.js 22+
-- pnpm 10+
+- Node.js 24+
+- pnpm 11+
 - Environment variable file `.env.local` (see `.env.example`)
 
 ## Environment Variables
 
-| Variable            | Description          | Example                 |
-| ------------------- | -------------------- | ----------------------- |
-| `VITE_API_BASE_URL` | Backend API base URL | `http://localhost:3000` |
-| `VITE_API_PREFIX`   | API request prefix   | `/api`                  |
+| Variable       | Description          | Example                 |
+| -------------- | -------------------- | ----------------------- |
+| `API_BASE_URL` | Backend API base URL | `http://localhost:3001` |
+| `API_PREFIX`   | API request prefix   | `/api`                  |
 
-> **⚠️ Important:** Vite inlines `VITE_*` prefixed environment variables into the build output at build time. After modifying `.env.local`, you must rebuild for changes to take effect.
+> **⚠️ Important:** Vite inlines `VITE_*` prefixed environment variables into the build output at build time, but `API_BASE_URL` and `API_PREFIX` are consumed by the Vite dev server proxy config and Caddy — not by client-side code, so they correctly lack the `VITE_` prefix. After modifying `.env.local`, you must rebuild for changes to take effect.
 
 Create a local environment file:
 
@@ -69,7 +69,7 @@ pnpm --filter @ecoctrl/admin start
 ## Development
 
 ```bash
-# Start dev server with hot reload (port 3000)
+# Start dev server with hot reload (port 5173)
 pnpm --filter @ecoctrl/admin dev
 ```
 
@@ -77,7 +77,7 @@ pnpm --filter @ecoctrl/admin dev
 
 | Command          | Description                                  |
 | ---------------- | -------------------------------------------- |
-| `pnpm dev`       | Start dev server with hot reload (port 3000) |
+| `pnpm dev`       | Start dev server with hot reload (port 5173) |
 | `pnpm build`     | Production build                             |
 | `pnpm preview`   | Preview production build (port 4173)         |
 | `pnpm start`     | Build and serve (port 4173)                  |
