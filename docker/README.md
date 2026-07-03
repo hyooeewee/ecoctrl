@@ -106,7 +106,7 @@ cp .env.example .env.local
 | 变量                                   | 说明                                              | 必填                            |
 | -------------------------------------- | ------------------------------------------------- | ------------------------------- |
 | `JWT_SECRET`                           | JWT 签名密钥                                      | 是                              |
-| `INITIAL_ADMIN_PASSWORD`               | 初始管理员密码                                    | 否（留空则随机生成）            |
+| `INIT_ADMIN_PASSWORD`                  | 初始管理员密码                                    | 否（留空则随机生成）            |
 | `DATABASE_URL`                         | 外部数据库连接字符串（留空则使用内部 PostgreSQL） | 否                              |
 | `OPENWEATHER_API_KEY`                  | 天气 API 密钥                                     | 否                              |
 | `SMTP_USER` / `SMTP_PASS`              | 邮件服务器账号                                    | 否                              |

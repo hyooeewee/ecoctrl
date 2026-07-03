@@ -40,7 +40,7 @@ const envSchema = z.object({
   AI_MODEL: z.string().optional(),
   BASE_URL: z.string().optional(),
   APP_ID: z.string().optional(),
-  INITIAL_ADMIN_PASSWORD: z.string().optional(),
+  INIT_ADMIN_PASSWORD: z.string().optional(),
   CORS_ORIGIN: z.string().optional(),
   STORAGE_PROVIDER: z.enum(["minio", "local"]).default("local"),
   S3_ENDPOINT: z.string().optional(),
