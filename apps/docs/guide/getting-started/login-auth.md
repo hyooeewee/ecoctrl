@@ -27,7 +27,7 @@ EcoCtrl 平台提供多种登录方式，支持账号密码、邮箱验证码、
 
 - 默认管理员账号：`admin`
 - 初始密码由以下两种方式之一决定（优先级从上到下）：
-  - `INITIAL_ADMIN_PASSWORD` 环境变量指定
+  - `INIT_ADMIN_PASSWORD` 环境变量指定
   - 运行 `pnpm db:seed` 时输出的初始密码
 - 首次登录后建议立即修改密码。
 

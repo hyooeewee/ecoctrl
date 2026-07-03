@@ -151,7 +151,7 @@ cp .env.example .env.local
 | ------------------------- | ---------------------- | ---- |
 | `JWT_SECRET`              | JWT 签名密钥           | 是   |
 | `DATABASE_URL`            | 外部数据库连接（可选） | 否   |
-| `INITIAL_ADMIN_PASSWORD`  | 初始管理员密码         | 否   |
+| `INIT_ADMIN_PASSWORD`     | 初始管理员密码         | 否   |
 | `CORS_ORIGIN`             | 允许的跨域来源         | 否   |
 | `SMTP_HOST` / `SMTP_PASS` | 邮件服务器             | 否   |
 
@@ -161,13 +161,13 @@ cp .env.example .env.local
 
 首次启动时，服务端会自动创建初始管理员账号：
 
-| 字段   | 默认值                                                                   |
-| ------ | ------------------------------------------------------------------------ |
-| 用户名 | `admin`                                                                  |
-| 密码   | 由 `INITIAL_ADMIN_PASSWORD` 指定，未设置则**随机生成**并输出到服务端日志 |
-| 邮箱   | `admin@example.com`                                                      |
+| 字段   | 默认值                                                                |
+| ------ | --------------------------------------------------------------------- |
+| 用户名 | `admin`                                                               |
+| 密码   | 由 `INIT_ADMIN_PASSWORD` 指定，未设置则**随机生成**并输出到服务端日志 |
+| 邮箱   | `admin@example.com`                                                   |
 
-> **生产环境务必设置 `INITIAL_ADMIN_PASSWORD` 为一个强密码**，或启动后立即在 Admin 后台修改。如果不设置，请查看 `docker compose logs server` 获取随机生成的管理员密码。
+> **生产环境务必设置 `INIT_ADMIN_PASSWORD` 为一个强密码**，或启动后立即在 Admin 后台修改。如果不设置，请查看 `docker compose logs server` 获取随机生成的管理员密码。
 
 ## 停止服务
 
