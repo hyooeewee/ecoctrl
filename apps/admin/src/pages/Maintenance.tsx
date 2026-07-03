@@ -39,7 +39,6 @@ import type { MaintenanceReminder, MaintenanceReminderDetail } from "@ecoctrl/sh
 import { filesApi } from "../api/files";
 import { maintenanceApi } from "../api/maintenance";
 import { auth } from "../lib/auth";
-import { API_PREFIX } from "../lib/env";
 
 interface Manual {
   id: string;
@@ -259,7 +258,7 @@ export default function Maintenance() {
   const handleManualClick = (manual: Manual) => {
     if (manual.fileUrl) {
       const token = auth.getAccessToken();
-      const url = `${API_PREFIX}/files/${manual.id}/preview${token ? `?token=${token}` : ""}`;
+      const url = `${filesApi.getUrl(manual.id, true)}${token ? `?token=${token}` : ""}`;
       window.open(url, "_blank");
     } else {
       setPreviewManual(manual.name);
