@@ -9,7 +9,7 @@
  * - Other strings (including paths starting with "/") → returned as-is.
  *
  * Same-origin paths like "/static/*" are proxied to the backend by the
- * front-end server (lws / caddy in production, vite dev server in
+ * front-end server (Caddy in production, Vite dev server in
  * development), so no host prefixing is needed.
  */
 
