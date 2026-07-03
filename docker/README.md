@@ -2,8 +2,11 @@
 
 本项目提供三种 Docker Compose 场景，适用于不同使用需求。
 
-> [!WARNING]
-> 在生产环境中，建议只放开web和admin，其他端口建议仅在排查BUG的时候开放。
+> [!NOTE]
+> 出于安全考虑，生成的文件中 postgres、minio、server 的端口以 `x-ports` 标记（仅作为文档参考）。
+> Docker Compose 自动忽略 `x-` 前缀的键，这些服务仅通过内部 Docker 网络通信，不会暴露到宿主机。
+> 需要临时调试时，将 `x-ports` 改为 `ports` 即可。
+> 开发环境（`compose.dev.yaml`）不受此限制，所有端口正常暴露。
 
 ---
 
@@ -33,10 +36,8 @@ docker compose up -d
 
 - Web: http://localhost:8081
 - Admin: http://localhost:4173
-- API: http://localhost:3000
-- API Docs: http://localhost:3000/documentation
-- MinIO Console: http://localhost:9001
-- DB: http://localhost:5432
+
+> 内部服务（API、MinIO、PostgreSQL）仅通过 Docker 内部网络通信，如需调试请将 `x-ports` 改为 `ports`。
 
 ---
 
@@ -66,10 +67,8 @@ cp .env.example .env.local
 
 - Web: http://localhost:8081
 - Admin: http://localhost:4173
-- API: http://localhost:3000
-- API Docs: http://localhost:3000/documentation
-- MinIO Console: http://localhost:9001
-- DB: http://localhost:5432
+
+> 内部服务（API、MinIO、PostgreSQL）仅通过 Docker 内部网络通信，如需调试请将 `x-ports` 改为 `ports`。
 
 ---
 
