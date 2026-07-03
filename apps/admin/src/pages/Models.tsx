@@ -655,7 +655,7 @@ export default function Models() {
                         ) : model.fileUrl &&
                           model.format &&
                           CARD_PREVIEW_FORMATS.has(model.format.toUpperCase()) ? (
-                          <CardModelPreview src={`/api/models/${model.id}/file`} alt={model.name} />
+                          <CardModelPreview src={modelsApi.getFileUrl(model.id)} alt={model.name} />
                         ) : (
                           <ImageIcon className="h-12 w-12 text-muted-foreground/40 transition-transform group-hover:scale-110" />
                         )}
@@ -944,7 +944,7 @@ export default function Models() {
           <div className="flex-1 overflow-hidden bg-muted p-4">
             {previewModel ? (
               <ModelViewer
-                src={`/api/models/${previewModel.id}/file`}
+                src={modelsApi.getFileUrl(previewModel.id)}
                 alt={previewModel.name}
                 format={previewModel.format}
               />

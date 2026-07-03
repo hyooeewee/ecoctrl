@@ -1,6 +1,7 @@
 import type { DataModel } from "@ecoctrl/shared";
 
 import { request, fetchRaw, get, put, del } from "./request";
+import { API_PREFIX } from "../lib/env";
 
 // One-time cleanup: remove old mock data from localStorage
 localStorage.removeItem("ecoctrl_models_override");
@@ -54,4 +55,6 @@ export const modelsApi = {
       devices: string[];
     }>("/models/import-points", { method: "POST", body: formData });
   },
+
+  getFileUrl: (id: string) => `${API_PREFIX}/models/${id}/file`,
 };
