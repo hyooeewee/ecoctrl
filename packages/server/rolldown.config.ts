@@ -5,7 +5,7 @@ import { spawnSync } from "node:child_process";
 import { writeFile, readFile, cp } from "node:fs/promises";
 import pkg from "./package.json" with { type: "json" };
 
-const staticAssets = ["ecoctrl.config.cjs", ".env.example"];
+const staticAssets = [".env.example"];
 
 export default defineConfig({
   input: ["index.ts", "src/queue/worker.ts", "scripts/init.ts", "scripts/seed.ts"],
