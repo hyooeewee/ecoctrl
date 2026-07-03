@@ -1,0 +1,349 @@
+# ========================================
+# CD — Continuous Deployment
+# ========================================
+#
+# Merges Release + Canary into a single workflow.
+#   - version-detection: determines what to do
+#   - version-pr:        creates changeset version PR (if needed)
+#   - images:            builds and pushes Docker images
+#
+# Triggered by:
+#   - CI completed on main
+#   - workflow_dispatch (auto | build-rc | version-pr)
+# ========================================
+
+name: CD
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Release mode"
+        required: true
+        default: "auto"
+        type: choice
+        options:
+          - auto
+          - build-rc
+          - version-pr
+
+# ========================================
+# Permissions
+# ========================================
+
+permissions:
+  contents: write
+  pull-requests: write
+  packages: write
+
+# ========================================
+# Concurrency
+# ========================================
+#
+# Auto-triggered runs are cancellable (latest wins).
+# Manual runs are serialized (never cancelled).
+# Using github.event_name directly yields distinct groups
+# (cd-workflow_run vs cd-workflow_dispatch) without the
+# &&/|| precedence trap of a faux ternary.
+
+concurrency:
+  group: cd-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+
+# ========================================
+# Jobs
+# ========================================
+
+jobs:
+  # ========================================
+  # Job 1: version-detection
+  #
+  # Pure read-only step. Determines what action to take:
+  #   version-pr  → .changeset/*.md exist (or manual override)
+  #   build-rc    → Version Packages merged (or manual override)
+  #   canary-only → regular push to main
+  #
+  # Does NOT install pnpm/node — uses jq for JSON parsing.
+  # ========================================
+
+  version-detection:
+    name: Version Detection
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      action: ${{ steps.detect.outputs.action }}
+      version: ${{ steps.detect.outputs.version }}
+      rc-tag: ${{ steps.detect.outputs.rc-tag }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+          # Only needs HEAD + working-tree files; full history is wasteful.
+          fetch-depth: 1
+
+      - name: Detect action
+        id: detect
+        run: |
+          # Version is read once from apps/admin/package.json.
+          # Safe because changeset config pins admin/web/server as a
+          # fixed (lockstep) version group — they always bump together.
+          VERSION=$(jq -r '.version' apps/admin/package.json)
+          # Rolling rc tag (always points to the latest rc build for this version).
+          # stable.yaml resolves rc images via this tag.
+          ROLLING="v${VERSION}-rc"
+          # Permanent rc tag suffixed with 7-char commit SHA.
+          # Unique per build — never overwritten, enables idempotent re-runs.
+          SHA="${{ github.event.workflow_run.head_sha || github.sha }}"
+          SHA7="${SHA:0:7}"
+          PERM="${ROLLING}.${SHA7}"
+
+          # ========================================
+          # Manual trigger: respect explicit mode
+          # ========================================
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            case "${{ github.event.inputs.mode }}" in
+              build-rc)
+                echo "action=build-rc" >> "$GITHUB_OUTPUT"
+                echo "version=${ROLLING}" >> "$GITHUB_OUTPUT"
+                echo "rc-tag=${PERM}" >> "$GITHUB_OUTPUT"
+                echo "✔ Manual build-rc for ${PERM} (rolling: ${ROLLING})"
+                exit 0
+                ;;
+              version-pr)
+                echo "action=version-pr" >> "$GITHUB_OUTPUT"
+                echo "✔ Manual version-pr"
+                exit 0
+                ;;
+              auto)
+                : # fall through to auto-detection
+                ;;
+              *)
+                echo "✘ Unknown mode: ${{ github.event.inputs.mode }}" >&2
+                exit 1
+                ;;
+            esac
+          fi
+
+          # ========================================
+          # Auto-detection
+          # ========================================
+
+          # --- Pending changesets → create version PR ---
+          if find .changeset -maxdepth 1 -name '*.md' ! -name 'README.md' -print -quit | grep -q .; then
+            echo "action=version-pr" >> "$GITHUB_OUTPUT"
+            echo "✔ Pending changesets → version-pr"
+            exit 0
+          fi
+
+          # --- Version Packages merged → build rc ---
+          # Matches all merge strategies:
+          #   merge commit:  "Merge pull request N from <owner>/changeset-release/main"
+          #   squash/rebase: "Version Packages" or "Version Packages (#N)"
+          # The owner is taken from github.repository_owner so forks/transfers still match.
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          OWNER="${{ github.repository_owner }}"
+          if echo "$COMMIT_MSG" | grep -qE "^Version Packages( \(#[0-9]+\))?$|^Merge pull request.*from ${OWNER}/changeset-release/main$"; then
+            echo "action=build-rc" >> "$GITHUB_OUTPUT"
+            echo "version=${ROLLING}" >> "$GITHUB_OUTPUT"
+            echo "rc-tag=${PERM}" >> "$GITHUB_OUTPUT"
+            echo "✔ Version Packages merged → build-rc ${PERM} (rolling: ${ROLLING})"
+            exit 0
+          fi
+
+          # --- Default: canary only ---
+          echo "action=canary-only" >> "$GITHUB_OUTPUT"
+          echo "version=" >> "$GITHUB_OUTPUT"
+          echo "rc-tag=" >> "$GITHUB_OUTPUT"
+          echo "✔ Regular push → canary-only"
+
+  # ========================================
+  # Job 2: version-pr
+  #
+  # Runs changesets/action to:
+  #   1. Bump versions in package.json
+  #   2. Generate changelogs
+  #   3. Create/update the "Version Packages" PR
+  #
+  # Only runs when action=version-pr.
+  # After completion the workflow ends — no images are built.
+  # ========================================
+
+  version-pr:
+    name: Create Version Packages PR
+    if: needs.version-detection.outputs.action == 'version-pr'
+    needs: version-detection
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+          # changesets/action reads .changeset/*.md files, not git history.
+          fetch-depth: 1
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: changesets/action@v1
+        with:
+          version: pnpm run version
+          createGithubReleases: false
+          setupGitUser: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ========================================
+  # Job 3: images
+  #
+  # Builds and pushes Docker images to GHCR.
+  #   - Always: canary (single-platform) + sha-<full> tags
+  #   - build-rc: also multi-platform rc tag + GitHub prerelease
+  #
+  # The canary build is single-platform for speed.
+  # The rc build (when needed) is multi-platform (amd64 + arm64)
+  # and uses the multi-platform builder pushed by the canary step.
+  # ========================================
+
+  images:
+    name: Build & Push Images
+    # Runs for any action that needs images published.
+    # version-pr does NOT build images — the Version Packages PR
+    # triggers a fresh CD run (build-rc) once it is merged.
+    if: >
+      needs.version-detection.outputs.action == 'canary-only'
+      || needs.version-detection.outputs.action == 'build-rc'
+    needs: version-detection
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+
+      - name: Login GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ========================================
+      # Always: canary + sha tags
+      # ========================================
+
+      - name: Build & Push canary images
+        uses: docker/bake-action@v5
+        with:
+          files: ./docker/docker-bake.hcl
+          push: true
+          set: |
+            builder.platform=linux/amd64,linux/arm64
+            web.platform=linux/amd64
+            admin.platform=linux/amd64
+            server.platform=linux/amd64
+        env:
+          TAG: canary
+          REGISTRY: ghcr.io/${{ github.repository }}
+          LATEST: "false"
+
+      - name: Tag with commit SHA
+        run: |
+          SHA="${{ github.event.workflow_run.head_sha || github.sha }}"
+          for IMG in web admin server; do
+            docker buildx imagetools create \
+              -t "ghcr.io/${{ github.repository }}/${IMG}:sha-${SHA}" \
+              "ghcr.io/${{ github.repository }}/${IMG}:canary"
+          done
+          echo "✔ Tagged canary images with sha-${SHA}"
+
+      # ========================================
+      # On build-rc: rc images + prerelease
+      # ========================================
+
+      - name: Build & Push rc images
+        if: needs.version-detection.outputs.action == 'build-rc'
+        uses: docker/bake-action@v5
+        with:
+          files: ./docker/docker-bake.hcl
+          targets: web,admin,server
+          push: true
+          set: |
+            *.platform=linux/amd64,linux/arm64
+        env:
+          # Permanent tag (vX.Y.Z-rc.<sha7>) — unique per build, never overwritten.
+          TAG: ${{ needs.version-detection.outputs.rc-tag }}
+          REGISTRY: ghcr.io/${{ github.repository }}
+          LATEST: "false"
+          BUILDER_CONTEXT: docker-image://ghcr.io/${{ github.repository }}/builder:cache
+
+      - name: Roll rc tag to latest rc build
+        if: needs.version-detection.outputs.action == 'build-rc'
+        run: |
+          # Point the rolling vX.Y.Z-rc tag at the permanent vX.Y.Z-rc.<sha7> image.
+          # stable.yaml resolves rc images via the rolling tag.
+          PERM="${{ needs.version-detection.outputs.rc-tag }}"
+          ROLLING="${{ needs.version-detection.outputs.version }}"
+          for IMG in web admin server; do
+            docker buildx imagetools create \
+              -t "ghcr.io/${{ github.repository }}/${IMG}:${ROLLING}" \
+              "ghcr.io/${{ github.repository }}/${IMG}:${PERM}"
+          done
+          echo "✔ Rolled ${ROLLING} → ${PERM} for web/admin/server"
+
+      - name: Create git tags
+        if: needs.version-detection.outputs.action == 'build-rc'
+        run: |
+          # Pushed AFTER images succeed, so tag and image never diverge.
+          #   vX.Y.Z-rc.<sha7>  — permanent, marks the exact rc build commit
+          #   vX.Y.Z-rc         — rolling, always the latest rc for this version
+          PERM="${{ needs.version-detection.outputs.rc-tag }}"
+          ROLLING="${{ needs.version-detection.outputs.version }}"
+
+          # Permanent tag (fail if it already exists on a different commit —
+          # same commit re-run is a no-op).
+          if git rev-parse "$PERM" >/dev/null 2>&1; then
+            echo "✔ $PERM already exists, skipping"
+          else
+            git tag "$PERM"
+            git push origin "$PERM"
+            echo "✔ Created $PERM"
+          fi
+
+          # Rolling tag — force-update to current commit.
+          git tag -f "$ROLLING"
+          git push -f origin "$ROLLING"
+          echo "✔ Rolled $ROLLING to $(git rev-parse --short HEAD)"
+
+      - name: Create or update GitHub Pre-release
+        if: needs.version-detection.outputs.action == 'build-rc'
+        run: |
+          # Rolling tag is the prerelease identity — one prerelease per version,
+          # updated on each rc build. stable.yaml finds it via git describe.
+          RC_TAG="${{ needs.version-detection.outputs.version }}"
+          NOTES="Pre-release of ${RC_TAG}"
+          if gh release view "$RC_TAG" > /dev/null 2>&1; then
+            gh release edit "$RC_TAG" \
+              --prerelease \
+              --title "$RC_TAG" \
+              --notes "$NOTES"
+            echo "✔ Updated prerelease $RC_TAG"
+          else
+            gh release create "$RC_TAG" \
+              --prerelease \
+              --title "$RC_TAG" \
+              --notes "$NOTES"
+            echo "✔ Created prerelease $RC_TAG"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -21,7 +21,6 @@
     "check:fix": "pnpm format && pnpm lint:fix",
     "changeset": "changeset",
     "version": "changeset version",
-    "release": "bash scripts/release-tag.sh",
     "prepare": "[ -n \"$CI\" ] || husky",
     "env:sync": "pnpm -r --if-present env:sync -y",
     "env:check": "pnpm -r --if-present env:check",
