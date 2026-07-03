@@ -44,6 +44,7 @@ import { useModelEditorStore } from "@/store/modelEditorStore";
 import { useAppStore } from "@/store/appStore";
 import { pointsApi } from "@/api/points";
 import type { Point, ModelFileEntry } from "@ecoctrl/shared";
+import { API_PREFIX } from "../lib/env";
 
 // ========================================
 // Component
@@ -137,7 +138,7 @@ export default function DashboardModel() {
     () =>
       existingFiles.map((file) => ({
         id: file.id,
-        url: `/api/dashboard-model/file?key=${encodeURIComponent(file.fileKey)}`,
+        url: `${API_PREFIX}/dashboard-model/file?key=${encodeURIComponent(file.fileKey)}`,
         visible: visibleFileIds.has(file.id),
         priority: file.priority ?? "background",
       })),

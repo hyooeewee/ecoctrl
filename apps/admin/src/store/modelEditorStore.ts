@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import type { DashboardModelConfig, DashboardModelLabel, LabelAction } from "@ecoctrl/shared";
 import { dashboardModelApi } from "@/api/dashboardModel";
 import { clearModelCache } from "@ecoctrl/shared/model-cache";
+import { API_PREFIX } from "../lib/env";
 import { Vector3 } from "@babylonjs/core";
 
 type Label = DashboardModelLabel;
@@ -160,7 +161,7 @@ export const useModelEditorStore = create<ModelEditorState>((set, get) => ({
     try {
       await dashboardModelApi.update({ modelFiles: newFiles });
       if (deleted) {
-        const url = `/api/dashboard-model/file?key=${encodeURIComponent(deleted.fileKey)}`;
+        const url = `${API_PREFIX}/dashboard-model/file?key=${encodeURIComponent(deleted.fileKey)}`;
         await clearModelCache(url);
       }
       set((state) => ({

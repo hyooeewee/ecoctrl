@@ -1,4 +1,5 @@
 import { apiGet } from "./api";
+import { API_PREFIX } from "~/lib/env";
 
 export interface PetEntry {
   id: string;
@@ -15,7 +16,7 @@ export interface PetsListResponse {
 
 export const petsApi = {
   list: async (): Promise<PetEntry[]> => {
-    const res = await apiGet<PetsListResponse>("/api/pets");
+    const res = await apiGet<PetsListResponse>(`${API_PREFIX}/pets`);
     if (!res.ok) {
       throw new Error(res.error ?? "Failed to load pets");
     }

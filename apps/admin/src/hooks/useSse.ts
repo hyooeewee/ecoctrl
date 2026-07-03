@@ -3,6 +3,7 @@ import { SSEClient, type SSEMessage } from "@ecoctrl/shared";
 import { auth } from "@/lib/auth";
 import { post } from "@/api/request";
 import { useSseStore } from "@/store/sseStore";
+import { API_PREFIX } from "../lib/env";
 
 export interface SseMessage {
   type: string;
@@ -31,7 +32,7 @@ export function useSse() {
       return;
     }
 
-    const client = new SSEClient("/api/events", {
+    const client = new SSEClient(`${API_PREFIX}/events`, {
       getToken: async () => {
         const data = await post<{ token: string }>("/events/token", undefined, { noReload: true });
         return data.token;

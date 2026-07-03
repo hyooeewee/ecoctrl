@@ -38,7 +38,7 @@ export const nodesApi = {
   },
 
   uninstall: async (id: string, version: string): Promise<void> => {
-    return del(`/api/nodes/${id}/${version}`);
+    return del(`/nodes/${id}/${version}`);
   },
 
   reload: async (): Promise<{ message: string }> => {

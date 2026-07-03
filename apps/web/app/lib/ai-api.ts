@@ -1,4 +1,5 @@
 import { apiGet, apiPost } from "./api";
+import { API_PREFIX } from "~/lib/env";
 
 export interface ChatRequest {
   message: string;
@@ -41,7 +42,7 @@ export function chatStream(
 
   const run = async () => {
     try {
-      const res = await fetch("/api/ai/chat", {
+      const res = await fetch(`${API_PREFIX}/ai/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(request),
@@ -99,17 +100,17 @@ export async function fetchConversations() {
       content: string;
       createdAt: string;
     }>
-  >("/api/ai/conversations");
+  >(`${API_PREFIX}/ai/conversations`);
 }
 
 export async function clearConversations() {
-  return apiPost<{ success: boolean }>("/api/ai/conversations", {});
+  return apiPost<{ success: boolean }>(`${API_PREFIX}/ai/conversations`, {});
 }
 
 export async function fetchPetPreferences() {
-  return apiGet<PetPreferences>("/api/ai/preferences");
+  return apiGet<PetPreferences>(`${API_PREFIX}/ai/preferences`);
 }
 
 export async function updatePetPreferences(updates: Partial<PetPreferences>) {
-  return apiPost<PetPreferences>("/api/ai/preferences", updates);
+  return apiPost<PetPreferences>(`${API_PREFIX}/ai/preferences`, updates);
 }
