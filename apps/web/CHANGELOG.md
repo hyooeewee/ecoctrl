@@ -1,5 +1,15 @@
 # @ecoctrl/web
 
+## 0.8.2
+
+### Patch Changes
+
+- 86cc317: Remove deprecated PM2 deployment scripts, ecoctrl.config.cjs and pm2 dependency
+- 86cc317: Add getFileUrl and getPreviewUrl helpers to filesApi and modelsApi
+- 86cc317: Replace all hardcoded /api/ paths with API_PREFIX constant across frontend, fix double-prefix bug in nodes.ts
+- 86cc317: Add MinIO storage to architecture diagrams and storage descriptions in docs
+- 86cc317: Add object storage proxy note to platform overview design principles
+
 ## 0.8.1
 
 ### Patch Changes
