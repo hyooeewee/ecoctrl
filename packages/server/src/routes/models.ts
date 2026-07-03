@@ -129,6 +129,9 @@ export default async function modelRoutes(fastify: FastifyInstance) {
           format,
           size: formatFileSize(sizeBytes),
           fileUrl,
+          // TODO: generate a thumbnail from the model file (e.g., via a
+          // headless renderer or an external service) and store the key here.
+          // Currently falls through to CardModelPreview 3D fallback on the UI.
           thumbnailUrl: null,
           docUrl: null,
         });
