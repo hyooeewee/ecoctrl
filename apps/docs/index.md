@@ -35,12 +35,4 @@ features:
   - icon: 🐳
     title: 一键部署
     details: 一条 docker compose up 启动整套服务，支持离线部署包与无外网环境。
-  - icon: 📖
-    title: 用户指南
-    details: Admin 后台各功能详解、Web 3D 驾驶舱操作、工作流配置与账户管理。
-    link: /guide/getting-started/platform-overview
-  - icon: 🔧
-    title: 技术参考
-    details: 架构总览、API 文档、子系统设计、数据模型与部署运维手册。
-    link: /reference/architecture/overview
 ---
