@@ -9,9 +9,12 @@
 }
 :root {
   --vp-font-family-base:
-    "Vazirmatn", "Inter", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", ui-sans-serif,
+    "Noto Sans SC", "Vazirmatn", "Inter", "PingFang SC", "Microsoft YaHei", ui-sans-serif,
     system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
     "Noto Color Emoji";
+  --vp-font-family-mono:
+    "JetBrains Mono", ui-monospace, "SF Mono", "Menlo", "Consolas", monospace, "Noto Sans SC",
+    "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 @media print {
@@ -20,6 +23,11 @@
   .VPDocFooter {
     display: none !important;
   }
+}
+
+/* Mermaid SVG text CJK support */
+.mermaid svg text {
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif !important;
 }
 
 /* ========================================
