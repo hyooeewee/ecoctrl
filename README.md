@@ -1,6 +1,6 @@
 # EcoCtrl
 
-[![Release](https://github.com/hyooeewee/ecoctrl/actions/workflows/release.yaml/badge.svg)](https://github.com/hyooeewee/ecoctrl/actions/workflows/release.yaml)
+[![Release](https://github.com/hyooeewee/ecoctrl/actions/workflows/stable.yaml/badge.svg)](https://github.com/hyooeewee/ecoctrl/actions/workflows/stable.yaml)
 [![Version](https://img.shields.io/github/v/tag/hyooeewee/ecoctrl?label=version)](https://github.com/hyooeewee/ecoctrl/releases)
 [![Node](https://img.shields.io/badge/node-%3E%3D24.0.0-339933?logo=nodedotjs)](https://nodejs.org/)
 
