@@ -1,35 +1,29 @@
 // .vitepress/vitepress-pdf.config.ts
-import { defineUserConfig } from "vitepress-export-pdf";
-import { guideSidebar, referenceSidebar, deploymentSidebar } from "./config";
+import { defineUserConfig, type PageType } from "vitepress-export-pdf";
+import { config } from "./config";
+import type { DefaultTheme } from "vitepress";
 
 // ========================================
 // Helpers
 // ========================================
 
-/** Flatten a sidebar definition into an ordered list of route paths. */
-function flattenSidebar(
-  sidebar: { text: string; items: { text: string; link: string }[] }[],
-): string[] {
-  return sidebar.flatMap((section) => section.items.map((item) => item.link));
-}
+function extractLinksFromConfig(sidebar: DefaultTheme.SidebarMulti): string[] {
+  const links: string[] = [];
 
-/** Build an ordered route lookup index from all sidebars combined. */
-function buildRoutePriority(
-  ...sidebars: { text: string; items: { text: string; link: string }[] }[][]
-): Map<string, number> {
-  const priority = new Map<string, number>();
-  let index = 0;
-  for (const sidebar of sidebars) {
-    for (const route of flattenSidebar(sidebar)) {
-      priority.set(route, index++);
+  function extractLinks(sidebarItems: DefaultTheme.SidebarItem[]) {
+    for (const item of sidebarItems) {
+      if (item.items) extractLinks(item.items);
+      else if (item.link) links.push(`${item.link}`);
     }
   }
-  return priority;
+
+  for (const key in sidebar) extractLinks(sidebar[key] as DefaultTheme.SidebarItem[]);
+
+  return links;
 }
 
-const routePriority = buildRoutePriority(guideSidebar, referenceSidebar, deploymentSidebar);
-// Place the index/home page first in the PDF — it is not in any sidebar.
-routePriority.set("/", -1);
+const links = extractLinksFromConfig(config.themeConfig?.sidebar as DefaultTheme.SidebarMulti);
+const routeOrder = ["/index", ...links];
 
 // ========================================
 // Template
@@ -64,10 +58,10 @@ export default defineUserConfig({
     },
   },
   /** Order pages by their position in the sidebar hierarchy. */
-  sorter(pageA, pageB) {
-    const a = routePriority.get(pageA.path) ?? Infinity;
-    const b = routePriority.get(pageB.path) ?? Infinity;
-    return a - b;
+  sorter(pageA: PageType, pageB: PageType) {
+    const indexA = routeOrder.findIndex((p) => p === pageA.path);
+    const indexB = routeOrder.findIndex((p) => p === pageB.path);
+    return indexA - indexB;
   },
   urlOrigin: "https://docs.godot.qzz.io",
 });
