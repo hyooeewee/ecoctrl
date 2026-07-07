@@ -7,6 +7,16 @@
   src: url(https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-sc@latest/chinese-simplified-400-normal.woff2)
     format("woff2");
 }
+
+/* noto-color-emoji */
+@font-face {
+  font-family: "Noto Color Emoji";
+  font-style: normal;
+  font-display: auto;
+  font-weight: 400;
+  src: url(https://cdn.jsdelivr.net/fontsource/fonts/noto-color-emoji@latest/emoji-400-normal.woff2)
+    format("woff2");
+}
 :root {
   --vp-font-family-base:
     "Noto Sans SC", "Vazirmatn", "Inter", "PingFang SC", "Microsoft YaHei", ui-sans-serif,
@@ -17,17 +27,17 @@
     "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
+/* Mermaid SVG text CJK support */
+.mermaid svg text {
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif !important;
+}
+
 @media print {
   .VPNav,
   .VPLocalNav,
   .VPDocFooter {
     display: none !important;
   }
-}
-
-/* Mermaid SVG text CJK support */
-.mermaid svg text {
-  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif !important;
 }
 
 /* ========================================
