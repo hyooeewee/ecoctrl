@@ -340,8 +340,8 @@ importers:
         specifier: 2.0.0-alpha.18
         version: 2.0.0-alpha.18(@types/node@22.20.0)(esbuild@0.28.1)(jiti@2.7.0)(postcss@8.5.16)(tsx@4.23.0)(typescript@5.9.3)(yaml@2.9.0)
       vitepress-export:
-        specifier: ^0.1.0
-        version: 0.1.0
+        specifier: ^0.1.1
+        version: 0.1.1
       vitepress-plugin-mermaid:
         specifier: ^2.0.17
         version: 2.0.17(mermaid@11.16.0)(vitepress@2.0.0-alpha.18(@types/node@22.20.0)(esbuild@0.28.1)(jiti@2.7.0)(postcss@8.5.16)(tsx@4.23.0)(typescript@5.9.3)(yaml@2.9.0))
@@ -7533,8 +7533,8 @@ packages:
       yaml:
         optional: true
 
-  vitepress-export@0.1.0:
-    resolution: {integrity: sha512-DKdd1xjLZHg9WkGOz51KX6R7fGhgGEjwVdKJYklJgfwnWRQ1TtbN+tCcj8dWA5jV9XbwM16aEPypAcSxkkry8A==}
+  vitepress-export@0.1.1:
+    resolution: {integrity: sha512-Pt32hxagh6f0kSNv4zCaTHUQHqlcVOEQqj0QtAHmLzI4ZjfclOswbS2AnRCiJXcOGtUvqHbiHa9KtQRYytKDsg==}
     engines: {node: '>=22'}
     hasBin: true
 
@@ -14649,7 +14649,7 @@ snapshots:
       tsx: 4.23.0
       yaml: 2.9.0
 
-  vitepress-export@0.1.0:
+  vitepress-export@0.1.1:
     dependencies:
       commander: 13.1.0
       jiti: 2.7.0
