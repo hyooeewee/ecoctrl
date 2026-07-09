@@ -47,9 +47,13 @@ peerDependencyRules:
   allowedVersions:
     vite: "*"
 allowBuilds:
+  core-js: true
+  es5-ext: true
   esbuild: true
   isolated-vm: true
   msw: true
   puppeteer: true
   sharp: true
   workerd: true
+minimumReleaseAgeExclude:
+  - vitepress-export@0.1.0
